@@ -12,6 +12,7 @@ import { Switch } from "@/components/ui/switch";
 import { useAction } from "@/hooks/use-action";
 import { archiveJohn, saveJohn } from "@/lib/actions/house";
 import { CATEGORIES, CATEGORY_LABEL, DOW_LABEL, type Category, type IsoDow } from "@/lib/domain";
+import { pointsLabel } from "@/lib/format";
 
 export interface JohnDef {
   id: string;
@@ -64,7 +65,7 @@ export function JohnList({ johns, editable }: { johns: JohnDef[]; editable: bool
                   {EVERY[j.everyWeeks]} · due {DOW_LABEL[j.dueDow].slice(0, 3)} {j.dueTime}
                 </div>
               </div>
-              <span className="text-sm font-black tabular">{j.points} pts</span>
+              <span className="text-sm font-black tabular">{pointsLabel(j.points)}</span>
               {editable ? (
                 <Button variant="ghost" size="icon-lg" aria-label={`Edit ${j.name}`} onClick={() => setEditing(j)}>
                   <PencilIcon aria-hidden />

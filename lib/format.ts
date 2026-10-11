@@ -32,6 +32,11 @@ export function relative(target: Date, now: Date): string {
   return ms >= 0 ? `in ${body}` : `${body} ago`;
 }
 
+/** "1 pt", "4 pts": a John's effort points as a label. */
+export function pointsLabel(points: number): string {
+  return `${points} ${points === 1 ? "pt" : "pts"}`;
+}
+
 /** "6–12 Oct", "28 Sep – 4 Oct". The end is the last day, not the instant the week ends. */
 export function weekRange(startsAt: Date, endsAt: Date, zone: string): string {
   const inZone = tz(zone);

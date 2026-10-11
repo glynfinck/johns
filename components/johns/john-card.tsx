@@ -6,7 +6,7 @@ import { StatusChip } from "@/components/johns/status-chip";
 import { Avatar } from "@/components/ui/avatar";
 import type { BoardItem } from "@/lib/data/week";
 import { CATEGORY_LABEL, type Category } from "@/lib/domain";
-import { dueLabel, relative } from "@/lib/format";
+import { dueLabel, pointsLabel, relative } from "@/lib/format";
 import { cn } from "@/lib/utils";
 
 const OPEN = new Set(["upcoming", "due-soon", "overdue"]);
@@ -72,7 +72,7 @@ export function JohnCard({
           </div>
           <div className="flex shrink-0 flex-col items-end gap-1.5">
             <StatusChip status={item.status} />
-            <span className="text-xs font-extrabold tabular">{item.points} pts</span>
+            <span className="text-xs font-extrabold tabular">{pointsLabel(item.points)}</span>
           </div>
         </div>
 

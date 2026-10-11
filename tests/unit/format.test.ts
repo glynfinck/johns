@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { dueLabel, firstName, initials, monthLabel, relative, weekRange } from "@/lib/format";
+import { dueLabel, firstName, initials, monthLabel, pointsLabel, relative, weekRange } from "@/lib/format";
 import { weekWindow } from "@/lib/week";
 
 const LONDON = "Europe/London";
@@ -47,5 +47,12 @@ describe("names", () => {
     expect(initials("tom")).toBe("TO");
     expect(firstName("Priya Shah")).toBe("Priya");
     expect(monthLabel("2026-10")).toBe("October 2026");
+  });
+});
+
+describe("pointsLabel", () => {
+  it("counts one point as a pt", () => {
+    expect(pointsLabel(1)).toBe("1 pt");
+    expect(pointsLabel(4)).toBe("4 pts");
   });
 });
