@@ -146,8 +146,11 @@ schema changes: `npm run types`.
   (Pixel 7, iPhone 15, desktop Firefox, a 1440px laptop). Sessions are minted
   by `e2e/auth.ts`, since Google's consent screen cannot be driven. A pass on
   retry is a failure in CI. Count things by what reads the same in every
-  layout (the board is cards on a phone and a table on a laptop), and wait on
-  a dialog closing rather than a button's label, which changes while pending.
+  layout (the board is cards on a phone and a table on a laptop), wait on
+  a dialog closing rather than a button's label, which changes while pending,
+  and navigate with `gotoSettled` (`e2e/nav.ts`) once the house exists:
+  WebKit reports the app's own post-action refresh as a navigation that
+  interrupts a bare `page.goto`.
 
 ## Local ports
 

@@ -1,6 +1,7 @@
 import { expect, test, type Page } from "@playwright/test";
 
 import { cleanUp, signInAs } from "./auth";
+import { gotoSettled } from "./nav";
 
 /**
  * A house from nothing, on two phones: set up, add Johns, join by link, deal
@@ -54,7 +55,7 @@ test("set up a house, deal a week, tick a John, dispute it", async ({ browser })
   // Ava hands out the first week; two Johns, two people, one each.
   await ava.getByTestId("deal-week").click();
   await expect(ava.getByTestId("deal-week")).toHaveText(/Re-deal this week/);
-  await ava.goto("/today");
+  await gotoSettled(ava, "/today");
   await expect(ava.getByTestId("john-card")).toHaveCount(1);
   await expect(ava.getByTestId("johns-left")).toHaveText("1");
 
@@ -62,15 +63,15 @@ test("set up a house, deal a week, tick a John, dispute it", async ({ browser })
   // without a reload, over realtime.
   // A phone shows the board as cards and a laptop as a table; the status
   // reads the same in both, so that is what to watch.
-  await ava.goto("/week");
+  await gotoSettled(ava, "/week");
   await expect(ava.getByRole("heading", { name: "The board" })).toBeVisible();
   const checking = ava.getByText("Done, being checked").filter({ visible: true });
   await expect(checking).toHaveCount(0);
-  await ben.goto("/today");
+  await gotoSettled(ben, "/today");
   await ben.getByTestId("mark-done").first().click();
   await expect(ben.locator('[data-testid="john-card"][data-status="checking"]')).toHaveCount(1);
   await expect(checking).toHaveCount(1);
-  await ava.goto("/today");
+  await gotoSettled(ava, "/today");
 
   // She ticks hers. It counts, provisionally, while the house can check it.
   await ava.getByTestId("mark-done").first().click();
@@ -78,12 +79,12 @@ test("set up a house, deal a week, tick a John, dispute it", async ({ browser })
   await expect(ava.getByTestId("johns-left")).toHaveText("0");
 
   // Ben sees it on the Wall.
-  await ben.goto("/wall");
+  await gotoSettled(ben, "/wall");
   await expect(ben.getByTestId("wall-event").first()).toContainText("Ava did");
 
   // Ben disputes it. In a house of two his vote is the majority, so the tick
   // is struck at once and Ava's John is open again.
-  await ben.goto("/week");
+  await gotoSettled(ben, "/week");
   await ben.getByRole("button", { name: "Dispute" }).click();
   await ben.locator("#dispute-reason").fill("The bin's still full");
   await ben.getByRole("button", { name: "Put it to the house" }).click();
@@ -91,10 +92,10 @@ test("set up a house, deal a week, tick a John, dispute it", async ({ browser })
   // (Not the button: its label changes to "Sending…" the moment it is pressed.)
   await expect(ben.getByRole("dialog")).toBeHidden();
 
-  await ava.goto("/today");
+  await gotoSettled(ava, "/today");
   await expect(ava.locator('[data-testid="john-card"][data-status="checking"]')).toHaveCount(0);
   await expect(ava.getByTestId("johns-left")).toHaveText("1");
-  await ava.goto("/wall");
+  await gotoSettled(ava, "/wall");
   await expect(ava.getByTestId("wall-event").first()).toContainText("The house struck your tick");
 
   await avaContext.close();
