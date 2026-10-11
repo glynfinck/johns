@@ -155,7 +155,8 @@ export default async function TodayPage() {
                   {myMonth.forfeited > 0
                     ? `${formatMoney(myMonth.forfeited, rules.currency)} forfeited so far.`
                     : "Nothing forfeited so far."}{" "}
-                  If the month ended now: {formatSigned(myMonth.net, rules.currency)}.
+                  If the month ended now:{" "}
+                  <span className="whitespace-nowrap">{formatSigned(myMonth.net, rules.currency)}</span>.
                 </p>
               </section>
             ) : null}

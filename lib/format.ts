@@ -28,7 +28,7 @@ export function relative(target: Date, now: Date): string {
   const hours = Math.round(abs / 3_600_000);
   const days = Math.round(abs / 86_400_000);
   const body =
-    minutes < 60 ? `${Math.max(1, minutes)} min` : hours < 36 ? `${hours}h` : `${days} days`;
+    minutes < 60 ? `${Math.max(1, minutes)} min` : hours < 36 ? `${hours}h` : `${days} ${days === 1 ? "day" : "days"}`;
   return ms >= 0 ? `in ${body}` : `${body} ago`;
 }
 

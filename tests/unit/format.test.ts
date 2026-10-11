@@ -27,6 +27,8 @@ describe("relative", () => {
     expect(relative(new Date(now.getTime() + 3 * 3_600_000), now)).toBe("in 3h");
     expect(relative(new Date(now.getTime() - 20 * 60_000), now)).toBe("20 min ago");
     expect(relative(new Date(now.getTime() + 3 * 86_400_000), now)).toBe("in 3 days");
+    // 35h45m is past the hours cut-off but rounds to one day.
+    expect(relative(new Date(now.getTime() - 35.75 * 3_600_000), now)).toBe("1 day ago");
   });
 });
 

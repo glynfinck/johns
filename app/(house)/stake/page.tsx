@@ -29,7 +29,7 @@ export default async function StakePage() {
     <div className="mx-auto max-w-6xl">
       <PageHeader eyebrow={`${money(stake.stakeMinor)} each, every month`} title="The Stake" />
 
-      <div className="grid gap-5 lg:grid-cols-[minmax(0,1fr)_minmax(0,1fr)]">
+      <div className="grid grid-cols-1 gap-5 lg:grid-cols-2">
         <section className="rounded-lg border border-border bg-card p-5">
           <h2 className="eyebrow">{monthLabel(stake.month)} so far</h2>
           <p className="mt-1 mb-4 text-sm text-muted-foreground">
@@ -37,13 +37,13 @@ export default async function StakePage() {
             loses more than their stake. What&rsquo;s forfeited is shared among everyone else when the month ends.
           </p>
           <div className="overflow-x-auto">
-          <table className="w-full min-w-[420px] text-sm">
+          <table className="w-full text-sm">
             <thead>
               <tr className="border-b-2 border-foreground text-left">
                 <th className="eyebrow py-2">Housemate</th>
-                <th className="eyebrow py-2 text-right">Forfeited</th>
-                <th className="eyebrow py-2 text-right">Share</th>
-                <th className="eyebrow py-2 text-right">If it ended now</th>
+                <th className="eyebrow py-2 pl-3 text-right">Forfeited</th>
+                <th className="eyebrow py-2 pl-3 text-right">Share</th>
+                <th className="eyebrow py-2 pl-3 text-right">If it ended now</th>
               </tr>
             </thead>
             <tbody>
@@ -55,12 +55,12 @@ export default async function StakePage() {
                       {nameOf(ctx, p.userId)}
                     </span>
                   </td>
-                  <td className="py-2.5 text-right tabular">
+                  <td className="py-2.5 pl-3 text-right tabular">
                     {p.forfeited ? money(p.forfeited) : "–"}
                     {p.forfeitedRaw > p.forfeited ? <span className="block text-xs text-muted-foreground">capped</span> : null}
                   </td>
-                  <td className="py-2.5 text-right tabular">{p.received ? money(p.received) : "–"}</td>
-                  <td className={cn("py-2.5 text-right font-black tabular", p.net < 0 && "text-hazard", p.net > 0 && "text-good")}>
+                  <td className="py-2.5 pl-3 text-right tabular">{p.received ? money(p.received) : "–"}</td>
+                  <td className={cn("py-2.5 pl-3 text-right font-black whitespace-nowrap tabular", p.net < 0 && "text-hazard", p.net > 0 && "text-good")}>
                     {formatSigned(p.net, rules.currency)}
                   </td>
                 </tr>
@@ -100,7 +100,7 @@ export default async function StakePage() {
             <p className="text-sm text-muted-foreground">Nothing yet. Forfeits appear as Johns are settled.</p>
           ) : (
             <div className="overflow-x-auto">
-              <table className="w-full min-w-[520px] text-sm">
+              <table className="w-full text-sm">
                 <thead>
                   <tr className="border-b-2 border-foreground text-left">
                     <th className="eyebrow py-2">Month</th>
@@ -112,8 +112,8 @@ export default async function StakePage() {
                 <tbody>
                   {stake.history.map((h) => (
                     <tr key={h.id} className="border-b border-border last:border-0">
-                      <td className="py-2 text-muted-foreground tabular">{h.month}</td>
-                      <td className="py-2 font-bold">{nameOf(ctx, h.userId)}</td>
+                      <td className="py-2 pr-2 text-muted-foreground whitespace-nowrap tabular">{h.month}</td>
+                      <td className="py-2 pr-2 font-bold">{nameOf(ctx, h.userId)}</td>
                       <td className="py-2">
                         {KIND_LABEL[h.kind] ?? h.kind}
                         {h.kind === "payment" && h.counterparty ? (
@@ -123,7 +123,7 @@ export default async function StakePage() {
                           </span>
                         ) : null}
                       </td>
-                      <td className={cn("py-2 text-right font-bold tabular", h.amount < 0 ? "text-hazard" : "text-good")}>
+                      <td className={cn("py-2 pl-2 text-right font-bold whitespace-nowrap tabular", h.amount < 0 ? "text-hazard" : "text-good")}>
                         {formatSigned(h.amount, rules.currency)}
                       </td>
                     </tr>
