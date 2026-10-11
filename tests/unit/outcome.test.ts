@@ -35,7 +35,7 @@ describe("settleOutcome", () => {
     expect(settleOutcome(a, at("2026-10-20T00:00:00Z"), 24)).toBeNull();
   });
 
-  it("misses a Johh the week closed on", () => {
+  it("misses a John the week closed on", () => {
     expect(settleOutcome(base, at("2026-10-11T22:59:59Z"), 24)).toBeNull();
     expect(settleOutcome(base, weekEnds, 24)).toBe("missed");
   });

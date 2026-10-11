@@ -7,7 +7,7 @@ export type ActionOutcome = { error?: string } | void;
 
 /**
  * Run a server action with a pending flag and a toast on refusal. Success
- * is the screen's to show (the Johh flips to done), not a toast's to narrate.
+ * is the screen's to show (the John flips to done), not a toast's to narrate.
  */
 export function useAction() {
   const [pending, startTransition] = useTransition();

@@ -29,7 +29,7 @@
   --color-hazard: var(--hazard);
   --color-on-hazard: var(--on-hazard);
   --color-good: var(--good);
-  /* Bin-lid colours, one per kind of Johh (lib/domain.ts CATEGORIES). */
+  /* Bin-lid colours, one per kind of John (lib/domain.ts CATEGORIES). */
   --color-bin-kitchen: var(--bin-kitchen);
   --color-bin-bathroom: var(--bin-bathroom);
   --color-bin-bins: var(--bin-bins);

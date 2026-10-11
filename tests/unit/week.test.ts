@@ -86,7 +86,7 @@ describe("dueAt", () => {
 describe("graceDue", () => {
   const ends = new Date("2026-10-11T23:00:00Z");
 
-  it("leaves a Johh due well after the deal alone", () => {
+  it("leaves a John due well after the deal alone", () => {
     const due = new Date("2026-10-10T18:00:00Z");
     expect(graceDue(due, new Date("2026-10-08T09:00:00Z"), ends)).toEqual(due);
   });

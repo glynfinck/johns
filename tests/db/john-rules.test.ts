@@ -4,7 +4,7 @@ import { adminClient, signedInUser } from "@/tests/support/clients";
 import { expectDenied, expectOk, expectRule } from "@/tests/support/expect";
 import {
   actorFor,
-  addJohhs,
+  addJohns,
   deal,
   makeHouse,
   reread,
@@ -15,18 +15,18 @@ import {
 
 /**
  * The housemate functions, attacked. Each one checks who is calling and what
- * state the Johh is in; these tests try the obvious ways round both.
+ * state the John is in; these tests try the obvious ways round both.
  */
 
-async function dealtHouse(johhs = [{ name: "Bins", points: 2 }, { name: "Bathroom", points: 4 }]) {
+async function dealtHouse(johns = [{ name: "Bins", points: 2 }, { name: "Bathroom", points: 4 }]) {
   const house = await makeHouse();
-  await addJohhs(house.id, johhs, thisWeek());
+  await addJohns(house.id, johns, thisWeek());
   const { weekId, assignments } = await deal(house.id, thisWeek(), new Date());
   return { house, weekId, assignments };
 }
 
 describe("mark_done", () => {
-  it("is for the person holding the Johh", async () => {
+  it("is for the person holding the John", async () => {
     const { house, assignments } = await dealtHouse();
     const a = assignments[0];
     expectDenied(await someoneElse(house, a.user_id).db.rpc("mark_done", { p_assignment: a.id }));
@@ -47,13 +47,13 @@ describe("mark_done", () => {
 
   it("refuses a week that has closed", async () => {
     const house = await makeHouse();
-    await addJohhs(house.id, [{ name: "Bins" }], weeksAgo(2));
+    await addJohns(house.id, [{ name: "Bins" }], weeksAgo(2));
     const { assignments } = await deal(house.id, weeksAgo(2), weeksAgo(2).startsAt);
     const a = assignments[0];
     expectRule(await actorFor(house, a.user_id).db.rpc("mark_done", { p_assignment: a.id }), "week_closed");
   });
 
-  it("needs a photo on a photo Johh, from that Johh's own folder", async () => {
+  it("needs a photo on a photo John, from that John's own folder", async () => {
     const { house, assignments } = await dealtHouse([{ name: "Oven", points: 5, needsPhoto: true } as never]);
     const a = assignments[0];
     const me = actorFor(house, a.user_id);
@@ -85,7 +85,7 @@ describe("disputes", () => {
     return { ...d, a, owner: actorFor(d.house, a.user_id), other: someoneElse(d.house, a.user_id) };
   }
 
-  it("cannot be raised on your own tick, or on a Johh nobody ticked", async () => {
+  it("cannot be raised on your own tick, or on a John nobody ticked", async () => {
     const { house, assignments, a, owner } = await ticked();
     expectDenied(await owner.db.rpc("raise_dispute", { p_assignment: a.id, p_reason: "Me?" }));
     const untouched = assignments.find((x) => x.id !== a.id)!;
@@ -130,7 +130,7 @@ describe("disputes", () => {
 });
 
 describe("perks", () => {
-  it("spends an immunity token to excuse an open Johh", async () => {
+  it("spends an immunity token to excuse an open John", async () => {
     const { house, assignments } = await dealtHouse();
     const a = assignments[0];
     const me = actorFor(house, a.user_id);
@@ -145,7 +145,7 @@ describe("perks", () => {
     expectRule(await me.db.rpc("use_immunity", { p_assignment: a.id }), "already_settled");
   });
 
-  it("cannot spend someone else's Johh", async () => {
+  it("cannot spend someone else's John", async () => {
     const { house, assignments } = await dealtHouse();
     const a = assignments[0];
     const other = someoneElse(house, a.user_id);
@@ -153,10 +153,10 @@ describe("perks", () => {
     expectDenied(await other.db.rpc("use_immunity", { p_assignment: a.id }));
   });
 
-  it("swaps two open Johhs with a swap token", async () => {
+  it("swaps two open Johns with a swap token", async () => {
     const { house, assignments } = await dealtHouse();
     const [mine, theirs] = assignments;
-    // Three people, two Johhs: fair shares always spreads them.
+    // Three people, two Johns: fair shares always spreads them.
     expect(mine.user_id).not.toBe(theirs.user_id);
     const me = actorFor(house, mine.user_id);
     expectRule(await me.db.rpc("use_swap", { p_mine: mine.id, p_theirs: theirs.id }), "no_swap");
@@ -166,7 +166,7 @@ describe("perks", () => {
     expect((await reread("assignments", theirs.id)).user_id).toBe(me.userId);
   });
 
-  it("will not swap for a Johh that is already done", async () => {
+  it("will not swap for a John that is already done", async () => {
     const { house, assignments } = await dealtHouse();
     const [mine, theirs] = assignments;
     expect(mine.user_id).not.toBe(theirs.user_id);
@@ -218,7 +218,7 @@ describe("reactions", () => {
 describe("photo receipts", () => {
   const png = new Blob([new Uint8Array([137, 80, 78, 71, 13, 10, 26, 10])], { type: "image/png" });
 
-  it("upload only into your own open Johh's folder, and are seen only by the house", async () => {
+  it("upload only into your own open John's folder, and are seen only by the house", async () => {
     const { house, assignments } = await dealtHouse();
     const a = assignments[0];
     const me = actorFor(house, a.user_id);

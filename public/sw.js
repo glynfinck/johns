@@ -1,8 +1,8 @@
-// Johhs service worker: push reminders only. No offline cache, on purpose:
+// Johns service worker: push reminders only. No offline cache, on purpose:
 // a stale rota is worse than a spinner.
 
 self.addEventListener("push", (event) => {
-  let message = { title: "Johhs", body: "", url: "/today" };
+  let message = { title: "Johns", body: "", url: "/today" };
   try {
     message = { ...message, ...event.data.json() };
   } catch {

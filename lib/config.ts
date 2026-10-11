@@ -1,4 +1,4 @@
-export const APP_NAME = "Johhs";
+export const APP_NAME = "Johns";
 export const TAGLINE = "The house rota that keeps everyone honest.";
 
 /** Absolute origin, for metadata and links that leave the app (join links). */

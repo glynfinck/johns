@@ -34,14 +34,14 @@ export default async function JoinPage({ params }: PageProps<"/join/[code]">) {
         <>
           <h1 className="text-2xl font-black uppercase">You&rsquo;re already in {house.name}</h1>
           <Button asChild>
-            <Link href="/today">Go to your Johhs</Link>
+            <Link href="/today">Go to your Johns</Link>
           </Button>
         </>
       ) : houseId ? (
         <>
           <h1 className="text-2xl font-black uppercase">You&rsquo;re in another house</h1>
           <p className="text-muted-foreground">
-            Johhs keeps you in one house at a time. Leave your current one from its House screen first.
+            Johns keeps you in one house at a time. Leave your current one from its House screen first.
           </p>
           <Button asChild variant="outline">
             <Link href="/house">Your house</Link>

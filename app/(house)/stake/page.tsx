@@ -97,7 +97,7 @@ export default async function StakePage() {
         <section className="rounded-lg border border-border bg-card p-5 lg:col-span-2">
           <h2 className="eyebrow mb-3">The ledger</h2>
           {stake.history.length === 0 ? (
-            <p className="text-sm text-muted-foreground">Nothing yet. Forfeits appear as Johhs are settled.</p>
+            <p className="text-sm text-muted-foreground">Nothing yet. Forfeits appear as Johns are settled.</p>
           ) : (
             <div className="overflow-x-auto">
               <table className="w-full min-w-[520px] text-sm">

@@ -41,7 +41,7 @@ export async function makeHouse(names: string[] = ["Ava", "Ben", "Cal"]): Promis
   return { id: id!, code: house!.join_code, admin, members, everyone: [admin, ...members] };
 }
 
-export interface JohhSpec {
+export interface JohnSpec {
   name: string;
   points?: number;
   category?: Category;
@@ -51,9 +51,9 @@ export interface JohhSpec {
   needsPhoto?: boolean;
 }
 
-export async function addJohhs(houseId: string, specs: JohhSpec[], anchor: WeekWindow) {
+export async function addJohns(houseId: string, specs: JohnSpec[], anchor: WeekWindow) {
   const { data, error } = await adminClient()
-    .from("johhs")
+    .from("johns")
     .insert(
       specs.map((s) => ({
         house_id: houseId,

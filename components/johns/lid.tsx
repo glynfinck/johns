@@ -3,7 +3,7 @@ import type { CSSProperties } from "react";
 import { CATEGORY_LABEL, type Category } from "@/lib/domain";
 import { cn } from "@/lib/utils";
 
-/** The bin-lid colour for a kind of Johh, as a CSS variable reference. */
+/** The bin-lid colour for a kind of John, as a CSS variable reference. */
 export function lidColor(category: string): string {
   return `var(--bin-${category in CATEGORY_LABEL ? category : "other"})`;
 }

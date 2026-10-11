@@ -1,8 +1,8 @@
 import { CameraIcon } from "lucide-react";
 
-import { DisputeButton, MarkDone, UndoDone, UseImmunity, VoteButtons } from "@/components/johhs/johh-actions";
-import { lidStyle } from "@/components/johhs/lid";
-import { StatusChip } from "@/components/johhs/status-chip";
+import { DisputeButton, MarkDone, UndoDone, UseImmunity, VoteButtons } from "@/components/johns/john-actions";
+import { lidStyle } from "@/components/johns/lid";
+import { StatusChip } from "@/components/johns/status-chip";
 import { Avatar } from "@/components/ui/avatar";
 import type { BoardItem } from "@/lib/data/week";
 import { CATEGORY_LABEL, type Category } from "@/lib/domain";
@@ -12,10 +12,10 @@ import { cn } from "@/lib/utils";
 const OPEN = new Set(["upcoming", "due-soon", "overdue"]);
 
 /**
- * One Johh, wearing its bin lid along the top. What you can do with it
+ * One John, wearing its bin lid along the top. What you can do with it
  * depends on whose it is and where it has got to, and nothing else.
  */
-export function JohhCard({
+export function JohnCard({
   item,
   ownerName,
   mine,
@@ -40,7 +40,7 @@ export function JohhCard({
 
   return (
     <article
-      data-testid="johh-card"
+      data-testid="john-card"
       data-status={item.status}
       className="relative overflow-hidden rounded-lg border border-border border-t-[6px] bg-card"
       style={lidStyle(item.category)}
@@ -58,7 +58,7 @@ export function JohhCard({
               {item.name}
             </h3>
             <p className="mt-1 flex flex-wrap items-center gap-x-1.5 text-sm text-muted-foreground">
-              <span>{CATEGORY_LABEL[item.category as Category] ?? "Johh"}</span>
+              <span>{CATEGORY_LABEL[item.category as Category] ?? "John"}</span>
               <span aria-hidden>·</span>
               <span className="tabular">{dueLabel(item.dueAt, now, zone)}</span>
               {item.needsPhoto ? (
@@ -111,7 +111,7 @@ export function JohhCard({
             {mine ? (
               <UndoDone assignmentId={item.id} />
             ) : (
-              <DisputeButton assignmentId={item.id} johh={item.name} owner={ownerName} />
+              <DisputeButton assignmentId={item.id} john={item.name} owner={ownerName} />
             )}
           </div>
         ) : null}

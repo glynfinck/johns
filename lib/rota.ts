@@ -1,24 +1,24 @@
 /**
- * Fair shares: who gets which Johh this week.
+ * Fair shares: who gets which John this week.
  *
- * Pure and deterministic. The engine hands it the week's Johhs, the house,
+ * Pure and deterministic. The engine hands it the week's Johns, the house,
  * and how much each person has carried lately; it hands back assignments.
  * Same inputs, same rota, on any machine, which is what lets a test pin it.
  *
  * The rule, in order of what matters:
- *   1. Effort evens out. Each Johh goes to whoever has the lightest load once
- *      their recent carry-over and this week's Johhs so far are counted.
- *   2. Variety. Doing the same Johh as last time costs a small penalty, so
+ *   1. Effort evens out. Each John goes to whoever has the lightest load once
+ *      their recent carry-over and this week's Johns so far are counted.
+ *   2. Variety. Doing the same John as last time costs a small penalty, so
  *      the bathroom moves around when loads are close, but fairness wins
  *      when they are not.
- *   3. Spread. Ties go to whoever has fewer Johhs this week.
+ *   3. Spread. Ties go to whoever has fewer Johns this week.
  *   4. Then a seeded shuffle, so ties do not always fall the same way.
  */
 
-export interface RotaJohh {
-  johhId: string;
+export interface RotaJohn {
+  johnId: string;
   points: number;
-  /** Who did this Johh the last time it was handed out. */
+  /** Who did this John the last time it was handed out. */
   lastUserId: string | null;
 }
 
@@ -29,11 +29,11 @@ export interface RotaMember {
 }
 
 export interface RotaAssignment {
-  johhId: string;
+  johnId: string;
   userId: string;
 }
 
-/** The cost, in points, of giving someone the same Johh twice running. */
+/** The cost, in points, of giving someone the same John twice running. */
 export const REPEAT_PENALTY = 1.5;
 
 /** A small, stable string hash (FNV-1a), for tie-breaking only. */
@@ -47,7 +47,7 @@ export function stableHash(text: string): number {
 }
 
 export function fairShares(
-  johhs: readonly RotaJohh[],
+  johns: readonly RotaJohn[],
   members: readonly RotaMember[],
   seed: string,
 ): RotaAssignment[] {
@@ -58,27 +58,27 @@ export function fairShares(
     members.map((m) => [m.userId, { load: m.carry - minCarry, count: 0 }]),
   );
 
-  const ordered = [...johhs].sort(
-    (a, b) => b.points - a.points || a.johhId.localeCompare(b.johhId),
+  const ordered = [...johns].sort(
+    (a, b) => b.points - a.points || a.johnId.localeCompare(b.johnId),
   );
 
   const out: RotaAssignment[] = [];
-  for (const johh of ordered) {
+  for (const john of ordered) {
     let best: { userId: string; key: [number, number, number] } | null = null;
     for (const m of members) {
       const s = state.get(m.userId)!;
-      const score = s.load + (m.userId === johh.lastUserId ? REPEAT_PENALTY : 0);
+      const score = s.load + (m.userId === john.lastUserId ? REPEAT_PENALTY : 0);
       const key: [number, number, number] = [
         score,
         s.count,
-        stableHash(`${seed}:${johh.johhId}:${m.userId}`),
+        stableHash(`${seed}:${john.johnId}:${m.userId}`),
       ];
       if (!best || lessThan(key, best.key)) best = { userId: m.userId, key };
     }
     const chosen = state.get(best!.userId)!;
-    chosen.load += johh.points;
+    chosen.load += john.points;
     chosen.count += 1;
-    out.push({ johhId: johh.johhId, userId: best!.userId });
+    out.push({ johnId: john.johnId, userId: best!.userId });
   }
   return out;
 }
@@ -99,7 +99,7 @@ export interface PastWeek {
 /**
  * Each person's carry-over: what they were handed in recent weeks minus their
  * fair share of each of those weeks. Someone who joins mid-way starts at
- * zero, rather than owing a month of Johhs they were never there for.
+ * zero, rather than owing a month of Johns they were never there for.
  */
 export function carryOver(
   weeks: readonly PastWeek[],

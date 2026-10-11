@@ -6,8 +6,8 @@ import { cn } from "@/lib/utils";
  */
 export function Wordmark({ className }: { className?: string }) {
   return (
-    <span aria-label="Johhs" className={cn("road-sign inline-block text-2xl", className)}>
-      Johhs
+    <span aria-label="Johns" className={cn("road-sign inline-block text-2xl", className)}>
+      Johns
     </span>
   );
 }

@@ -10,7 +10,7 @@ export function InviteCard({ url, code, houseName }: { url: string; code: string
   async function share() {
     if (navigator.share) {
       try {
-        await navigator.share({ title: `Join ${houseName} on Johhs`, url });
+        await navigator.share({ title: `Join ${houseName} on Johns`, url });
         return;
       } catch {
         // Cancelled, or the share sheet is unavailable: fall back to copying.

@@ -1,20 +1,20 @@
-# Johhs
+# Johns
 
 The house rota that keeps everyone honest. In our house the week's assigned
-chores were always "Johhs", so that is what the app calls them: one chore is
-a **Johh**.
+chores were always "Johns", so that is what the app calls them: one chore is
+a **John**.
 
-- **A fair rota, dealt for you.** Every Johh has an effort score (1–10), a
-  kind, a due day and a cadence. Each week the Johhs are shared so effort
+- **A fair rota, dealt for you.** Every John has an effort score (1–10), a
+  kind, a due day and a cadence. Each week the Johns are shared so effort
   evens out over the month, and the bathroom moves around.
 - **Housemate check.** A tick stands after 24 hours unless someone disputes
   it; disputes go to a quick house vote. Photo receipts are optional, or
-  required on the Johhs you choose.
-- **The Stake.** Everyone stakes the same each month. Late and missed Johhs
+  required on the Johns you choose.
+- **The Stake.** Everyone stakes the same each month. Late and missed Johns
   forfeit part of it, and at month end the forfeits are shared among everyone
   else. The app keeps the ledger and works out who pays whom; it never moves
   money.
-- **The Table, streaks and perks.** Points for every Johh done (half for
+- **The Table, streaks and perks.** Points for every John done (half for
   late). Four clean weeks in a row earn an immunity token; topping the week
   earns a swap.
 - **The Wall.** Ticks, photos, misses, disputes and perks as they happen,
@@ -22,7 +22,7 @@ a **Johh**.
 - **Reminders** by push notification, installable to the home screen.
 
 It works on any phone and spreads out on a laptop, in the Bin Night house
-style: council signage, hi-vis amber, a bin-lid colour per kind of Johh.
+style: council signage, hi-vis amber, a bin-lid colour per kind of John.
 
 ## Stack
 
@@ -37,7 +37,7 @@ fits together and why.
 app/(house)/          today · week · wall · table · stake · house
 app/join/[code]/      the join link
 app/api/cron/tick/    the clock (called by pg_cron)
-components/           shell, Johh cards and actions, house settings, ui (shadcn)
+components/           shell, John cards and actions, house settings, ui (shadcn)
 lib/                  pure rules: week, rota, outcome, points, streak, stake, dispute
 lib/engine/           the tick: applies the rules to the database
 lib/actions/ data/    server actions and loaders
@@ -75,6 +75,6 @@ See `DEPLOYMENT.md`.
 
 ## Later
 
-Bounties, swapping Johhs by agreement, history and stats per housemate, pay
+Bounties, swapping Johns by agreement, history and stats per housemate, pay
 links or Stripe to settle up, a calendar feed, more than one house per
 person, and posts in the house group chat.

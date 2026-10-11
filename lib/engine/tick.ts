@@ -140,7 +140,7 @@ export async function tickAll(db: Db, now: Date, notify?: Notify) {
 // --- Dealing ---------------------------------------------------------------
 
 /**
- * Deal a week's Johhs with fair shares. With `replace`, re-deal a week nobody
+ * Deal a week's Johns with fair shares. With `replace`, re-deal a week nobody
  * has ticked anything in yet (deal_week refuses otherwise).
  */
 export async function dealWeek(
@@ -153,26 +153,26 @@ export async function dealWeek(
 ): Promise<{ weekId: string | null; byUser: Map<string, string[]> }> {
   const rules = rulesOf(house);
   const index = weekIndex(week.startsOn);
-  const johhs = must(
-    await db.from("johhs").select("*").eq("house_id", house.id).is("archived_at", null),
-    "johhs",
+  const johns = must(
+    await db.from("johns").select("*").eq("house_id", house.id).is("archived_at", null),
+    "johns",
   ).filter((j) => isDueInWeek(j.every_weeks, j.anchor_week, index));
 
   const byUser = new Map<string, string[]>();
-  if (johhs.length === 0 || members.length === 0) return { weekId: null, byUser };
+  if (johns.length === 0 || members.length === 0) return { weekId: null, byUser };
 
   const recent = must(
     await db
       .from("assignments")
-      .select("johh_id, user_id, due_at")
-      .in("johh_id", johhs.map((j) => j.id))
+      .select("john_id, user_id, due_at")
+      .in("john_id", johns.map((j) => j.id))
       .lt("due_at", week.startsAt.toISOString())
       .order("due_at", { ascending: false })
       .limit(500),
     "recent assignments",
   );
   const lastBy = new Map<string, string>();
-  for (const r of recent) if (r.johh_id && !lastBy.has(r.johh_id)) lastBy.set(r.johh_id, r.user_id);
+  for (const r of recent) if (r.john_id && !lastBy.has(r.john_id)) lastBy.set(r.john_id, r.user_id);
 
   const pastWeeks = must(
     await db
@@ -201,19 +201,19 @@ export async function dealWeek(
   }));
 
   const rota = fairShares(
-    johhs.map((j) => ({ johhId: j.id, points: j.points, lastUserId: lastBy.get(j.id) ?? null })),
+    johns.map((j) => ({ johnId: j.id, points: j.points, lastUserId: lastBy.get(j.id) ?? null })),
     carryOver(history, members.map((m) => m.user_id)),
     `${house.id}:${week.startsOn}`,
   );
 
   const midWeek = now > week.startsAt;
   const assignments = rota.map((r) => {
-    const j = johhs.find((x) => x.id === r.johhId)!;
+    const j = johns.find((x) => x.id === r.johnId)!;
     let due = dueAt(week, rules.timezone, rules.weekStarts, j.due_dow as IsoDow, j.due_time.slice(0, 5));
     if (midWeek) due = graceDue(due, now, week.endsAt);
     byUser.set(r.userId, [...(byUser.get(r.userId) ?? []), j.name]);
     return {
-      johh_id: j.id,
+      john_id: j.id,
       user_id: r.userId,
       name: j.name,
       category: j.category,
@@ -255,7 +255,7 @@ async function ensureCurrentWeek(
   if (weekId && notify) {
     for (const [userId, names] of byUser) {
       await notify([userId], {
-        title: "This week's Johhs",
+        title: "This week's Johns",
         body: names.join(", "),
         url: "/today",
       });

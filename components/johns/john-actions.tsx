@@ -8,7 +8,7 @@ import { Button } from "@/components/ui/button";
 import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle, SheetTrigger } from "@/components/ui/sheet";
 import { Textarea } from "@/components/ui/textarea";
 import { useAction } from "@/hooks/use-action";
-import { castVote, markDone, raiseDispute, spendImmunity, spendSwap, undoDone } from "@/lib/actions/johhs";
+import { castVote, markDone, raiseDispute, spendImmunity, spendSwap, undoDone } from "@/lib/actions/johns";
 import { createClient } from "@/lib/supabase/client";
 import { cn } from "@/lib/utils";
 
@@ -26,8 +26,8 @@ async function shrink(file: File): Promise<Blob> {
 }
 
 /**
- * The tick. On a photo Johh the button opens the camera and the photo goes
- * up first; on any other Johh a photo is offered but never required.
+ * The tick. On a photo John the button opens the camera and the photo goes
+ * up first; on any other John a photo is offered but never required.
  */
 export function MarkDone({
   assignmentId,
@@ -125,7 +125,7 @@ export function UndoDone({ assignmentId }: { assignmentId: string }) {
 }
 
 /** Housemate check: say what's wrong with someone's tick, and the house votes. */
-export function DisputeButton({ assignmentId, johh, owner }: { assignmentId: string; johh: string; owner: string }) {
+export function DisputeButton({ assignmentId, john, owner }: { assignmentId: string; john: string; owner: string }) {
   const { pending, run } = useAction();
   const [open, setOpen] = useState(false);
   const [reason, setReason] = useState("");
@@ -139,9 +139,9 @@ export function DisputeButton({ assignmentId, johh, owner }: { assignmentId: str
       </SheetTrigger>
       <SheetContent side="bottom" className="mx-auto max-w-lg rounded-t-xl">
         <SheetHeader>
-          <SheetTitle>Was {johh} really done?</SheetTitle>
+          <SheetTitle>Was {john} really done?</SheetTitle>
           <SheetDescription>
-            {owner}&rsquo;s tick goes to a house vote. If the house agrees with you, the Johh opens again.
+            {owner}&rsquo;s tick goes to a house vote. If the house agrees with you, the John opens again.
           </SheetDescription>
         </SheetHeader>
         <form
@@ -217,7 +217,7 @@ export function UseImmunity({ assignmentId, tokens }: { assignmentId: string; to
   );
 }
 
-/** Top of the table: trade one of your open Johhs for a housemate's. */
+/** Top of the table: trade one of your open Johns for a housemate's. */
 export function SwapSheet({
   mine,
   theirs,
@@ -240,7 +240,7 @@ export function SwapSheet({
       </SheetTrigger>
       <SheetContent side="bottom" className="mx-auto max-h-[85dvh] max-w-lg overflow-y-auto rounded-t-xl">
         <SheetHeader>
-          <SheetTitle>Swap a Johh</SheetTitle>
+          <SheetTitle>Swap a John</SheetTitle>
           <SheetDescription>You topped the table, so you pick. They get yours, you get theirs.</SheetDescription>
         </SheetHeader>
         <div className="flex flex-col gap-4 px-4 pb-6">

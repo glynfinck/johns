@@ -14,8 +14,8 @@ export default function PrivacyPage() {
       <h1 className="mt-8 text-3xl font-black tracking-tight uppercase">Privacy</h1>
       <div className="mt-4 flex flex-col gap-4 text-[15px] leading-relaxed">
         <p>
-          Johhs keeps what it needs to run your house&rsquo;s rota and nothing more: your name from Google, the house
-          you belong to, the Johhs you were given and when you ticked them, any photos you add, disputes and votes,
+          Johns keeps what it needs to run your house&rsquo;s rota and nothing more: your name from Google, the house
+          you belong to, the Johns you were given and when you ticked them, any photos you add, disputes and votes,
           and the Stake ledger.
         </p>
         <p>
@@ -23,12 +23,12 @@ export default function PrivacyPage() {
           through links that expire after an hour.
         </p>
         <p>
-          Johhs never moves money. The ledger records what housemates owe each other; you settle up however you
+          Johns never moves money. The ledger records what housemates owe each other; you settle up however you
           like, outside the app.
         </p>
         <p>
           If you turn on reminders, your browser gives us an address to send notifications to. Turning reminders off
-          deletes it. Leaving a house removes you from it; your past Johhs stay in its history.
+          deletes it. Leaving a house removes you from it; your past Johns stay in its history.
         </p>
       </div>
     </main>

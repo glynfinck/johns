@@ -5,7 +5,7 @@
 -- (app/api/cron/tick/route.ts): deal new weeks, settle outcomes and
 -- forfeits, decide disputes, close weeks and months, send reminders. The
 -- rules live in TypeScript (lib/engine) where they are unit-tested; this is
--- only the alarm. It means a missed Johh is fined at the end of the week even
+-- only the alarm. It means a missed John is fined at the end of the week even
 -- if nobody opens the app that night, on any Vercel plan.
 --
 -- The URL and the shared secret come from Vault, so this migration carries no
@@ -27,8 +27,8 @@ declare
   url text;
   secret text;
 begin
-  select decrypted_secret into url from vault.decrypted_secrets where name = 'johhs_tick_url';
-  select decrypted_secret into secret from vault.decrypted_secrets where name = 'johhs_tick_secret';
+  select decrypted_secret into url from vault.decrypted_secrets where name = 'johns_tick_url';
+  select decrypted_secret into secret from vault.decrypted_secrets where name = 'johns_tick_secret';
   if url is null or secret is null then
     return;
   end if;
@@ -43,4 +43,4 @@ $$;
 
 revoke execute on function public.request_tick() from public, anon, authenticated;
 
-select cron.schedule('johhs-tick', '*/10 * * * *', 'select public.request_tick()');
+select cron.schedule('johns-tick', '*/10 * * * *', 'select public.request_tick()');

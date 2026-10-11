@@ -18,11 +18,11 @@ export function NotDealt({
       <section className="rounded-lg border border-border bg-card p-6">
         <h2 className="text-lg font-extrabold">Nothing&rsquo;s on the rota this week.</h2>
         <p className="mt-1 text-sm text-muted-foreground">
-          Every Johh on the list is on a fortnightly or longer cycle, or the list is empty.
+          Every John on the list is on a fortnightly or longer cycle, or the list is empty.
         </p>
         {isAdmin ? (
           <Button asChild variant="outline" className="mt-4">
-            <Link href="/house#johhs">Edit the Johh list</Link>
+            <Link href="/house#johns">Edit the John list</Link>
           </Button>
         ) : null}
       </section>
@@ -35,9 +35,9 @@ export function NotDealt({
       {isAdmin ? (
         <>
           <ol className="mt-3 flex list-decimal flex-col gap-1.5 pl-5 text-sm">
-            <li>Add the house&rsquo;s Johhs, with how much effort each one is.</li>
+            <li>Add the house&rsquo;s Johns, with how much effort each one is.</li>
             <li>Send the join link to everyone who lives there.</li>
-            <li>Hand out the first week. Johhs are shared so the effort evens out.</li>
+            <li>Hand out the first week. Johns are shared so the effort evens out.</li>
           </ol>
           <div className="mt-5 flex flex-wrap gap-2">
             <Button asChild variant="outline">
@@ -48,7 +48,7 @@ export function NotDealt({
         </>
       ) : (
         <p className="mt-1 text-sm text-muted-foreground">
-          {adminName} will hand out the first week once the Johh list is ready.
+          {adminName} will hand out the first week once the John list is ready.
         </p>
       )}
     </section>

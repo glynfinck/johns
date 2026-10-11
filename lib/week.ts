@@ -42,9 +42,9 @@ export function nextWeek(week: WeekWindow, zone: string, weekStarts: IsoDow): We
 }
 
 /**
- * When a Johh is due inside a week: its day of the week at its local time.
+ * When a John is due inside a week: its day of the week at its local time.
  * `dueTime` is `HH:mm`. A due day before the week's first day falls in the
- * following calendar week, so every Johh is due inside the week it belongs to.
+ * following calendar week, so every John is due inside the week it belongs to.
  */
 export function dueAt(
   week: WeekWindow,
@@ -62,7 +62,7 @@ export function dueAt(
 
 /**
  * A week dealt part-way through (the first week, or a re-deal after someone
- * joins) must not hand anyone a Johh that is already overdue. Anything due
+ * joins) must not hand anyone a John that is already overdue. Anything due
  * within a day of the deal moves to a day after it, or to the last minute of
  * the week if that comes first.
  */
@@ -82,7 +82,7 @@ export function weekIndex(startsOn: string): number {
   return Math.floor(days / 7);
 }
 
-/** Whether a Johh repeating every `everyWeeks`, first due in `anchorIndex`, is due this week. */
+/** Whether a John repeating every `everyWeeks`, first due in `anchorIndex`, is due this week. */
 export function isDueInWeek(everyWeeks: number, anchorIndex: number, index: number): boolean {
   if (everyWeeks <= 1) return true;
   const offset = (((index - anchorIndex) % everyWeeks) + everyWeeks) % everyWeeks;

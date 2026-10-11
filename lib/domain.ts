@@ -4,7 +4,7 @@
  * migrations' CHECK constraints (keep the two lists in step).
  */
 
-/** What kind of Johh it is. Each one wears its bin-lid colour (globals.css). */
+/** What kind of John it is. Each one wears its bin-lid colour (globals.css). */
 export const CATEGORIES = [
   "kitchen",
   "bathroom",
@@ -25,7 +25,7 @@ export const CATEGORY_LABEL: Record<Category, string> = {
 };
 
 /**
- * How a Johh ended, once the house can no longer argue about it.
+ * How a John ended, once the house can no longer argue about it.
  * - `done`: ticked by its due time and nobody upheld a dispute.
  * - `late`: ticked after its due time but before the week closed.
  * - `missed`: the week closed without a tick that stood.

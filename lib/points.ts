@@ -3,7 +3,7 @@ import type { LiveStatus } from "@/lib/outcome";
 /**
  * The Table: effort points earned, not points handed out.
  *
- * A Johh done on time earns its points, a late one earns half (rounded down),
+ * A John done on time earns its points, a late one earns half (rounded down),
  * and a missed or excused one earns nothing. A tick still inside its dispute
  * window counts as done, provisionally, so the live table moves when you
  * tick rather than a day later.

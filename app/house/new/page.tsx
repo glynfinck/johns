@@ -27,7 +27,7 @@ export default async function NewHousePage() {
       <div>
         <h1 className="text-3xl font-black tracking-tight uppercase">Set up your house</h1>
         <p className="mt-2 text-muted-foreground">
-          You&rsquo;ll be its admin. Next you add the Johhs and send the house a join link.
+          You&rsquo;ll be its admin. Next you add the Johns and send the house a join link.
         </p>
       </div>
       <section className="rounded-lg border border-border bg-card p-5">

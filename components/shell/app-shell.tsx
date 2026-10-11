@@ -52,7 +52,7 @@ export function AppShell({
       <div className="flex min-w-0 flex-1 flex-col">
         <header className="sticky top-0 z-30 border-b border-border bg-background/90 pt-[env(safe-area-inset-top)] backdrop-blur lg:hidden">
           <div className="flex h-14 items-center justify-between gap-3 px-4">
-            <Link href="/today" aria-label="Johhs, today">
+            <Link href="/today" aria-label="Johns, today">
               <Wordmark className="text-xl" />
             </Link>
             <span className="min-w-0 flex-1 truncate text-right text-xs font-bold tracking-wide text-muted-foreground uppercase">

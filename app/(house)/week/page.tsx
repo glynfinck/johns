@@ -1,11 +1,11 @@
 import type { Metadata } from "next";
 
 import { DealButton } from "@/components/house/start-rota";
-import { DisputeButton, MarkDone, SwapSheet, VoteButtons } from "@/components/johhs/johh-actions";
-import { JohhCard } from "@/components/johhs/johh-card";
-import { lidColor } from "@/components/johhs/lid";
-import { NotDealt } from "@/components/johhs/not-dealt";
-import { StatusChip } from "@/components/johhs/status-chip";
+import { DisputeButton, MarkDone, SwapSheet, VoteButtons } from "@/components/johns/john-actions";
+import { JohnCard } from "@/components/johns/john-card";
+import { lidColor } from "@/components/johns/lid";
+import { NotDealt } from "@/components/johns/not-dealt";
+import { StatusChip } from "@/components/johns/status-chip";
 import { PageHeader } from "@/components/shell/app-shell";
 import { Standings } from "@/components/table/standings";
 import { Avatar } from "@/components/ui/avatar";
@@ -78,12 +78,12 @@ export default async function WeekPage() {
 
       <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_300px] xl:grid-cols-[minmax(0,1fr)_340px]">
         {/* Laptop: the whole house on one board. */}
-        <section className="hidden overflow-hidden rounded-lg border border-border bg-card lg:block" aria-label="Every Johh this week">
+        <section className="hidden overflow-hidden rounded-lg border border-border bg-card lg:block" aria-label="Every John this week">
           <table className="w-full text-sm">
             <thead>
               <tr className="border-b-2 border-foreground text-left">
                 <th className="w-3 p-0" aria-label="Kind" />
-                <th className="eyebrow px-3 py-2.5">Johh</th>
+                <th className="eyebrow px-3 py-2.5">John</th>
                 <th className="eyebrow px-3 py-2.5">Who</th>
                 <th className="eyebrow px-3 py-2.5">Due</th>
                 <th className="eyebrow px-3 py-2.5 text-right">Pts</th>
@@ -124,7 +124,7 @@ export default async function WeekPage() {
                       {mine && OPEN.has(i.status) ? (
                         <MarkDone assignmentId={i.id} houseId={ctx.house.id} needsPhoto={i.needsPhoto} compact />
                       ) : !mine && i.status === "checking" ? (
-                        <DisputeButton assignmentId={i.id} johh={i.name} owner={names.get(i.userId) ?? ""} />
+                        <DisputeButton assignmentId={i.id} john={i.name} owner={names.get(i.userId) ?? ""} />
                       ) : null}
                     </td>
                   </tr>
@@ -146,7 +146,7 @@ export default async function WeekPage() {
                 </span>
               </h2>
               {p.items.map((i) => (
-                <JohhCard
+                <JohnCard
                   key={i.id}
                   item={i}
                   ownerName={p.name}

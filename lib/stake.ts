@@ -3,8 +3,8 @@ import type { HouseRules, Outcome } from "@/lib/domain";
 /**
  * The Stake.
  *
- * Everyone stakes the same amount each month. Finishing your Johhs keeps it;
- * a late Johh forfeits a little, a missed one more, and nobody can lose more
+ * Everyone stakes the same amount each month. Finishing your Johns keeps it;
+ * a late John forfeits a little, a missed one more, and nobody can lose more
  * than their stake in a month. Whatever is forfeited is shared equally among
  * the rest of the house.
  *
@@ -14,7 +14,7 @@ import type { HouseRules, Outcome } from "@/lib/domain";
  * positive means they are owed. A balance is a sum of entries, never a stored
  * number, and a month's entries always sum to zero.
  *
- *   forfeit     written as each late or missed Johh is settled (negative)
+ *   forfeit     written as each late or missed John is settled (negative)
  *   cap_refund  at month end, gives back anything forfeited beyond the stake
  *   share       at month end, each person's cut of everyone else's forfeits
  *   payment     when a payee confirms money arrived: +payer, −payee
@@ -28,7 +28,7 @@ export interface LedgerEntry {
   amount: number;
 }
 
-/** What one settled Johh costs. */
+/** What one settled John costs. */
 export function forfeitFor(
   outcome: Outcome,
   rules: Pick<HouseRules, "lateForfeitMinor" | "missedForfeitMinor">,

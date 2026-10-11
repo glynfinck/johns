@@ -1,7 +1,7 @@
-# Johhs
+# Johns
 
-A house chore rota with consequences. "Johhs" is what the house calls its
-assigned chores for the week; one chore is a **Johh**.
+A house chore rota with consequences. "Johns" is what the house calls its
+assigned chores for the week; one chore is a **John**.
 
 This is NOT the Next.js you know: v16 has breaking changes. Read
 `node_modules/next/dist/docs/` before writing framework code (see AGENTS.md).
@@ -25,13 +25,13 @@ default size is `min-h-12` (thumb target), Input is `min-h-12`, `FieldLabel`
 is exported from `ui/input.tsx`. `ui/native-select.tsx` was written by hand
 because the registry was unreachable from the session that scaffolded the
 repo; `npx shadcn add native-select` replaces it with the same API. Domain
-components (Avatar initials, StatusChip, the Johh card) stay custom.
+components (Avatar initials, StatusChip, the John card) stay custom.
 
 ## House style: Bin Night
 
 Council signage. Tokens live in `app/globals.css`: pavement and tarmac
 grounds, ink, **hi-vis amber** (`--hivis`) for the one thing to do, **hazard**
-for late and missed, and a bin-lid colour per kind of Johh
+for late and missed, and a bin-lid colour per kind of John
 (`--bin-kitchen`, `--bin-bathroom`, `--bin-bins`, `--bin-floors`,
 `--bin-errands`, `--bin-other`, mirroring `CATEGORIES` in `lib/domain.ts`).
 Never hardcode colours. Headings are uppercase Overpass (Highway Gothic's
@@ -65,7 +65,7 @@ at least 44px; compact controls appear only in the laptop board.
   through named functions (`mark_done`, `undo_done`, `raise_dispute`,
   `cast_vote`, `use_immunity`, `use_swap`, `confirm_payment`,
   `create_house`, `join_house`, `set_member_role`, `remove_member`) or a few
-  column grants (house settings and the Johh list for admins, your own name,
+  column grants (house settings and the John list for admins, your own name,
   reactions, push subscriptions). Refusals raise `42501` (not yours) or
   `P0001` with a short code that `lib/errors.ts` turns into a sentence.
   Server actions in `lib/actions` are thin wrappers: they never decide.
@@ -79,26 +79,26 @@ closes weeks (streaks, perks) and months (the Stake), and sends reminders.
 A page load also catches its own house up (`lib/engine/fresh.ts`, at most
 once a minute, no pushes), so a screen never shows last week and local dev
 needs no cron. Nothing is dealt until an admin presses "Hand out this week's
-Johhs" (`houses.rota_started_at`); a week can be re-dealt while nothing in it
+Johns" (`houses.rota_started_at`); a week can be re-dealt while nothing in it
 has been ticked. Dealing part-way through a week gives anything already due
 a day's grace (`graceDue`).
 
 ## The game
 
-- **Fair shares**: Johhs are dealt so effort points even out, counting each
+- **Fair shares**: Johns are dealt so effort points even out, counting each
   person's carry-over from the last four weeks against their fair share of
-  each; doing the same Johh twice running costs a small penalty.
+  each; doing the same John twice running costs a small penalty.
 - **Housemate check**: a tick stands after `dispute_hours` (default 24)
   unless disputed. Raising a dispute counts as a vote to strike; everyone
   but the ticker votes; a majority decides at once, otherwise the vote closes
-  on time and a tie goes to the tick. Upheld strikes the tick: the Johh is
+  on time and a tie goes to the tick. Upheld strikes the tick: the John is
   open again, and missed if the week has ended.
 - **The Table**: on time earns full points, late half, missed nothing.
-- **Streaks and perks**: a clean week is every Johh on time or excused. Every
+- **Streaks and perks**: a clean week is every John on time or excused. Every
   4 clean weeks in a row earns an immunity token (cap 2), spent to excuse a
-  Johh with no forfeit. Topping a week earns a swap token (cap 1), spent to
-  trade one of your open Johhs for any housemate's open Johh that week.
-- **The Stake**: everyone stakes the same each month. Late and missed Johhs
+  John with no forfeit. Topping a week earns a swap token (cap 1), spent to
+  trade one of your open Johns for any housemate's open John that week.
+- **The Stake**: everyone stakes the same each month. Late and missed Johns
   forfeit fixed amounts, capped at the stake; at month end the forfeits are
   shared equally among everyone else. Money is integer minor units in an
   append-only ledger, from each person's side; balances are sums, a month
@@ -107,7 +107,7 @@ a day's grace (`graceDue`).
 - **The Wall**: `events` rows written by the functions and the engine, with
   reactions and photo receipts.
 
-Words: a chore is a **Johh**; the plural is **Johhs**. The money is **the
+Words: a chore is a **John**; the plural is **Johns**. The money is **the
 Stake**, the standings **the Table**, the feed **the Wall**. Copy never
 says "chore app".
 
@@ -117,10 +117,10 @@ says "chore app".
 currency GBP/CAD/USD/EUR defaulted from Vercel's geo headers, week start,
 stake and forfeits, dispute hours; `join_code` from the CSPRNG) → `members`
 (role admin/member, streak, tokens; one house per person via
-`members_one_house`, dropped when "more than one house" ships) → `johhs` (the
+`members_one_house`, dropped when "more than one house" ships) → `johns` (the
 list: category, points 1–10, every N weeks from `anchor_week`, due day and
 time, needs photo) → `weeks` (unique per house and local start date) →
-`assignments` (a snapshot of the Johh as dealt, `due_at`, `done_at`,
+`assignments` (a snapshot of the John as dealt, `due_at`, `done_at`,
 `photo_path`, `outcome` stamped once final) → `disputes` + `dispute_votes`;
 `ledger` + `month_closes`; `events` + `reactions`; `push_subscriptions`.
 Photos live in the private `proofs` bucket at `<house>/<assignment>/<file>`.

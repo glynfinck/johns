@@ -64,20 +64,20 @@ export default async function TablePage() {
             <div>
               <dt className="font-extrabold">Points</dt>
               <dd className="text-muted-foreground">
-                A Johh done on time earns its points. A late one earns half. A missed one earns nothing.
+                A John done on time earns its points. A late one earns half. A missed one earns nothing.
               </dd>
             </div>
             <div>
               <dt className="font-extrabold">Immunity</dt>
               <dd className="text-muted-foreground">
-                Every {IMMUNITY_EVERY} clean weeks in a row earns a token (hold up to two). Spend one to skip a Johh
+                Every {IMMUNITY_EVERY} clean weeks in a row earns a token (hold up to two). Spend one to skip a John
                 with no forfeit.
               </dd>
             </div>
             <div>
               <dt className="font-extrabold">Swap</dt>
               <dd className="text-muted-foreground">
-                Top the week and you can trade one of your open Johhs for anyone&rsquo;s, once.
+                Top the week and you can trade one of your open Johns for anyone&rsquo;s, once.
               </dd>
             </div>
           </dl>

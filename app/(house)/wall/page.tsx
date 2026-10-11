@@ -27,36 +27,36 @@ type Line = { icon: typeof CheckIcon; text: React.ReactNode; tone?: "good" | "ha
 
 function describe(e: WallEvent, ctx: HouseContext): Line {
   const who = nameOf(ctx, e.userId);
-  const johh = String(e.data.name ?? "a Johh");
+  const john = String(e.data.name ?? "a John");
   const against = nameOf(ctx, (e.data.against as string) ?? null);
   const possessive = (name: string) => (name === "You" ? "your" : `${name}'s`);
   switch (e.kind) {
     case "done":
-      return { icon: CheckIcon, tone: "good", text: <><b>{who}</b> did {johh}.</> };
+      return { icon: CheckIcon, tone: "good", text: <><b>{who}</b> did {john}.</> };
     case "late":
-      return { icon: CheckIcon, text: <><b>{who}</b> did {johh}, late.</> };
+      return { icon: CheckIcon, text: <><b>{who}</b> did {john}, late.</> };
     case "missed":
-      return { icon: XIcon, tone: "hazard", text: <><b>{who}</b> missed {johh}.</> };
+      return { icon: XIcon, tone: "hazard", text: <><b>{who}</b> missed {john}.</> };
     case "disputed":
       return {
         icon: FlagIcon,
         tone: "hazard",
         text: (
           <>
-            <b>{who}</b> disputed {possessive(against)} {johh}: &ldquo;{String(e.data.reason ?? "")}&rdquo;
+            <b>{who}</b> disputed {possessive(against)} {john}: &ldquo;{String(e.data.reason ?? "")}&rdquo;
           </>
         ),
       };
     case "upheld":
-      return { icon: GavelIcon, tone: "hazard", text: <>The house struck {possessive(against)} tick on {johh}. It&rsquo;s open again.</> };
+      return { icon: GavelIcon, tone: "hazard", text: <>The house struck {possessive(against)} tick on {john}. It&rsquo;s open again.</> };
     case "rejected":
-      return { icon: GavelIcon, tone: "good", text: <>The house backed {possessive(against)} {johh}. The tick stands.</> };
+      return { icon: GavelIcon, tone: "good", text: <>The house backed {possessive(against)} {john}. The tick stands.</> };
     case "immunity_earned":
       return { icon: ShieldIcon, tone: "hivis", text: <><b>{who}</b> earned an immunity token: {String(e.data.streak)} clean weeks in a row.</> };
     case "swap_earned":
       return { icon: RepeatIcon, tone: "hivis", text: <><b>{who}</b> topped the week and earned a swap.</> };
     case "immunity_used":
-      return { icon: ShieldIcon, text: <><b>{who}</b> spent immunity on {johh}.</> };
+      return { icon: ShieldIcon, text: <><b>{who}</b> spent immunity on {john}.</> };
     case "swap_used":
       return {
         icon: RepeatIcon,
@@ -131,7 +131,7 @@ export default async function WallPage() {
                       // eslint-disable-next-line @next/next/no-img-element -- a signed, short-lived URL: nothing for the optimiser to cache
                       <img
                         src={e.photoUrl}
-                        alt={`Photo of ${String(e.data.name ?? "the Johh")}`}
+                        alt={`Photo of ${String(e.data.name ?? "the John")}`}
                         className="mt-3 max-h-96 w-full rounded-md border border-border object-cover"
                         loading="lazy"
                       />

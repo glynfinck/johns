@@ -43,7 +43,7 @@ export interface WeekBoard {
   notStarted: boolean;
 }
 
-/** This week's board: every Johh, its live status, and any dispute on it. */
+/** This week's board: every John, its live status, and any dispute on it. */
 export async function getWeekBoard(ctx: HouseContext): Promise<WeekBoard> {
   const { supabase, house, rules, now } = ctx;
   const window = weekWindow(now, rules.timezone, rules.weekStarts);
@@ -124,7 +124,7 @@ export async function getWeekBoard(ctx: HouseContext): Promise<WeekBoard> {
   };
 }
 
-/** This month's table: every Johh due in the month so far, settled or live. */
+/** This month's table: every John due in the month so far, settled or live. */
 export async function getMonthTable(ctx: HouseContext) {
   const { supabase, house, rules, now } = ctx;
   const month = monthOf(now, rules.timezone);

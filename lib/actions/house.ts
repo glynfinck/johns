@@ -99,9 +99,9 @@ export async function updateHouse(input: z.input<typeof Settings>): Promise<Outc
 }
 
 /**
- * Hand out this week's Johhs. The first time, it starts the rota; after
+ * Hand out this week's Johns. The first time, it starts the rota; after
  * that it re-deals the week, which deal_week only allows while nothing in it
- * has been ticked (someone new moved in, a Johh was added).
+ * has been ticked (someone new moved in, a John was added).
  */
 export async function dealThisWeek(): Promise<Outcome> {
   const ctx = await myHouse();
@@ -112,7 +112,7 @@ export async function dealThisWeek(): Promise<Outcome> {
   const week = weekWindow(now, house.timezone, house.week_starts as IsoDow);
   try {
     const { weekId } = await dealWeek(admin, house, members, week, now, true);
-    if (!weekId) return { error: "Add at least one Johh first." };
+    if (!weekId) return { error: "Add at least one John first." };
   } catch (e) {
     return { error: humanError({ message: e instanceof Error ? e.message : String(e) }) };
   }
@@ -140,9 +140,9 @@ export async function removeMember(userId: string): Promise<Outcome> {
   refresh();
 }
 
-const JohhInput = z.object({
+const JohnInput = z.object({
   id: z.string().uuid().optional(),
-  name: z.string().trim().min(1, "Name the Johh.").max(60),
+  name: z.string().trim().min(1, "Name the John.").max(60),
   category: z.enum(CATEGORIES),
   points: z.coerce.number().int().min(1).max(10),
   everyWeeks: z.coerce.number().int().min(1).max(4),
@@ -151,8 +151,8 @@ const JohhInput = z.object({
   needsPhoto: z.boolean(),
 });
 
-export async function saveJohh(input: z.input<typeof JohhInput>): Promise<Outcome> {
-  const parsed = JohhInput.safeParse(input);
+export async function saveJohn(input: z.input<typeof JohnInput>): Promise<Outcome> {
+  const parsed = JohnInput.safeParse(input);
   if (!parsed.success) return { error: parsed.error.issues[0].message };
   const ctx = await myHouse();
   if (!ctx?.isAdmin) return { error: humanError({ message: "admins_only" }) };
@@ -167,8 +167,8 @@ export async function saveJohh(input: z.input<typeof JohhInput>): Promise<Outcom
     needs_photo: j.needsPhoto,
   };
   const { error } = j.id
-    ? await ctx.supabase.from("johhs").update(fields).eq("id", j.id).eq("house_id", ctx.house.id)
-    : await ctx.supabase.from("johhs").insert({
+    ? await ctx.supabase.from("johns").update(fields).eq("id", j.id).eq("house_id", ctx.house.id)
+    : await ctx.supabase.from("johns").insert({
         ...fields,
         house_id: ctx.house.id,
         anchor_week: weekIndex(weekWindow(new Date(), ctx.house.timezone, ctx.house.week_starts as IsoDow).startsOn),
@@ -177,11 +177,11 @@ export async function saveJohh(input: z.input<typeof JohhInput>): Promise<Outcom
   refresh();
 }
 
-export async function archiveJohh(id: string): Promise<Outcome> {
+export async function archiveJohn(id: string): Promise<Outcome> {
   const ctx = await myHouse();
   if (!ctx?.isAdmin) return { error: humanError({ message: "admins_only" }) };
   const { error } = await ctx.supabase
-    .from("johhs")
+    .from("johns")
     .update({ archived_at: new Date().toISOString() })
     .eq("id", id)
     .eq("house_id", ctx.house.id);

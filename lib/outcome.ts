@@ -1,7 +1,7 @@
 import type { Outcome } from "@/lib/domain";
 
 /**
- * When a Johh's result becomes final, and what it is.
+ * When a John's result becomes final, and what it is.
  *
  * A tick does not count the moment it is made: it stands once the dispute
  * window has passed with no dispute open. The engine calls `settleOutcome`
@@ -40,7 +40,7 @@ export function settleOutcome(
   return null;
 }
 
-/** What a screen shows for a Johh right now. */
+/** What a screen shows for a John right now. */
 export type LiveStatus =
   | "upcoming" // not done, due more than a day away
   | "due-soon" // not done, due within a day

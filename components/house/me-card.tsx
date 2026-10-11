@@ -9,7 +9,7 @@ import { Button } from "@/components/ui/button";
 import { FieldLabel, Input } from "@/components/ui/input";
 import { useAction } from "@/hooks/use-action";
 import { removeMember, renameMe, signOut } from "@/lib/actions/house";
-import { removePushSubscription, savePushSubscription } from "@/lib/actions/johhs";
+import { removePushSubscription, savePushSubscription } from "@/lib/actions/johns";
 import { cn } from "@/lib/utils";
 
 const subscribe = () => () => {};
@@ -50,7 +50,7 @@ function PushToggle({ vapidKey }: { vapidKey: string }) {
   if (!supported) {
     return (
       <p className="text-sm text-muted-foreground">
-        Reminders need a browser that supports notifications. On iPhone, add Johhs to your home screen first.
+        Reminders need a browser that supports notifications. On iPhone, add Johns to your home screen first.
       </p>
     );
   }

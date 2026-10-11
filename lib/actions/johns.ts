@@ -11,7 +11,7 @@ import { createClient } from "@/lib/supabase/server";
 export type Outcome = { error?: string } | void;
 
 /**
- * The housemate's moves on a Johh. Each one is a single call to the SQL
+ * The housemate's moves on a John. Each one is a single call to the SQL
  * function that owns the rule (supabase/migrations): these wrappers only
  * translate refusals into sentences and refresh the screen.
  */

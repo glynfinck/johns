@@ -3,8 +3,8 @@ import type { Metadata } from "next";
 import Link from "next/link";
 
 import { InviteCard } from "@/components/house/invite-card";
-import { JohhCard } from "@/components/johhs/johh-card";
-import { NotDealt } from "@/components/johhs/not-dealt";
+import { JohnCard } from "@/components/johns/john-card";
+import { NotDealt } from "@/components/johns/not-dealt";
 import { PageHeader } from "@/components/shell/app-shell";
 import { Standings } from "@/components/table/standings";
 import { SITE_URL } from "@/lib/config";
@@ -47,7 +47,7 @@ export default async function TodayPage() {
     <div className="mx-auto max-w-6xl">
       <PageHeader
         eyebrow={board.week ? `This week · ${weekRange(board.week.startsAt, board.week.endsAt, rules.timezone)}` : "This week"}
-        title="Your Johhs"
+        title="Your Johns"
       />
 
       {!board.week ? (
@@ -62,11 +62,11 @@ export default async function TodayPage() {
               aria-label="Your week"
               className="flex items-center gap-4 rounded-lg border border-l-[10px] border-border border-l-hivis bg-card p-4"
             >
-              <span className="text-[52px] leading-none font-black tabular" data-testid="johhs-left">
+              <span className="text-[52px] leading-none font-black tabular" data-testid="johns-left">
                 {left}
               </span>
               <div className="min-w-0 flex-1">
-                <div className="font-extrabold">{left === 1 ? "Johh left this week" : "Johhs left this week"}</div>
+                <div className="font-extrabold">{left === 1 ? "John left this week" : "Johns left this week"}</div>
                 <div className="mt-2 flex gap-1" aria-hidden>
                   {mine.map((i) => (
                     <span key={i.id} className={`h-1.5 w-7 rounded-sm ${isOpen(i) ? "bg-secondary" : "bg-good"}`} />
@@ -95,7 +95,7 @@ export default async function TodayPage() {
               <section className="flex flex-col gap-3">
                 <h2 className="eyebrow">The house wants your vote</h2>
                 {toVote.map((i) => (
-                  <JohhCard
+                  <JohnCard
                     key={i.id}
                     item={i}
                     ownerName={names.get(i.userId) ?? "Someone"}
@@ -117,7 +117,7 @@ export default async function TodayPage() {
                 </p>
               ) : (
                 mine.map((i) => (
-                  <JohhCard
+                  <JohnCard
                     key={i.id}
                     item={i}
                     ownerName="You"

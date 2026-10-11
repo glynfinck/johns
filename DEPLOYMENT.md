@@ -1,4 +1,4 @@
-# Deploying Johhs
+# Deploying Johns
 
 The same arrangement as Pub Golf: Vercel's git integration builds the app,
 Supabase's GitHub integration applies the migrations, and CI only proves.
@@ -22,8 +22,8 @@ additive and readable by the code already deployed.
    secret (the same value as the app's `CRON_SECRET`):
 
    ```sql
-   select vault.create_secret('https://johhs.glyn.dev/api/cron/tick', 'johhs_tick_url');
-   select vault.create_secret('<CRON_SECRET>', 'johhs_tick_secret');
+   select vault.create_secret('https://johns.glyn.dev/api/cron/tick', 'johns_tick_url');
+   select vault.create_secret('<CRON_SECRET>', 'johns_tick_secret');
    ```
 
    Until both exist the cron job does nothing (pages still catch their own
@@ -35,11 +35,11 @@ additive and readable by the code already deployed.
 1. Google Cloud Console: an OAuth client (Web application). Authorised
    redirect URI: `https://<project-ref>.supabase.co/auth/v1/callback`.
 2. Supabase **Authentication → Sign In / Providers → Google**: paste the
-   client ID and secret. Leave email sign-up **off** in production: Johhs is
+   client ID and secret. Leave email sign-up **off** in production: Johns is
    Google-only.
 3. **Authentication → URL Configuration:** Site URL
-   `https://johhs.glyn.dev`; redirect URLs `https://johhs.glyn.dev/**` and,
-   for PR previews, `https://johhs-*-<team>.vercel.app/**`.
+   `https://johns.glyn.dev`; redirect URLs `https://johns.glyn.dev/**` and,
+   for PR previews, `https://johns-*-<team>.vercel.app/**`.
 4. Opening the app beyond your own house later means Google brand
    verification: the landing page at `/` already carries the name, the
    purpose and the privacy link it checks for.
@@ -54,7 +54,7 @@ variables for Production (and Preview, pointing at the preview project):
 | `NEXT_PUBLIC_SUPABASE_URL` | `https://<project-ref>.supabase.co` |
 | `NEXT_PUBLIC_SUPABASE_ANON_KEY` | the project's anon/publishable key |
 | `SUPABASE_SERVICE_ROLE_KEY` | the service role key (server only) |
-| `NEXT_PUBLIC_SITE_URL` | `https://johhs.glyn.dev` |
+| `NEXT_PUBLIC_SITE_URL` | `https://johns.glyn.dev` |
 | `CRON_SECRET` | a long random string, also in the Vault secret above |
 | `NEXT_PUBLIC_VAPID_PUBLIC_KEY`, `VAPID_PRIVATE_KEY` | from `npm run vapid`, once per environment |
 | `VAPID_SUBJECT` | `mailto:` an address you read |
@@ -64,7 +64,7 @@ new house's currency and time zone need nothing configured.
 
 ### 4. Domain
 
-Add `johhs.glyn.dev` to the Vercel project and a CNAME at the DNS host.
+Add `johns.glyn.dev` to the Vercel project and a CNAME at the DNS host.
 
 ## Day to day
 
@@ -72,5 +72,5 @@ Add `johhs.glyn.dev` to the Vercel project and a CNAME at the DNS host.
 - Merging to `main` deploys both halves. A migration that drops or renames
   anything the running code reads is an outage for the minute the deploys
   take; split it into an additive step and a later cleanup.
-- `TICK_URL=https://johhs.glyn.dev/api/cron/tick CRON_SECRET=… npm run tick`
+- `TICK_URL=https://johns.glyn.dev/api/cron/tick CRON_SECRET=… npm run tick`
   runs the clock by hand.

@@ -3,8 +3,8 @@
 --
 -- A private bucket. Objects live at `<house_id>/<assignment_id>/<file>`, and
 -- the path is the whole of the access rule: housemates read anything under
--- their house, and only the person holding an open Johh may upload under it.
--- mark_done refuses a photo path outside that Johh's folder, so a receipt
+-- their house, and only the person holding an open John may upload under it.
+-- mark_done refuses a photo path outside that John's folder, so a receipt
 -- cannot be borrowed from someone else's tick.
 -- ---------------------------------------------------------------------------
 
@@ -59,7 +59,7 @@ create policy "housemates see proofs" on storage.objects
   for select to authenticated
   using (bucket_id = 'proofs' and public.is_member(public.proof_house(name)));
 
-create policy "upload a proof for your own Johh" on storage.objects
+create policy "upload a proof for your own John" on storage.objects
   for insert to authenticated
   with check (bucket_id = 'proofs' and public.can_upload_proof(name));
 

@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 
 import { adminClient, signedInUser, visitor } from "@/tests/support/clients";
 import { expectDenied, expectOk, expectRule } from "@/tests/support/expect";
-import { addJohhs, deal, makeHouse, reread, thisWeek } from "@/tests/support/factories";
+import { addJohns, deal, makeHouse, reread, thisWeek } from "@/tests/support/factories";
 
 /**
  * Who can see and touch a house. RLS is the only real enforcement: the app's
@@ -11,7 +11,7 @@ import { addJohhs, deal, makeHouse, reread, thisWeek } from "@/tests/support/fac
  */
 
 const TABLES = [
-  "profiles", "houses", "members", "johhs", "weeks", "assignments", "disputes",
+  "profiles", "houses", "members", "johns", "weeks", "assignments", "disputes",
   "dispute_votes", "ledger", "month_closes", "events", "reactions", "push_subscriptions",
 ] as const;
 
@@ -32,10 +32,10 @@ describe("a signed-out visitor", () => {
 describe("someone outside the house", () => {
   it("sees none of it", async () => {
     const house = await makeHouse();
-    await addJohhs(house.id, [{ name: "Bins" }], thisWeek());
+    await addJohns(house.id, [{ name: "Bins" }], thisWeek());
     await deal(house.id, thisWeek(), new Date());
     const outsider = await signedInUser("Nosy");
-    for (const table of ["houses", "members", "johhs", "weeks", "assignments", "events", "ledger"] as const) {
+    for (const table of ["houses", "members", "johns", "weeks", "assignments", "events", "ledger"] as const) {
       const { data, error } = await outsider.db.from(table).select("*");
       expect(error).toBeNull();
       expect(data, table).toEqual([]);
@@ -84,7 +84,7 @@ describe("a housemate", () => {
 
   it("cannot write the tables directly", async () => {
     const house = await makeHouse();
-    await addJohhs(house.id, [{ name: "Bins" }], thisWeek());
+    await addJohns(house.id, [{ name: "Bins" }], thisWeek());
     const { assignments } = await deal(house.id, thisWeek(), new Date());
     const mine = assignments.find((a) => a.user_id === house.members[0].userId) ?? assignments[0];
     const me = house.everyone.find((a) => a.userId === mine.user_id)!;
@@ -150,11 +150,11 @@ describe("a housemate", () => {
     expectRule(res, "unknown_timezone");
   });
 
-  it("can only add Johhs as an admin", async () => {
+  it("can only add Johns as an admin", async () => {
     const house = await makeHouse();
     const row = { house_id: house.id, name: "Mop", anchor_week: 0 };
-    expectDenied(await house.members[0].db.from("johhs").insert(row));
-    expectOk(await house.admin.db.from("johhs").insert(row));
+    expectDenied(await house.members[0].db.from("johns").insert(row));
+    expectOk(await house.admin.db.from("johns").insert(row));
   });
 });
 

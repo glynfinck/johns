@@ -43,7 +43,7 @@ export type Database = {
           excused: boolean
           house_id: string
           id: string
-          johh_id: string | null
+          john_id: string | null
           name: string
           needs_photo: boolean
           outcome: string | null
@@ -62,7 +62,7 @@ export type Database = {
           excused?: boolean
           house_id: string
           id?: string
-          johh_id?: string | null
+          john_id?: string | null
           name: string
           needs_photo?: boolean
           outcome?: string | null
@@ -81,7 +81,7 @@ export type Database = {
           excused?: boolean
           house_id?: string
           id?: string
-          johh_id?: string | null
+          john_id?: string | null
           name?: string
           needs_photo?: boolean
           outcome?: string | null
@@ -101,10 +101,10 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
-            foreignKeyName: "assignments_johh_id_fkey"
-            columns: ["johh_id"]
+            foreignKeyName: "assignments_john_id_fkey"
+            columns: ["john_id"]
             isOneToOne: false
-            referencedRelation: "johhs"
+            referencedRelation: "johns"
             referencedColumns: ["id"]
           },
           {
@@ -323,7 +323,7 @@ export type Database = {
         }
         Relationships: []
       }
-      johhs: {
+      johns: {
         Row: {
           anchor_week: number
           archived_at: string | null
@@ -368,7 +368,7 @@ export type Database = {
         }
         Relationships: [
           {
-            foreignKeyName: "johhs_house_id_fkey"
+            foreignKeyName: "johns_house_id_fkey"
             columns: ["house_id"]
             isOneToOne: false
             referencedRelation: "houses"
@@ -709,7 +709,7 @@ export type Database = {
           excused: boolean
           house_id: string
           id: string
-          johh_id: string | null
+          john_id: string | null
           name: string
           needs_photo: boolean
           outcome: string | null

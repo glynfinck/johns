@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 
 import { InviteCard } from "@/components/house/invite-card";
-import { JohhList, type JohhDef } from "@/components/house/johh-list";
+import { JohnList, type JohnDef } from "@/components/house/john-list";
 import { MeCard } from "@/components/house/me-card";
 import { MembersList } from "@/components/house/members-list";
 import { SettingsForm } from "@/components/house/settings-form";
@@ -26,12 +26,12 @@ export default async function HousePage() {
   const ctx = await requireHouse();
   const { supabase, house, rules } = ctx;
   const { data: rows } = await supabase
-    .from("johhs")
+    .from("johns")
     .select("id, name, category, points, every_weeks, due_dow, due_time, needs_photo")
     .eq("house_id", house.id)
     .is("archived_at", null)
     .order("created_at");
-  const johhs: JohhDef[] = (rows ?? []).map((j) => ({
+  const johns: JohnDef[] = (rows ?? []).map((j) => ({
     id: j.id,
     name: j.name,
     category: j.category as Category,
@@ -47,13 +47,13 @@ export default async function HousePage() {
       <PageHeader eyebrow="Settings" title={house.name} />
       <div className="grid gap-5 lg:grid-cols-[minmax(0,1fr)_380px]">
         <div className="flex min-w-0 flex-col gap-5">
-          <Panel id="johhs" title="The Johh list">
-            <JohhList johhs={johhs} editable={ctx.isAdmin} />
-            {ctx.isAdmin && johhs.length > 0 ? (
+          <Panel id="johns" title="The John list">
+            <JohnList johns={johns} editable={ctx.isAdmin} />
+            {ctx.isAdmin && johns.length > 0 ? (
               <div className="mt-5 border-t border-border pt-4">
                 <p className="mb-3 text-sm text-muted-foreground">
                   {house.rota_started_at
-                    ? "Re-deal this week to include new Johhs or housemates. Only works while nothing this week has been ticked."
+                    ? "Re-deal this week to include new Johns or housemates. Only works while nothing this week has been ticked."
                     : "When the list is ready and the house has joined, hand out the first week."}
                 </p>
                 <DealButton started={Boolean(house.rota_started_at)} />

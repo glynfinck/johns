@@ -11,12 +11,12 @@ const POINTS = [
   {
     Icon: ShuffleIcon,
     title: "A fair rota, dealt for you",
-    body: "Every Johh has an effort score. Each week the app shares them out so the effort evens up over the month, and the bathroom moves around.",
+    body: "Every John has an effort score. Each week the app shares them out so the effort evens up over the month, and the bathroom moves around.",
   },
   {
     Icon: CoinsIcon,
     title: "The Stake",
-    body: "Everyone stakes the same each month. Miss a Johh and part of yours goes to the people who didn't.",
+    body: "Everyone stakes the same each month. Miss a John and part of yours goes to the people who didn't.",
   },
   {
     Icon: MessagesSquareIcon,
@@ -43,7 +43,7 @@ export default async function Home() {
         <span aria-hidden className="hazard-tape absolute inset-x-0 top-0 h-2" />
         <p className="eyebrow">For houses that share a bin</p>
         <h1 className="mt-3 max-w-2xl text-[40px] leading-[0.95] font-black tracking-tight text-balance uppercase sm:text-6xl">
-          Johhs: who&rsquo;s on what this week.
+          Johns: who&rsquo;s on what this week.
         </h1>
         <p className="mt-4 max-w-xl text-lg text-muted-foreground">{TAGLINE}</p>
         <div className="mt-7 flex flex-wrap gap-3">
@@ -67,7 +67,7 @@ export default async function Home() {
       </section>
 
       <footer className="mt-auto flex gap-4 pt-12 text-xs text-muted-foreground">
-        <span>Johhs</span>
+        <span>Johns</span>
         <Link href="/privacy" className="underline-offset-2 hover:underline">
           Privacy
         </Link>

@@ -10,7 +10,7 @@ export default function NotFound() {
       <h1 className="text-2xl font-black uppercase">Nothing here</h1>
       <p className="text-muted-foreground">That page isn&rsquo;t on the rota.</p>
       <Button asChild className="self-start">
-        <Link href="/">Back to your Johhs</Link>
+        <Link href="/">Back to your Johns</Link>
       </Button>
     </main>
   );

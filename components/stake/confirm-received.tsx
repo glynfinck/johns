@@ -4,7 +4,7 @@ import { BanknoteIcon } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import { useAction } from "@/hooks/use-action";
-import { confirmPayment } from "@/lib/actions/johhs";
+import { confirmPayment } from "@/lib/actions/johns";
 
 /** Only the person owed can say the money arrived. */
 export function ConfirmReceived({

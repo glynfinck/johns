@@ -1,9 +1,9 @@
 ---
 name: verify
-description: Build, run and drive the Johhs app (Next.js + local Supabase) to verify a change end-to-end.
+description: Build, run and drive the Johns app (Next.js + local Supabase) to verify a change end-to-end.
 ---
 
-# Verifying Johhs changes
+# Verifying Johns changes
 
 ## Run
 

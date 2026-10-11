@@ -4,7 +4,7 @@ import { tickHouse } from "@/lib/engine/tick";
 import { monthOf, nextWeek } from "@/lib/week";
 import { adminClient } from "@/tests/support/clients";
 import { expectOk } from "@/tests/support/expect";
-import { actorFor, addJohhs, deal, makeHouse, someoneElse, thisWeek, weeksAgo, ZONE } from "@/tests/support/factories";
+import { actorFor, addJohns, deal, makeHouse, someoneElse, thisWeek, weeksAgo, ZONE } from "@/tests/support/factories";
 
 /**
  * The clock, driven by hand. The engine takes `now` as an argument, so a
@@ -24,7 +24,7 @@ async function ledgerOf(houseId: string) {
 describe("dealing", () => {
   it("deals nothing until the rota is started, then deals the current week once", async () => {
     const house = await makeHouse();
-    await addJohhs(house.id, [{ name: "Bins" }, { name: "Bathroom", points: 4 }], thisWeek());
+    await addJohns(house.id, [{ name: "Bins" }, { name: "Bathroom", points: 4 }], thisWeek());
     const now = new Date();
 
     expect((await tickHouse(db, house.id, now)).dealt).toBeNull();
@@ -39,19 +39,19 @@ describe("dealing", () => {
     expect(data).toHaveLength(2);
   });
 
-  it("never deals a Johh that is already overdue", async () => {
+  it("never deals a John that is already overdue", async () => {
     const house = await makeHouse();
     const week = thisWeek();
-    await addJohhs(house.id, [{ name: "Monday bins", dueDow: 1, dueTime: "07:00" }], week);
+    await addJohns(house.id, [{ name: "Monday bins", dueDow: 1, dueTime: "07:00" }], week);
     const now = new Date();
     const { assignments } = await deal(house.id, week, now);
     expect(new Date(assignments[0].due_at).getTime()).toBeGreaterThan(now.getTime());
   });
 
-  it("only deals a fortnightly Johh in its weeks", async () => {
+  it("only deals a fortnightly John in its weeks", async () => {
     const house = await makeHouse();
     const week = weeksAgo(3);
-    await addJohhs(house.id, [{ name: "Fridge", everyWeeks: 2 }, { name: "Bins" }], week);
+    await addJohns(house.id, [{ name: "Fridge", everyWeeks: 2 }, { name: "Bins" }], week);
     const first = await deal(house.id, week, week.startsAt);
     expect(first.assignments.map((a) => a.name).sort()).toEqual(["Bins", "Fridge"]);
     const following = nextWeek(week, ZONE, 1);
@@ -64,12 +64,12 @@ describe("settling a week", () => {
   async function pastWeek() {
     const house = await makeHouse(["Ava", "Ben"]);
     const week = weeksAgo(2);
-    await addJohhs(house.id, [{ name: "Bins", points: 2 }, { name: "Bathroom", points: 4 }], week);
+    await addJohns(house.id, [{ name: "Bins", points: 2 }, { name: "Bathroom", points: 4 }], week);
     const { weekId, assignments } = await deal(house.id, week, week.startsAt);
     return { house, week, weekId, assignments };
   }
 
-  it("calls an untouched Johh missed and fines it, once", async () => {
+  it("calls an untouched John missed and fines it, once", async () => {
     const { house, week, assignments } = await pastWeek();
     const after = new Date(week.endsAt.getTime() + DAY);
     await tickHouse(db, house.id, after);
@@ -126,9 +126,9 @@ describe("settling a week", () => {
 });
 
 describe("disputes, decided by the tick", () => {
-  it("strikes an upheld tick, so the Johh is open again", async () => {
+  it("strikes an upheld tick, so the John is open again", async () => {
     const house = await makeHouse(["Ava", "Ben", "Cal"]);
-    await addJohhs(house.id, [{ name: "Bathroom", points: 4 }], thisWeek());
+    await addJohns(house.id, [{ name: "Bathroom", points: 4 }], thisWeek());
     const { assignments } = await deal(house.id, thisWeek(), new Date());
     const a = assignments[0];
     const owner = actorFor(house, a.user_id);
@@ -147,7 +147,7 @@ describe("disputes, decided by the tick", () => {
 
   it("decides at once in a house of two, where raising it is the majority", async () => {
     const house = await makeHouse(["Ava", "Ben"]);
-    await addJohhs(house.id, [{ name: "Bins" }, { name: "Bathroom", points: 4 }], thisWeek());
+    await addJohns(house.id, [{ name: "Bins" }, { name: "Bathroom", points: 4 }], thisWeek());
     const { assignments } = await deal(house.id, thisWeek(), new Date());
     const a = assignments[0];
     await actorFor(house, a.user_id).db.rpc("mark_done", { p_assignment: a.id });
@@ -164,7 +164,7 @@ describe("disputes, decided by the tick", () => {
 
   it("lets a tick stand when the house sides with it", async () => {
     const house = await makeHouse(["Ava", "Ben", "Cal"]);
-    await addJohhs(house.id, [{ name: "Bins" }], thisWeek());
+    await addJohns(house.id, [{ name: "Bins" }], thisWeek());
     const { assignments } = await deal(house.id, thisWeek(), new Date());
     const a = assignments[0];
     await actorFor(house, a.user_id).db.rpc("mark_done", { p_assignment: a.id });
@@ -183,7 +183,7 @@ describe("closing the month", () => {
   it("shares the forfeits, sums to zero, and only happens once", async () => {
     const house = await makeHouse(["Ava", "Ben", "Cal"]);
     const week = weeksAgo(6);
-    await addJohhs(house.id, [{ name: "Bins", points: 2 }], week);
+    await addJohns(house.id, [{ name: "Bins", points: 2 }], week);
     const { assignments } = await deal(house.id, week, week.startsAt);
     const a = assignments[0];
     const month = monthOf(new Date(a.due_at), ZONE);
@@ -204,7 +204,7 @@ describe("closing the month", () => {
   it("survives two ticks racing each other", async () => {
     const house = await makeHouse(["Ava", "Ben"]);
     const week = weeksAgo(6);
-    await addJohhs(house.id, [{ name: "Bins" }, { name: "Hob", points: 3 }], week);
+    await addJohns(house.id, [{ name: "Bins" }, { name: "Hob", points: 3 }], week);
     await deal(house.id, week, week.startsAt);
     const later = new Date(week.endsAt.getTime() + 40 * DAY);
     // The race is the point here, so these really do run at once.

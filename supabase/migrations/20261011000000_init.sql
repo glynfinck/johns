@@ -1,5 +1,5 @@
 -- ---------------------------------------------------------------------------
--- Johhs: the house, its Johhs, the weekly rota, the Stake and the Wall.
+-- Johns: the house, its Johns, the weekly rota, the Stake and the Wall.
 --
 -- The access model, stated once:
 --
@@ -9,7 +9,7 @@
 --     which checks who is calling and what state the row is in. The tables
 --     themselves grant `authenticated` nothing but SELECT, plus a few column
 --     grants where a plain update is the honest shape (house settings, the
---     Johh list, your own name, reactions, push subscriptions).
+--     John list, your own name, reactions, push subscriptions).
 --   * The clock's work (handing out the rota, settling outcomes, closing
 --     weeks and months) is decided in TypeScript (lib/engine) and applied by
 --     service-role-only functions that are idempotent and atomic, so two
@@ -90,7 +90,7 @@ create table public.houses (
   missed_forfeit_minor integer not null default 300 check (missed_forfeit_minor between 0 and 100000),
   dispute_hours smallint not null default 24 check (dispute_hours between 0 and 72),
   -- Null until an admin hands out the first week. Nothing is dealt before
-  -- then, so a house can add its Johhs and its people first.
+  -- then, so a house can add its Johns and its people first.
   rota_started_at timestamptz,
   -- When the engine last caught this house up (lib/engine/tick.ts).
   ticked_at timestamptz,
@@ -172,9 +172,9 @@ as $$
   );
 $$;
 
--- --- Johhs (the house's list) -------------------------------------------------
+-- --- Johns (the house's list) -------------------------------------------------
 
-create table public.johhs (
+create table public.johns (
   id uuid primary key default gen_random_uuid(),
   house_id uuid not null references public.houses (id) on delete cascade,
   name text not null check (char_length(btrim(name)) between 1 and 60),
@@ -183,7 +183,7 @@ create table public.johhs (
   points smallint not null default 2 check (points between 1 and 10),
   every_weeks smallint not null default 1 check (every_weeks between 1 and 4),
   -- lib/week.ts weekIndex of the first week it is due; with every_weeks it
-  -- decides which weeks a fortnightly Johh lands in.
+  -- decides which weeks a fortnightly John lands in.
   anchor_week integer not null,
   due_dow smallint not null default 7 check (due_dow between 1 and 7),
   due_time time not null default '21:00',
@@ -192,7 +192,7 @@ create table public.johhs (
   created_at timestamptz not null default now()
 );
 
-create index johhs_house on public.johhs (house_id) where archived_at is null;
+create index johns_house on public.johns (house_id) where archived_at is null;
 
 -- --- Weeks and assignments ---------------------------------------------------
 
@@ -211,9 +211,9 @@ create table public.assignments (
   id uuid primary key default gen_random_uuid(),
   week_id uuid not null references public.weeks (id) on delete cascade,
   house_id uuid not null references public.houses (id) on delete cascade,
-  johh_id uuid references public.johhs (id) on delete set null,
+  john_id uuid references public.johns (id) on delete set null,
   user_id uuid not null references public.profiles (id) on delete cascade,
-  -- Snapshot of the Johh as it was dealt: editing the list later never
+  -- Snapshot of the John as it was dealt: editing the list later never
   -- rewrites a week that already happened.
   name text not null,
   category text not null,
@@ -234,7 +234,7 @@ create table public.assignments (
 create index assignments_week on public.assignments (week_id);
 create index assignments_house_open on public.assignments (house_id) where outcome is null;
 create index assignments_user on public.assignments (user_id);
-create index assignments_johh on public.assignments (johh_id, due_at desc);
+create index assignments_john on public.assignments (john_id, due_at desc);
 
 -- --- Disputes ------------------------------------------------------------------
 
@@ -244,7 +244,7 @@ create table public.disputes (
   house_id uuid not null references public.houses (id) on delete cascade,
   raised_by uuid references public.profiles (id) on delete set null,
   reason text not null check (char_length(btrim(reason)) between 1 and 280),
-  -- The tick being disputed. One dispute per tick: a re-done Johh is a new tick.
+  -- The tick being disputed. One dispute per tick: a re-done John is a new tick.
   tick_at timestamptz not null,
   closes_at timestamptz not null,
   resolution text check (resolution in ('upheld', 'rejected')),
@@ -335,7 +335,7 @@ create table public.push_subscriptions (
 alter table public.profiles enable row level security;
 alter table public.houses enable row level security;
 alter table public.members enable row level security;
-alter table public.johhs enable row level security;
+alter table public.johns enable row level security;
 alter table public.weeks enable row level security;
 alter table public.assignments enable row level security;
 alter table public.disputes enable row level security;
@@ -362,11 +362,11 @@ create policy "admins change the house" on public.houses
 create policy "members see each other" on public.members
   for select to authenticated using (public.is_member(house_id));
 
-create policy "members see the list" on public.johhs
+create policy "members see the list" on public.johns
   for select to authenticated using (public.is_member(house_id));
-create policy "admins add Johhs" on public.johhs
+create policy "admins add Johns" on public.johns
   for insert to authenticated with check (public.is_admin(house_id));
-create policy "admins edit Johhs" on public.johhs
+create policy "admins edit Johns" on public.johns
   for update to authenticated
   using (public.is_admin(house_id)) with check (public.is_admin(house_id));
 
@@ -556,7 +556,7 @@ declare
 begin
   select * into a from public.assignments where id = p_assignment for update;
   if a.id is null or a.user_id <> (select auth.uid()) then
-    raise exception 'not_your_johh' using errcode = '42501';
+    raise exception 'not_your_john' using errcode = '42501';
   end if;
   if a.outcome is not null then
     raise exception 'already_settled';
@@ -636,7 +636,7 @@ begin
     raise exception 'not_in_house' using errcode = '42501';
   end if;
   if a.user_id = me then
-    raise exception 'own_johh' using errcode = '42501';
+    raise exception 'own_john' using errcode = '42501';
   end if;
   select * into h from public.houses where id = a.house_id;
   if a.done_at is null or a.outcome is not null
@@ -677,7 +677,7 @@ begin
   end if;
   select user_id into assignee from public.assignments where id = d.assignment_id;
   if assignee = me then
-    raise exception 'own_johh' using errcode = '42501';
+    raise exception 'own_john' using errcode = '42501';
   end if;
   if d.resolution is not null or now() >= d.closes_at then
     raise exception 'vote_closed';
@@ -688,7 +688,7 @@ begin
 end;
 $$;
 
--- Spend an immunity token: the Johh is excused, with no forfeit and no points.
+-- Spend an immunity token: the John is excused, with no forfeit and no points.
 create function public.use_immunity(p_assignment uuid)
 returns void
 language plpgsql
@@ -713,8 +713,8 @@ begin
 end;
 $$;
 
--- Spend a swap token: trade one of your open Johhs for a housemate's open
--- Johh in the same week. The perk for topping the table.
+-- Spend a swap token: trade one of your open Johns for a housemate's open
+-- John in the same week. The perk for topping the table.
 create function public.use_swap(p_mine uuid, p_theirs uuid)
 returns void
 language plpgsql
@@ -768,7 +768,7 @@ begin
   end if;
   -- One payment at a time per house, so two confirmations cannot both fit
   -- under the same balance.
-  perform pg_advisory_xact_lock(hashtextextended('johhs.payment:' || p_house::text, 0));
+  perform pg_advisory_xact_lock(hashtextextended('johns.payment:' || p_house::text, 0));
   select coalesce(sum(amount_minor), 0) into mine from public.ledger where house_id = p_house and user_id = me;
   select coalesce(sum(amount_minor), 0) into theirs from public.ledger where house_id = p_house and user_id = p_from;
   if p_amount > mine or p_amount > -theirs then
@@ -824,8 +824,8 @@ begin
     delete from public.assignments where week_id = week;
   end if;
 
-  insert into public.assignments (week_id, house_id, johh_id, user_id, name, category, points, needs_photo, due_at)
-  select week, p_house, (x ->> 'johh_id')::uuid, (x ->> 'user_id')::uuid, x ->> 'name',
+  insert into public.assignments (week_id, house_id, john_id, user_id, name, category, points, needs_photo, due_at)
+  select week, p_house, (x ->> 'john_id')::uuid, (x ->> 'user_id')::uuid, x ->> 'name',
          x ->> 'category', (x ->> 'points')::smallint, coalesce((x ->> 'needs_photo')::boolean, false),
          (x ->> 'due_at')::timestamptz
   from jsonb_array_elements(p_assignments) x;
@@ -873,7 +873,7 @@ begin
 end;
 $$;
 
--- Decide a dispute. Upheld strikes the tick: the Johh is open again if the
+-- Decide a dispute. Upheld strikes the tick: the John is open again if the
 -- week is, and missed when it closes.
 create function public.resolve_dispute(p_dispute uuid, p_resolution text)
 returns boolean
@@ -984,7 +984,7 @@ grant usage, select on all sequences in schema public to service_role;
 alter default privileges in schema public grant select, insert, update, delete on tables to service_role;
 
 grant select on
-  public.profiles, public.houses, public.members, public.johhs, public.weeks,
+  public.profiles, public.houses, public.members, public.johns, public.weeks,
   public.assignments, public.disputes, public.dispute_votes, public.ledger,
   public.month_closes, public.events, public.reactions, public.push_subscriptions
 to authenticated;
@@ -994,9 +994,9 @@ grant update (name, timezone, currency, week_starts, stake_minor, late_forfeit_m
               missed_forfeit_minor, dispute_hours)
   on public.houses to authenticated;
 grant insert (house_id, name, category, points, every_weeks, anchor_week, due_dow, due_time, needs_photo)
-  on public.johhs to authenticated;
+  on public.johns to authenticated;
 grant update (name, category, points, every_weeks, due_dow, due_time, needs_photo, archived_at)
-  on public.johhs to authenticated;
+  on public.johns to authenticated;
 grant insert (event_id, user_id, kind), delete on public.reactions to authenticated;
 grant insert (user_id, endpoint, p256dh, auth), delete on public.push_subscriptions to authenticated;
 

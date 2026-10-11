@@ -20,7 +20,7 @@ export function dueLabel(due: Date, now: Date, zone: string): string {
   return format(due, "EEE d MMM", { in: inZone });
 }
 
-/** "in 3h", "in 2 days", "3h ago" — for the line under a Johh. */
+/** "in 3h", "in 2 days", "3h ago" — for the line under a John. */
 export function relative(target: Date, now: Date): string {
   const ms = target.getTime() - now.getTime();
   const abs = Math.abs(ms);

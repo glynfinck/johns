@@ -4,7 +4,7 @@ import { EyeIcon, FlameIcon, SparklesIcon, ThumbsUpIcon } from "lucide-react";
 import { useOptimistic, useTransition } from "react";
 import { toast } from "sonner";
 
-import { toggleReaction } from "@/lib/actions/johhs";
+import { toggleReaction } from "@/lib/actions/johns";
 import type { ReactionKind, WallEvent } from "@/lib/data/wall";
 import { cn } from "@/lib/utils";
 
