@@ -7,7 +7,7 @@
     "build": "next build",
     "start": "next start --port 3205",
     "lint": "eslint app components lib hooks e2e tests",
-    "typecheck": "tsc --noEmit",
+    "typecheck": "next typegen && tsc --noEmit",
     "test": "vitest run --project unit",
     "test:watch": "vitest --project unit",
     "test:db": "vitest run --project db",

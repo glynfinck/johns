@@ -1,0 +1,39 @@
+/**
+ * The database refuses with short codes (`raise exception 'week_closed'`);
+ * people read sentences. One table, so every screen says the same thing.
+ */
+const MESSAGES: Record<string, string> = {
+  sign_in_required: "Sign in first.",
+  already_in_house: "You're already in a house. Leave it first to join another.",
+  unknown_code: "That join link doesn't match a house. Ask for a fresh one.",
+  unknown_timezone: "That time zone isn't one we recognise.",
+  admins_only: "Only the house admins can do that.",
+  last_admin: "Make someone else an admin first. A house needs at least one.",
+  not_your_johh: "That Johh isn't yours.",
+  already_settled: "That Johh is already settled.",
+  week_closed: "That week has finished.",
+  already_done: "That's already ticked.",
+  photo_required: "This Johh needs a photo with the tick.",
+  photo_path: "That photo doesn't belong to this Johh.",
+  under_dispute: "Someone's disputing this tick, so it can't be undone now.",
+  own_johh: "You can't vote on your own Johh.",
+  not_disputable: "That tick can't be disputed any more.",
+  already_disputed: "Someone's already disputing that tick.",
+  vote_closed: "Voting on that has closed.",
+  no_immunity: "You don't have an immunity token.",
+  no_swap: "You don't have a swap token.",
+  not_swappable: "Only two open Johhs from the same week can be swapped.",
+  more_than_owed: "That's more than is owed.",
+  bad_payment: "That payment doesn't add up.",
+  week_started: "Someone's already ticked a Johh this week, so it can't be re-dealt.",
+  not_in_house: "That isn't in your house.",
+};
+
+export function humanError(error: { message?: string; code?: string } | null | undefined): string {
+  if (!error) return "Something went wrong. Try again.";
+  for (const [code, text] of Object.entries(MESSAGES)) {
+    if (error.message?.includes(code)) return text;
+  }
+  if (error.code === "42501") return "You can't do that.";
+  return "Something went wrong. Try again.";
+}

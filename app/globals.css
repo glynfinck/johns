@@ -1,0 +1,160 @@
+@import "tailwindcss";
+@import "tw-animate-css";
+@import "shadcn/tailwind.css";
+
+@custom-variant dark (&:is(.dark *));
+
+@theme inline {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-card: var(--card);
+  --color-card-foreground: var(--card-foreground);
+  --color-popover: var(--popover);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-secondary: var(--secondary);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-accent: var(--accent);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-destructive: var(--destructive);
+  --color-border: var(--border);
+  --color-input: var(--input);
+  --color-ring: var(--ring);
+  /* House semantics: hi-vis for the one thing to do, hazard for what's late. */
+  --color-hivis: var(--hivis);
+  --color-on-hivis: var(--on-hivis);
+  --color-hazard: var(--hazard);
+  --color-on-hazard: var(--on-hazard);
+  --color-good: var(--good);
+  /* Bin-lid colours, one per kind of Johh (lib/domain.ts CATEGORIES). */
+  --color-bin-kitchen: var(--bin-kitchen);
+  --color-bin-bathroom: var(--bin-bathroom);
+  --color-bin-bins: var(--bin-bins);
+  --color-bin-floors: var(--bin-floors);
+  --color-bin-errands: var(--bin-errands);
+  --color-bin-other: var(--bin-other);
+  --font-sans: var(--font-overpass), ui-sans-serif, system-ui, sans-serif;
+  --font-mono: ui-monospace, "SF Mono", Menlo, monospace;
+  --radius-sm: calc(var(--radius) * 0.6);
+  --radius-md: calc(var(--radius) * 0.8);
+  --radius-lg: var(--radius);
+  --radius-xl: calc(var(--radius) * 1.4);
+  --radius-2xl: calc(var(--radius) * 1.8);
+}
+
+/* Bin Night, daylight: pavement ground, tarmac ink, hi-vis amber. */
+:root {
+  --background: #e7e9e5;
+  --foreground: #16181a;
+  --card: #f7f8f5;
+  --card-foreground: #16181a;
+  --popover: #f7f8f5;
+  --popover-foreground: #16181a;
+  --primary: #f3aa00;
+  --primary-foreground: #16181a;
+  --secondary: #dde0db;
+  --secondary-foreground: #16181a;
+  --muted: #dde0db;
+  --muted-foreground: #596066;
+  --accent: #dde0db;
+  --accent-foreground: #16181a;
+  --destructive: #c8410c;
+  --border: #c5c9c3;
+  --input: #c5c9c3;
+  --ring: #16181a;
+  --hivis: #f3aa00;
+  --on-hivis: #16181a;
+  --hazard: #c8410c;
+  --on-hazard: #ffffff;
+  --good: #2e7d32;
+  --bin-kitchen: #7a4e2d;
+  --bin-bathroom: #1f5fae;
+  --bin-bins: #2a2d30;
+  --bin-floors: #2e7d32;
+  --bin-errands: #6a3d9a;
+  --bin-other: #8a9096;
+  --radius: 0.375rem;
+}
+
+/* Bin Night, after dark: wet tarmac, the same amber, lids lifted to read. */
+.dark {
+  --background: #111315;
+  --foreground: #edefeb;
+  --card: #1a1d20;
+  --card-foreground: #edefeb;
+  --popover: #1a1d20;
+  --popover-foreground: #edefeb;
+  --primary: #ffb81c;
+  --primary-foreground: #111315;
+  --secondary: #24282c;
+  --secondary-foreground: #edefeb;
+  --muted: #24282c;
+  --muted-foreground: #99a0a5;
+  --accent: #24282c;
+  --accent-foreground: #edefeb;
+  --destructive: #ff7a3d;
+  --border: #2c3135;
+  --input: #2c3135;
+  --ring: #ffb81c;
+  --hivis: #ffb81c;
+  --on-hivis: #111315;
+  --hazard: #ff7a3d;
+  --on-hazard: #1c0b03;
+  --good: #6cc070;
+  --bin-kitchen: #c08a5e;
+  --bin-bathroom: #5e9be8;
+  --bin-bins: #8d959c;
+  --bin-floors: #6cc070;
+  --bin-errands: #a97fd6;
+  --bin-other: #6b7378;
+}
+
+@layer base {
+  * {
+    @apply border-border outline-ring/50;
+  }
+  body {
+    @apply bg-background text-foreground font-sans antialiased;
+  }
+}
+
+/* Small uppercase label, council-sign spacing. */
+@utility eyebrow {
+  @apply text-[11px] font-extrabold tracking-[0.12em] uppercase text-muted-foreground;
+}
+
+@utility tabular {
+  font-variant-numeric: tabular-nums;
+}
+
+/* Hazard tape: marks what is late or missed, the way a cone would. */
+@utility hazard-tape {
+  background-image: repeating-linear-gradient(
+    -45deg,
+    var(--color-hivis) 0 6px,
+    var(--color-foreground) 6px 12px
+  );
+}
+
+/* The road-sign box the wordmark sits in. */
+@utility road-sign {
+  border: 3px solid currentColor;
+  border-radius: 7px;
+  padding: 0.28em 0.5em 0.12em;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  font-weight: 900;
+  line-height: 1;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    transition-duration: 0.01ms !important;
+  }
+}

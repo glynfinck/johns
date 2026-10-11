@@ -145,6 +145,23 @@ describe("disputes, decided by the tick", () => {
     expect(d!.resolution).toBe("upheld");
   });
 
+  it("decides at once in a house of two, where raising it is the majority", async () => {
+    const house = await makeHouse(["Ava", "Ben"]);
+    await addJohhs(house.id, [{ name: "Bins" }, { name: "Bathroom", points: 4 }], thisWeek());
+    const { assignments } = await deal(house.id, thisWeek(), new Date());
+    const a = assignments[0];
+    await actorFor(house, a.user_id).db.rpc("mark_done", { p_assignment: a.id });
+    const { error } = await someoneElse(house, a.user_id).db.rpc("raise_dispute", {
+      p_assignment: a.id,
+      p_reason: "Still full",
+    });
+    expect(error).toBeNull();
+    const summary = await tickHouse(db, house.id, new Date());
+    expect(summary.disputes).toBe(1);
+    const { data: row } = await db.from("assignments").select("done_at").eq("id", a.id).single();
+    expect(row!.done_at).toBeNull();
+  });
+
   it("lets a tick stand when the house sides with it", async () => {
     const house = await makeHouse(["Ava", "Ben", "Cal"]);
     await addJohhs(house.id, [{ name: "Bins" }], thisWeek());

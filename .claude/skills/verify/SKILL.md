@@ -1,0 +1,31 @@
+---
+name: verify
+description: Build, run and drive the Johhs app (Next.js + local Supabase) to verify a change end-to-end.
+---
+
+# Verifying Johhs changes
+
+## Run
+
+- Local Supabase: `supabase start` (API 127.0.0.1:54341, DB 54342). `.env.local`
+  points at it (see `.env.example`). New migration: `supabase db reset` (or
+  `supabase migration up`), then `npm run types`.
+- App: `npm run dev` serves http://localhost:3205. Playwright's webServer
+  reuses a running one.
+- psql: `psql postgresql://postgres:postgres@127.0.0.1:54342/postgres`.
+
+## Drive
+
+- Signed-in flows without Google: `e2e/auth.ts` `signInAs(context, name)`
+  mints a real session with the admin API and hands the cookies to a browser
+  context. `cleanUp(userIds)` removes what it made.
+- The clock: open any house page (it catches the house up), or
+  `npm run tick` to run the cron tick for every house (needs `CRON_SECRET`).
+  To see a week end, drive `tickHouse(adminClient, houseId, futureDate)` from
+  a db test rather than waiting.
+- Look at both layouts: phone (412px) and laptop (1440px), light and dark.
+
+## Gates
+
+`npm run lint`, `npm run typecheck`, `npm test`, `npm run test:db`,
+`npm run build`, `npm run test:e2e`.

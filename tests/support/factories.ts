@@ -100,7 +100,7 @@ export function weeksAgo(n: number, now = new Date()) {
 export async function reread<T extends string>(table: T, id: string) {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const { data } = await adminClient().from(table as any).select("*").eq("id", id).single();
-  return data as Record<string, unknown>;
+  return data as unknown as Record<string, unknown>;
 }
 
 export function actorFor(house: House, userId: string): Actor {
