@@ -40,7 +40,9 @@ export type Database = {
           created_at: string
           done_at: string | null
           due_at: string
+          due_moved_from: string | null
           excused: boolean
+          group_name: string | null
           house_id: string
           id: string
           john_id: string | null
@@ -59,7 +61,9 @@ export type Database = {
           created_at?: string
           done_at?: string | null
           due_at: string
+          due_moved_from?: string | null
           excused?: boolean
+          group_name?: string | null
           house_id: string
           id?: string
           john_id?: string | null
@@ -78,7 +82,9 @@ export type Database = {
           created_at?: string
           done_at?: string | null
           due_at?: string
+          due_moved_from?: string | null
           excused?: boolean
+          group_name?: string | null
           house_id?: string
           id?: string
           john_id?: string | null
@@ -120,6 +126,44 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "weeks"
             referencedColumns: ["id"]
+          },
+        ]
+      }
+      away: {
+        Row: {
+          created_at: string
+          ends_on: string
+          house_id: string
+          id: string
+          note: string | null
+          starts_on: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          ends_on: string
+          house_id: string
+          id?: string
+          note?: string | null
+          starts_on: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          ends_on?: string
+          house_id?: string
+          id?: string
+          note?: string | null
+          starts_on?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "away_house_id_user_id_fkey"
+            columns: ["house_id", "user_id"]
+            isOneToOne: false
+            referencedRelation: "members"
+            referencedColumns: ["house_id", "user_id"]
           },
         ]
       }
@@ -272,50 +316,115 @@ export type Database = {
           },
         ]
       }
+      group_members: {
+        Row: {
+          group_id: string
+          house_id: string
+          user_id: string
+        }
+        Insert: {
+          group_id: string
+          house_id: string
+          user_id: string
+        }
+        Update: {
+          group_id?: string
+          house_id?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "group_members_group_id_house_id_fkey"
+            columns: ["group_id", "house_id"]
+            isOneToOne: false
+            referencedRelation: "groups"
+            referencedColumns: ["id", "house_id"]
+          },
+          {
+            foreignKeyName: "group_members_house_id_user_id_fkey"
+            columns: ["house_id", "user_id"]
+            isOneToOne: false
+            referencedRelation: "members"
+            referencedColumns: ["house_id", "user_id"]
+          },
+        ]
+      }
+      groups: {
+        Row: {
+          created_at: string
+          house_id: string
+          id: string
+          name: string
+        }
+        Insert: {
+          created_at?: string
+          house_id: string
+          id?: string
+          name: string
+        }
+        Update: {
+          created_at?: string
+          house_id?: string
+          id?: string
+          name?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "groups_house_id_fkey"
+            columns: ["house_id"]
+            isOneToOne: false
+            referencedRelation: "houses"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       houses: {
         Row: {
+          away_makeup: number
           created_at: string
           created_by: string | null
           currency: string
           dispute_hours: number
+          first_dealt_at: string | null
           id: string
           join_code: string
           late_forfeit_minor: number
           missed_forfeit_minor: number
           name: string
-          rota_started_at: string | null
           stake_minor: number
           ticked_at: string | null
           timezone: string
           week_starts: number
         }
         Insert: {
+          away_makeup?: number
           created_at?: string
           created_by?: string | null
           currency?: string
           dispute_hours?: number
+          first_dealt_at?: string | null
           id?: string
           join_code?: string
           late_forfeit_minor?: number
           missed_forfeit_minor?: number
           name: string
-          rota_started_at?: string | null
           stake_minor?: number
           ticked_at?: string | null
           timezone?: string
           week_starts?: number
         }
         Update: {
+          away_makeup?: number
           created_at?: string
           created_by?: string | null
           currency?: string
           dispute_hours?: number
+          first_dealt_at?: string | null
           id?: string
           join_code?: string
           late_forfeit_minor?: number
           missed_forfeit_minor?: number
           name?: string
-          rota_started_at?: string | null
           stake_minor?: number
           ticked_at?: string | null
           timezone?: string
@@ -332,6 +441,7 @@ export type Database = {
           due_dow: number
           due_time: string
           every_weeks: number
+          group_id: string | null
           house_id: string
           id: string
           name: string
@@ -346,6 +456,7 @@ export type Database = {
           due_dow?: number
           due_time?: string
           every_weeks?: number
+          group_id?: string | null
           house_id: string
           id?: string
           name: string
@@ -360,6 +471,7 @@ export type Database = {
           due_dow?: number
           due_time?: string
           every_weeks?: number
+          group_id?: string | null
           house_id?: string
           id?: string
           name?: string
@@ -367,6 +479,13 @@ export type Database = {
           points?: number
         }
         Relationships: [
+          {
+            foreignKeyName: "johns_group_in_house"
+            columns: ["group_id", "house_id"]
+            isOneToOne: false
+            referencedRelation: "groups"
+            referencedColumns: ["id", "house_id"]
+          },
           {
             foreignKeyName: "johns_house_id_fkey"
             columns: ["house_id"]
@@ -604,6 +723,49 @@ export type Database = {
           },
         ]
       }
+      week_shares: {
+        Row: {
+          house_id: string
+          share: number
+          user_id: string
+          week_id: string
+        }
+        Insert: {
+          house_id: string
+          share: number
+          user_id: string
+          week_id: string
+        }
+        Update: {
+          house_id?: string
+          share?: number
+          user_id?: string
+          week_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "week_shares_house_id_fkey"
+            columns: ["house_id"]
+            isOneToOne: false
+            referencedRelation: "houses"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "week_shares_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "week_shares_week_id_fkey"
+            columns: ["week_id"]
+            isOneToOne: false
+            referencedRelation: "weeks"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       weeks: {
         Row: {
           closed_at: string | null
@@ -648,6 +810,7 @@ export type Database = {
     }
     Functions: {
       can_upload_proof: { Args: { object_name: string }; Returns: boolean }
+      cancel_away: { Args: { p_away: string }; Returns: undefined }
       cast_vote: {
         Args: { p_dispute: string; p_uphold: boolean }
         Returns: undefined
@@ -679,11 +842,13 @@ export type Database = {
           p_ends_at: string
           p_house: string
           p_replace?: boolean
+          p_shares: Json
           p_starts_at: string
           p_starts_on: string
         }
         Returns: string
       }
+      delete_group: { Args: { p_group: string }; Returns: undefined }
       house_by_code: {
         Args: { p_code: string }
         Returns: {
@@ -706,7 +871,9 @@ export type Database = {
           created_at: string
           done_at: string | null
           due_at: string
+          due_moved_from: string | null
           excused: boolean
+          group_name: string | null
           house_id: string
           id: string
           john_id: string | null
@@ -742,6 +909,19 @@ export type Database = {
       resolve_dispute: {
         Args: { p_dispute: string; p_resolution: string }
         Returns: boolean
+      }
+      save_group: {
+        Args: {
+          p_group: string
+          p_house: string
+          p_members: string[]
+          p_name: string
+        }
+        Returns: string
+      }
+      set_away: {
+        Args: { p_ends: string; p_note?: string; p_starts: string }
+        Returns: number
       }
       set_member_role: {
         Args: { p_house: string; p_role: string; p_user: string }

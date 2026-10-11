@@ -4,13 +4,15 @@ import { verdict } from "@/lib/dispute";
 import type { Currency, HouseRules, IsoDow, Outcome } from "@/lib/domain";
 import { settleOutcome } from "@/lib/outcome";
 import { standings, weekWinners } from "@/lib/points";
-import { carryOver, fairShares, type PastWeek } from "@/lib/rota";
+import { awayOn, type AwayPeriod } from "@/lib/away";
+import { BALANCE_WEEKS, carryOver, fairShares, weekShares, type DealJohn, type PastWeek } from "@/lib/deal";
 import { forfeitFor, settleMonth } from "@/lib/stake";
 import { earnsImmunity, isCleanWeek } from "@/lib/streak";
 import {
   dueAt,
   graceDue,
   isDueInWeek,
+  localDate,
   monthOf,
   monthWindow,
   weekIndex,
@@ -110,7 +112,7 @@ export async function tickHouse(
     reminders: 0,
   };
 
-  if (house.rota_started_at) {
+  if (house.first_dealt_at) {
     summary.dealt = await ensureCurrentWeek(db, house, members, now, notify);
   }
   summary.disputes = await decideDisputes(db, house, members, now);
@@ -140,8 +142,55 @@ export async function tickAll(db: Db, now: Date, notify?: Notify) {
 // --- Dealing ---------------------------------------------------------------
 
 /**
+ * Each housemate's balance going into a week: what they were handed minus
+ * their share, over the weeks before it (lib/deal.ts). Reads through whatever
+ * client it is given, so a screen can show the same number the deal used.
+ */
+export async function loadBalances(
+  db: Db,
+  houseId: string,
+  beforeStartsOn: string,
+  memberIds: readonly string[],
+): Promise<{ balances: Map<string, number>; usualShare: Map<string, number> }> {
+  const pastWeeks = must(
+    await db
+      .from("weeks")
+      .select("id")
+      .eq("house_id", houseId)
+      .lt("starts_on", beforeStartsOn)
+      .order("starts_on", { ascending: false })
+      .limit(BALANCE_WEEKS),
+    "past weeks",
+  );
+  const ids = pastWeeks.map((w) => w.id);
+  const [shares, handed] = ids.length
+    ? await Promise.all([
+        db.from("week_shares").select("week_id, user_id, share").in("week_id", ids),
+        db.from("assignments").select("week_id, user_id, points").in("week_id", ids),
+      ]).then(([a, b]) => [must(a, "shares"), must(b, "past assignments")] as const)
+    : [[], []];
+  const weeks: PastWeek[] = ids.map((id) => ({
+    shares: shares.filter((s) => s.week_id === id).map((s) => ({ userId: s.user_id, share: Number(s.share) })),
+    assignments: handed.filter((a) => a.week_id === id).map((a) => ({ userId: a.user_id, points: a.points })),
+  }));
+
+  // A usual week, for saying how long catching up takes: the average of the
+  // weeks someone had a share in.
+  const usualShare = new Map<string, number>();
+  for (const id of memberIds) {
+    const theirs = shares.filter((s) => s.user_id === id && Number(s.share) > 0).map((s) => Number(s.share));
+    usualShare.set(id, theirs.length ? theirs.reduce((a, b) => a + b, 0) / theirs.length : 0);
+  }
+  return { balances: carryOver(weeks, memberIds), usualShare };
+}
+
+/**
  * Deal a week's Johns with fair shares. With `replace`, re-deal a week nobody
  * has ticked anything in yet (deal_week refuses otherwise).
+ *
+ * A John with a group goes only to that group's members (or to everyone, if
+ * nobody in the group lives here any more); nobody is handed a John due on a
+ * day they are away; a John nobody who shares it is home for is skipped.
  */
 export async function dealWeek(
   db: Db,
@@ -153,6 +202,7 @@ export async function dealWeek(
 ): Promise<{ weekId: string | null; byUser: Map<string, string[]> }> {
   const rules = rulesOf(house);
   const index = weekIndex(week.startsOn);
+  const memberIds = members.map((m) => m.user_id);
   const johns = must(
     await db.from("johns").select("*").eq("house_id", house.id).is("archived_at", null),
     "johns",
@@ -161,65 +211,73 @@ export async function dealWeek(
   const byUser = new Map<string, string[]>();
   if (johns.length === 0 || members.length === 0) return { weekId: null, byUser };
 
-  const recent = must(
-    await db
+  const lastDay = localDate(new Date(week.endsAt.getTime() - 1), rules.timezone);
+  const [groups, awayRows, recent] = await Promise.all([
+    db.from("groups").select("id, name, group_members(user_id)").eq("house_id", house.id),
+    db
+      .from("away")
+      .select("id, user_id, starts_on, ends_on, note")
+      .eq("house_id", house.id)
+      .lte("starts_on", lastDay)
+      .gte("ends_on", week.startsOn),
+    db
       .from("assignments")
       .select("john_id, user_id, due_at")
       .in("john_id", johns.map((j) => j.id))
       .lt("due_at", week.startsAt.toISOString())
       .order("due_at", { ascending: false })
       .limit(500),
-    "recent assignments",
-  );
+  ]).then(([g, a, r]) => [must(g, "groups"), must(a, "away"), must(r, "recent assignments")] as const);
+
   const lastBy = new Map<string, string>();
   for (const r of recent) if (r.john_id && !lastBy.has(r.john_id)) lastBy.set(r.john_id, r.user_id);
-
-  const pastWeeks = must(
-    await db
-      .from("weeks")
-      .select("id, ends_at")
-      .eq("house_id", house.id)
-      .lt("starts_on", week.startsOn)
-      .order("starts_on", { ascending: false })
-      .limit(4),
-    "past weeks",
-  );
-  const pastRows = pastWeeks.length
-    ? must(
-        await db
-          .from("assignments")
-          .select("week_id, user_id, points")
-          .in("week_id", pastWeeks.map((w) => w.id)),
-        "past assignments",
-      )
-    : [];
-  const history: PastWeek[] = pastWeeks.map((w) => ({
-    memberIds: members.filter((m) => new Date(m.joined_at) < new Date(w.ends_at)).map((m) => m.user_id),
-    assignments: pastRows
-      .filter((r) => r.week_id === w.id)
-      .map((r) => ({ userId: r.user_id, points: r.points })),
+  const away: AwayPeriod[] = awayRows.map((a) => ({
+    id: a.id,
+    userId: a.user_id,
+    startsOn: a.starts_on,
+    endsOn: a.ends_on,
+    note: a.note,
   }));
 
-  const rota = fairShares(
-    johns.map((j) => ({ johnId: j.id, points: j.points, lastUserId: lastBy.get(j.id) ?? null })),
-    carryOver(history, members.map((m) => m.user_id)),
+  const midWeek = now > week.startsAt;
+  const planned = johns.map((j) => {
+    let due = dueAt(week, rules.timezone, rules.weekStarts, j.due_dow as IsoDow, j.due_time.slice(0, 5));
+    if (midWeek) due = graceDue(due, now, week.endsAt);
+    const group = j.group_id ? groups.find((g) => g.id === j.group_id) : undefined;
+    const inGroup = (group?.group_members ?? []).map((m) => m.user_id).filter((id) => memberIds.includes(id));
+    const sharers = inGroup.length > 0 ? inGroup : memberIds;
+    const day = localDate(due, rules.timezone);
+    const deal: DealJohn = {
+      johnId: j.id,
+      points: j.points,
+      lastUserId: lastBy.get(j.id) ?? null,
+      sharers,
+      home: sharers.filter((id) => !awayOn(away, id, day)),
+    };
+    return { john: j, due, groupName: inGroup.length > 0 ? group!.name : null, deal };
+  });
+
+  const deals = planned.map((p) => p.deal);
+  const shares = weekShares(deals, memberIds, house.away_makeup / 100);
+  const { balances } = await loadBalances(db, house.id, week.startsOn, memberIds);
+  const dealt = fairShares(
+    deals,
+    memberIds.map((id) => ({ userId: id, balance: balances.get(id) ?? 0, share: shares.get(id) ?? 0 })),
     `${house.id}:${week.startsOn}`,
   );
 
-  const midWeek = now > week.startsAt;
-  const assignments = rota.map((r) => {
-    const j = johns.find((x) => x.id === r.johnId)!;
-    let due = dueAt(week, rules.timezone, rules.weekStarts, j.due_dow as IsoDow, j.due_time.slice(0, 5));
-    if (midWeek) due = graceDue(due, now, week.endsAt);
-    byUser.set(r.userId, [...(byUser.get(r.userId) ?? []), j.name]);
+  const assignments = dealt.map((d) => {
+    const p = planned.find((x) => x.john.id === d.johnId)!;
+    byUser.set(d.userId, [...(byUser.get(d.userId) ?? []), p.john.name]);
     return {
-      john_id: j.id,
-      user_id: r.userId,
-      name: j.name,
-      category: j.category,
-      points: j.points,
-      needs_photo: j.needs_photo,
-      due_at: due.toISOString(),
+      john_id: p.john.id,
+      user_id: d.userId,
+      name: p.john.name,
+      category: p.john.category,
+      points: p.john.points,
+      needs_photo: p.john.needs_photo,
+      due_at: p.due.toISOString(),
+      group_name: p.groupName,
     };
   });
 
@@ -230,6 +288,7 @@ export async function dealWeek(
       p_starts_at: week.startsAt.toISOString(),
       p_ends_at: week.endsAt.toISOString(),
       p_assignments: assignments,
+      p_shares: memberIds.map((id) => ({ user_id: id, share: Math.round((shares.get(id) ?? 0) * 100) / 100 })),
       p_replace: replace,
     }),
     "deal_week",

@@ -1,5 +1,5 @@
 -- ---------------------------------------------------------------------------
--- Johns: the house, its Johns, the weekly rota, the Stake and the Wall.
+-- Johns: the house, its Johns, the weekly deal, the Stake and the Wall.
 --
 -- The access model, stated once:
 --
@@ -10,7 +10,7 @@
 --     themselves grant `authenticated` nothing but SELECT, plus a few column
 --     grants where a plain update is the honest shape (house settings, the
 --     John list, your own name, reactions, push subscriptions).
---   * The clock's work (handing out the rota, settling outcomes, closing
+--   * The clock's work (handing out the week, settling outcomes, closing
 --     weeks and months) is decided in TypeScript (lib/engine) and applied by
 --     service-role-only functions that are idempotent and atomic, so two
 --     ticks racing each other can never double a forfeit or a token.
@@ -91,7 +91,7 @@ create table public.houses (
   dispute_hours smallint not null default 24 check (dispute_hours between 0 and 72),
   -- Null until an admin hands out the first week. Nothing is dealt before
   -- then, so a house can add its Johns and its people first.
-  rota_started_at timestamptz,
+  first_dealt_at timestamptz,
   -- When the engine last caught this house up (lib/engine/tick.ts).
   ticked_at timestamptz,
   created_by uuid references auth.users (id) on delete set null,
@@ -830,7 +830,7 @@ begin
          (x ->> 'due_at')::timestamptz
   from jsonb_array_elements(p_assignments) x;
 
-  update public.houses set rota_started_at = coalesce(rota_started_at, now()) where id = p_house;
+  update public.houses set first_dealt_at = coalesce(first_dealt_at, now()) where id = p_house;
   insert into public.events (house_id, kind, data)
   values (p_house, 'week_dealt', jsonb_build_object('starts_on', p_starts_on, 'count', jsonb_array_length(p_assignments)));
   return week;

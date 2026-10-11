@@ -117,6 +117,7 @@ describe("a housemate", () => {
         p_starts_at: "2026-10-04T23:00:00Z",
         p_ends_at: "2026-10-11T23:00:00Z",
         p_assignments: [],
+        p_shares: [],
       }),
     );
     expectDenied(await db.rpc("settle_assignments", { p_items: [] }));
@@ -139,7 +140,7 @@ describe("a housemate", () => {
   it("cannot set the clock's columns even as an admin", async () => {
     const house = await makeHouse(["Ava"]);
     expectDenied(
-      await house.admin.db.from("houses").update({ rota_started_at: new Date().toISOString() }).eq("id", house.id),
+      await house.admin.db.from("houses").update({ first_dealt_at: new Date().toISOString() }).eq("id", house.id),
     );
     expectDenied(await house.admin.db.from("houses").update({ join_code: "AAAAAAAA" }).eq("id", house.id));
   });

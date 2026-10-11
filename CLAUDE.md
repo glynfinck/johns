@@ -1,6 +1,6 @@
 # Johns
 
-A house chore rota with consequences. "Johns" is what the house calls its
+Shared housework with consequences. "Johns" is what the house calls its
 assigned chores for the week; one chore is a **John**.
 
 This is NOT the Next.js you know: v16 has breaking changes. Read
@@ -48,8 +48,9 @@ at least 44px; compact controls appear only in the laptop board.
 ## Rules live in the lowest layer that can hold them
 
 - **Pure, unit-tested, no clock** (`lib/`): `week.ts` (week and month edges
-  in the house's zone, DST-safe, cadence, `graceDue`), `rota.ts` (fair
-  shares + carry-over), `outcome.ts` (when a tick stands, live status),
+  in the house's zone, DST-safe, cadence, `graceDue`, `localDate`),
+  `deal.ts` (shares, fair shares, balances, catch-up), `away.ts` (away
+  days as local dates), `outcome.ts` (when a tick stands, live status),
   `points.ts` (the Table), `streak.ts` (streaks, immunity and swap tokens),
   `stake.ts` (forfeits, month settlement, settle-up), `dispute.ts`
   (verdicts), `money.ts`, `format.ts`. Every function takes `now`.
@@ -64,8 +65,10 @@ at least 44px; compact controls appear only in the laptop board.
   real enforcement. Housemates READ through RLS (`is_member`) and WRITE only
   through named functions (`mark_done`, `undo_done`, `raise_dispute`,
   `cast_vote`, `use_immunity`, `use_swap`, `confirm_payment`,
-  `create_house`, `join_house`, `set_member_role`, `remove_member`) or a few
-  column grants (house settings and the John list for admins, your own name,
+  `create_house`, `join_house`, `set_member_role`, `remove_member`,
+  `save_group`, `delete_group`, `set_away`, `cancel_away`) or a few
+  column grants (house settings and the John list, its group included, for
+  admins; your own name,
   reactions, push subscriptions). Refusals raise `42501` (not yours) or
   `P0001` with a short code that `lib/errors.ts` turns into a sentence.
   Server actions in `lib/actions` are thin wrappers: they never decide.
@@ -79,15 +82,34 @@ closes weeks (streaks, perks) and months (the Stake), and sends reminders.
 A page load also catches its own house up (`lib/engine/fresh.ts`, at most
 once a minute, no pushes), so a screen never shows last week and local dev
 needs no cron. Nothing is dealt until an admin presses "Hand out this week's
-Johns" (`houses.rota_started_at`); a week can be re-dealt while nothing in it
+Johns" (`houses.first_dealt_at`); a week can be re-dealt while nothing in it
 has been ticked. Dealing part-way through a week gives anything already due
 a day's grace (`graceDue`).
 
 ## The game
 
-- **Fair shares**: Johns are dealt so effort points even out, counting each
-  person's carry-over from the last four weeks against their fair share of
-  each; doing the same John twice running costs a small penalty.
+- **Fair shares** (`lib/deal.ts`): each deal stores everyone's share of the
+  week (`week_shares`). A John is split equally among whoever shares it:
+  the whole house, or its **group** (three on the upstairs bathroom owe a
+  third each, two on the downstairs one a half). A **balance** is what you
+  were handed minus your share over the last 12 weeks; each John goes to
+  whoever, of those home on its due day, would be furthest behind. Doing the
+  same John twice running costs a small penalty.
+- **Groups**: named sets of housemates (`groups`, `group_members`); a John
+  belongs to everyone or to one group, and only that group is handed it. If
+  everyone in a group has left, its Johns go to everyone; if everyone in it
+  is away on the due day, that week it is skipped.
+- **Time away** (`away`, booked by `set_away`): the fair mechanism for the
+  housemate who keeps leaving. You are never handed a John due on a day
+  you're away, but away is not a holiday from your share: it keeps counting
+  at the house's make-up rate (`houses.away_makeup`: 100 in full, the
+  default, 50 half, 0 none), so you come back behind. Catching up is
+  gradual: no deal hands anyone more than half as much again as their share
+  while someone else could take the John (`CATCH_UP_PACE`). Time away must
+  start today or later, and Johns you already have that fall due while you're
+  gone are pulled forward to 23:59 the night before you leave
+  (`due_moved_from` keeps the old time, so cancelling puts them back). Book before the week is dealt and
+  you're simply not given those days; book after and you do them first.
 - **Housemate check**: a tick stands after `dispute_hours` (default 24)
   unless disputed. Raising a dispute counts as a vote to strike; everyone
   but the ticker votes; a majority decides at once, otherwise the vote closes
@@ -108,8 +130,9 @@ a day's grace (`graceDue`).
   reactions and photo receipts.
 
 Words: a chore is a **John**; the plural is **Johns**. The money is **the
-Stake**, the standings **the Table**, the feed **the Wall**. Copy never
-says "chore app".
+Stake**, the standings **the Table**, the feed **the Wall**. Handing out a
+week's Johns is **the deal**. Copy never says "chore app", and never "rota"
+(the house doesn't use the word).
 
 ## Data model (supabase/migrations)
 
@@ -117,11 +140,14 @@ says "chore app".
 currency GBP/CAD/USD/EUR defaulted from Vercel's geo headers, week start,
 stake and forfeits, dispute hours; `join_code` from the CSPRNG) → `members`
 (role admin/member, streak, tokens; one house per person via
-`members_one_house`, dropped when "more than one house" ships) → `johns` (the
-list: category, points 1–10, every N weeks from `anchor_week`, due day and
-time, needs photo) → `weeks` (unique per house and local start date) →
-`assignments` (a snapshot of the John as dealt, `due_at`, `done_at`,
-`photo_path`, `outcome` stamped once final) → `disputes` + `dispute_votes`;
+`members_one_house`, dropped when "more than one house" ships) → `groups` +
+`group_members` → `johns` (the list: category, points 1–10, every N weeks
+from `anchor_week`, due day and time, needs photo, optional `group_id`) →
+`weeks` (unique per house and local start date) + `week_shares` (each
+housemate's share of it) → `assignments` (a snapshot of the John as dealt,
+`group_name`, `due_at`, `due_moved_from`, `done_at`, `photo_path`, `outcome`
+stamped once final); `away` (local first and last dates, inclusive) →
+`disputes` + `dispute_votes`;
 `ledger` + `month_closes`; `events` + `reactions`; `push_subscriptions`.
 Photos live in the private `proofs` bucket at `<house>/<assignment>/<file>`.
 

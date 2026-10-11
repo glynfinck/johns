@@ -49,6 +49,8 @@ export interface JohnSpec {
   dueTime?: string;
   everyWeeks?: number;
   needsPhoto?: boolean;
+  /** Only this group shares it. */
+  groupId?: string;
 }
 
 export async function addJohns(houseId: string, specs: JohnSpec[], anchor: WeekWindow) {
@@ -64,6 +66,7 @@ export async function addJohns(houseId: string, specs: JohnSpec[], anchor: WeekW
         due_time: s.dueTime ?? "21:00",
         every_weeks: s.everyWeeks ?? 1,
         needs_photo: s.needsPhoto ?? false,
+        group_id: s.groupId ?? null,
         anchor_week: weekIndex(anchor.startsOn),
       })),
     )

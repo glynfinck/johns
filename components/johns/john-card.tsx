@@ -1,4 +1,4 @@
-import { CameraIcon } from "lucide-react";
+import { CameraIcon, PlaneIcon } from "lucide-react";
 
 import { DisputeButton, MarkDone, UndoDone, UseImmunity, VoteButtons } from "@/components/johns/john-actions";
 import { lidStyle } from "@/components/johns/lid";
@@ -58,7 +58,7 @@ export function JohnCard({
               {item.name}
             </h3>
             <p className="mt-1 flex flex-wrap items-center gap-x-1.5 text-sm text-muted-foreground">
-              <span>{CATEGORY_LABEL[item.category as Category] ?? "John"}</span>
+              <span>{item.groupName ?? CATEGORY_LABEL[item.category as Category] ?? "John"}</span>
               <span aria-hidden>·</span>
               <span className="tabular">{dueLabel(item.dueAt, now, zone)}</span>
               {item.needsPhoto ? (
@@ -96,6 +96,17 @@ export function JohnCard({
               </div>
             ) : null}
           </div>
+        ) : null}
+
+        {open && item.movedFrom ? (
+          <p className="flex items-start gap-2 rounded-md bg-secondary p-3 text-sm" data-testid="due-before-you-go">
+            <PlaneIcon className="mt-0.5 size-4 shrink-0" aria-hidden />
+            <span>
+              Due before {mine ? "you go" : `${ownerName} goes`}: it was due{" "}
+              {dueLabel(item.movedFrom, now, zone).replace(/^(Today|Tomorrow|Yesterday)/, (w) => w.toLowerCase())}, while{" "}
+              {mine ? "you're" : "they're"} away.
+            </span>
+          </p>
         ) : null}
 
         {mine && open ? (

@@ -76,3 +76,27 @@ export function initials(name: string): string {
 export function firstName(name: string): string {
   return name.trim().split(/\s+/)[0] || name;
 }
+
+/** "14–21 Oct", "28 Oct – 2 Nov", "Fri 16 Oct" for a single day. Local `yyyy-MM-dd` dates. */
+export function dateRange(from: string, to: string): string {
+  const day = (d: string) => {
+    const [y, m, dd] = d.split("-").map(Number);
+    return new Date(Date.UTC(y, m - 1, dd, 12));
+  };
+  const a = day(from);
+  const b = day(to);
+  const utc = tz("UTC");
+  if (from === to) return format(a, "EEE d MMM", { in: utc });
+  if (format(a, "yyyy-MM", { in: utc }) === format(b, "yyyy-MM", { in: utc })) {
+    return `${format(a, "d", { in: utc })}–${format(b, "d MMM", { in: utc })}`;
+  }
+  return `${format(a, "d MMM", { in: utc })} – ${format(b, "d MMM", { in: utc })}`;
+}
+
+/** A balance against your share: "+3.5", "−9", "level". */
+export function formatBalance(points: number): string {
+  const rounded = Math.round(points * 2) / 2;
+  if (rounded === 0) return "level";
+  const body = Math.abs(rounded).toString();
+  return rounded > 0 ? `+${body}` : `−${body}`;
+}

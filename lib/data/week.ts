@@ -15,6 +15,10 @@ export interface BoardItem {
   points: number;
   needsPhoto: boolean;
   dueAt: Date;
+  /** Set when time away pulled the due date forward: when it was due before. */
+  movedFrom: Date | null;
+  /** The group it belongs to, as dealt; null for everyone's. */
+  groupName: string | null;
   doneAt: Date | null;
   photoPath: string | null;
   outcome: Outcome | null;
@@ -39,7 +43,7 @@ export interface WeekBoard {
   week: { id: string; startsOn: string; startsAt: Date; endsAt: Date } | null;
   items: BoardItem[];
   table: TableRow[];
-  /** The rota has not been started yet: nothing has ever been dealt. */
+  /** Nothing has ever been dealt in this house. */
   notStarted: boolean;
 }
 
@@ -56,7 +60,7 @@ export async function getWeekBoard(ctx: HouseContext): Promise<WeekBoard> {
 
   const memberIds = ctx.members.map((m) => m.userId);
   if (!week) {
-    return { week: null, items: [], table: standings([], memberIds), notStarted: !house.rota_started_at };
+    return { week: null, items: [], table: standings([], memberIds), notStarted: !house.first_dealt_at };
   }
 
   const [{ data: rows }, { data: disputes }] = await Promise.all([
@@ -104,6 +108,8 @@ export async function getWeekBoard(ctx: HouseContext): Promise<WeekBoard> {
       points: a.points,
       needsPhoto: a.needs_photo,
       dueAt: facts.dueAt,
+      movedFrom: a.due_moved_from ? new Date(a.due_moved_from) : null,
+      groupName: a.group_name,
       doneAt,
       photoPath: a.photo_path,
       outcome: facts.outcome,

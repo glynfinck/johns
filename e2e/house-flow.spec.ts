@@ -50,7 +50,7 @@ test("set up a house, deal a week, tick a John, dispute it", async ({ browser })
   await expect(ben.getByRole("heading", { name: "Flat 3" })).toBeVisible();
   await ben.getByTestId("join-house").click();
   await expect(ben).toHaveURL(/\/today$/);
-  await expect(ben.getByText("The rota hasn’t started yet.")).toBeVisible();
+  await expect(ben.getByText("No Johns handed out yet.")).toBeVisible();
 
   // Ava hands out the first week; two Johns, two people, one each.
   await ava.getByTestId("deal-week").click();

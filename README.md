@@ -1,12 +1,19 @@
 # Johns
 
-The house rota that keeps everyone honest. In our house the week's assigned
+Fair shares of the housework, and a house that keeps score. In our house the week's assigned
 chores were always "Johns", so that is what the app calls them: one chore is
 a **John**.
 
-- **A fair rota, dealt for you.** Every John has an effort score (1–10), a
+- **Fair shares, dealt for you.** Every John has an effort score (1–10), a
   kind, a due day and a cadence. Each week the Johns are shared so effort
   evens out over the month, and the bathroom moves around.
+- **Groups.** Three of you share the upstairs bathroom and two the
+  downstairs one? Put each bathroom's Johns in a group, and only that group
+  is handed them, and only they count toward its share.
+- **Time away that stays fair.** Book your dates and you aren't handed
+  Johns due while you're gone, but your share keeps counting, so you catch up
+  a little each week when you're back (the house can make that half, or
+  none). Johns you already have when you book become due before you go.
 - **Housemate check.** A tick stands after 24 hours unless someone disputes
   it; disputes go to a quick house vote. Photo receipts are optional, or
   required on the Johns you choose.
@@ -38,7 +45,7 @@ app/(house)/          today · week · wall · table · stake · house
 app/join/[code]/      the join link
 app/api/cron/tick/    the clock (called by pg_cron)
 components/           shell, John cards and actions, house settings, ui (shadcn)
-lib/                  pure rules: week, rota, outcome, points, streak, stake, dispute
+lib/                  pure rules: week, deal, outcome, points, streak, stake, dispute
 lib/engine/           the tick: applies the rules to the database
 lib/actions/ data/    server actions and loaders
 supabase/migrations/  schema, RLS, the housemate functions, the cron job

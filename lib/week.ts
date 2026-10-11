@@ -7,7 +7,7 @@ import type { IsoDow } from "@/lib/domain";
  * Week and month edges in a house's own time zone.
  *
  * Every function takes the instant it reasons about as an argument: nothing
- * here reads the clock, so the rota, the outcome rules and the Stake can all
+ * here reads the clock, so the deal, the outcome rules and the Stake can all
  * be unit-tested at any moment of any week, DST changes included.
  */
 
@@ -112,4 +112,16 @@ export function monthWindow(month: string, zone: string): MonthWindow {
 export function previousMonth(month: string): string {
   const [y, m] = month.split("-").map(Number);
   return m === 1 ? `${y - 1}-12` : `${y}-${String(m - 1).padStart(2, "0")}`;
+}
+
+/** The local calendar date an instant falls on, as `yyyy-MM-dd`. */
+export function localDate(at: Date, zone: string): string {
+  return format(at, "yyyy-MM-dd", { in: tz(zone) });
+}
+
+/** A `yyyy-MM-dd` date moved by whole days. Calendar arithmetic, so DST never shifts it. */
+export function addDaysTo(date: string, days: number): string {
+  const [y, m, d] = date.split("-").map(Number);
+  const moved = new Date(Date.UTC(y, m - 1, d + days));
+  return moved.toISOString().slice(0, 10);
 }

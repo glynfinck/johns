@@ -22,14 +22,14 @@ async function ledgerOf(houseId: string) {
 }
 
 describe("dealing", () => {
-  it("deals nothing until the rota is started, then deals the current week once", async () => {
+  it("deals nothing until the first deal, then deals the current week once", async () => {
     const house = await makeHouse();
     await addJohns(house.id, [{ name: "Bins" }, { name: "Bathroom", points: 4 }], thisWeek());
     const now = new Date();
 
     expect((await tickHouse(db, house.id, now)).dealt).toBeNull();
 
-    await db.from("houses").update({ rota_started_at: now.toISOString() }).eq("id", house.id);
+    await db.from("houses").update({ first_dealt_at: now.toISOString() }).eq("id", house.id);
     const first = await tickHouse(db, house.id, now);
     expect(first.dealt).toBeTruthy();
     const again = await tickHouse(db, house.id, now);

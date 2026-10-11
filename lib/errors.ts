@@ -27,6 +27,16 @@ const MESSAGES: Record<string, string> = {
   bad_payment: "That payment doesn't add up.",
   week_started: "Someone's already ticked a John this week, so it can't be re-dealt.",
   not_in_house: "That isn't in your house.",
+  group_empty: "A group needs at least one housemate in it.",
+  not_housemates: "Groups can only hold people who live here.",
+  unknown_group: "That group doesn't exist any more.",
+  group_name_taken: "There's already a group with that name.",
+  away_in_past: "Time away can start today at the earliest.",
+  away_backwards: "The last day away has to be on or after the first.",
+  away_too_long: "Time away can be up to three months at once.",
+  away_overlaps: "You're already away for some of those days.",
+  away_over: "That time away has already finished.",
+  not_yours: "That isn't yours to change.",
 };
 
 export function humanError(error: { message?: string; code?: string } | null | undefined): string {

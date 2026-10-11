@@ -10,7 +10,7 @@ import { getMembership } from "@/lib/data/house";
 const POINTS = [
   {
     Icon: ShuffleIcon,
-    title: "A fair rota, dealt for you",
+    title: "Fair shares, dealt for you",
     body: "Every John has an effort score. Each week the app shares them out so the effort evens up over the month, and the bathroom moves around.",
   },
   {

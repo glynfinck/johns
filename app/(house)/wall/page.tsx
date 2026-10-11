@@ -5,6 +5,7 @@ import {
   CheckIcon,
   FlagIcon,
   GavelIcon,
+  PlaneIcon,
   RepeatIcon,
   ShieldIcon,
   UserPlusIcon,
@@ -17,7 +18,7 @@ import { Avatar } from "@/components/ui/avatar";
 import { ReactionBar } from "@/components/wall/reaction-bar";
 import { nameOf, requireHouse, type HouseContext } from "@/lib/data/house";
 import { getWall, type WallEvent } from "@/lib/data/wall";
-import { monthLabel, relative } from "@/lib/format";
+import { dateRange, monthLabel, relative } from "@/lib/format";
 import { formatMoney } from "@/lib/money";
 import { cn } from "@/lib/utils";
 
@@ -66,6 +67,18 @@ function describe(e: WallEvent, ctx: HouseContext): Line {
           </>
         ),
       };
+    case "away": {
+      const moved = Number(e.data.moved ?? 0);
+      return {
+        icon: PlaneIcon,
+        text: (
+          <>
+            <b>{who}</b> {who === "You" ? "are" : "is"} away {dateRange(String(e.data.starts_on), String(e.data.ends_on))}.
+            {moved > 0 ? ` ${moved} ${moved === 1 ? "John is" : "Johns are"} due before ${who === "You" ? "you go" : "they go"}.` : ""}
+          </>
+        ),
+      };
+    }
     case "joined":
       return { icon: UserPlusIcon, text: <><b>{who}</b> moved in.</> };
     case "month_closed":

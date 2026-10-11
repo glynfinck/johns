@@ -1,5 +1,5 @@
 export const APP_NAME = "Johns";
-export const TAGLINE = "The house rota that keeps everyone honest.";
+export const TAGLINE = "Fair shares of the housework, and a house that keeps score.";
 
 /** Absolute origin, for metadata and links that leave the app (join links). */
 export const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL ?? "http://localhost:3205";

@@ -73,6 +73,7 @@ const Settings = z.object({
   lateForfeitMinor: z.coerce.number().int().min(0).max(100000),
   missedForfeitMinor: z.coerce.number().int().min(0).max(100000),
   disputeHours: z.coerce.number().int().min(0).max(72),
+  awayMakeup: z.coerce.number().int().refine((n) => n === 0 || n === 50 || n === 100),
 });
 
 export async function updateHouse(input: z.input<typeof Settings>): Promise<Outcome> {
@@ -92,6 +93,7 @@ export async function updateHouse(input: z.input<typeof Settings>): Promise<Outc
       late_forfeit_minor: s.lateForfeitMinor,
       missed_forfeit_minor: s.missedForfeitMinor,
       dispute_hours: s.disputeHours,
+      away_makeup: s.awayMakeup,
     })
     .eq("id", ctx.house.id);
   if (error) return { error: humanError(error) };
@@ -99,8 +101,8 @@ export async function updateHouse(input: z.input<typeof Settings>): Promise<Outc
 }
 
 /**
- * Hand out this week's Johns. The first time, it starts the rota; after
- * that it re-deals the week, which deal_week only allows while nothing in it
+ * Hand out this week's Johns. The first time, it starts the house off;
+ * after that it re-deals the week, which deal_week only allows while nothing in it
  * has been ticked (someone new moved in, a John was added).
  */
 export async function dealThisWeek(): Promise<Outcome> {
@@ -149,6 +151,7 @@ const JohnInput = z.object({
   dueDow: z.coerce.number().int().min(1).max(7),
   dueTime: z.string().regex(/^\d{2}:\d{2}$/),
   needsPhoto: z.boolean(),
+  groupId: z.string().uuid().nullable(),
 });
 
 export async function saveJohn(input: z.input<typeof JohnInput>): Promise<Outcome> {
@@ -165,6 +168,7 @@ export async function saveJohn(input: z.input<typeof JohnInput>): Promise<Outcom
     due_dow: j.dueDow,
     due_time: j.dueTime,
     needs_photo: j.needsPhoto,
+    group_id: j.groupId,
   };
   const { error } = j.id
     ? await ctx.supabase.from("johns").update(fields).eq("id", j.id).eq("house_id", ctx.house.id)
@@ -185,6 +189,37 @@ export async function archiveJohn(id: string): Promise<Outcome> {
     .update({ archived_at: new Date().toISOString() })
     .eq("id", id)
     .eq("house_id", ctx.house.id);
+  if (error) return { error: humanError(error) };
+  refresh();
+}
+
+const GroupInput = z.object({
+  id: z.string().uuid().optional(),
+  name: z.string().trim().min(1, "Name the group.").max(40),
+  members: z.array(z.string().uuid()).min(1, "Pick at least one housemate."),
+});
+
+/** Create or rewrite a group: who shares a bathroom, a floor, a fridge. */
+export async function saveGroup(input: z.input<typeof GroupInput>): Promise<Outcome> {
+  const parsed = GroupInput.safeParse(input);
+  if (!parsed.success) return { error: parsed.error.issues[0].message };
+  const ctx = await myHouse();
+  if (!ctx) return { error: humanError({ message: "sign_in_required" }) };
+  const g = parsed.data;
+  const { error } = await ctx.supabase.rpc("save_group", {
+    p_house: ctx.house.id,
+    p_group: (g.id ?? null) as string,
+    p_name: g.name,
+    p_members: g.members,
+  });
+  if (error) return { error: humanError(error) };
+  refresh();
+}
+
+export async function deleteGroup(id: string): Promise<Outcome> {
+  const ctx = await myHouse();
+  if (!ctx) return { error: humanError({ message: "sign_in_required" }) };
+  const { error } = await ctx.supabase.rpc("delete_group", { p_group: id });
   if (error) return { error: humanError(error) };
   refresh();
 }

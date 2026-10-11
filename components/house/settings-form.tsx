@@ -8,6 +8,7 @@ import { FieldLabel, Input } from "@/components/ui/input";
 import { NativeSelect } from "@/components/ui/native-select";
 import { useAction } from "@/hooks/use-action";
 import { updateHouse } from "@/lib/actions/house";
+import { MAKEUP_LABEL } from "@/lib/deal";
 import { CURRENCIES, DOW_LABEL, type Currency, type IsoDow } from "@/lib/domain";
 import { parseMoney } from "@/lib/money";
 
@@ -20,7 +21,14 @@ export interface SettingsValues {
   lateForfeitMinor: number;
   missedForfeitMinor: number;
   disputeHours: number;
+  awayMakeup: number;
 }
+
+const MAKEUP_HINT: Record<number, string> = {
+  100: "Their share still counts, so they do a little extra each week when they're back until it evens out.",
+  50: "Half their share still counts and is made up when they're back; the rest falls to whoever is home.",
+  0: "Their share falls to whoever is home, and there's nothing to make up.",
+};
 
 const SYMBOL: Record<Currency, string> = { GBP: "£", CAD: "$", USD: "$", EUR: "€" };
 
@@ -68,6 +76,7 @@ export function SettingsForm({ values, editable }: { values: SettingsValues; edi
           lateForfeitMinor,
           missedForfeitMinor,
           disputeHours: v.disputeHours,
+          awayMakeup: v.awayMakeup,
         }),
       () => toast.success("Saved"),
     );
@@ -139,6 +148,19 @@ export function SettingsForm({ values, editable }: { values: SettingsValues; edi
               </option>
             ))}
           </NativeSelect>
+        </div>
+        <div className="sm:col-span-2">
+          <FieldLabel htmlFor="house-away">Time away is made up</FieldLabel>
+          <NativeSelect id="house-away" value={v.awayMakeup} onChange={(e) => set({ awayMakeup: Number(e.target.value) })}>
+            {[100, 50, 0].map((n) => (
+              <option key={n} value={n}>
+                {MAKEUP_LABEL[n]}
+              </option>
+            ))}
+          </NativeSelect>
+          <p className="mt-1.5 text-xs text-muted-foreground">
+            Nobody is handed a John due while they&rsquo;re away. {MAKEUP_HINT[v.awayMakeup]}
+          </p>
         </div>
         {editable ? (
           <Button type="submit" className="sm:col-span-2 sm:justify-self-start">

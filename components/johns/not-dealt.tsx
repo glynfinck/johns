@@ -1,6 +1,6 @@
 import Link from "next/link";
 
-import { DealButton } from "@/components/house/start-rota";
+import { DealButton } from "@/components/house/deal-button";
 import { Button } from "@/components/ui/button";
 
 /** What a house sees before there is anything to do this week. */
@@ -16,7 +16,7 @@ export function NotDealt({
   if (!notStarted) {
     return (
       <section className="rounded-lg border border-border bg-card p-6">
-        <h2 className="text-lg font-extrabold">Nothing&rsquo;s on the rota this week.</h2>
+        <h2 className="text-lg font-extrabold">Nothing&rsquo;s been handed out this week.</h2>
         <p className="mt-1 text-sm text-muted-foreground">
           Every John on the list is on a fortnightly or longer cycle, or the list is empty.
         </p>
@@ -31,7 +31,7 @@ export function NotDealt({
   return (
     <section className="relative overflow-hidden rounded-lg border border-border bg-card p-6">
       <span aria-hidden className="absolute inset-x-0 top-0 h-1.5 bg-hivis" />
-      <h2 className="text-lg font-extrabold">The rota hasn&rsquo;t started yet.</h2>
+      <h2 className="text-lg font-extrabold">No Johns handed out yet.</h2>
       {isAdmin ? (
         <>
           <ol className="mt-3 flex list-decimal flex-col gap-1.5 pl-5 text-sm">

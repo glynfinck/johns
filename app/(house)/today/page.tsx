@@ -1,4 +1,4 @@
-import { FlameIcon, RepeatIcon, ShieldIcon } from "lucide-react";
+import { FlameIcon, PlaneIcon, RepeatIcon, ShieldIcon } from "lucide-react";
 import type { Metadata } from "next";
 import Link from "next/link";
 
@@ -7,11 +7,15 @@ import { JohnCard } from "@/components/johns/john-card";
 import { NotDealt } from "@/components/johns/not-dealt";
 import { PageHeader } from "@/components/shell/app-shell";
 import { Standings } from "@/components/table/standings";
+import { currentOrNext } from "@/lib/away";
 import { SITE_URL } from "@/lib/config";
+import { getAway } from "@/lib/data/away";
+import { getBalances } from "@/lib/data/balance";
 import { requireHouse } from "@/lib/data/house";
 import { getStake } from "@/lib/data/stake";
 import { getWeekBoard, type BoardItem } from "@/lib/data/week";
-import { weekRange } from "@/lib/format";
+import { dateRange, formatBalance, weekRange } from "@/lib/format";
+import { addDaysTo } from "@/lib/week";
 import { formatMoney, formatSigned } from "@/lib/money";
 
 export const metadata: Metadata = { title: "Today" };
@@ -31,7 +35,15 @@ const isOpen = (i: BoardItem) => i.status === "overdue" || i.status === "due-soo
 
 export default async function TodayPage() {
   const ctx = await requireHouse();
-  const [board, stake] = await Promise.all([getWeekBoard(ctx), getStake(ctx)]);
+  const [board, stake, away, balances] = await Promise.all([
+    getWeekBoard(ctx),
+    getStake(ctx),
+    getAway(ctx),
+    getBalances(ctx),
+  ]);
+  const trip = currentOrNext(away.periods, ctx.userId, away.today);
+  const showTrip = trip && trip.startsOn <= addDaysTo(away.today, 14) ? trip : null;
+  const myBalance = balances.find((b) => b.userId === ctx.userId);
   const { rules, now, me } = ctx;
   const names = new Map(ctx.members.map((m) => [m.userId, m.name]));
   const admin = ctx.members.find((m) => m.role === "admin");
@@ -49,6 +61,32 @@ export default async function TodayPage() {
         eyebrow={board.week ? `This week · ${weekRange(board.week.startsAt, board.week.endsAt, rules.timezone)}` : "This week"}
         title="Your Johns"
       />
+
+      {showTrip ? (
+        <section
+          className="mb-5 flex items-start gap-3 rounded-lg border border-border bg-card p-4"
+          aria-label="Your time away"
+          data-testid="away-banner"
+        >
+          <PlaneIcon className="mt-0.5 size-5 shrink-0" aria-hidden />
+          <div className="min-w-0 flex-1 text-sm">
+            <p className="font-extrabold">
+              {showTrip.startsOn <= away.today
+                ? `You're away until ${dateRange(showTrip.endsOn, showTrip.endsOn)}.`
+                : `You're away ${dateRange(showTrip.startsOn, showTrip.endsOn)}.`}
+            </p>
+            <p className="mt-0.5 text-muted-foreground">
+              Nobody hands you a John due while you&rsquo;re gone
+              {ctx.house.away_makeup > 0
+                ? `, but ${ctx.house.away_makeup === 100 ? "your share" : "half your share"} still counts: you catch up a little each week when you're back.`
+                : "."}
+            </p>
+          </div>
+          <Link href="/house#away" className="text-xs font-bold underline-offset-2 hover:underline">
+            Change
+          </Link>
+        </section>
+      ) : null}
 
       {!board.week ? (
         <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_340px]">
@@ -142,6 +180,24 @@ export default async function TodayPage() {
               </div>
               <Standings rows={board.table} names={names} me={ctx.userId} dense />
             </section>
+            {myBalance ? (
+              <section className="rounded-lg border border-border bg-card p-4" data-testid="my-share">
+                <div className="mb-2 flex items-baseline justify-between">
+                  <h2 className="eyebrow">Your share, lately</h2>
+                  <Link href="/table#shares" className="text-xs font-bold underline-offset-2 hover:underline">
+                    Everyone&rsquo;s
+                  </Link>
+                </div>
+                <p className="text-3xl font-black tabular">{formatBalance(myBalance.balance)}</p>
+                <p className="mt-1 text-sm text-muted-foreground">
+                  {myBalance.balance <= -0.5
+                    ? `Points behind your share. The next weeks hand you a little extra, never more than half a week's worth, for about ${myBalance.weeksToEven} ${myBalance.weeksToEven === 1 ? "week" : "weeks"}.`
+                    : myBalance.balance >= 0.5
+                      ? "Points ahead of your share, so the next weeks go a little easier on you."
+                      : "You've done your share."}
+                </p>
+              </section>
+            ) : null}
             {myMonth ? (
               <section className="rounded-lg border border-border bg-card p-4">
                 <div className="mb-2 flex items-baseline justify-between">

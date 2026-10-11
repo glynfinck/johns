@@ -23,6 +23,13 @@ export interface JohnDef {
   dueDow: IsoDow;
   dueTime: string;
   needsPhoto: boolean;
+  /** The group that shares it; null means the whole house. */
+  groupId: string | null;
+}
+
+export interface GroupOption {
+  id: string;
+  name: string;
 }
 
 const BLANK: Omit<JohnDef, "id"> = {
@@ -33,12 +40,22 @@ const BLANK: Omit<JohnDef, "id"> = {
   dueDow: 7,
   dueTime: "21:00",
   needsPhoto: false,
+  groupId: null,
 };
 
 const EVERY: Record<number, string> = { 1: "Every week", 2: "Every 2 weeks", 3: "Every 3 weeks", 4: "Every 4 weeks" };
 
-/** The house's list of Johns. Changes land in next week's rota (or a re-deal). */
-export function JohnList({ johns, editable }: { johns: JohnDef[]; editable: boolean }) {
+/** The house's list of Johns. Changes land in next week's deal (or a re-deal). */
+export function JohnList({
+  johns,
+  groups,
+  editable,
+}: {
+  johns: JohnDef[];
+  groups: GroupOption[];
+  editable: boolean;
+}) {
+  const groupName = (id: string | null) => groups.find((g) => g.id === id)?.name ?? null;
   const [editing, setEditing] = useState<(Omit<JohnDef, "id"> & { id?: string }) | null>(null);
   const total = johns.reduce((s, j) => s + j.points / j.everyWeeks, 0);
 
@@ -63,6 +80,12 @@ export function JohnList({ johns, editable }: { johns: JohnDef[]; editable: bool
                 </div>
                 <div className="text-xs text-muted-foreground">
                   {EVERY[j.everyWeeks]} · due {DOW_LABEL[j.dueDow].slice(0, 3)} {j.dueTime}
+                  {groupName(j.groupId) ? (
+                    <>
+                      {" · "}
+                      <span className="font-bold text-foreground">{groupName(j.groupId)}</span>
+                    </>
+                  ) : null}
                 </div>
               </div>
               <span className="text-sm font-black tabular">{pointsLabel(j.points)}</span>
@@ -84,16 +107,18 @@ export function JohnList({ johns, editable }: { johns: JohnDef[]; editable: bool
           Add a John
         </Button>
       ) : null}
-      <JohnEditor value={editing} onClose={() => setEditing(null)} />
+      <JohnEditor value={editing} groups={groups} onClose={() => setEditing(null)} />
     </div>
   );
 }
 
 function JohnEditor({
   value,
+  groups,
   onClose,
 }: {
   value: (Omit<JohnDef, "id"> & { id?: string }) | null;
+  groups: GroupOption[];
   onClose: () => void;
 }) {
   return (
@@ -103,13 +128,21 @@ function JohnEditor({
           <SheetTitle>{value?.id ? `Edit ${value.name}` : "Add a John"}</SheetTitle>
           <SheetDescription>Points are effort: 1 for taking the bins out, 5 for a deep clean.</SheetDescription>
         </SheetHeader>
-        {value ? <JohnForm key={value.id ?? "new"} initial={value} onDone={onClose} /> : null}
+        {value ? <JohnForm key={value.id ?? "new"} initial={value} groups={groups} onDone={onClose} /> : null}
       </SheetContent>
     </Sheet>
   );
 }
 
-function JohnForm({ initial, onDone }: { initial: Omit<JohnDef, "id"> & { id?: string }; onDone: () => void }) {
+function JohnForm({
+  initial,
+  groups,
+  onDone,
+}: {
+  initial: Omit<JohnDef, "id"> & { id?: string };
+  groups: GroupOption[];
+  onDone: () => void;
+}) {
   const { pending, run } = useAction();
   const [v, setV] = useState(initial);
   const set = (patch: Partial<typeof v>) => setV((old) => ({ ...old, ...patch }));
@@ -143,6 +176,26 @@ function JohnForm({ initial, onDone }: { initial: Omit<JohnDef, "id"> & { id?: s
           ))}
         </NativeSelect>
         <LidSwatch category={v.category} className="mt-2 text-xs text-muted-foreground" />
+      </div>
+      <div>
+        <FieldLabel htmlFor="john-group">Shared by</FieldLabel>
+        <NativeSelect
+          id="john-group"
+          value={v.groupId ?? ""}
+          onChange={(e) => set({ groupId: e.target.value || null })}
+        >
+          <option value="">Everyone</option>
+          {groups.map((g) => (
+            <option key={g.id} value={g.id}>
+              {g.name}
+            </option>
+          ))}
+        </NativeSelect>
+        <p className="mt-1.5 text-xs text-muted-foreground">
+          {groups.length === 0
+            ? "For a John only some of you share, like one of two bathrooms, make a group first."
+            : "Only that group is handed it, and it only counts toward their share."}
+        </p>
       </div>
       <div>
         <FieldLabel>Effort</FieldLabel>

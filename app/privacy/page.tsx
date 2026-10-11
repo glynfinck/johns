@@ -14,7 +14,7 @@ export default function PrivacyPage() {
       <h1 className="mt-8 text-3xl font-black tracking-tight uppercase">Privacy</h1>
       <div className="mt-4 flex flex-col gap-4 text-[15px] leading-relaxed">
         <p>
-          Johns keeps what it needs to run your house&rsquo;s rota and nothing more: your name from Google, the house
+          Johns keeps what it needs to share out your house&rsquo;s Johns and nothing more: your name from Google, the house
           you belong to, the Johns you were given and when you ticked them, any photos you add, disputes and votes,
           and the Stake ledger.
         </p>

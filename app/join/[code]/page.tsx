@@ -54,7 +54,7 @@ export default async function JoinPage({ params }: PageProps<"/join/[code]">) {
             <h1 className="mt-1 text-3xl font-black tracking-tight uppercase">{house.name}</h1>
             <p className="mt-2 text-muted-foreground">
               {house.members} {house.members === 1 ? "person lives" : "people live"}{" "}
-              here. Joining puts you on next week&rsquo;s rota.
+              here. Join and you&rsquo;re dealt Johns from next week.
             </p>
           </div>
           <JoinButton code={code} houseName={house.name} />

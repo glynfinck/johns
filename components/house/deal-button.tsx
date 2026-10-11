@@ -7,8 +7,8 @@ import { useAction } from "@/hooks/use-action";
 import { dealThisWeek } from "@/lib/actions/house";
 
 /**
- * Deal this week's Johns. Before the rota has started it is the moment the
- * house begins; afterwards it re-deals a week nobody has ticked anything in.
+ * Deal this week's Johns. The first time, it is the moment the house
+ * begins; afterwards it re-deals a week nobody has ticked anything in.
  */
 export function DealButton({ started, className }: { started: boolean; className?: string }) {
   const { pending, run } = useAction();

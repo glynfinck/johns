@@ -1,6 +1,16 @@
 import { describe, expect, it } from "vitest";
 
-import { dueLabel, firstName, initials, monthLabel, pointsLabel, relative, weekRange } from "@/lib/format";
+import {
+  dateRange,
+  dueLabel,
+  firstName,
+  formatBalance,
+  initials,
+  monthLabel,
+  pointsLabel,
+  relative,
+  weekRange,
+} from "@/lib/format";
 import { weekWindow } from "@/lib/week";
 
 const LONDON = "Europe/London";
@@ -54,5 +64,21 @@ describe("pointsLabel", () => {
   it("counts one point as a pt", () => {
     expect(pointsLabel(1)).toBe("1 pt");
     expect(pointsLabel(4)).toBe("4 pts");
+  });
+});
+
+describe("dateRange", () => {
+  it("reads like a calendar", () => {
+    expect(dateRange("2026-10-14", "2026-10-21")).toBe("14–21 Oct");
+    expect(dateRange("2026-10-28", "2026-11-02")).toBe("28 Oct – 2 Nov");
+    expect(dateRange("2026-10-16", "2026-10-16")).toBe("Fri 16 Oct");
+  });
+});
+
+describe("formatBalance", () => {
+  it("signs a balance to the half point", () => {
+    expect(formatBalance(3.4)).toBe("+3.5");
+    expect(formatBalance(-9)).toBe("−9");
+    expect(formatBalance(0.1)).toBe("level");
   });
 });

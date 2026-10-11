@@ -7,7 +7,7 @@ import { createAdminClient } from "@/lib/supabase/admin";
  * Catch a house up before showing it.
  *
  * pg_cron runs the tick every ten minutes in production, but a page should
- * never show last week's rota because the alarm has not gone off yet, and
+ * never show last week's Johns because the alarm has not gone off yet, and
  * local development has no alarm at all. So a page load runs the same tick
  * for the one house it is about, no more than once a minute, without
  * sending any pushes (those are the cron tick's job).

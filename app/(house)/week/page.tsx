@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 
-import { DealButton } from "@/components/house/start-rota";
+import { DealButton } from "@/components/house/deal-button";
 import { DisputeButton, MarkDone, SwapSheet, VoteButtons } from "@/components/johns/john-actions";
 import { JohnCard } from "@/components/johns/john-card";
 import { lidColor } from "@/components/johns/lid";
@@ -9,10 +9,13 @@ import { StatusChip } from "@/components/johns/status-chip";
 import { PageHeader } from "@/components/shell/app-shell";
 import { Standings } from "@/components/table/standings";
 import { Avatar } from "@/components/ui/avatar";
+import { awayDays } from "@/lib/away";
+import { getAway } from "@/lib/data/away";
 import { requireHouse } from "@/lib/data/house";
 import { getWeekBoard } from "@/lib/data/week";
-import { dueLabel, firstName, relative, weekRange } from "@/lib/format";
+import { dateRange, dueLabel, firstName, relative, weekRange } from "@/lib/format";
 import { pointsEarned } from "@/lib/points";
+import { addDaysTo } from "@/lib/week";
 
 export const metadata: Metadata = { title: "This week" };
 
@@ -20,7 +23,7 @@ const OPEN = new Set(["upcoming", "due-soon", "overdue"]);
 
 export default async function WeekPage() {
   const ctx = await requireHouse();
-  const board = await getWeekBoard(ctx);
+  const [board, away] = await Promise.all([getWeekBoard(ctx), getAway(ctx)]);
   const { rules, now, me } = ctx;
   const names = new Map(ctx.members.map((m) => [m.userId, m.name]));
   const admin = ctx.members.find((m) => m.role === "admin");
@@ -40,9 +43,18 @@ export default async function WeekPage() {
   const disputes = items.filter((i) => i.dispute);
   const myOpen = items.filter((i) => i.userId === ctx.userId && OPEN.has(i.status));
   const theirOpen = items.filter((i) => i.userId !== ctx.userId && OPEN.has(i.status));
+  const lastDay = addDaysTo(board.week.startsOn, 6);
+  const awayLabel = (userId: string) => {
+    const days = awayDays(away.periods, userId, board.week!.startsOn, lastDay);
+    if (days.length === 0) return null;
+    return days.length === 7 ? "Away all week" : `Away ${dateRange(days[0], days[days.length - 1])}`;
+  };
+  const awayThisWeek = ctx.members
+    .map((m) => ({ ...m, label: awayLabel(m.userId) }))
+    .filter((m) => m.label !== null);
   const people = ctx.members
-    .map((m) => ({ ...m, items: items.filter((i) => i.userId === m.userId) }))
-    .filter((p) => p.items.length > 0);
+    .map((m) => ({ ...m, items: items.filter((i) => i.userId === m.userId), away: awayLabel(m.userId) }))
+    .filter((p) => p.items.length > 0 || p.away);
 
   return (
     <div className="mx-auto max-w-7xl">
@@ -104,7 +116,10 @@ export default async function WeekPage() {
                         style={hazard ? undefined : { background: lidColor(i.category) }}
                       />
                     </td>
-                    <td className="px-3 py-2 font-bold">{i.name}</td>
+                    <td className="px-3 py-2">
+                      <span className="font-bold">{i.name}</span>
+                      {i.groupName ? <span className="block text-xs text-muted-foreground">{i.groupName}</span> : null}
+                    </td>
                     <td className="px-3 py-2">
                       <span className="inline-flex items-center gap-2">
                         <Avatar name={names.get(i.userId) ?? "?"} me={mine} className="size-6 text-[10px]" />
@@ -145,6 +160,9 @@ export default async function WeekPage() {
                   {p.items.filter((i) => !OPEN.has(i.status)).length}/{p.items.length}
                 </span>
               </h2>
+              {p.away ? (
+                <p className="-mt-1 text-xs font-bold tracking-wide text-muted-foreground uppercase">{p.away}</p>
+              ) : null}
               {p.items.map((i) => (
                 <JohnCard
                   key={i.id}
@@ -177,6 +195,20 @@ export default async function WeekPage() {
                       {i.dispute!.uphold} not done · {i.dispute!.reject} fine · closes {relative(i.dispute!.closesAt, now)}
                     </p>
                     {i.userId !== ctx.userId ? <VoteButtons disputeId={i.dispute!.id} myVote={i.dispute!.myVote} /> : null}
+                  </li>
+                ))}
+              </ul>
+            </section>
+          ) : null}
+          {awayThisWeek.length > 0 ? (
+            <section className="rounded-lg border border-border bg-card p-4">
+              <h2 className="eyebrow mb-3">Away this week</h2>
+              <ul className="flex flex-col gap-2 text-sm">
+                {awayThisWeek.map((m) => (
+                  <li key={m.userId} className="flex items-center gap-2">
+                    <Avatar name={m.name} me={m.userId === ctx.userId} className="size-6 text-[10px]" />
+                    <span className="font-bold">{m.userId === ctx.userId ? "You" : firstName(m.name)}</span>
+                    <span className="ml-auto text-muted-foreground tabular">{m.label!.replace("Away ", "")}</span>
                   </li>
                 ))}
               </ul>
