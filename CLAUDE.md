@@ -16,7 +16,11 @@ Next 16.2 + React 19.2, Tailwind 4 (`@theme inline` tokens), `@supabase/ssr`
 clients in `lib/supabase/` (`client`, `server`, `proxy`, plus `admin` for the
 service role), next-themes with the `.dark` class, lucide icons, sonner, zod,
 Vitest (unit + db projects) and Playwright. Vercel and Supabase deploy from
-their GitHub integrations; CI only proves.
+their GitHub integrations; CI only proves. Production's accounts are set up
+by `npm run provision` (`scripts/provision.mjs`, what production should be in
+`scripts/provision/config.mjs`, its decisions unit-tested in
+`scripts/provision/lib.mjs`): it writes, then reads everything back. Never
+`supabase config push`, which writes local settings over production's.
 
 Components are **shadcn/ui** (radix-nova, `components.json` matches the other
 repos). Add new ones with `npx shadcn add <name>`, never hand-roll a primitive
