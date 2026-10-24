@@ -17,6 +17,7 @@ import {
   setEnvLine,
   summaryMarkdown,
   todoText,
+  tokenHint,
   vaultUpsertSql,
 } from "@/scripts/provision/lib.mjs";
 
@@ -192,6 +193,25 @@ describe("the run's summary", () => {
     expect(md).toContain("1. **Connect the integration** · [open](https://supabase.com/dashboard/project/x/settings/integrations)");
     expect(md).toContain("[Create a Google Cloud project called Johns](https://console.cloud.google.com/projectcreate)");
     expect(md).toContain(`\`https://${REF}.supabase.co/auth/v1/callback\``);
+  });
+
+  it("says why a run stopped early on the page a phone opens first", () => {
+    const md = summaryMarkdown({
+      app: "Johns",
+      site: "https://johns.glyn.dev",
+      results: [{ ok: false, msg: "no project called Johns yet" }],
+      todo: [],
+      stopped: "SUPABASE_ACCESS_TOKEN is not set.\nAdd it as a repository secret.",
+    });
+    expect(md).toContain("## Johns: stopped");
+    expect(md).toContain("> SUPABASE_ACCESS_TOKEN is not set.\n> Add it as a repository secret.");
+    expect(md).toContain("- ❌ no project called Johns yet");
+  });
+
+  it("names the token an API refused", () => {
+    expect(tokenHint("https://api.supabase.com", 401)).toBe(" (check SUPABASE_ACCESS_TOKEN)");
+    expect(tokenHint("https://api.vercel.com", 403)).toContain("VERCEL_TOKEN");
+    expect(tokenHint("https://api.vercel.com", 404)).toBe("");
   });
 
   it("says the same in a terminal", () => {

@@ -206,13 +206,24 @@ export function todoText(todo) {
     .join("\n");
 }
 
+/** What a refused token means, by which API refused it. */
+export function tokenHint(base, status) {
+  if (status !== 401 && status !== 403) return "";
+  if (base.includes("supabase")) return " (check SUPABASE_ACCESS_TOKEN)";
+  if (base.includes("vercel")) return " (check VERCEL_TOKEN, and that its scope is the team that owns the project)";
+  return "";
+}
+
 /**
  * The run as a GitHub job summary: what passed, then what's left, every step
  * a link, and every value to paste in its own code span so a phone can copy it.
+ * `stopped` is why a run ended early, which otherwise only the log would say.
  */
-export function summaryMarkdown({ app, site, results, todo }) {
+export function summaryMarkdown({ app, site, results, todo, stopped = "" }) {
   const failed = results.filter((r) => !r.ok).length;
-  const out = [`## ${app}: ${failed === 0 ? "all checks passed" : `${failed} check${failed === 1 ? "" : "s"} failed`}`, ""];
+  const verdict = stopped ? "stopped" : failed === 0 ? "all checks passed" : `${failed} check${failed === 1 ? "" : "s"} failed`;
+  const out = [`## ${app}: ${verdict}`, ""];
+  if (stopped) out.push(...stopped.split("\n").map((line) => `> ${line}`), "");
   out.push(`[Open ${site}](${site})`, "");
   for (const r of results) out.push(`- ${r.ok ? "✅" : "❌"} ${r.msg}`);
   if (todo.length > 0) {

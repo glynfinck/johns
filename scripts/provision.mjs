@@ -38,6 +38,7 @@ import {
   siteUrl,
   summaryMarkdown,
   todoText,
+  tokenHint,
   vaultUpsertSql,
 } from "./provision/lib.mjs";
 
@@ -67,14 +68,31 @@ const mask = (value) => {
   return value;
 };
 
+/**
+ * End the run early. In a workflow the reason also goes on the run's summary
+ * page and as an annotation, since a phone sees those before it sees the log.
+ */
+function stop(reason, code = 1) {
+  console.error(reason);
+  if (IN_ACTIONS) {
+    const escaped = reason.replaceAll("%", "%25").replaceAll("\r", "%0D").replaceAll("\n", "%0A");
+    console.log(`::error title=Provisioning stopped::${escaped}`);
+  }
+  if (process.env.GITHUB_STEP_SUMMARY) {
+    appendFileSync(process.env.GITHUB_STEP_SUMMARY, summaryMarkdown({ app: C.app, site: siteUrl(C), results, todo, stopped: reason }));
+  }
+  process.exit(code);
+}
+process.on("uncaughtException", (e) => stop(e.message));
+
 function need(name, where) {
   if (!env[name]) {
-    console.error(
+    stop(
       IN_ACTIONS
         ? `${name} is not set. Create one at ${where}, then add it as a repository secret: ${SECRETS_PAGE}/new`
         : `${name} is not set. Create one at ${where}, then put it in .env.provision.local or the environment.`,
+      2,
     );
-    process.exit(2);
   }
   return env[name];
 }
@@ -95,7 +113,7 @@ async function call(base, token, method, route, body) {
   }
   if (!res.ok) {
     const detail = typeof data === "string" ? data : JSON.stringify(data);
-    throw new Error(`${method} ${route.split("?")[0]} → ${res.status}: ${detail.slice(0, 300)}`);
+    throw new Error(`${method} ${route.split("?")[0]} → ${res.status}${tokenHint(base, res.status)}: ${detail.slice(0, 300)}`);
   }
   return data;
 }
@@ -112,12 +130,17 @@ const google =
     ? { clientId: env.GOOGLE_CLIENT_ID.trim(), secret: env.GOOGLE_CLIENT_SECRET.trim() }
     : null;
 
+/** The Supabase CLI. Its own output shows; a failure names the command but not its arguments, which carry the password. */
 function supabaseCli(cliArgs) {
-  execFileSync("supabase", cliArgs, {
-    cwd: ROOT,
-    stdio: ["ignore", "inherit", "inherit"],
-    env: { ...process.env, SUPABASE_ACCESS_TOKEN: SUPABASE_TOKEN },
-  });
+  try {
+    execFileSync("supabase", cliArgs, {
+      cwd: ROOT,
+      stdio: ["ignore", "inherit", "inherit"],
+      env: { ...process.env, SUPABASE_ACCESS_TOKEN: SUPABASE_TOKEN },
+    });
+  } catch (e) {
+    throw new Error(`supabase ${cliArgs.slice(0, 2).join(" ")} failed (exit ${e.status ?? "unknown"}); its own message is in the log`);
+  }
 }
 
 say(`Provisioning ${C.app} → ${siteUrl(C)}${CHECK_ONLY ? " (check only)" : ""}`);
@@ -130,7 +153,7 @@ const findProject = async () =>
 let project = await findProject();
 if (!project && CHECK_ONLY) {
   fail(`no project called ${C.supabase.name} yet`);
-  process.exit(1);
+  stop(`Nothing to check yet: ${IN_ACTIONS ? 'run it again in "set up and check" mode' : "run it without --check"} to create the project.`);
 }
 if (!project) {
   // The password is saved before the project exists, so a crash between the
