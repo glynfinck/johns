@@ -30,6 +30,17 @@ npm run provision -- --no-deploy  # skip the production deploy at the end
 
 It is safe to run again and again: each step looks before it writes.
 
+**From a phone, run it on GitHub instead.** The **Provision production**
+workflow (`.github/workflows/provision.yml`) runs the same command on a
+runner, with the tokens as repository secrets (`SUPABASE_ACCESS_TOKEN`,
+`VERCEL_TOKEN`, later `GOOGLE_CLIENT_ID` and `GOOGLE_CLIENT_SECRET`). Start it
+from the Actions tab: <https://github.com/glynfinck/johns/actions/workflows/provision.yml>
+→ Run workflow. Its summary page lists every check and what's left, each step
+a link and each value to paste on its own line. A database password made by a
+workflow run lives only for that run, which is enough: everything after
+creating the project goes through the Management API, and the dashboard can
+reset the password if you ever need a direct connection.
+
 | Step | What it does | How it checks |
 | --- | --- | --- |
 | Supabase project | Creates `Johns` in London at the smallest compute (Micro) if it doesn't exist, saving the database password to `.env.provision.local` first, and waits for it to be healthy | Finds it by name |

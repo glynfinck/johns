@@ -172,3 +172,59 @@ export function setEnvLine(text, key, value) {
   if (re.test(text)) return text.replace(re, line);
   return `${text}${text === "" || text.endsWith("\n") ? "" : "\n"}${line}\n`;
 }
+
+/** The Google console steps, in order, each with the page it happens on. */
+export function googleSteps(c, ref, secretsUrl) {
+  const v = googleConsoleValues(c, ref);
+  return [
+    { text: `Create a Google Cloud project called ${c.app}`, url: "https://console.cloud.google.com/projectcreate" },
+    {
+      text: `Branding: app name ${c.app}, your email, home page ${v.homePage}, privacy policy ${v.privacyPolicy}, authorised domains ${v.authorizedDomains.join(" and ")}`,
+      url: "https://console.cloud.google.com/auth/branding",
+    },
+    { text: "Audience: External, then Publish app", url: "https://console.cloud.google.com/auth/audience" },
+    {
+      text: `Create client → Web application, with the JavaScript origins and redirect URIs below`,
+      url: "https://console.cloud.google.com/auth/clients/create",
+    },
+    {
+      text: "Save its client ID and secret as GOOGLE_CLIENT_ID and GOOGLE_CLIENT_SECRET, then run this again",
+      url: secretsUrl,
+    },
+  ];
+}
+
+/** A to-do list as plain text, for a terminal. */
+export function todoText(todo) {
+  return todo
+    .map((t) => {
+      const lines = [`- ${t.title}${t.url ? `: ${t.url}` : ""}`];
+      (t.steps ?? []).forEach((s, i) => lines.push(`  ${i + 1}. ${s.text}${s.url ? `: ${s.url}` : ""}`));
+      for (const [label, values] of t.values ?? []) lines.push(`     ${label}: ${values.join("  ")}`);
+      return lines.join("\n");
+    })
+    .join("\n");
+}
+
+/**
+ * The run as a GitHub job summary: what passed, then what's left, every step
+ * a link, and every value to paste in its own code span so a phone can copy it.
+ */
+export function summaryMarkdown({ app, site, results, todo }) {
+  const failed = results.filter((r) => !r.ok).length;
+  const out = [`## ${app}: ${failed === 0 ? "all checks passed" : `${failed} check${failed === 1 ? "" : "s"} failed`}`, ""];
+  out.push(`[Open ${site}](${site})`, "");
+  for (const r of results) out.push(`- ${r.ok ? "✅" : "❌"} ${r.msg}`);
+  if (todo.length > 0) {
+    out.push("", "### Still yours to do", "");
+    todo.forEach((t, i) => {
+      out.push(`${i + 1}. **${t.title}**${t.url ? ` · [open](${t.url})` : ""}`);
+      (t.steps ?? []).forEach((s, j) => out.push(`   ${j + 1}. ${s.url ? `[${s.text}](${s.url})` : s.text}`));
+      for (const [label, values] of t.values ?? []) {
+        out.push("", `   ${label}:`, "");
+        for (const v of values) out.push(`   \`${v}\``, "");
+      }
+    });
+  }
+  return `${out.join("\n")}\n`;
+}

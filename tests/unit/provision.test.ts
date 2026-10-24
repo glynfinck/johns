@@ -8,12 +8,15 @@ import {
   authorizeProblems,
   envPlan,
   googleConsoleValues,
+  googleSteps,
   googleVerdict,
   migrationVersion,
   missingMigrations,
   parseEnvFile,
   pickKeys,
   setEnvLine,
+  summaryMarkdown,
+  todoText,
   vaultUpsertSql,
 } from "@/scripts/provision/lib.mjs";
 
@@ -148,5 +151,53 @@ describe(".env files", () => {
     expect(setEnvLine(text, "A", "9")).toBe("# comment\nA=9\nB=\"two\"\n");
     expect(setEnvLine("A=1", "C", "3")).toBe("A=1\nC=3\n");
     expect(setEnvLine("", "C", "3")).toBe("C=3\n");
+  });
+});
+
+describe("the run's summary", () => {
+  const todo = [
+    { title: "Connect the integration", url: "https://supabase.com/dashboard/project/x/settings/integrations" },
+    {
+      title: "Create the Google sign-in client",
+      steps: googleSteps(CONFIG, REF),
+      values: [["Authorised redirect URIs", googleConsoleValues(CONFIG, REF).redirectUris]] as [string, string[]][],
+    },
+  ];
+
+  it("walks the Google console in order, each step on its own page", () => {
+    const steps = googleSteps(CONFIG, REF);
+    expect(steps.map((s) => s.url)).toEqual([
+      "https://console.cloud.google.com/projectcreate",
+      "https://console.cloud.google.com/auth/branding",
+      "https://console.cloud.google.com/auth/audience",
+      "https://console.cloud.google.com/auth/clients/create",
+      undefined,
+    ]);
+    expect(steps[1].text).toContain("https://johns.glyn.dev/privacy");
+  });
+
+  it("makes every step a link and every value its own code span, for a phone", () => {
+    const md = summaryMarkdown({
+      app: "Johns",
+      site: "https://johns.glyn.dev",
+      results: [
+        { ok: true, msg: "healthy" },
+        { ok: false, msg: "Google refuses sign-in: invalid_client" },
+      ],
+      todo,
+    });
+    expect(md).toContain("## Johns: 1 check failed");
+    expect(md).toContain("- ✅ healthy");
+    expect(md).toContain("- ❌ Google refuses sign-in: invalid_client");
+    expect(md).toContain("1. **Connect the integration** · [open](https://supabase.com/dashboard/project/x/settings/integrations)");
+    expect(md).toContain("[Create a Google Cloud project called Johns](https://console.cloud.google.com/projectcreate)");
+    expect(md).toContain(`\`https://${REF}.supabase.co/auth/v1/callback\``);
+  });
+
+  it("says the same in a terminal", () => {
+    const text = todoText(todo);
+    expect(text).toContain("- Connect the integration: https://supabase.com/dashboard/project/x/settings/integrations");
+    expect(text).toContain("  3. Audience: External, then Publish app: https://console.cloud.google.com/auth/audience");
+    expect(text).toContain(`Authorised redirect URIs: https://${REF}.supabase.co/auth/v1/callback`);
   });
 });

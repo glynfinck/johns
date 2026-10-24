@@ -17,7 +17,7 @@
 // secret it generates is ever printed.
 import { execFileSync } from "node:child_process";
 import { randomBytes } from "node:crypto";
-import { existsSync, readFileSync, readdirSync, writeFileSync } from "node:fs";
+import { appendFileSync, existsSync, readFileSync, readdirSync, writeFileSync } from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 
@@ -28,6 +28,7 @@ import {
   authorizeProblems,
   envPlan,
   googleConsoleValues,
+  googleSteps,
   googleVerdict,
   migrationVersion,
   missingMigrations,
@@ -35,6 +36,8 @@ import {
   pickKeys,
   setEnvLine,
   siteUrl,
+  summaryMarkdown,
+  todoText,
   vaultUpsertSql,
 } from "./provision/lib.mjs";
 
@@ -43,6 +46,10 @@ const LOCAL_FILE = path.join(ROOT, ".env.provision.local");
 const args = new Set(process.argv.slice(2));
 const CHECK_ONLY = args.has("--check");
 const DEPLOY = !CHECK_ONLY && !args.has("--no-deploy");
+// Run from the "Provision production" workflow, the tokens are repository
+// secrets and the summary is written to the run's page for a phone to read.
+const IN_ACTIONS = Boolean(process.env.GITHUB_ACTIONS);
+const SECRETS_PAGE = `https://github.com/${process.env.GITHUB_REPOSITORY ?? "glynfinck/johns"}/settings/secrets/actions`;
 
 const env = { ...(existsSync(LOCAL_FILE) ? parseEnvFile(readFileSync(LOCAL_FILE, "utf8")) : {}), ...process.env };
 const results = [];
@@ -54,10 +61,19 @@ const fail = (msg) => (results.push({ ok: false, msg }), say(`  ✗ ${msg}`));
 const step = (title) => say(`\n${title}`);
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 const secret = () => randomBytes(32).toString("base64url");
+/** Keep a value out of the Actions log even if something were to print it. */
+const mask = (value) => {
+  if (IN_ACTIONS && value) console.log(`::add-mask::${value}`);
+  return value;
+};
 
 function need(name, where) {
   if (!env[name]) {
-    console.error(`${name} is not set. Create one at ${where}, then put it in .env.provision.local or the environment.`);
+    console.error(
+      IN_ACTIONS
+        ? `${name} is not set. Create one at ${where}, then add it as a repository secret: ${SECRETS_PAGE}/new`
+        : `${name} is not set. Create one at ${where}, then put it in .env.provision.local or the environment.`,
+    );
     process.exit(2);
   }
   return env[name];
@@ -118,9 +134,13 @@ if (!project && CHECK_ONLY) {
 }
 if (!project) {
   // The password is saved before the project exists, so a crash between the
-  // two can't lose it. Nothing else can recover it later.
-  const password = env.SUPABASE_DB_PASSWORD || secret();
-  if (!env.SUPABASE_DB_PASSWORD) {
+  // two can't lose it. In a workflow it lives only for this run: everything
+  // after creation goes through the API, and the dashboard can reset it.
+  const password = mask(env.SUPABASE_DB_PASSWORD || secret());
+  if (!env.SUPABASE_DB_PASSWORD && IN_ACTIONS) {
+    env.SUPABASE_DB_PASSWORD = password;
+    say("  · database password made for this run only (reset it in Supabase if you ever need it)");
+  } else if (!env.SUPABASE_DB_PASSWORD) {
     const before = existsSync(LOCAL_FILE) ? readFileSync(LOCAL_FILE, "utf8") : "";
     writeFileSync(LOCAL_FILE, setEnvLine(before, "SUPABASE_DB_PASSWORD", password), { mode: 0o600 });
     env.SUPABASE_DB_PASSWORD = password;
@@ -172,16 +192,20 @@ if (missing.length > 0 && !CHECK_ONLY) {
     supabaseCli(["db", "push", "--project-ref", ref, "--password", env.SUPABASE_DB_PASSWORD, "--yes"]);
     missing = missingMigrations(localVersions, await remoteVersions());
   } else {
-    todo.push(
-      `Apply the migrations: connect the GitHub integration (https://supabase.com/dashboard/project/${ref}/settings/integrations), or set SUPABASE_DB_PASSWORD and run this again.`,
-    );
+    todo.push({
+      title: "Apply the migrations: connect the Supabase GitHub integration (glynfinck/johns, branch main), then run this again",
+      url: `https://supabase.com/dashboard/project/${ref}/settings/integrations`,
+    });
   }
 }
 if (missing.length === 0) pass(`all ${localVersions.length} migrations applied`);
 else fail(`not applied yet: ${missing.join(", ")}`);
-todo.push(
-  `If you haven't yet, connect the Supabase GitHub integration so later migrations deploy on merge (one click, no API for it): https://supabase.com/dashboard/project/${ref}/settings/integrations`,
-);
+if (missing.length === 0) {
+  todo.push({
+    title: "If you haven't yet, connect the Supabase GitHub integration (glynfinck/johns, branch main) so later migrations deploy on merge",
+    url: `https://supabase.com/dashboard/project/${ref}/settings/integrations`,
+  });
+}
 
 // --- 3. The clock's Vault secrets -----------------------------------------------------
 
@@ -189,7 +213,7 @@ step("The clock (pg_cron → /api/cron/tick)");
 const [existingSecret] = await sql(
   `select decrypted_secret from vault.decrypted_secrets where name = '${C.vault.secret}'`,
 );
-const cronSecret = existingSecret?.decrypted_secret || secret();
+const cronSecret = mask(existingSecret?.decrypted_secret || secret());
 if (!CHECK_ONLY) {
   await sql(vaultUpsertSql(C.vault.url, `${siteUrl(C)}/api/cron/tick`));
   await sql(vaultUpsertSql(C.vault.secret, cronSecret));
@@ -218,18 +242,14 @@ if (problems.length === 0) pass(`site URL ${siteUrl(C)}, email sign-up off${goog
 for (const p of problems) fail(p);
 if (!google) {
   const v = googleConsoleValues(C, ref);
-  todo.push(
-    [
-      "Create the Google sign-in client (Google has no API for this part), then run this again with GOOGLE_CLIENT_ID and GOOGLE_CLIENT_SECRET:",
-      "  1. New Google Cloud project for this app: https://console.cloud.google.com/projectcreate",
-      `  2. Branding: https://console.cloud.google.com/auth/branding  name ${C.app}, home page ${v.homePage},`,
-      `     privacy policy ${v.privacyPolicy}, authorised domains ${v.authorizedDomains.join(" and ")}`,
-      "  3. Audience: External, then Publish",
-      "  4. Clients → Create client → Web application: https://console.cloud.google.com/auth/clients/create",
-      `     Authorised JavaScript origins: ${v.javascriptOrigins.join("  ")}`,
-      `     Authorised redirect URIs:      ${v.redirectUris.join("  ")}`,
-    ].join("\n"),
-  );
+  todo.push({
+    title: "Create the Google sign-in client (Google has no API for this part)",
+    steps: googleSteps(C, ref, IN_ACTIONS ? `${SECRETS_PAGE}/new` : undefined),
+    values: [
+      ["Authorised JavaScript origins", v.javascriptOrigins],
+      ["Authorised redirect URIs", v.redirectUris],
+    ],
+  });
 } else if (!CHECK_ONLY && existsSync(path.join(ROOT, ".env.local"))) {
   // Local sign-in uses the same client, through config.toml's env() names.
   let local = readFileSync(path.join(ROOT, ".env.local"), "utf8");
@@ -249,12 +269,14 @@ else fail(`${C.vercel.project} isn't connected to its GitHub repository`);
 
 const keys = pickKeys(await supa("GET", `/v1/projects/${ref}/api-keys?reveal=true`));
 if (!keys.anon || !keys.service) throw new Error("Supabase returned no usable API keys for the project");
+mask(keys.service);
 const existing = (await vercel("GET", `/v10/projects/${vercelProject.id}/env`)).envs ?? [];
 const has = (key) => existing.some((e) => e.key === key && e.target?.includes("production"));
 let vapid = null;
 if (!(has("NEXT_PUBLIC_VAPID_PUBLIC_KEY") && has("VAPID_PRIVATE_KEY"))) {
   const { default: webpush } = await import("web-push");
   vapid = webpush.generateVAPIDKeys();
+  mask(vapid.privateKey);
 }
 const plan = envPlan(C, { supabaseUrl, anonKey: keys.anon, serviceKey: keys.service, cronSecret, vapid });
 if (!CHECK_ONLY) await vercel("POST", `/v10/projects/${vercelProject.id}/env?upsert=true`, plan);
@@ -320,8 +342,8 @@ if (google) {
 
 const failed = results.filter((r) => !r.ok);
 say(`\n${results.length - failed.length} checks passed, ${failed.length} failed.`);
-if (todo.length > 0) {
-  say("\nStill yours to do:");
-  for (const t of todo) say(`- ${t}`);
+if (todo.length > 0) say(`\nStill yours to do:\n${todoText(todo)}`);
+if (process.env.GITHUB_STEP_SUMMARY) {
+  appendFileSync(process.env.GITHUB_STEP_SUMMARY, summaryMarkdown({ app: C.app, site: siteUrl(C), results, todo }));
 }
 process.exit(failed.length > 0 ? 1 : 0);

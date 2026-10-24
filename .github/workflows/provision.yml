@@ -1,0 +1,62 @@
+name: Provision production
+
+# `npm run provision`, started by hand from the Actions tab, so production can
+# be set up and checked from a phone. It makes the accounts match
+# scripts/provision/config.mjs, reads everything back, and writes what passed
+# and what's left (with links) to the run's summary page. See DEPLOYMENT.md.
+#
+# Repository secrets it reads:
+#   SUPABASE_ACCESS_TOKEN, VERCEL_TOKEN        always
+#   GOOGLE_CLIENT_ID, GOOGLE_CLIENT_SECRET     once Google's client exists
+on:
+  workflow_dispatch:
+    inputs:
+      mode:
+        description: What to do
+        type: choice
+        options:
+          - set up and check
+          - check only
+          - set up without deploying
+        default: set up and check
+
+permissions:
+  contents: read
+
+# Two runs at once would both try to create the project.
+concurrency:
+  group: provision
+  cancel-in-progress: false
+
+jobs:
+  provision:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - uses: supabase/setup-cli@v1
+        with:
+          version: 2.114.0
+
+      - name: Provision
+        env:
+          SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+          VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
+          GOOGLE_CLIENT_ID: ${{ secrets.GOOGLE_CLIENT_ID }}
+          GOOGLE_CLIENT_SECRET: ${{ secrets.GOOGLE_CLIENT_SECRET }}
+          MODE: ${{ inputs.mode }}
+        run: |
+          case "$MODE" in
+            "check only") npm run provision -- --check ;;
+            "set up without deploying") npm run provision -- --no-deploy ;;
+            *) npm run provision ;;
+          esac
