@@ -1,4 +1,5 @@
 import {
+  AWAY_COPY,
   buildStake,
   DISPUTE_COPY,
   INVITE_COPY,
@@ -12,6 +13,7 @@ import { QueryClientProvider } from '@tanstack/react-query';
 import { Slot } from 'expo-router';
 import { fireEvent, renderRouter, screen, waitFor, within } from 'expo-router/testing-library';
 
+import { loadAway } from '@/api/away';
 import { loadHouse } from '@/api/board';
 import { castVote } from '@/api/disputes';
 import { catchUp } from '@/api/house';
@@ -23,6 +25,7 @@ import { assignment, snapshot } from '@/testing/house';
 import { testQueryClient } from '@/testing/query';
 
 jest.mock('@/api/board', () => ({ loadHouse: jest.fn() }));
+jest.mock('@/api/away', () => ({ loadAway: jest.fn(), setAway: jest.fn(), cancelAway: jest.fn() }));
 jest.mock('@/api/settings', () => ({ dealThisWeek: jest.fn() }));
 jest.mock('@/api/house', () => ({ catchUp: jest.fn() }));
 jest.mock('@/api/table', () => ({ loadTable: jest.fn() }));
@@ -71,6 +74,7 @@ async function open() {
 
 beforeEach(() => {
   jest.clearAllMocks();
+  (loadAway as jest.Mock).mockResolvedValue({ today: '2026-10-21', periods: [] });
   read.mockResolvedValue(snapshot());
   (catchUp as jest.Mock).mockResolvedValue(false);
   (markDone as jest.Mock).mockResolvedValue(undefined);
@@ -216,3 +220,32 @@ it("says when it can't read the house, and tries again", async () => {
   expect(await screen.findByText(TODAY_COPY.title)).toBeOnTheScreen();
 });
 
+
+describe('your time away', () => {
+  const trip = (startsOn: string, endsOn: string) => ({ id: 'p1', userId: 'priya', startsOn, endsOn, note: null });
+
+  it('says when you go, and that your share still counts', async () => {
+    (loadAway as jest.Mock).mockResolvedValue({ today: '2026-10-21', periods: [trip('2026-10-26', '2026-10-28')] });
+    await open();
+    const banner = await screen.findByTestId('away-banner');
+    expect(banner).toHaveTextContent(/You're away 26–28 Oct\./);
+    expect(within(banner).getByText(AWAY_COPY.bannerBody(100))).toBeOnTheScreen();
+    expect(within(banner).getByRole('link', { name: AWAY_COPY.change })).toBeOnTheScreen();
+  });
+
+  it('says until when, once you have gone', async () => {
+    (loadAway as jest.Mock).mockResolvedValue({ today: '2026-10-21', periods: [trip('2026-10-20', '2026-10-28')] });
+    await open();
+    expect(await screen.findByText(AWAY_COPY.banner('Wed 28 Oct', true))).toBeOnTheScreen();
+  });
+
+  it("stays quiet about a trip more than a fortnight off, or someone else's", async () => {
+    (loadAway as jest.Mock).mockResolvedValue({
+      today: '2026-10-21',
+      periods: [trip('2026-11-05', '2026-11-08'), { ...trip('2026-10-22', '2026-10-23'), id: 'p2', userId: 'sam' }],
+    });
+    await open();
+    await waitFor(() => expect(loadAway).toHaveBeenCalled());
+    expect(screen.queryByTestId('away-banner')).toBeNull();
+  });
+});

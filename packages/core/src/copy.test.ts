@@ -2,9 +2,11 @@ import { describe, expect, it } from "vitest";
 
 import {
   APP_NAME,
+  AWAY_COPY,
   DEAL_COPY,
   DISPUTE_COPY,
   FRONT_DOOR,
+  GROUPS_COPY,
   INVITE_COPY,
   JOHN_COPY,
   JOHN_LIST_COPY,
@@ -226,5 +228,26 @@ describe("MEMBERS_COPY", () => {
   it("names who's being removed by their first name", () => {
     expect(MEMBERS_COPY.removeName("Ben Wall")).toBe("Remove Ben");
     expect(MEMBERS_COPY.removeName("Cal")).toBe("Remove Cal");
+  });
+});
+
+describe("GROUPS_COPY", () => {
+  it("names the group being edited", () => {
+    expect(GROUPS_COPY.edit("Upstairs")).toBe("Edit Upstairs");
+  });
+});
+
+describe("AWAY_COPY", () => {
+  it("counts the Johns booking moved", () => {
+    expect(AWAY_COPY.moved(1)).toBe("1 of your Johns falls due while you're away, so it's now due before you go.");
+    expect(AWAY_COPY.moved(3)).toBe("3 of your Johns fall due while you're away, so they're now due before you go.");
+  });
+
+  it("tells you on Today when you're away, and what your share does", () => {
+    expect(AWAY_COPY.banner("26–28 Oct", false)).toBe("You're away 26–28 Oct.");
+    expect(AWAY_COPY.banner("Wed 28 Oct", true)).toBe("You're away until Wed 28 Oct.");
+    expect(AWAY_COPY.bannerBody(100)).toMatch(/, but your share still counts/);
+    expect(AWAY_COPY.bannerBody(50)).toMatch(/, but half your share still counts/);
+    expect(AWAY_COPY.bannerBody(0)).toBe("Nobody hands you a John due while you’re gone.");
   });
 });

@@ -1,12 +1,14 @@
 import { describe, expect, it } from "vitest";
 
 import {
+  AwayDraft,
   CastVote,
   CreateHouse,
   DealRequest,
   DisplayName,
   disputeProblem,
   FreshRequest,
+  GroupDraft,
   HouseSettings,
   JOIN_CODE_ALPHABET,
   JOIN_CODE_LENGTH,
@@ -226,5 +228,37 @@ describe("DealRequest", () => {
     expect(DealRequest.parse({ houseId })).toEqual({ houseId });
     expect(DealRequest.safeParse({ houseId: "flat-3" }).success).toBe(false);
     expect(DealRequest.safeParse({}).success).toBe(false);
+  });
+});
+
+describe("GroupDraft", () => {
+  const ava = crypto.randomUUID();
+
+  it("takes a named group of housemates, tidied", () => {
+    expect(GroupDraft.parse({ name: " Upstairs ", members: [ava] })).toEqual({ name: "Upstairs", members: [ava] });
+  });
+
+  it("says what's missing in words", () => {
+    expect(GroupDraft.safeParse({ name: "", members: [ava] }).error?.issues[0].message).toBe("Name the group.");
+    expect(GroupDraft.safeParse({ name: "Upstairs", members: [] }).error?.issues[0].message).toBe("Pick at least one housemate.");
+    expect(GroupDraft.safeParse({ name: "x".repeat(41), members: [ava] }).success).toBe(false);
+    expect(GroupDraft.safeParse({ name: "Upstairs", members: ["ava"] }).success).toBe(false);
+  });
+});
+
+describe("AwayDraft", () => {
+  it("takes local first and last days, and where", () => {
+    expect(AwayDraft.parse({ from: "2026-10-26", to: "2026-10-28", note: " Lisbon " })).toEqual({
+      from: "2026-10-26",
+      to: "2026-10-28",
+      note: "Lisbon",
+    });
+    expect(AwayDraft.parse({ from: "2026-10-26", to: "2026-10-26" })).toEqual({ from: "2026-10-26", to: "2026-10-26" });
+  });
+
+  it("asks for each day it's missing", () => {
+    expect(AwayDraft.safeParse({ from: "", to: "2026-10-28" }).error?.issues[0].message).toBe("Pick the first day you're away.");
+    expect(AwayDraft.safeParse({ from: "2026-10-26", to: "28 Oct" }).error?.issues[0].message).toBe("Pick the last day you're away.");
+    expect(AwayDraft.safeParse({ from: "2026-10-26", to: "2026-10-28", note: "x".repeat(61) }).success).toBe(false);
   });
 });

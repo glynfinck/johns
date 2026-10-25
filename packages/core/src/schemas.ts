@@ -86,6 +86,24 @@ export const JohnDraft = z.object({
 });
 export type JohnDraft = z.infer<typeof JohnDraft>;
 
+/** A group of housemates who share some Johns (one of two bathrooms): what save_group takes. */
+export const GroupDraft = z.object({
+  id: z.uuid().optional(),
+  name: z.string().trim().min(1, "Name the group.").max(40),
+  members: z.array(z.uuid()).min(1, "Pick at least one housemate."),
+});
+export type GroupDraft = z.infer<typeof GroupDraft>;
+
+const LOCAL_DATE = /^\d{4}-\d{2}-\d{2}$/;
+
+/** Time away you book for yourself: local first and last days, inclusive, and where. set_away decides the rest. */
+export const AwayDraft = z.object({
+  from: z.string().regex(LOCAL_DATE, "Pick the first day you're away."),
+  to: z.string().regex(LOCAL_DATE, "Pick the last day you're away."),
+  note: z.string().trim().max(60).optional(),
+});
+export type AwayDraft = z.infer<typeof AwayDraft>;
+
 /** A name you go by: what renaming yourself writes to profiles.display_name. */
 export const DisplayName = z.string().trim().min(1, "Names are 1 to 60 characters.").max(60, "Names are 1 to 60 characters.");
 

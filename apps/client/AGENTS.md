@@ -93,7 +93,8 @@ permanent once a store has seen them.
     and "Mark received" through `confirm_payment`), `settings.ts` (House:
     the John list and the house rules through the admins' column grants,
     roles and leaving through RPC, and the deal through `POST /api/deal`)
-    and `photos.ts` (receipts: below). RLS filters a write that isn't an
+    `away.ts` (time away: reading it, and booking and cancelling through
+    `set_away` and `cancel_away`) and `photos.ts` (receipts: below). RLS filters a write that isn't an
     admin's to no rows rather than refusing it, so `settings.ts` asks for
     the written row back and says "Only the house admins can do that." when
     there is none.
@@ -110,7 +111,9 @@ permanent once a store has seen them.
   for the web's selects, `Alert`, `SignInPanel`, `Screen` for a house
   screen's page, `Sheet` for a form that rises from the bottom, `JohnCard`
   for anyone's John, `DisputeButton` and `VoteButtons`, `SwapSheet`, the
-  board's pieces in `week-board.tsx`, and the shell in `shell/`).
+  board's pieces in `week-board.tsx`, `Toggle` for an on/off setting,
+  `DateRangePicker` for picking days (no native date module), House's
+  panels in `house/`, and the shell in `shell/`).
 - **A house's screens are tabs** (`src/app/(house)/_layout.tsx`, Expo
   Router's JS tabs from `expo-router/js-tabs`): `HouseTabBar` draws them in
   the web's look, along the bottom of a phone and as a sidebar from `WIDE`

@@ -1,4 +1,5 @@
 import {
+  AWAY_COPY,
   dueLabel,
   firstName,
   isOpen,
@@ -62,11 +63,14 @@ export function PersonSection({
   userId,
   items,
   immunityTokens,
+  away = null,
 }: {
   context: BoardContext;
   userId: string;
   items: BoardItem[];
   immunityTokens: number;
+  /** "Away 21–23 Oct", when they are this week. */
+  away?: string | null;
 }) {
   const { colors } = useTheme();
   const mine = userId === context.userId;
@@ -80,6 +84,7 @@ export function PersonSection({
           {`${items.filter((i) => !isOpen(i.status)).length}/${items.length}`}
         </Text>
       </View>
+      {away ? <Text style={[styles.away, { color: colors.mutedForeground }]}>{away}</Text> : null}
       {items.map((item) => (
         <JohnCard
           key={item.id}
@@ -93,6 +98,23 @@ export function PersonSection({
         />
       ))}
     </View>
+  );
+}
+
+/** Who's away this week, beside the laptop's board, as the web's aside. */
+export function AwayThisWeek({ people, me }: { people: { userId: string; name: string; label: string | null }[]; me: string }) {
+  const { colors } = useTheme();
+  return (
+    <Card style={styles.awayCard}>
+      <Eyebrow>{AWAY_COPY.thisWeek}</Eyebrow>
+      {people.map((p) => (
+        <View key={p.userId} testID="away-this-week" style={styles.awayRow}>
+          <Avatar name={p.name} me={p.userId === me} size={24} />
+          <Text style={[styles.awayName, { color: colors.foreground }]}>{p.userId === me ? 'You' : firstName(p.name)}</Text>
+          <Text style={[styles.awayWhen, { color: colors.mutedForeground }]}>{(p.label ?? '').replace('Away ', '')}</Text>
+        </View>
+      ))}
+    </Card>
   );
 }
 
@@ -193,6 +215,11 @@ export function DisputeList({ context, items }: { context: BoardContext; items: 
 }
 
 const styles = StyleSheet.create({
+  awayCard: { gap: SPACE.sm },
+  awayRow: { flexDirection: 'row', alignItems: 'center', gap: SPACE.sm },
+  awayName: { fontFamily: FONT.bold, fontSize: 14 },
+  awayWhen: { marginLeft: 'auto', fontFamily: FONT.regular, fontSize: 14 },
+  away: { marginTop: -SPACE.xs, fontFamily: FONT.bold, fontSize: 12, letterSpacing: 0.6, textTransform: 'uppercase' },
   stats: { flexDirection: 'row', flexWrap: 'wrap', gap: SPACE.sm },
   stat: { flexGrow: 1, paddingVertical: SPACE.md, gap: 2 },
   statValue: { fontFamily: FONT.black, fontSize: 24 },

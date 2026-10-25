@@ -53,6 +53,18 @@ export function johnDef(
   };
 }
 
+/** A group of housemates, as House shows and edits it. */
+export interface GroupDef {
+  id: string;
+  name: string;
+  memberIds: string[];
+}
+
+/** A group from its row, with who is in it. */
+export function groupDef(row: Pick<Row<"groups">, "id" | "name"> & { group_members: { user_id: string }[] | null }): GroupDef {
+  return { id: row.id, name: row.name, memberIds: (row.group_members ?? []).map((m) => m.user_id) };
+}
+
 /** How much effort the list asks of the house in an average week: a fortnightly John counts half. */
 export function weeklyEffort(johns: readonly Pick<JohnDef, "points" | "everyWeeks">[]): number {
   return johns.reduce((sum, j) => sum + j.points / j.everyWeeks, 0);

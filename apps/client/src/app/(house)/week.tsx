@@ -1,4 +1,4 @@
-import { isOpen, weekRange, WEEK_COPY, TODAY_COPY } from '@app/core';
+import { awayThisWeek, isOpen, weekRange, WEEK_COPY, TODAY_COPY } from '@app/core';
 import { RefreshCwIcon } from 'lucide-react-native';
 import { useState } from 'react';
 import { ActivityIndicator, StyleSheet, View, useWindowDimensions } from 'react-native';
@@ -11,7 +11,8 @@ import { SwapSheet } from '@/components/swap-sheet';
 import { TableBeside } from '@/components/table-parts';
 import { Eyebrow, Heading } from '@/components/text';
 import { DealButton } from '@/components/house/deal-button';
-import { DisputeList, PersonSection, Stats, WeekTable, type BoardContext } from '@/components/week-board';
+import { AwayThisWeek, DisputeList, PersonSection, Stats, WeekTable, type BoardContext } from '@/components/week-board';
+import { useAway } from '@/hooks/use-away';
 import { useCatchUp, useHouse, type HouseView } from '@/hooks/use-house';
 import { useMembership } from '@/hooks/use-membership';
 import { SPACE, useTheme, WIDE } from '@/theme';
@@ -59,6 +60,7 @@ function WeekFor({ houseId, userId }: { houseId: string; userId: string }) {
 function Board({ view, wide }: { view: HouseView; wide: boolean }) {
   const { snapshot, board, me, now } = view;
   const { house, members, rules } = snapshot;
+  const away = useAway(house.id, snapshot).data;
   const userId = me?.userId ?? '';
   const nameOf = (id: string) => members.find((m) => m.userId === id)?.name ?? 'Housemate';
   const context: BoardContext = { houseId: house.id, userId, zone: rules.timezone, now, nameOf };
@@ -80,8 +82,10 @@ function Board({ view, wide }: { view: HouseView; wide: boolean }) {
   const myOpen = items.filter((i) => i.userId === userId && isOpen(i.status));
   const theirOpen = items.filter((i) => i.userId !== userId && isOpen(i.status));
   const nothingTicked = items.every((i) => !i.doneAt && !i.outcome);
-  // Everyone with a John this week, in the order they joined.
-  const people = members.filter((m) => items.some((i) => i.userId === m.userId));
+  const awayLabel = (id: string) => (away ? awayThisWeek(away.periods, id, board.week!.startsOn) : null);
+  // Everyone with a John this week, or away some of it, in the order they joined.
+  const people = members.filter((m) => items.some((i) => i.userId === m.userId) || awayLabel(m.userId));
+  const awayNow = members.map((m) => ({ ...m, label: awayLabel(m.userId) })).filter((m) => m.label !== null);
 
   return (
     <View style={styles.stack}>
@@ -110,6 +114,7 @@ function Board({ view, wide }: { view: HouseView; wide: boolean }) {
           </View>
           <View style={styles.aside}>
             <DisputeList context={context} items={items} />
+            {awayNow.length > 0 ? <AwayThisWeek people={awayNow} me={userId} /> : null}
             <TableBeside rows={board.table} people={{ me: userId, nameOf }} />
           </View>
         </View>
@@ -122,6 +127,7 @@ function Board({ view, wide }: { view: HouseView; wide: boolean }) {
               userId={p.userId}
               items={items.filter((i) => i.userId === p.userId)}
               immunityTokens={me?.immunityTokens ?? 0}
+              away={awayLabel(p.userId)}
             />
           ))}
           {/* On a phone each card carries its own votes, so only the Table follows. */}

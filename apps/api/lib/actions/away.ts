@@ -1,6 +1,6 @@
 "use server";
 
-import { humanError } from "@app/core";
+import { AwayDraft, humanError } from "@app/core";
 import { refresh } from "next/cache";
 import { z } from "zod";
 
@@ -11,16 +11,10 @@ import { createClient } from "@/lib/supabase/server";
  * including pulling forward the Johns you already have.
  */
 
-const AwayInput = z.object({
-  from: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, "Pick the first day you're away."),
-  to: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, "Pick the last day you're away."),
-  note: z.string().trim().max(60).optional(),
-});
-
 export type AwayOutcome = { error?: string; moved?: number } | void;
 
-export async function setAway(input: z.input<typeof AwayInput>): Promise<AwayOutcome> {
-  const parsed = AwayInput.safeParse(input);
+export async function setAway(input: z.input<typeof AwayDraft>): Promise<AwayOutcome> {
+  const parsed = AwayDraft.safeParse(input);
   if (!parsed.success) return { error: parsed.error.issues[0].message };
   const supabase = await createClient();
   const { data, error } = await supabase.rpc("set_away", {

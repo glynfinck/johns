@@ -8,6 +8,7 @@ import {
   pointsLabel,
   weeklyEffort,
   type Category,
+  type GroupDef,
   type HouseRules,
   type IsoDow,
   type JohnDef,
@@ -16,7 +17,7 @@ import { CameraIcon, PencilIcon, PlusIcon, Trash2Icon } from 'lucide-react-nativ
 import { useState } from 'react';
 import { StyleSheet, Text, View } from 'react-native';
 
-import { archiveJohn, saveJohn, type GroupOption } from '@/api/settings';
+import { archiveJohn, saveJohn } from '@/api/settings';
 import { Alert } from '@/components/alert';
 import { Button } from '@/components/button';
 import { Choice } from '@/components/choice';
@@ -50,7 +51,7 @@ export function JohnList({
   houseId: string;
   rules: HouseRules;
   johns: JohnDef[];
-  groups: GroupOption[];
+  groups: GroupDef[];
   editable: boolean;
 }) {
   const { colors } = useTheme();
@@ -141,7 +142,7 @@ function JohnForm({
   houseId: string;
   rules: HouseRules;
   initial: Draft;
-  groups: GroupOption[];
+  groups: GroupDef[];
   onDone: () => void;
 }) {
   const move = useMove(houseId);

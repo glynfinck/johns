@@ -1,9 +1,10 @@
-import { DEAL_COPY, DISPUTE_COPY, JOHN_COPY, NOT_DEALT_COPY, SWAP_COPY, WEEK_COPY } from '@app/core';
+import { AWAY_COPY, DEAL_COPY, DISPUTE_COPY, JOHN_COPY, NOT_DEALT_COPY, SWAP_COPY, WEEK_COPY } from '@app/core';
 import { QueryClientProvider } from '@tanstack/react-query';
 import { Slot } from 'expo-router';
-import { fireEvent, renderRouter, screen, within } from 'expo-router/testing-library';
+import { fireEvent, renderRouter, screen, waitFor, within } from 'expo-router/testing-library';
 import { useWindowDimensions } from 'react-native';
 
+import { loadAway } from '@/api/away';
 import { loadHouse } from '@/api/board';
 import { castVote } from '@/api/disputes';
 import { catchUp } from '@/api/house';
@@ -14,6 +15,7 @@ import { assignment, snapshot } from '@/testing/house';
 import { testQueryClient } from '@/testing/query';
 
 jest.mock('@/api/board', () => ({ loadHouse: jest.fn() }));
+jest.mock('@/api/away', () => ({ loadAway: jest.fn(), setAway: jest.fn(), cancelAway: jest.fn() }));
 jest.mock('@/api/settings', () => ({ dealThisWeek: jest.fn() }));
 jest.mock('@/api/disputes', () => ({ castVote: jest.fn(), raiseDispute: jest.fn() }));
 jest.mock('@/api/house', () => ({ catchUp: jest.fn() }));
@@ -73,6 +75,7 @@ async function open() {
 
 beforeEach(() => {
   jest.clearAllMocks();
+  (loadAway as jest.Mock).mockResolvedValue({ today: '2026-10-21', periods: [] });
   read.mockResolvedValue(busyWeek());
   (catchUp as jest.Mock).mockResolvedValue(false);
   (castVote as jest.Mock).mockResolvedValue(undefined);
@@ -160,5 +163,41 @@ describe('re-dealing', () => {
   it('is gone once a John is ticked', async () => {
     await open();
     expect(screen.queryByRole('button', { name: DEAL_COPY.again })).toBeNull();
+  });
+});
+
+describe('time away', () => {
+  const away = (userId: string, startsOn: string, endsOn: string) => ({ id: `p-${userId}`, userId, startsOn, endsOn, note: null });
+
+  it("says under each person which days they're away, and shows someone away with no Johns", async () => {
+    (useWindowDimensions as jest.Mock).mockReturnValue({ width: 412, height: 915, scale: 1, fontScale: 1 });
+    read.mockResolvedValue(
+      busyWeek({
+        members: [...snapshot().members, { userId: 'cal', name: 'Cal', role: 'member', streak: 0, immunityTokens: 0, swapTokens: 0 }],
+      }),
+    );
+    (loadAway as jest.Mock).mockResolvedValue({
+      today: '2026-10-21',
+      periods: [away('sam', '2026-10-21', '2026-10-23'), away('cal', '2026-10-01', '2026-11-30')],
+    });
+    await open();
+    expect(await within(screen.getByTestId('person-sam')).findByText('Away 21–23 Oct')).toBeOnTheScreen();
+    expect(within(screen.getByTestId('person-cal')).getByText('Away all week')).toBeOnTheScreen();
+    expect(within(screen.getByTestId('person-priya')).queryByText(/^Away/)).toBeNull();
+  });
+
+  it('lists who is away beside the laptop board', async () => {
+    (useWindowDimensions as jest.Mock).mockReturnValue({ width: 1440, height: 900, scale: 1, fontScale: 1 });
+    (loadAway as jest.Mock).mockResolvedValue({ today: '2026-10-21', periods: [away('sam', '2026-10-21', '2026-10-23')] });
+    await open();
+    expect(await screen.findByText(AWAY_COPY.thisWeek)).toBeOnTheScreen();
+    expect(screen.getByTestId('away-this-week')).toHaveTextContent(/Sam.*21–23 Oct/);
+  });
+
+  it('leaves the list out when nobody is', async () => {
+    (useWindowDimensions as jest.Mock).mockReturnValue({ width: 1440, height: 900, scale: 1, fontScale: 1 });
+    await open();
+    await waitFor(() => expect(loadAway).toHaveBeenCalled());
+    expect(screen.queryByText(AWAY_COPY.thisWeek)).toBeNull();
   });
 });

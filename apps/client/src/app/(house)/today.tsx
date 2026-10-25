@@ -4,6 +4,7 @@ import { useState } from 'react';
 import { ActivityIndicator, StyleSheet, Text, View } from 'react-native';
 
 import { Alert } from '@/components/alert';
+import { AwayBanner } from '@/components/away-banner';
 import { Button } from '@/components/button';
 import { Card } from '@/components/card';
 import { InviteCard } from '@/components/invite-card';
@@ -13,6 +14,7 @@ import { Screen } from '@/components/screen';
 import { StakeCard } from '@/components/stake-parts';
 import { ShareCard, TableBeside } from '@/components/table-parts';
 import { Body, Eyebrow, Heading } from '@/components/text';
+import { useAway } from '@/hooks/use-away';
 import { useCatchUp, useHouse, type HouseView } from '@/hooks/use-house';
 import { useMembership } from '@/hooks/use-membership';
 import { useStake } from '@/hooks/use-stake';
@@ -63,6 +65,7 @@ function Week({ view }: { view: HouseView }) {
   const { snapshot, board, today, me, now } = view;
   const table = useTable(snapshot.house.id, snapshot);
   const stake = useStake(snapshot.house.id, snapshot);
+  const away = useAway(snapshot.house.id, snapshot);
   const myBalance = table.data?.balances.find((b) => b.userId === me?.userId);
   const { rules, house, members } = snapshot;
   const admin = members.find((m) => m.role === 'admin');
@@ -76,6 +79,10 @@ function Week({ view }: { view: HouseView }) {
         </Eyebrow>
         <Heading style={styles.title}>{TODAY_COPY.title}</Heading>
       </View>
+
+      {away.data && me ? (
+        <AwayBanner periods={away.data.periods} me={me.userId} today={away.data.today} makeup={house.awayMakeup} />
+      ) : null}
 
       {!board.week ? (
         <>

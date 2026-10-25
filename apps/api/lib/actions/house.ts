@@ -3,6 +3,7 @@
 import {
   CreateHouse,
   DisplayName,
+  GroupDraft,
   HouseSettings,
   humanError,
   JohnDraft,
@@ -160,15 +161,9 @@ export async function archiveJohn(id: string): Promise<Outcome> {
   refresh();
 }
 
-const GroupInput = z.object({
-  id: z.string().uuid().optional(),
-  name: z.string().trim().min(1, "Name the group.").max(40),
-  members: z.array(z.string().uuid()).min(1, "Pick at least one housemate."),
-});
-
 /** Create or rewrite a group: who shares a bathroom, a floor, a fridge. */
-export async function saveGroup(input: z.input<typeof GroupInput>): Promise<Outcome> {
-  const parsed = GroupInput.safeParse(input);
+export async function saveGroup(input: z.input<typeof GroupDraft>): Promise<Outcome> {
+  const parsed = GroupDraft.safeParse(input);
   if (!parsed.success) return { error: parsed.error.issues[0].message };
   const ctx = await myHouse();
   if (!ctx) return { error: humanError({ message: "sign_in_required" }) };

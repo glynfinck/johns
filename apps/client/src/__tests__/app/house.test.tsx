@@ -1,5 +1,7 @@
 import {
+  AWAY_COPY,
   DEAL_COPY,
+  GROUPS_COPY,
   HOUSE_COPY,
   JOHN_LIST_COPY,
   ME_COPY,
@@ -15,16 +17,28 @@ import { act, fireEvent, renderRouter, screen, waitFor, within } from 'expo-rout
 import { Text } from 'react-native';
 
 import { signOut } from '@/api/auth';
+import { cancelAway, loadAway, setAway } from '@/api/away';
 import { loadHouse } from '@/api/board';
 import { catchUp } from '@/api/house';
 import { renameMe } from '@/api/profile';
-import { archiveJohn, dealThisWeek, loadJohnList, removeMember, saveJohn, setRole, updateHouse } from '@/api/settings';
+import {
+  archiveJohn,
+  dealThisWeek,
+  deleteGroup,
+  loadJohnList,
+  removeMember,
+  saveGroup,
+  saveJohn,
+  setRole,
+  updateHouse,
+} from '@/api/settings';
 import HouseScreen from '@/app/(house)/house';
 import { snapshot } from '@/testing/house';
 import { testQueryClient } from '@/testing/query';
 
 jest.mock('@/api/auth', () => ({ signOut: jest.fn() }));
 jest.mock('@/api/board', () => ({ loadHouse: jest.fn() }));
+jest.mock('@/api/away', () => ({ loadAway: jest.fn(), setAway: jest.fn(), cancelAway: jest.fn() }));
 jest.mock('@/api/house', () => ({ catchUp: jest.fn() }));
 jest.mock('@/api/profile', () => ({ renameMe: jest.fn() }));
 jest.mock('@/api/settings', () => ({
@@ -32,6 +46,8 @@ jest.mock('@/api/settings', () => ({
   saveJohn: jest.fn(),
   archiveJohn: jest.fn(),
   updateHouse: jest.fn(),
+  saveGroup: jest.fn(),
+  deleteGroup: jest.fn(),
   setRole: jest.fn(),
   removeMember: jest.fn(),
   dealThisWeek: jest.fn(),
@@ -70,12 +86,14 @@ async function open(as: 'priya' | 'sam' = 'priya') {
 
 beforeEach(() => {
   jest.clearAllMocks();
+  (loadAway as jest.Mock).mockResolvedValue({ today: '2026-10-21', periods: [] });
   (loadHouse as jest.Mock).mockResolvedValue(snapshot());
   (catchUp as jest.Mock).mockResolvedValue(false);
   (loadJohnList as jest.Mock).mockResolvedValue({ johns: [BINS, BATH], groups: [] });
-  for (const move of [saveJohn, archiveJohn, updateHouse, setRole, removeMember, dealThisWeek, renameMe, signOut]) {
+  for (const move of [saveJohn, archiveJohn, updateHouse, setRole, removeMember, dealThisWeek, renameMe, signOut, cancelAway, saveGroup, deleteGroup]) {
     (move as jest.Mock).mockResolvedValue(undefined);
   }
+  (setAway as jest.Mock).mockResolvedValue(0);
 });
 
 it('reads the house again each time House comes into view', async () => {
@@ -345,5 +363,131 @@ describe('you', () => {
     await fireEvent.press(screen.getByTestId('leave-house'));
     expect(await screen.findByRole('alert')).toHaveTextContent(/Make someone else an admin first/);
     expect(mockMembership.refresh).not.toHaveBeenCalled();
+  });
+});
+
+describe('groups', () => {
+  const UPSTAIRS = { id: 'g1', name: 'Upstairs bathroom', memberIds: ['priya', 'sam'] };
+
+  it('names each group and who is in it, and says when nobody is', async () => {
+    (loadJohnList as jest.Mock).mockResolvedValue({
+      johns: [{ ...BATH, groupId: 'g1' }],
+      groups: [UPSTAIRS, { id: 'g2', name: 'Attic', memberIds: [] }],
+    });
+    await open();
+    const [upstairs, attic] = screen.getAllByTestId('group');
+    expect(upstairs).toHaveTextContent(/Upstairs bathroom.*You.*Sam/);
+    expect(attic).toHaveTextContent(`Attic${GROUPS_COPY.nobody}`);
+    // Its John says which group shares it.
+    expect(screen.getAllByTestId('john-def')[0]).toHaveTextContent(/· Upstairs bathroom/);
+  });
+
+  it('lets an admin make a group of the people who share something', async () => {
+    await open();
+    expect(screen.getByText(GROUPS_COPY.empty)).toBeOnTheScreen();
+    await fireEvent.press(screen.getByTestId('add-group'));
+    const form = within(screen.getByTestId('group-form'));
+    expect(form.getByTestId('save-group')).toBeDisabled();
+    await fireEvent.changeText(form.getByTestId('group-name'), 'Upstairs bathroom');
+    await fireEvent.press(form.getByRole('checkbox', { name: 'You' }));
+    await fireEvent.press(form.getByRole('checkbox', { name: 'Sam' }));
+    await fireEvent.press(form.getByRole('checkbox', { name: 'Sam' }));
+    expect(form.getByRole('checkbox', { name: 'Sam' })).not.toBeChecked();
+    await fireEvent.press(form.getByTestId('save-group'));
+    expect(saveGroup).toHaveBeenCalledWith('h1', { id: undefined, name: 'Upstairs bathroom', members: ['priya'] });
+    await waitFor(() => expect(screen.queryByTestId('group-form')).toBeNull());
+  });
+
+  it('lets an admin change a group, or delete it', async () => {
+    (loadJohnList as jest.Mock).mockResolvedValue({ johns: [], groups: [UPSTAIRS] });
+    await open();
+    await fireEvent.press(screen.getByRole('button', { name: GROUPS_COPY.edit('Upstairs bathroom') }));
+    const form = within(screen.getByTestId('group-form'));
+    expect(form.getByRole('checkbox', { name: 'Sam' })).toBeChecked();
+    await fireEvent.press(form.getByRole('button', { name: GROUPS_COPY.remove }));
+    expect(deleteGroup).toHaveBeenCalledWith('g1');
+  });
+
+  it("offers a group as who shares a John", async () => {
+    (loadJohnList as jest.Mock).mockResolvedValue({ johns: [], groups: [UPSTAIRS] });
+    await open();
+    await fireEvent.press(screen.getByTestId('add-john'));
+    const form = within(screen.getByTestId('john-form'));
+    expect(form.getByText(JOHN_LIST_COPY.groupOnly)).toBeOnTheScreen();
+    await fireEvent.changeText(form.getByTestId('john-name'), 'Bath');
+    await fireEvent.press(form.getByRole('radio', { name: 'Upstairs bathroom' }));
+    await fireEvent.press(form.getByTestId('save-john'));
+    expect(saveJohn).toHaveBeenCalledWith('h1', snapshot().rules, { ...NEW_JOHN, name: 'Bath', groupId: 'g1' }, expect.any(Date));
+  });
+
+  it('is for admins to change', async () => {
+    (loadJohnList as jest.Mock).mockResolvedValue({ johns: [], groups: [UPSTAIRS] });
+    await open('sam');
+    expect(screen.getByTestId('group')).toBeOnTheScreen();
+    expect(screen.queryByTestId('add-group')).toBeNull();
+    expect(screen.queryByRole('button', { name: GROUPS_COPY.edit('Upstairs bathroom') })).toBeNull();
+  });
+});
+
+describe('time away', () => {
+  const trip = (overrides: object = {}) => ({
+    id: 'p1',
+    userId: 'sam',
+    startsOn: '2026-10-26',
+    endsOn: '2026-10-28',
+    note: 'Lisbon',
+    ...overrides,
+  });
+
+  it("shows who's away, in words as well as squares", async () => {
+    (loadAway as jest.Mock).mockResolvedValue({
+      today: '2026-10-21',
+      periods: [trip(), trip({ id: 'p2', userId: 'priya', startsOn: '2026-10-20', endsOn: '2026-10-22', note: null })],
+    });
+    await open();
+    const [sam, priya] = screen.getAllByTestId('away-period');
+    expect(sam).toHaveTextContent(/Sam.*26–28 Oct.*Lisbon/);
+    expect(priya).toHaveTextContent(new RegExp(`You.*20–22 Oct.*${AWAY_COPY.awayNow}`));
+    // Your own trip, already begun, ends with "I'm back".
+    expect(within(screen.getByTestId('my-trip')).getByRole('button', { name: AWAY_COPY.back })).toBeOnTheScreen();
+  });
+
+  it("says when nobody's away", async () => {
+    await open();
+    expect(screen.getByText(AWAY_COPY.nobody)).toBeOnTheScreen();
+    expect(screen.queryByTestId('my-trip')).toBeNull();
+  });
+
+  it('books your time away from the calendar, and says what it moved', async () => {
+    (setAway as jest.Mock).mockResolvedValue(2);
+    await open();
+    const form = within(screen.getByTestId('away-form'));
+    expect(form.getByTestId('book-away')).toBeDisabled();
+    expect(form.getByText(AWAY_COPY.pickFrom)).toBeOnTheScreen();
+    await fireEvent.press(form.getByRole('button', { name: 'Monday 26 October' }));
+    expect(form.getByText(AWAY_COPY.pickTo)).toBeOnTheScreen();
+    await fireEvent.press(form.getByRole('button', { name: 'Wednesday 28 October' }));
+    expect(form.getByText(AWAY_COPY.picked('26–28 Oct'))).toBeOnTheScreen();
+    await fireEvent.changeText(form.getByTestId('away-note'), 'Lisbon');
+    await fireEvent.press(form.getByTestId('book-away'));
+    expect(setAway).toHaveBeenCalledWith({ from: '2026-10-26', to: '2026-10-28', note: 'Lisbon' });
+    expect(await screen.findByText(AWAY_COPY.moved(2))).toBeOnTheScreen();
+    expect(form.getByTestId('book-away')).toBeDisabled();
+  });
+
+  it("says why a booking didn't take", async () => {
+    (setAway as jest.Mock).mockRejectedValue(new Error("You're already away for some of those days."));
+    await open();
+    const form = within(screen.getByTestId('away-form'));
+    await fireEvent.press(form.getByRole('button', { name: 'Thursday 22 October' }));
+    await fireEvent.press(form.getByTestId('book-away'));
+    expect(await form.findByRole('alert')).toHaveTextContent("You're already away for some of those days.");
+  });
+
+  it('cancels a trip that has not started', async () => {
+    (loadAway as jest.Mock).mockResolvedValue({ today: '2026-10-21', periods: [trip({ userId: 'priya' })] });
+    await open();
+    await fireEvent.press(within(screen.getByTestId('my-trip')).getByRole('button', { name: AWAY_COPY.cancel }));
+    expect(cancelAway).toHaveBeenCalledWith('p1');
   });
 });

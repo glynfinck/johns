@@ -396,3 +396,57 @@ export const ME_COPY = {
   leaveForGood: "Leave the house for good",
   stay: "Stay",
 } as const;
+
+/** Groups: the parts of the house only some of you share. */
+export const GROUPS_COPY = {
+  title: "Groups",
+  empty: "For Johns only some of you share, like one of two bathrooms. Everything else stays with the whole house.",
+  nobody: "Nobody left in it: its Johns go to everyone.",
+  add: "Make a group",
+  edit: (name: string) => `Edit ${name}`,
+  hint: "Who shares it. Johns you give this group only go to them.",
+  name: "Name",
+  namePlaceholder: "Upstairs bathroom",
+  who: "Who’s in it",
+  create: "Make the group",
+  save: "Save",
+  saving: "Saving…",
+  remove: "Delete",
+} as const;
+
+/** Time away: the house's calendar, booking your own, and Today's reminder of it. Dates arrive formatted. */
+export const AWAY_COPY = {
+  title: "Time away",
+  nobody: "Nobody’s booked any time away.",
+  awayNow: "away now",
+  yours: "Your time away",
+  howItWorks:
+    "Book it before the week is handed out and you won’t be given Johns due while you’re gone. Any you already have become due before you go.",
+  from: "First day away",
+  to: "Last day away",
+  pickFrom: "Tap your first day away.",
+  pickTo: "Now tap your last day away.",
+  picked: (range: string) => `Away ${range}.`,
+  note: "Where (optional)",
+  notePlaceholder: "Lisbon",
+  book: "Book time away",
+  booking: "Booking…",
+  /** What booking moved: the one consequence the calendar can't show. */
+  moved: (n: number) =>
+    `${n} of your Johns ${n === 1 ? "falls" : "fall"} due while you're away, so ${n === 1 ? "it's" : "they're"} now due before you go.`,
+  back: "I'm back",
+  cancel: "Cancel",
+  previousMonth: "Previous month",
+  nextMonth: "Next month",
+  today: "Today",
+  thisWeek: "Away this week",
+  /** Today's banner: when, and what your share does meanwhile (houses.away_makeup). */
+  banner: (range: string, now: boolean) => (now ? `You're away until ${range}.` : `You're away ${range}.`),
+  bannerBody: (makeup: number) =>
+    `Nobody hands you a John due while you’re gone${
+      makeup > 0
+        ? `, but ${makeup === 100 ? "your share" : "half your share"} still counts: you catch up a little each week when you're back.`
+        : "."
+    }`,
+  change: "Change",
+} as const;
