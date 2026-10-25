@@ -1,6 +1,6 @@
 "use server";
 
-import { CATEGORIES, CURRENCIES, humanError, weekIndex, weekWindow, type IsoDow } from "@app/core";
+import { CATEGORIES, CreateHouse, CURRENCIES, humanError, JoinCode, weekIndex, weekWindow, type IsoDow } from "@app/core";
 import { refresh } from "next/cache";
 import { redirect } from "next/navigation";
 import { z } from "zod";
@@ -32,13 +32,6 @@ async function myHouse() {
   return { supabase, user, house: data.houses, isAdmin: data.role === "admin" };
 }
 
-const CreateHouse = z.object({
-  name: z.string().trim().min(1, "Give the house a name.").max(60),
-  timezone: z.string().min(1),
-  currency: z.enum(CURRENCIES),
-  weekStarts: z.coerce.number().int().min(1).max(7),
-});
-
 export async function createHouse(input: z.input<typeof CreateHouse>): Promise<Outcome> {
   const parsed = CreateHouse.safeParse(input);
   if (!parsed.success) return { error: parsed.error.issues[0].message };
@@ -57,7 +50,9 @@ export async function createHouse(input: z.input<typeof CreateHouse>): Promise<O
 export async function joinHouse(code: string): Promise<Outcome> {
   const { supabase, user } = await session();
   if (!user) redirect(`/signin?next=/join/${encodeURIComponent(code)}`);
-  const { error } = await supabase.rpc("join_house", { p_code: code });
+  const parsed = JoinCode.safeParse(code);
+  if (!parsed.success) return { error: humanError({ message: "unknown_code" }) };
+  const { error } = await supabase.rpc("join_house", { p_code: parsed.data });
   if (error) return { error: humanError(error) };
   redirect("/today");
 }

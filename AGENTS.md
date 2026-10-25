@@ -13,8 +13,8 @@ you're working in (`apps/api/AGENTS.md` for the Next.js app).
   johns.glyn.dev.
 - Platforms: the web today, served by `apps/api`. iOS, Android and web from
   one Expo app (`apps/client`) as `docs/specs/native-migration.md` lands,
-  phase by phase: its scaffold, front door and sign-in are in, the screens
-  follow.
+  phase by phase: its scaffold, front door, sign-in and starting or joining
+  a house are in, the house's own screens follow.
   From here every feature must work on all three unless its spec says
   otherwise.
 - Solo project. My main language is Python: when code relies on a TypeScript

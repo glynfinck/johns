@@ -24,6 +24,15 @@ describe('signInWithGoogle on the web', () => {
     });
   });
 
+  it('comes back to a join link when one asked', async () => {
+    signInWithOAuth.mockResolvedValue({ data: {}, error: null });
+    await signInWithGoogle('/join/AB3DEF7H');
+    expect(signInWithOAuth).toHaveBeenCalledWith({
+      provider: 'google',
+      options: { redirectTo: 'http://localhost:8205/join/AB3DEF7H' },
+    });
+  });
+
   it('fails when the redirect cannot start', async () => {
     signInWithOAuth.mockResolvedValue({ data: {}, error: new Error('provider is not enabled') });
     await expect(signInWithGoogle()).rejects.toThrow('provider is not enabled');

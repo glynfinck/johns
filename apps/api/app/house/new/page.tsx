@@ -1,4 +1,4 @@
-import { currencyForCountry } from "@app/core";
+import { currencyForCountry, NEW_HOUSE_COPY } from "@app/core";
 import type { Metadata } from "next";
 import { headers } from "next/headers";
 import { redirect } from "next/navigation";
@@ -25,17 +25,13 @@ export default async function NewHousePage() {
     <main className="mx-auto flex w-full max-w-lg flex-1 flex-col gap-6 px-5 pt-[max(1.5rem,env(safe-area-inset-top))] pb-12">
       <Wordmark className="self-start text-2xl" />
       <div>
-        <h1 className="text-3xl font-black tracking-tight uppercase">Set up your house</h1>
-        <p className="mt-2 text-muted-foreground">
-          You&rsquo;ll be its admin. Next you add the Johns and send the house a join link.
-        </p>
+        <h1 className="text-3xl font-black tracking-tight uppercase">{NEW_HOUSE_COPY.heading}</h1>
+        <p className="mt-2 text-muted-foreground">{NEW_HOUSE_COPY.intro}</p>
       </div>
       <section className="rounded-lg border border-border bg-card p-5">
         <CreateHouseForm timezone={zone} currency={currencyForCountry(h.get("x-vercel-ip-country"))} />
       </section>
-      <p className="text-sm text-muted-foreground">
-        Joining a housemate&rsquo;s house instead? Open the join link they sent you.
-      </p>
+      <p className="text-sm text-muted-foreground">{NEW_HOUSE_COPY.joinInstead}</p>
     </main>
   );
 }

@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 
-import { currencyForCountry, formatMoney, formatSigned, parseMoney } from "./money";
+import { CURRENCIES } from "./domain";
+import { CURRENCY_SYMBOL, currencyForCountry, formatMoney, formatSigned, parseMoney } from "./money";
 import { balances, forfeitFor, settleMonth, settleUp, type LedgerEntry } from "./stake";
 
 const RULES = { lateForfeitMinor: 100, missedForfeitMinor: 300 };
@@ -130,5 +131,13 @@ describe("money", () => {
     expect(currencyForCountry("IE")).toBe("EUR");
     expect(currencyForCountry(null)).toBe("GBP");
     expect(currencyForCountry("JP")).toBe("GBP");
+  });
+});
+
+describe("CURRENCY_SYMBOL", () => {
+  it("marks every currency a house can use", () => {
+    expect(Object.keys(CURRENCY_SYMBOL).sort()).toEqual([...CURRENCIES].sort());
+    expect(CURRENCY_SYMBOL.GBP).toBe("£");
+    expect(CURRENCY_SYMBOL.EUR).toBe("€");
   });
 });

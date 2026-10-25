@@ -62,10 +62,13 @@ permanent once a store has seen them.
   network calls inline, and nothing else at all: Expo Router makes every
   script there a route and ships it, tests included. Screen tests live in
   `src/__tests__/app/`, and `src/routes.test.ts` fails on anything else.
-- The root layout reads the saved session behind the splash screen and
-  splits the routes with `Stack.Protected`: the front door and sign-in when
-  signed out, the rest when signed in. Signing in or out moves you by
-  itself; screens never navigate after auth.
+- The root layout reads the saved session and its house behind the splash
+  screen and splits the routes with `Stack.Protected` three ways: signed
+  out (front door, sign-in), signed in with no house (`welcome`,
+  `house/new`), and in a house (the rest). Signing in or out, or creating a
+  house, moves you by itself; screens never navigate after auth. A join link
+  (`join/[joinCode]`, which is `johns://join/CODE` on a phone) sits outside
+  the guards and signs you in in place, so the code survives.
 - `src/api/`: every network call.
   - `supabase.ts`: the Supabase client, typed with `Database` from
     `@app/core`, publishable key only; `storage.ts` / `storage.web.ts` keep
@@ -76,8 +79,11 @@ permanent once a store has seen them.
     redirect back to `/signin`), `apple.ts` (Sign in with Apple, iOS only,
     with the nonce from `nonce.ts`; keeps the name Apple sends once) and
     `profile.ts` (your display name).
-  - `http.ts` (Phase 5): `apiFetch` for calls to `apps/api`, sending the
-    user's token and validating the response with a schema from `@app/core`.
+  - `http.ts`: `apiPost` for calls to `apps/api`, sending the user's access
+    token and parsing the answer with its schema from `@app/core`; a refusal
+    throws `ApiRequestError` with the API's sentence. One small module per
+    resource beside it: `house.ts` (your house, join codes, creating and
+    joining through RPC, and `catchUp` through `POST /api/fresh`).
 - **Writes go through the database, as the web's do.** A move is one named
   SQL function (`supabase.rpc('mark_done', …)`) or one column-granted write;
   the database decides, and the client only translates a refusal with
@@ -85,7 +91,13 @@ permanent once a store has seen them.
   the four moves that need a server: `POST /api/deal`, `POST /api/disputes`,
   `POST /api/disputes/:id/votes` and `POST /api/fresh`.
 - `src/hooks/`: connect `@app/core` and `src/api/` to screens (e.g.
-  `use-session.ts`). `src/components/`: reusable UI pieces.
+  `use-session.ts`). `use-membership.tsx` is the one provider: the session
+  and the house it's in, read behind the splash screen, with `refresh()` for
+  after creating or joining a house. `src/components/`: reusable UI pieces
+  (`Field`, `Choice` for the web's selects, `Alert`, `SignInPanel`).
+- **Screens that show a house catch it up as they come into view**
+  (`useFocusEffect` → `catchUp`), as a web page load does; the server ticks
+  at most once a minute per house, so calling it freely is fine.
 - Shared code by default. Use platform files (`.ios.tsx`, `.android.tsx`,
   `.web.tsx`) or `Platform.OS` only where behaviour truly differs.
 - Web is a single-page build: keep `"web": { "output": "single" }` in

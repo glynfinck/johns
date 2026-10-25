@@ -1,4 +1,4 @@
-import { signInPath } from "@app/core";
+import { JOIN_COPY, signInPath } from "@app/core";
 import type { Metadata } from "next";
 import Link from "next/link";
 import { redirect } from "next/navigation";
@@ -27,35 +27,30 @@ export default async function JoinPage({ params }: PageProps<"/join/[code]">) {
       <Wordmark className="self-start text-3xl" />
       {!house ? (
         <>
-          <h1 className="text-2xl font-black uppercase">That link doesn&rsquo;t work</h1>
-          <p className="text-muted-foreground">Ask whoever sent it for a fresh one from their House screen.</p>
+          <h1 className="text-2xl font-black uppercase">{JOIN_COPY.badLink}</h1>
+          <p className="text-muted-foreground">{JOIN_COPY.badLinkBody}</p>
         </>
       ) : houseId === house.id ? (
         <>
-          <h1 className="text-2xl font-black uppercase">You&rsquo;re already in {house.name}</h1>
+          <h1 className="text-2xl font-black uppercase">{JOIN_COPY.alreadyIn(house.name)}</h1>
           <Button asChild>
-            <Link href="/today">Go to your Johns</Link>
+            <Link href="/today">{JOIN_COPY.goToJohns}</Link>
           </Button>
         </>
       ) : houseId ? (
         <>
-          <h1 className="text-2xl font-black uppercase">You&rsquo;re in another house</h1>
-          <p className="text-muted-foreground">
-            Johns keeps you in one house at a time. Leave your current one from its House screen first.
-          </p>
+          <h1 className="text-2xl font-black uppercase">{JOIN_COPY.otherHouse}</h1>
+          <p className="text-muted-foreground">{JOIN_COPY.otherHouseBody}</p>
           <Button asChild variant="outline">
-            <Link href="/house">Your house</Link>
+            <Link href="/house">{JOIN_COPY.yourHouse}</Link>
           </Button>
         </>
       ) : (
         <>
           <div>
-            <p className="eyebrow">You&rsquo;re invited</p>
+            <p className="eyebrow">{JOIN_COPY.invited}</p>
             <h1 className="mt-1 text-3xl font-black tracking-tight uppercase">{house.name}</h1>
-            <p className="mt-2 text-muted-foreground">
-              {house.members} {house.members === 1 ? "person lives" : "people live"}{" "}
-              here. Join and you&rsquo;re dealt Johns from next week.
-            </p>
+            <p className="mt-2 text-muted-foreground">{JOIN_COPY.livesHere(Number(house.members))}</p>
           </div>
           <JoinButton code={code} houseName={house.name} />
         </>

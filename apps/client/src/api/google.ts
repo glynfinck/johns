@@ -28,7 +28,8 @@ function configure(): void {
   configured = true;
 }
 
-export async function signInWithGoogle(): Promise<SignInResult> {
+/** `returnTo` is the web's (google.web.ts): a native sheet never leaves the screen. */
+export async function signInWithGoogle(returnTo?: string): Promise<SignInResult> {
   configure();
   try {
     await GoogleSignin.hasPlayServices({ showPlayServicesUpdateDialog: true });

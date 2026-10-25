@@ -1,29 +1,40 @@
 import { SIGN_IN_COPY } from '@app/core';
+import { useFocusEffect } from 'expo-router';
 import { LogOutIcon } from 'lucide-react-native';
-import { useState } from 'react';
+import { useCallback, useState } from 'react';
 import { ScrollView, StyleSheet, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { signOut } from '@/api/auth';
+import { catchUp } from '@/api/house';
 import { Button } from '@/components/button';
 import { Card } from '@/components/card';
 import { Body, Eyebrow, Heading } from '@/components/text';
 import { Wordmark } from '@/components/wordmark';
+import { useMembership } from '@/hooks/use-membership';
 import { useMyName } from '@/hooks/use-my-name';
-import { useSession } from '@/hooks/use-session';
 import { SITE_URL } from '@/links';
 import { SPACE, useTheme } from '@/theme';
 
 /**
- * Signed in. For now this only says who you are and lets you out: joining or
- * starting a house arrives in Phase 5 of docs/specs/native-migration.md, and
- * the real Today in Phase 6.
+ * Your house, signed in. For now it names the house and who you are, and
+ * catches the house up whenever it comes into view, as a web page load does;
+ * the real Today arrives in Phase 6 of docs/specs/native-migration.md.
  */
 export default function Today() {
   const { colors } = useTheme();
-  const { session } = useSession();
+  const { session, house } = useMembership();
   const name = useMyName(session?.user.id);
   const [leaving, setLeaving] = useState(false);
+  const houseId = house?.id;
+
+  useFocusEffect(
+    useCallback(() => {
+      // The server ticks at most once a minute per house; a failure only
+      // means the next look is a little out of date.
+      if (houseId) catchUp(houseId).catch((reason: unknown) => console.warn('Catching up failed', reason));
+    }, [houseId]),
+  );
 
   async function leave() {
     setLeaving(true);
@@ -41,8 +52,8 @@ export default function Today() {
       <ScrollView contentContainerStyle={styles.page}>
         <Wordmark />
         <Card>
-          <Eyebrow>Signed in</Eyebrow>
-          <Heading style={styles.name}>{name ?? ' '}</Heading>
+          <Eyebrow>{name ? `Signed in as ${name}` : ' '}</Eyebrow>
+          <Heading style={styles.name}>{house?.name ?? ' '}</Heading>
           <Body muted style={styles.body}>
             {`Your house's Johns are on their way to the app. Until then, play them at ${SITE_URL.replace('https://', '')}.`}
           </Body>

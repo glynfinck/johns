@@ -1,0 +1,71 @@
+import { CreateHouse, FreshResponse, humanError, JoinCode } from '@app/core';
+
+import { apiPost } from './http';
+import { supabase } from './supabase';
+
+/** The house you're in, as the app needs to know it before any screen. */
+export interface MyHouse {
+  id: string;
+  name: string;
+}
+
+/** Your house, read through your own session; null when you're in none. */
+export async function getMyHouse(userId: string): Promise<MyHouse | null> {
+  const { data, error } = await supabase
+    .from('members')
+    .select('house_id, houses(name)')
+    .eq('user_id', userId)
+    .maybeSingle();
+  if (error) throw error;
+  if (!data) return null;
+  return { id: data.house_id, name: data.houses?.name ?? '' };
+}
+
+/** What a join link shows a signed-in visitor: the house's name and size. */
+export interface Invite {
+  id: string;
+  name: string;
+  members: number;
+}
+
+/** The house a join code opens, or null for a code that matches none (or can't be one). */
+export async function houseByCode(code: string): Promise<Invite | null> {
+  const parsed = JoinCode.safeParse(code);
+  if (!parsed.success) return null;
+  const { data, error } = await supabase.rpc('house_by_code', { p_code: parsed.data });
+  if (error) throw error;
+  const row = data?.[0];
+  return row ? { id: row.id, name: row.name, members: Number(row.members) } : null;
+}
+
+/** Join a house by its code. A refusal throws the sentence to show. */
+export async function joinHouse(code: string): Promise<string> {
+  const parsed = JoinCode.safeParse(code);
+  if (!parsed.success) throw new Error(humanError({ message: 'unknown_code' }));
+  const { data, error } = await supabase.rpc('join_house', { p_code: parsed.data });
+  if (error) throw new Error(humanError(error));
+  return data;
+}
+
+/** Set up a house, with you as its admin. A refusal throws the sentence to show. */
+export async function createHouse(input: CreateHouse): Promise<string> {
+  const parsed = CreateHouse.safeParse(input);
+  if (!parsed.success) throw new Error(parsed.error.issues[0].message);
+  const { data, error } = await supabase.rpc('create_house', {
+    p_name: parsed.data.name,
+    p_timezone: parsed.data.timezone,
+    p_currency: parsed.data.currency,
+    p_week_starts: parsed.data.weekStarts,
+  });
+  if (error) throw new Error(humanError(error));
+  return data;
+}
+
+/**
+ * Catch the house up before showing it (apps/api's POST /api/fresh), as a
+ * page load does on the web. True when the server ticked.
+ */
+export async function catchUp(houseId: string): Promise<boolean> {
+  const { ticked } = await apiPost('/api/fresh', { houseId }, FreshResponse);
+  return ticked;
+}

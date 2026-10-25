@@ -1,0 +1,64 @@
+import { afterEach, describe, expect, it } from "vitest";
+
+import { getBearerToken } from "@/lib/auth";
+import { corsHeaders } from "@/lib/cors";
+import { error, json, preflight } from "@/lib/respond";
+
+describe("getBearerToken", () => {
+  it("reads a bearer token", () => {
+    expect(getBearerToken("Bearer abc.def.ghi")).toBe("abc.def.ghi");
+    expect(getBearerToken("bearer abc")).toBe("abc");
+  });
+
+  it("refuses a missing or malformed header", () => {
+    for (const header of [null, "", "Basic abc", "Bearer", "Bearer ", "Bearer a b", "abc"]) {
+      expect(getBearerToken(header)).toBeNull();
+    }
+  });
+});
+
+describe("corsHeaders", () => {
+  const allowed = ["http://localhost:8205"];
+
+  it("lets a listed web origin in", () => {
+    expect(corsHeaders("http://localhost:8205", allowed)).toMatchObject({
+      "Access-Control-Allow-Origin": "http://localhost:8205",
+      "Access-Control-Allow-Headers": "Authorization, Content-Type",
+      Vary: "Origin",
+    });
+  });
+
+  it("adds nothing for anyone else, or for a phone (no Origin)", () => {
+    expect(corsHeaders("https://evil.example", allowed)).toEqual({});
+    expect(corsHeaders("http://localhost:8205.evil.example", allowed)).toEqual({});
+    expect(corsHeaders(null, allowed)).toEqual({});
+    expect(corsHeaders("http://localhost:8205", [])).toEqual({});
+  });
+});
+
+describe("responses", () => {
+  const saved = process.env.ALLOWED_ORIGINS;
+  afterEach(() => {
+    process.env.ALLOWED_ORIGINS = saved;
+  });
+
+  const from = (origin?: string) => new Request("http://localhost:3205/api/fresh", { headers: origin ? { origin } : {} });
+
+  it("gives every error the same shape", async () => {
+    process.env.ALLOWED_ORIGINS = "";
+    const response = error(from(), 404, "That isn't in your house.");
+    expect(response.status).toBe(404);
+    expect(await response.json()).toEqual({ error: "That isn't in your house." });
+    expect(response.headers.get("access-control-allow-origin")).toBeNull();
+  });
+
+  it("answers an allowed origin's preflight, and its calls, with CORS", async () => {
+    process.env.ALLOWED_ORIGINS = "http://localhost:8205, https://example.test";
+    const pre = preflight(from("http://localhost:8205"));
+    expect(pre.status).toBe(204);
+    expect(pre.headers.get("access-control-allow-origin")).toBe("http://localhost:8205");
+    const ok = json(from("https://example.test"), { ticked: true });
+    expect(ok.headers.get("access-control-allow-origin")).toBe("https://example.test");
+    expect(await ok.json()).toEqual({ ticked: true });
+  });
+});

@@ -52,3 +52,46 @@ export const SIGN_IN_COPY = {
   failed: (provider: SignInProvider) => `${provider} didn’t finish signing you in. Try again.`,
   signOut: "Sign out",
 } as const;
+
+/** Setting up a house: the web's /house/new and the app's. */
+export const NEW_HOUSE_COPY = {
+  heading: "Set up your house",
+  intro: "You’ll be its admin. Next you add the Johns and send the house a join link.",
+  name: "What do you call the house?",
+  namePlaceholder: "Flat 3",
+  currency: "Currency",
+  weekStarts: "The week starts on",
+  timezone: "Time zone",
+  timezoneFromPhone: "This phone’s. Change it later from the House screen.",
+  submit: "Set up the house",
+  busy: "Setting up…",
+  joinInstead: "Joining a housemate’s house instead? Open the join link they sent you.",
+} as const;
+
+/** A join link: the web's /join/[code] and the app's. */
+export const JOIN_COPY = {
+  badLink: "That link doesn’t work",
+  badLinkBody: "Ask whoever sent it for a fresh one from their House screen.",
+  alreadyIn: (house: string) => `You’re already in ${house}`,
+  goToJohns: "Go to your Johns",
+  otherHouse: "You’re in another house",
+  otherHouseBody: "Johns keeps you in one house at a time. Leave your current one from its House screen first.",
+  yourHouse: "Your house",
+  invited: "You’re invited",
+  livesHere: (people: number) =>
+    `${people} ${people === 1 ? "person lives" : "people live"} here. Join and you’re dealt Johns from next week.`,
+  join: (house: string) => `Join ${house}`,
+  joining: "Joining…",
+  back: "Back",
+} as const;
+
+/** Signed in with no house: the app's way to start one or join by code. */
+export const NO_HOUSE_COPY = {
+  heading: "No house yet",
+  body: "Start one and you’ll be its admin, or join a housemate’s with the code from their link.",
+  start: "Start a house",
+  code: "Join code",
+  codeHint: "Eight letters and numbers, from the end of the link.",
+  badCode: "A join code is eight letters and numbers.",
+  join: "Join with this code",
+} as const;

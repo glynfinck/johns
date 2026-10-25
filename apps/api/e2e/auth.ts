@@ -91,6 +91,27 @@ export async function signInToClient(context: BrowserContext, name: string): Pro
   return id;
 }
 
+/**
+ * A house set up by someone else, the way the app does it (create_house as
+ * them), for a test to join by its code. Their id goes to `cleanUp` with the
+ * test's own users, which takes the house with it.
+ */
+export async function houseOf(owner: string, houseName: string): Promise<{ ownerId: string; code: string }> {
+  const { email, id } = await createHousemate(owner);
+  const client = createClient(SUPABASE_URL!, ANON_KEY!, { auth: { persistSession: false, autoRefreshToken: false } });
+  const { error: signInError } = await client.auth.signInWithPassword({ email, password: PASSWORD });
+  if (signInError) throw signInError;
+  const { data: houseId, error } = await client.rpc("create_house", {
+    p_name: houseName,
+    p_timezone: "Europe/London",
+    p_currency: "GBP",
+    p_week_starts: 1,
+  });
+  if (error) throw error;
+  const { data } = await admin().from("houses").select("join_code").eq("id", houseId).single();
+  return { ownerId: id, code: data!.join_code };
+}
+
 /** A confirmed user with a password, named as housemates will see them. */
 async function createHousemate(name: string): Promise<{ email: string; id: string }> {
   const email = `e2e-${randomUUID()}@test.local`;

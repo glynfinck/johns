@@ -14,13 +14,18 @@ import { createAdminClient } from "@/lib/supabase/admin";
  *
  * Only call this for a house the viewer has already been shown to belong
  * to through their own session: the tick runs as the service role.
+ *
+ * True when it ticked; false when the house was caught up in the last
+ * minute, or the tick failed.
  */
-export async function ensureFresh(houseId: string, tickedAt: string | null, now: Date) {
-  if (tickedAt && now.getTime() - new Date(tickedAt).getTime() < 60_000) return;
+export async function ensureFresh(houseId: string, tickedAt: string | null, now: Date): Promise<boolean> {
+  if (tickedAt && now.getTime() - new Date(tickedAt).getTime() < 60_000) return false;
   try {
     await tickHouse(createAdminClient(), houseId, now);
+    return true;
   } catch (e) {
     // A failed catch-up must never take the page down with it.
     console.error("ensureFresh", houseId, e);
+    return false;
   }
 }
