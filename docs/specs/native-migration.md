@@ -19,6 +19,8 @@ What does **not** change, in any phase:
 - The clock: pg_cron, `request_tick()`, the Vault secrets, `/api/cron/tick`
   and its URL, `CRON_SECRET`.
 - Web push: VAPID keys, `/sw.js`, the existing subscriptions.
+- One backend: Supabase, with `apps/api` on Vercel beside it. No Firebase,
+  and no other push service (decision 3).
 - Ports: the app on 3205, Supabase on 54340–54344.
 - Store releases: `release-targets.json` has `ios` and `android` set to
   `false`, and nothing here switches them on.
@@ -101,7 +103,8 @@ where a server is genuinely needed. Going through every server action today:
 | Raise a dispute | action: rpc, then pushes to the ticker and voters, then a tick (a house of two decides at once) | **`POST /api/disputes`** |
 | Cast a vote | action: rpc, then a tick (a majority decides at once) | **`POST /api/disputes/:id/votes`** |
 | Catch the house up before showing it | `ensureFresh` on page load | **`POST /api/fresh`** when a screen gains focus, at most once a minute per house, as now |
-| The clock, reminders | pg_cron → `/api/cron/tick` | unchanged |
+| The clock | pg_cron → `/api/cron/tick` | unchanged |
+| Reminders | web push from the tick | scheduled **on the phone** (decision 3); the deal, disputes and votes show in the app |
 
 For the dispute and vote routes, the rpc itself still runs as the caller
 (a client built from their bearer token), so the database decides exactly as
@@ -179,32 +182,36 @@ Sign in with Apple cannot be tried on a device until there is an Apple
 Developer account. It is built and unit-tested in Phase 4 and must be proven
 on a device before `ios` is ever switched on.
 
-### 3. Push: Expo push for iOS and Android, web push stays
+### 3. Reminders: scheduled on the phone, no second backend
 
-**Recommendation:** `expo-notifications` gets an Expo push token on iOS and
-Android. The token goes into a new table, `push_tokens` (additive migration:
-`user_id`, `token` unique, `platform`, `created_at`; RLS identical to
-`push_subscriptions`; grants stated for every role including
-`service_role`). `lib/push.ts`'s `Notify` fans out to both: web push with
-VAPID exactly as now, and Expo's push API (batches of 100, an optional
-`EXPO_ACCESS_TOKEN`). `DeviceNotRegistered` deletes the token, as 404/410 does
-for web. The message keeps its `url` (`/week`), which Expo Router opens.
-Signing out deletes the device's token.
+**Decided 25 October:** no Firebase. Reaching a closed Android phone from a
+server is only possible through Google's Firebase Cloud Messaging (and an
+iPhone only through Apple's push service, which needs the Apple account),
+whichever service sends the message. That would be a second backend, so the
+native app gets no server push.
 
-Why Expo's service rather than talking to FCM and APNs directly: one sender
-and one token format for both platforms, with no FCM service-account JSON or
-APNs key in Vercel. The price is a dependency on Expo's service and an EAS
-project ID in `app.json`.
+- **Due-time reminders are local notifications.** The app schedules them
+  itself with `expo-notifications`, from the Johns it has loaded: "due
+  tomorrow" 24 hours before and "due soon" 3 hours before, the same two
+  stages the tick uses (that rule moves from the engine into `@app/core`, so
+  both use one function). It reschedules whenever it opens, comes to the
+  foreground, or Realtime reports a change to your Johns (a swap, a re-deal,
+  time away pulling one forward). No accounts on either platform, and it
+  works on the iOS simulator before the Apple account exists.
+- **The deal, a dispute on your tick, a vote** reach the native app when
+  it's open (live through Realtime, plus a badge on the tab) and are waiting
+  on Today when it next opens. They don't reach a closed phone.
+- **Web push is unchanged** for the web app: VAPID, `/sw.js`, every message
+  including disputes and votes.
 
-What it needs, all ask-first in Phase 12:
-- An Expo account and EAS project (`eas init`). This is not a store account.
-- **Android:** a Firebase project, `google-services.json`, and the FCM v1 key
-  uploaded to EAS credentials.
-- **iOS:** an APNs key, which needs the Apple Developer account. Until then
-  iOS push is built but unproven, and the iOS app simply has no reminders.
+The cost: if your Johns change while the app stays closed, a reminder can be
+out of date until it next opens (one for a John you swapped away, or none for
+one you were handed). Someone with both the web app's notifications and the
+native app gets the due reminders twice; the native app's notification
+settings say so.
 
-The sender treats a missing `push_tokens` table as "no tokens", because
-Vercel can deploy before Supabase does.
+Revisit only if the house misses dispute and vote alerts on Android. Then the
+only route is Firebase Cloud Messaging, and that decision comes back to you.
 
 ### 4. Photo receipts: camera or library, same bucket, same rules
 
@@ -281,8 +288,8 @@ ships with join.
 
 Admin-only moves (dealing, editing the John list) arrive with House, last.
 Until then a house is set up on the web and played on the phone: both
-clients hit the same database, so that works from Phase 5. Push comes after
-House, because it waits on accounts (decision 3).
+clients hit the same database, so that works from Phase 5. Reminders come
+after House (decision 3).
 
 ### 8. Other choices the plan makes
 
@@ -468,16 +475,18 @@ the link and the code), renaming yourself, signing out, and "Hand out this
 week's Johns" through `POST /api/deal`. After this the phone can run a house
 from nothing.
 
-### Phase 12: native push
+### Phase 12: reminders on the phone
 
-Decision 3. The migration revokes and grants as the house rules say. db
-tests: you see and remove only your own tokens; a housemate can't insert a
-token for you; the service role reads them. Unit tests for batching and
-`DeviceNotRegistered` pruning.
-Production (ask-first): the migration reaches the database through Supabase's
-GitHub integration if it's on by then, otherwise through provision (`db
-push`), which waits for your word; the Expo account, EAS project and Firebase
-project; an optional `EXPO_ACCESS_TOKEN` in Vercel.
+Decision 3. First a db test pins what the tick sends today (no test covers
+reminders yet): which stage, when, and never twice. Then the reminder rule
+(which stage, when, the words) moves from `apps/api/lib/engine/tick.ts` into
+`@app/core` with unit tests, and the tick uses it, so that test proves web
+push unchanged. The app asks for
+notification permission from House (never on first launch), schedules and
+reschedules the local reminders, and badges the tabs for open disputes and
+votes. Jest covers scheduling and rescheduling against a mocked
+`expo-notifications`.
+Production: none. No migration, no accounts, no new environment variables.
 
 ### Phase 13: web parity and the hosting cutover
 
@@ -514,7 +523,6 @@ e2e suite retires; the Expo web suite carries on.
 | --- | --- | --- |
 | 2 | Vercel Root Directory → `apps/api`; preview redeploy; merge; read-only provision check | you, or me through the Vercel connector on your word |
 | 4 | Supabase Auth: Google client IDs, skip nonce, `johns://**` (via provision) | me on your word; Google Cloud clients are yours |
-| 12 | migration to production; Expo/EAS and Firebase projects; `EXPO_ACCESS_TOKEN` | you, or me on your word |
 | 13 | new Vercel project, domain, Supabase site and redirect URLs; Vault only if you choose the subdomain | you, or me on your word |
 | any | `npm run provision`, `supabase db push`, a production deploy, Vault, VAPID, `release:*`, `eas build --profile production`, `eas submit`, `eas update` | never without your say-so in that message |
 
@@ -529,8 +537,7 @@ e2e suite retires; the Expo web suite carries on.
 - **Apple accounts split from Google ones** (decision 2). The sign-in copy
   covers it for now; identity linking is a later feature.
 - **iOS can only be checked on a simulator** until the Apple account exists,
-  which means a Mac. Sign in with Apple and iOS push can't be proven before
-  then.
+  which means a Mac. Sign in with Apple can't be proven before then.
 - **CI time roughly doubles** once the Expo web e2e runs on the full matrix.
   The client job runs in parallel; the two e2e suites share one Supabase
   start.
@@ -552,7 +559,8 @@ e2e suite retires; the Expo web suite carries on.
 5. **A Mac for the iOS simulator?** **Yes**, so iOS is checked on the
    simulator until the Apple account exists.
 6. **Accounts in Phase 12:** OK to plan on an Expo account and a Firebase
-   project then (neither is a store account)? **Yes.**
+   project then (neither is a store account)? **Superseded: no Firebase, no
+   second backend.** Reminders are scheduled on the phone (decision 3).
 
 ## Done when
 
