@@ -589,6 +589,16 @@ As built, where it differs from the above:
 
 Events, reactions (lucide), photos through signed URLs, live updates.
 
+As built, where it differs from the above:
+- **The Wall's sentences are core's** (`wall.ts`: `describeEvent` gives the
+  words, with the person in bold, a tone and an icon's name), as are the
+  reactions' names and which events take them; both apps draw them with
+  their own lucide. The web's loader and the app read the same rows through
+  `wallEvents`.
+- **Reactions don't stream**: `supabase_realtime` publishes `events`, not
+  `reactions`, so a housemate's reaction shows on your next read, as on the
+  web. Your own shows at once.
+
 ### Phase 9: the Table
 
 Standings for the week and the month, from core's `points.ts`.

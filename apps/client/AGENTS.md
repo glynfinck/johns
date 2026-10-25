@@ -86,8 +86,9 @@ permanent once a store has seen them.
     joining through RPC, and `catchUp` through `POST /api/fresh`),
     `board.ts` (`loadHouse`: one read of a house's rules, people and this
     week's rows), `johns.ts` (ticking, undoing, spending immunity, a swap),
-    `disputes.ts` (disputing and voting, through apps/api) and `photos.ts`
-    (receipts: below).
+    `disputes.ts` (disputing and voting, through apps/api), `wall.ts` (the
+    Wall's events with their photos signed for an hour, and your reactions)
+    and `photos.ts` (receipts: below).
 - **Writes go through the database, as the web's do.** A move is one named
   SQL function (`supabase.rpc('mark_done', …)`) or one column-granted write;
   the database decides, and the client only translates a refusal with
@@ -119,6 +120,11 @@ permanent once a store has seen them.
   themselves.
 - **A move** goes through `useMove(houseId).run(...)`: it runs, then reads the
   house again, and holds the refusal's sentence in `problem`.
+- **Everything a house's screens read is keyed under `houseKey(id)`**
+  (`hooks/keys.ts`): the Wall is `wallKey(id)`, beneath it, so reading the
+  house again (a move, a Realtime change, catching up) refreshes the Wall
+  too. A reaction (`useReact` in `use-wall.ts`) shows at once and goes back
+  if the database says no: React Query's optimistic update.
 - **Live:** `useLiveHouse(houseId)` listens on Realtime to what
   `supabase_realtime` publishes (`events`, `assignments`, `disputes`; never
   `members`) with the user's token, and folds a burst into one read. Coming

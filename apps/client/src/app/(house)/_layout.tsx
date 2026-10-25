@@ -43,6 +43,7 @@ export default function HouseLayout() {
     >
       <Tabs.Screen name="today" options={{ title: SECTION_LABEL.today }} />
       <Tabs.Screen name="week" options={{ title: SECTION_LABEL.week }} />
+      <Tabs.Screen name="wall" options={{ title: SECTION_LABEL.wall }} />
     </Tabs>
   );
 }

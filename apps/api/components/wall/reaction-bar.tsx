@@ -1,27 +1,25 @@
 "use client";
 
+import { REACTION_LABEL, toggled, type ReactionKind } from "@app/core";
 import { EyeIcon, FlameIcon, SparklesIcon, ThumbsUpIcon } from "lucide-react";
 import { useOptimistic, useTransition } from "react";
 import { toast } from "sonner";
 
 import { toggleReaction } from "@/lib/actions/johns";
-import type { ReactionKind, WallEvent } from "@/lib/data/wall";
+import type { WallEvent } from "@/lib/data/wall";
 import { cn } from "@/lib/utils";
 
 // Icons, not emoji: the house style has none.
 const KINDS: { kind: ReactionKind; label: string; Icon: typeof FlameIcon }[] = [
-  { kind: "nice", label: "Nice one", Icon: ThumbsUpIcon },
-  { kind: "fire", label: "On fire", Icon: FlameIcon },
-  { kind: "sparkle", label: "Spotless", Icon: SparklesIcon },
-  { kind: "eyes", label: "Side-eye", Icon: EyeIcon },
+  { kind: "nice", label: REACTION_LABEL.nice, Icon: ThumbsUpIcon },
+  { kind: "fire", label: REACTION_LABEL.fire, Icon: FlameIcon },
+  { kind: "sparkle", label: REACTION_LABEL.sparkle, Icon: SparklesIcon },
+  { kind: "eyes", label: REACTION_LABEL.eyes, Icon: EyeIcon },
 ];
 
 export function ReactionBar({ eventId, reactions }: { eventId: string; reactions: WallEvent["reactions"] }) {
   const [, startTransition] = useTransition();
-  const [shown, flip] = useOptimistic(reactions, (state, kind: ReactionKind) => {
-    const r = state[kind];
-    return { ...state, [kind]: { count: r.count + (r.mine ? -1 : 1), mine: !r.mine } };
-  });
+  const [shown, flip] = useOptimistic(reactions, (state, kind: ReactionKind) => toggled(state, kind));
 
   return (
     <div className="flex flex-wrap gap-1.5">
