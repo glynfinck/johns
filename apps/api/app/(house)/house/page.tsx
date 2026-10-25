@@ -1,4 +1,4 @@
-import { DEAL_COPY, HOUSE_COPY, johnDef } from "@app/core";
+import { AWAY_COPY, DEAL_COPY, GROUPS_COPY, HOUSE_COPY, johnDef } from "@app/core";
 import type { Metadata } from "next";
 
 import { AwayCalendar } from "@/components/house/away-calendar";
@@ -60,7 +60,7 @@ export default async function HousePage() {
               </div>
             ) : null}
           </Panel>
-          <Panel id="groups" title="Groups">
+          <Panel id="groups" title={GROUPS_COPY.title}>
             <GroupsList groups={groups} people={people} me={ctx.userId} editable={ctx.isAdmin} />
           </Panel>
           <Panel title={HOUSE_COPY.rules}>
@@ -82,7 +82,7 @@ export default async function HousePage() {
         </div>
         <div className="flex flex-col gap-5">
           <InviteCard url={`${SITE_URL}/join/${house.join_code}`} code={house.join_code} houseName={house.name} />
-          <Panel id="away" title="Time away">
+          <Panel id="away" title={AWAY_COPY.title}>
             <div className="flex flex-col gap-5">
               <AwayCalendar
                 periods={away.periods}
@@ -92,12 +92,9 @@ export default async function HousePage() {
                 weekStarts={rules.weekStarts}
               />
               <div className="flex flex-col gap-3 border-t border-border pt-4">
-                <h3 className="text-sm font-extrabold">Your time away</h3>
+                <h3 className="text-sm font-extrabold">{AWAY_COPY.yours}</h3>
                 <MyTrips periods={myTrips} today={away.today} />
-                <p className="text-sm text-muted-foreground">
-                  Book it before the week is handed out and you won&rsquo;t be given Johns due while you&rsquo;re
-                  gone. Any you already have become due before you go.
-                </p>
+                <p className="text-sm text-muted-foreground">{AWAY_COPY.howItWorks}</p>
                 <AwayForm today={away.today} />
               </div>
             </div>

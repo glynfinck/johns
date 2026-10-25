@@ -1,6 +1,6 @@
 import "server-only";
 
-import { addDaysTo, localDate, type AwayPeriod } from "@app/core";
+import { addDaysTo, awayPeriod, localDate, type AwayPeriod } from "@app/core";
 
 import type { HouseContext } from "./house";
 
@@ -22,12 +22,6 @@ export async function getAway(ctx: HouseContext): Promise<AwayView> {
     .order("starts_on");
   return {
     today,
-    periods: (data ?? []).map((a) => ({
-      id: a.id,
-      userId: a.user_id,
-      startsOn: a.starts_on,
-      endsOn: a.ends_on,
-      note: a.note,
-    })),
+    periods: (data ?? []).map(awayPeriod),
   };
 }

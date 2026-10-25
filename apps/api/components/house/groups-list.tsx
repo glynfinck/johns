@@ -1,6 +1,6 @@
 "use client";
 
-import { firstName } from "@app/core";
+import { firstName, GROUPS_COPY, type GroupDef } from "@app/core";
 import { PencilIcon, PlusIcon, UsersIcon } from "lucide-react";
 import { useState } from "react";
 
@@ -10,12 +10,6 @@ import { FieldLabel, Input } from "@/components/ui/input";
 import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { useAction } from "@/hooks/use-action";
 import { deleteGroup, saveGroup } from "@/lib/actions/house";
-
-export interface GroupDef {
-  id: string;
-  name: string;
-  memberIds: string[];
-}
 
 interface Person {
   userId: string;
@@ -43,9 +37,7 @@ export function GroupsList({
   return (
     <div className="flex flex-col gap-3" data-testid="groups">
       {groups.length === 0 ? (
-        <p className="rounded-md bg-secondary p-4 text-sm">
-          For Johns only some of you share, like one of two bathrooms. Everything else stays with the whole house.
-        </p>
+        <p className="rounded-md bg-secondary p-4 text-sm">{GROUPS_COPY.empty}</p>
       ) : (
         <ul className="flex flex-col gap-2">
           {groups.map((g) => (
@@ -55,7 +47,7 @@ export function GroupsList({
                 <div className="font-bold">{g.name}</div>
                 <div className="mt-1 flex flex-wrap items-center gap-x-2 gap-y-1 text-xs text-muted-foreground">
                   {g.memberIds.length === 0
-                    ? "Nobody left in it: its Johns go to everyone."
+                    ? GROUPS_COPY.nobody
                     : g.memberIds.map((id) => (
                         <span key={id} className="inline-flex items-center gap-1">
                           <Avatar
@@ -72,7 +64,7 @@ export function GroupsList({
                 <Button
                   variant="ghost"
                   size="icon-lg"
-                  aria-label={`Edit ${g.name}`}
+                  aria-label={GROUPS_COPY.edit(g.name)}
                   onClick={() => setEditing({ id: g.id, name: g.name, memberIds: g.memberIds })}
                 >
                   <PencilIcon aria-hidden />
@@ -90,14 +82,14 @@ export function GroupsList({
           data-testid="add-group"
         >
           <PlusIcon aria-hidden />
-          Make a group
+          {GROUPS_COPY.add}
         </Button>
       ) : null}
       <Sheet open={editing !== null} onOpenChange={(open) => !open && setEditing(null)}>
         <SheetContent side="bottom" className="mx-auto max-h-[90dvh] max-w-lg overflow-y-auto rounded-t-xl">
           <SheetHeader>
-            <SheetTitle>{editing?.id ? `Edit ${editing.name}` : "Make a group"}</SheetTitle>
-            <SheetDescription>Who shares it. Johns you give this group only go to them.</SheetDescription>
+            <SheetTitle>{editing?.id ? GROUPS_COPY.edit(editing.name) : GROUPS_COPY.add}</SheetTitle>
+            <SheetDescription>{GROUPS_COPY.hint}</SheetDescription>
           </SheetHeader>
           {editing ? (
             <GroupForm key={editing.id ?? "new"} initial={editing} people={people} me={me} onDone={() => setEditing(null)} />
@@ -139,18 +131,18 @@ function GroupForm({
       }}
     >
       <div>
-        <FieldLabel htmlFor="group-name">Name</FieldLabel>
+        <FieldLabel htmlFor="group-name">{GROUPS_COPY.name}</FieldLabel>
         <Input
           id="group-name"
           value={name}
           maxLength={40}
           required
-          placeholder="Upstairs bathroom"
+          placeholder={GROUPS_COPY.namePlaceholder}
           onChange={(e) => setName(e.target.value)}
         />
       </div>
       <fieldset className="flex flex-col gap-2">
-        <legend className="eyebrow mb-2">Who&rsquo;s in it</legend>
+        <legend className="eyebrow mb-2">{GROUPS_COPY.who}</legend>
         {people.map((p) => (
           <label
             key={p.userId}
@@ -164,11 +156,11 @@ function GroupForm({
       </fieldset>
       <div className="flex flex-wrap gap-2">
         <Button type="submit" disabled={pending || picked.size === 0 || !name.trim()} className="flex-1">
-          {pending ? "Saving…" : initial.id ? "Save" : "Make the group"}
+          {pending ? GROUPS_COPY.saving : initial.id ? GROUPS_COPY.save : GROUPS_COPY.create}
         </Button>
         {initial.id ? (
           <Button type="button" variant="destructive" disabled={pending} onClick={() => run(() => deleteGroup(initial.id!), onDone)}>
-            Delete
+            {GROUPS_COPY.remove}
           </Button>
         ) : null}
       </div>

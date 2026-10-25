@@ -1,12 +1,10 @@
 import "server-only";
 
+import { groupDef, type GroupDef } from "@app/core";
+
 import type { HouseContext } from "./house";
 
-export interface Group {
-  id: string;
-  name: string;
-  memberIds: string[];
-}
+export type Group = GroupDef;
 
 /** The house's groups and who is in each, read through RLS. */
 export async function getGroups(ctx: HouseContext): Promise<Group[]> {
@@ -15,9 +13,5 @@ export async function getGroups(ctx: HouseContext): Promise<Group[]> {
     .select("id, name, group_members(user_id)")
     .eq("house_id", ctx.house.id)
     .order("name");
-  return (data ?? []).map((g) => ({
-    id: g.id,
-    name: g.name,
-    memberIds: (g.group_members ?? []).map((m) => m.user_id),
-  }));
+  return (data ?? []).map(groupDef);
 }

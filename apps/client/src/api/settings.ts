@@ -1,4 +1,6 @@
 import {
+  GroupDraft,
+  groupDef,
   HouseSettings,
   humanError,
   JohnDraft,
@@ -7,6 +9,7 @@ import {
   RULES_COPY,
   weekIndex,
   weekWindow,
+  type GroupDef,
   type HouseRules,
   type JohnDef,
 } from '@app/core';
@@ -20,15 +23,10 @@ import { supabase } from './supabase';
 // remove_member; the deal needs the server (POST /api/deal). RLS and those
 // functions decide; this only translates. (Renaming yourself is profile.ts.)
 
-/** A group a John can belong to, for the editor's "Shared by". */
-export interface GroupOption {
-  id: string;
-  name: string;
-}
-
 export interface JohnList {
   johns: JohnDef[];
-  groups: GroupOption[];
+  /** The house's groups, by name, with who is in each: for "Shared by" and for Groups. */
+  groups: GroupDef[];
 }
 
 /** The house's list of Johns, oldest first, and its groups. */
@@ -40,11 +38,11 @@ export async function loadJohnList(houseId: string): Promise<JohnList> {
       .eq('house_id', houseId)
       .is('archived_at', null)
       .order('created_at'),
-    supabase.from('groups').select('id, name').eq('house_id', houseId).order('name'),
+    supabase.from('groups').select('id, name, group_members(user_id)').eq('house_id', houseId).order('name'),
   ]);
   if (johns.error) throw johns.error;
   if (groups.error) throw groups.error;
-  return { johns: (johns.data ?? []).map(johnDef), groups: groups.data ?? [] };
+  return { johns: (johns.data ?? []).map(johnDef), groups: (groups.data ?? []).map(groupDef) };
 }
 
 /**
@@ -134,6 +132,26 @@ export async function setRole(houseId: string, userId: string, role: 'admin' | '
 /** Ask someone to leave (admins), or leave yourself (anyone). */
 export async function removeMember(houseId: string, userId: string) {
   const { error } = await supabase.rpc('remove_member', { p_house: houseId, p_user: userId });
+  if (error) throw new Error(humanError(error));
+}
+
+/** Make a group, or change who's in one. save_group checks they all live here. */
+export async function saveGroup(houseId: string, draft: Omit<GroupDraft, 'id'> & { id?: string }) {
+  const parsed = GroupDraft.safeParse(draft);
+  if (!parsed.success) throw new Error(parsed.error.issues[0].message);
+  const { error } = await supabase.rpc('save_group', {
+    p_house: houseId,
+    // A new group has no id yet; save_group makes one.
+    p_group: (parsed.data.id ?? null) as string,
+    p_name: parsed.data.name,
+    p_members: parsed.data.members,
+  });
+  if (error) throw new Error(humanError(error));
+}
+
+/** Delete a group. Its Johns go back to the whole house. */
+export async function deleteGroup(groupId: string) {
+  const { error } = await supabase.rpc('delete_group', { p_group: groupId });
   if (error) throw new Error(humanError(error));
 }
 

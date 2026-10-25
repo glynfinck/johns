@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 
 import {
+  groupDef,
   johnDef,
   NEW_JOHN,
   weeklyEffort,
@@ -79,6 +80,17 @@ describe("johnDef", () => {
       needsPhoto: true,
       groupId: null,
     });
+  });
+});
+
+describe("groupDef", () => {
+  it("reads a group with who is in it, and an emptied one as nobody", () => {
+    expect(groupDef({ id: "g1", name: "Upstairs", group_members: [{ user_id: "ava" }, { user_id: "ben" }] })).toEqual({
+      id: "g1",
+      name: "Upstairs",
+      memberIds: ["ava", "ben"],
+    });
+    expect(groupDef({ id: "g2", name: "Attic", group_members: null }).memberIds).toEqual([]);
   });
 });
 

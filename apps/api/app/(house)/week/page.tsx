@@ -1,4 +1,4 @@
-import { addDaysTo, awayDays, dateRange, dueLabel, firstName, pointsEarned, relative, TABLE_COPY, WEEK_COPY, weekRange } from "@app/core";
+import { AWAY_COPY, awayThisWeek as awayLabelOf, dueLabel, firstName, pointsEarned, relative, TABLE_COPY, WEEK_COPY, weekRange } from "@app/core";
 import type { Metadata } from "next";
 
 import { DealButton } from "@/components/house/deal-button";
@@ -40,12 +40,7 @@ export default async function WeekPage() {
   const disputes = items.filter((i) => i.dispute);
   const myOpen = items.filter((i) => i.userId === ctx.userId && OPEN.has(i.status));
   const theirOpen = items.filter((i) => i.userId !== ctx.userId && OPEN.has(i.status));
-  const lastDay = addDaysTo(board.week.startsOn, 6);
-  const awayLabel = (userId: string) => {
-    const days = awayDays(away.periods, userId, board.week!.startsOn, lastDay);
-    if (days.length === 0) return null;
-    return days.length === 7 ? "Away all week" : `Away ${dateRange(days[0], days[days.length - 1])}`;
-  };
+  const awayLabel = (userId: string) => awayLabelOf(away.periods, userId, board.week!.startsOn);
   const awayThisWeek = ctx.members
     .map((m) => ({ ...m, label: awayLabel(m.userId) }))
     .filter((m) => m.label !== null);
@@ -199,7 +194,7 @@ export default async function WeekPage() {
           ) : null}
           {awayThisWeek.length > 0 ? (
             <section className="rounded-lg border border-border bg-card p-4">
-              <h2 className="eyebrow mb-3">Away this week</h2>
+              <h2 className="eyebrow mb-3">{AWAY_COPY.thisWeek}</h2>
               <ul className="flex flex-col gap-2 text-sm">
                 {awayThisWeek.map((m) => (
                   <li key={m.userId} className="flex items-center gap-2">

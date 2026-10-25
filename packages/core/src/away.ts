@@ -1,3 +1,6 @@
+import type { Database } from "./db-types";
+import type { IsoDow } from "./domain";
+import { dateRange } from "./format";
 import { addDaysTo } from "./week";
 
 /**
@@ -49,4 +52,50 @@ export function currentOrNext(periods: readonly AwayPeriod[], userId: string, to
 export function remaining(period: AwayPeriod, today: string): { from: string; to: string } | null {
   if (period.endsOn < today) return null;
   return { from: period.startsOn > today ? period.startsOn : today, to: period.endsOn };
+}
+
+/** A period from its `away` row. */
+export function awayPeriod(
+  row: Pick<Database["public"]["Tables"]["away"]["Row"], "id" | "user_id" | "starts_on" | "ends_on" | "note">,
+): AwayPeriod {
+  return { id: row.id, userId: row.user_id, startsOn: row.starts_on, endsOn: row.ends_on, note: row.note };
+}
+
+/** The ISO day of the week (1 Monday … 7 Sunday) of a local date. */
+export function isoDayOf(date: string): IsoDow {
+  const [y, m, d] = date.split("-").map(Number);
+  const day = new Date(Date.UTC(y, m - 1, d)).getUTCDay();
+  return (day === 0 ? 7 : day) as IsoDow;
+}
+
+/** What Week says under someone away this week: "Away all week", "Away 21–23 Oct", or nothing. */
+export function awayThisWeek(periods: readonly AwayPeriod[], userId: string, weekStartsOn: string): string | null {
+  const days = awayDays(periods, userId, weekStartsOn, addDaysTo(weekStartsOn, 6));
+  if (days.length === 0) return null;
+  return days.length === 7 ? "Away all week" : `Away ${dateRange(days[0], days[days.length - 1])}`;
+}
+
+/**
+ * A month as a calendar shows it, for picking days: its weeks, each seven
+ * local dates long and starting on the house's first day, with null for
+ * the days before the 1st and after the last.
+ */
+export function monthGrid(month: string, weekStarts: IsoDow): (string | null)[][] {
+  const first = `${month}-01`;
+  const [y, m] = month.split("-").map(Number);
+  const days = new Date(Date.UTC(y, m, 0)).getUTCDate();
+  const lead = (isoDayOf(first) - weekStarts + 7) % 7;
+  const cells: (string | null)[] = [
+    ...Array.from({ length: lead }, () => null),
+    ...Array.from({ length: days }, (_, i) => addDaysTo(first, i)),
+  ];
+  while (cells.length % 7) cells.push(null);
+  return Array.from({ length: cells.length / 7 }, (_, w) => cells.slice(w * 7, w * 7 + 7));
+}
+
+/** The month after (or, with -1, before) a `yyyy-MM` month. */
+export function shiftMonth(month: string, by: number): string {
+  const [y, m] = month.split("-").map(Number);
+  const d = new Date(Date.UTC(y, m - 1 + by, 1));
+  return `${d.getUTCFullYear()}-${String(d.getUTCMonth() + 1).padStart(2, "0")}`;
 }

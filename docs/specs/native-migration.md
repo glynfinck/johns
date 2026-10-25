@@ -656,6 +656,18 @@ As built, where it differs from the above:
   the list and the members aren't on Realtime, and a tab stays mounted.
 - **An admin can deal from Today and re-deal from Week**, as on the web, and
   Today's not-dealt card points at House instead of at the web.
+- **Groups and time away (11b)** read and write as the web's do (`save_group`,
+  `delete_group`, `set_away`, `cancel_away`), with their rules and words in
+  core: `GroupDraft` and `AwayDraft` in `schemas.ts`, `GroupDef`/`groupDef`
+  in `board.ts`, `awayPeriod`, `isoDayOf`, `awayThisWeek` (Week's "Away
+  21–23 Oct"), `monthGrid` and `shiftMonth` in `away.ts`, and
+  `GROUPS_COPY` and `AWAY_COPY`, which the web now uses too.
+- **Time away is booked from a calendar the app draws** (a month of days:
+  tap the first, then the last), not the web's two date fields: there's no
+  date input on a phone without a native module, and this one is the same
+  on iOS, Android and the web. Today gains the web's away banner, and Week
+  says under each person which days they're away (with someone away and
+  holding no Johns shown too) and lists them beside the laptop board.
 - **Signing out moves from Today's foot to House.** Reminders on this
   device (web push) and the Day/Night/Auto choice stay on the web for now:
   native push is Phase 12, and the app follows the system's theme.

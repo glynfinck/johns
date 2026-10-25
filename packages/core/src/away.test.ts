@@ -1,6 +1,18 @@
 import { describe, expect, it } from "vitest";
 
-import { awayDays, awayOn, currentOrNext, datesBetween, remaining, type AwayPeriod } from "./away";
+import {
+  awayDays,
+  awayOn,
+  awayPeriod,
+  awayThisWeek,
+  currentOrNext,
+  datesBetween,
+  isoDayOf,
+  monthGrid,
+  remaining,
+  shiftMonth,
+  type AwayPeriod,
+} from "./away";
 import { addDaysTo, localDate } from "./week";
 
 const ben = (startsOn: string, endsOn: string, id = "p1"): AwayPeriod => ({
@@ -58,5 +70,76 @@ describe("time away", () => {
     expect(localDate(new Date("2026-10-13T23:30:00Z"), "Pacific/Auckland")).toBe("2026-10-14");
     expect(localDate(new Date("2026-10-13T23:30:00Z"), "Europe/London")).toBe("2026-10-14");
     expect(localDate(new Date("2026-10-13T22:30:00Z"), "Europe/London")).toBe("2026-10-13");
+  });
+});
+
+describe("awayPeriod", () => {
+  it("reads a period from its row", () => {
+    expect(awayPeriod({ id: "p1", user_id: "ben", starts_on: "2026-10-26", ends_on: "2026-10-28", note: "Lisbon" })).toEqual({
+      id: "p1",
+      userId: "ben",
+      startsOn: "2026-10-26",
+      endsOn: "2026-10-28",
+      note: "Lisbon",
+    });
+  });
+});
+
+describe("isoDayOf", () => {
+  it("names a local date's day, Monday 1 to Sunday 7", () => {
+    expect(isoDayOf("2026-10-26")).toBe(1);
+    expect(isoDayOf("2026-10-25")).toBe(7);
+    expect(isoDayOf("2024-02-29")).toBe(4);
+    // The night the clocks go back in London changes nothing: dates have no zone.
+    expect(isoDayOf("2026-10-25")).toBe(isoDayOf("2026-11-01"));
+  });
+});
+
+describe("awayThisWeek", () => {
+  const week = "2026-10-19";
+
+  it("says which days of the week someone is away", () => {
+    expect(awayThisWeek([ben("2026-10-21", "2026-10-23")], "ben", week)).toBe("Away 21–23 Oct");
+    expect(awayThisWeek([ben("2026-10-25", "2026-10-30")], "ben", week)).toBe("Away Sun 25 Oct");
+  });
+
+  it("says all week for a trip that covers it, and nothing for anyone home", () => {
+    expect(awayThisWeek([ben("2026-10-10", "2026-11-10")], "ben", week)).toBe("Away all week");
+    expect(awayThisWeek([ben("2026-10-26", "2026-10-30")], "ben", week)).toBeNull();
+    expect(awayThisWeek([ben("2026-10-21", "2026-10-23")], "ava", week)).toBeNull();
+    expect(awayThisWeek([], "ben", week)).toBeNull();
+  });
+});
+
+describe("monthGrid", () => {
+  it("lays a month out in weeks from the house's first day", () => {
+    const grid = monthGrid("2026-10", 1);
+    // 1 October 2026 is a Thursday: three blank days before it.
+    expect(grid[0]).toEqual([null, null, null, "2026-10-01", "2026-10-02", "2026-10-03", "2026-10-04"]);
+    expect(grid.at(-1)).toEqual(["2026-10-26", "2026-10-27", "2026-10-28", "2026-10-29", "2026-10-30", "2026-10-31", null]);
+    expect(grid.flat().filter(Boolean)).toHaveLength(31);
+    expect(grid.every((w) => w.length === 7)).toBe(true);
+  });
+
+  it("starts the week where the house does", () => {
+    expect(monthGrid("2026-10", 7)[0]).toEqual([null, null, null, null, "2026-10-01", "2026-10-02", "2026-10-03"]);
+    expect(monthGrid("2026-11", 7)[0][0]).toBe("2026-11-01");
+  });
+
+  it("knows February, leap years included", () => {
+    expect(monthGrid("2026-02", 1).flat().filter(Boolean)).toHaveLength(28);
+    expect(monthGrid("2028-02", 1).flat().filter(Boolean)).toHaveLength(29);
+    // February 2027 starts on a Monday and fills exactly four weeks.
+    expect(monthGrid("2027-02", 1)).toHaveLength(4);
+  });
+});
+
+describe("shiftMonth", () => {
+  it("moves a month on or back, over the year's edge", () => {
+    expect(shiftMonth("2026-10", 1)).toBe("2026-11");
+    expect(shiftMonth("2026-12", 1)).toBe("2027-01");
+    expect(shiftMonth("2026-01", -1)).toBe("2025-12");
+    expect(shiftMonth("2026-10", 0)).toBe("2026-10");
+    expect(shiftMonth("2026-10", 14)).toBe("2027-12");
   });
 });

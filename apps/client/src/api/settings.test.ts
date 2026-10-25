@@ -1,7 +1,17 @@
 import { MoveResponse, NEW_JOHN, weekIndex, weekWindow, type HouseRules, type HouseSettings } from '@app/core';
 
 import { apiPost } from './http';
-import { archiveJohn, dealThisWeek, loadJohnList, removeMember, saveJohn, setRole, updateHouse } from './settings';
+import {
+  archiveJohn,
+  dealThisWeek,
+  deleteGroup,
+  loadJohnList,
+  removeMember,
+  saveGroup,
+  saveJohn,
+  setRole,
+  updateHouse,
+} from './settings';
 import { supabase } from './supabase';
 
 const mockAnswers: Record<string, { data: unknown; error: unknown }> = {};
@@ -63,13 +73,13 @@ describe('loadJohnList', () => {
       ],
       error: null,
     };
-    mockAnswers.groups = { data: [{ id: 'g1', name: 'Upstairs' }], error: null };
+    mockAnswers.groups = { data: [{ id: 'g1', name: 'Upstairs', group_members: [{ user_id: 'ava' }] }], error: null };
     const list = await loadJohnList('h1');
     expect(list).toEqual({
       johns: [
         { id: 'j1', name: 'Bins', category: 'bins', points: 2, everyWeeks: 1, dueDow: 7, dueTime: '21:00', needsPhoto: false, groupId: 'g1' },
       ],
-      groups: [{ id: 'g1', name: 'Upstairs' }],
+      groups: [{ id: 'g1', name: 'Upstairs', memberIds: ['ava'] }],
     });
     expect(callsOf('johns', 'eq')).toEqual([['house_id', 'h1']]);
     expect(callsOf('johns', 'is')).toEqual([['archived_at', null]]);
@@ -201,6 +211,39 @@ describe('roles and leaving', () => {
     rpc.mockResolvedValue({ data: null, error: { code: 'P0001', message: 'last_admin' } });
     await expect(setRole('h1', 'priya', 'member')).rejects.toThrow('Make someone else an admin first. A house needs at least one.');
     await expect(removeMember('h1', 'priya')).rejects.toThrow('Make someone else an admin first.');
+  });
+});
+
+describe('groups', () => {
+  const ava = crypto.randomUUID();
+  const ben = crypto.randomUUID();
+
+  it('makes a group through save_group, which checks they all live here', async () => {
+    rpc.mockResolvedValue({ data: 'g1', error: null });
+    await saveGroup('h1', { name: ' Upstairs ', members: [ava, ben] });
+    expect(rpc).toHaveBeenCalledWith('save_group', { p_house: 'h1', p_group: null, p_name: 'Upstairs', p_members: [ava, ben] });
+  });
+
+  it("changes who's in one by its id", async () => {
+    rpc.mockResolvedValue({ data: null, error: null });
+    const id = crypto.randomUUID();
+    await saveGroup('h1', { id, name: 'Upstairs', members: [ava] });
+    expect(rpc).toHaveBeenCalledWith('save_group', { p_house: 'h1', p_group: id, p_name: 'Upstairs', p_members: [ava] });
+  });
+
+  it("says what's missing before asking, and the database's refusal after", async () => {
+    await expect(saveGroup('h1', { name: 'Upstairs', members: [] })).rejects.toThrow('Pick at least one housemate.');
+    expect(rpc).not.toHaveBeenCalled();
+    rpc.mockResolvedValue({ data: null, error: { code: 'P0001', message: 'group_name_taken' } });
+    await expect(saveGroup('h1', { name: 'Upstairs', members: [ava] })).rejects.toThrow("There's already a group with that name.");
+  });
+
+  it('deletes a group through delete_group', async () => {
+    rpc.mockResolvedValue({ data: null, error: null });
+    await deleteGroup('g1');
+    expect(rpc).toHaveBeenCalledWith('delete_group', { p_group: 'g1' });
+    rpc.mockResolvedValue({ data: null, error: { code: '42501', message: 'admins_only' } });
+    await expect(deleteGroup('g1')).rejects.toThrow('Only the house admins can do that.');
   });
 });
 

@@ -1,13 +1,7 @@
-import { addDaysTo, awayOn, dateRange, datesBetween, firstName, type AwayPeriod, type IsoDow } from "@app/core";
+import { addDaysTo, AWAY_COPY, awayOn, dateRange, datesBetween, firstName, isoDayOf, type AwayPeriod, type IsoDow } from "@app/core";
 
 import { Avatar } from "@/components/ui/avatar";
 import { cn } from "@/lib/utils";
-
-const isoDay = (date: string): IsoDow => {
-  const [y, m, d] = date.split("-").map(Number);
-  const day = new Date(Date.UTC(y, m - 1, d)).getUTCDay();
-  return (day === 0 ? 7 : day) as IsoDow;
-};
 
 const short = (date: string) => {
   const [y, m, d] = date.split("-").map(Number);
@@ -45,7 +39,7 @@ export function AwayCalendar({
           <span />
           {dates.map((d) => (
             <span key={d} className="h-3.5 overflow-visible whitespace-nowrap">
-              {isoDay(d) === weekStarts ? short(d) : d === today ? "Today" : ""}
+              {isoDayOf(d) === weekStarts ? short(d) : d === today ? AWAY_COPY.today : ""}
             </span>
           ))}
         </div>
@@ -63,7 +57,7 @@ export function AwayCalendar({
                   className={cn(
                     "h-4 rounded-[2px]",
                     away ? "bg-foreground" : "bg-secondary",
-                    isoDay(d) === weekStarts && "ml-[3px]",
+                    isoDayOf(d) === weekStarts && "ml-[3px]",
                     d === today && "ring-2 ring-hivis ring-inset",
                   )}
                 />
@@ -73,7 +67,7 @@ export function AwayCalendar({
         ))}
       </div>
       {upcoming.length === 0 ? (
-        <p className="text-sm text-muted-foreground">Nobody&rsquo;s booked any time away.</p>
+        <p className="text-sm text-muted-foreground">{AWAY_COPY.nobody}</p>
       ) : (
         <ul className="flex flex-col gap-1.5 text-sm">
           {upcoming.map((p) => (
@@ -81,7 +75,7 @@ export function AwayCalendar({
               <span className="font-bold">{p.userId === me ? "You" : people.find((x) => x.userId === p.userId)?.name}</span>
               <span className="tabular">{dateRange(p.startsOn, p.endsOn)}</span>
               {p.note ? <span className="text-muted-foreground">{p.note}</span> : null}
-              {p.startsOn <= today ? <span className="text-xs font-bold text-muted-foreground uppercase">away now</span> : null}
+              {p.startsOn <= today ? <span className="text-xs font-bold text-muted-foreground uppercase">{AWAY_COPY.awayNow}</span> : null}
             </li>
           ))}
         </ul>

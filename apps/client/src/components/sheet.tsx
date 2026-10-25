@@ -28,6 +28,11 @@ export function Sheet({
 }) {
   const { colors, scheme } = useTheme();
   const insets = useSafeAreaInsets();
+  // On the web a closed react-native-web Modal stays mounted until its slide
+  // out reports it has ended, and until then it holds on to focus: typing
+  // into the next sheet would land on this one's backdrop instead. So on the
+  // web a closed sheet goes at once.
+  if (Platform.OS === 'web' && !visible) return null;
   // The darker of the two inks, faintly, whichever way the theme is.
   const shade = withAlpha(scheme === 'dark' ? colors.background : colors.foreground, 0.35);
   return (

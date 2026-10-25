@@ -1,5 +1,6 @@
 import {
   addDaysTo,
+  AWAY_COPY,
   currentOrNext,
   dateRange,
   formatBalance,
@@ -60,25 +61,20 @@ export default async function TodayPage() {
       {showTrip ? (
         <section
           className="mb-5 flex items-start gap-3 rounded-lg border border-border bg-card p-4"
-          aria-label="Your time away"
+          aria-label={AWAY_COPY.yours}
           data-testid="away-banner"
         >
           <PlaneIcon className="mt-0.5 size-5 shrink-0" aria-hidden />
           <div className="min-w-0 flex-1 text-sm">
             <p className="font-extrabold">
               {showTrip.startsOn <= away.today
-                ? `You're away until ${dateRange(showTrip.endsOn, showTrip.endsOn)}.`
-                : `You're away ${dateRange(showTrip.startsOn, showTrip.endsOn)}.`}
+                ? AWAY_COPY.banner(dateRange(showTrip.endsOn, showTrip.endsOn), true)
+                : AWAY_COPY.banner(dateRange(showTrip.startsOn, showTrip.endsOn), false)}
             </p>
-            <p className="mt-0.5 text-muted-foreground">
-              Nobody hands you a John due while you&rsquo;re gone
-              {ctx.house.away_makeup > 0
-                ? `, but ${ctx.house.away_makeup === 100 ? "your share" : "half your share"} still counts: you catch up a little each week when you're back.`
-                : "."}
-            </p>
+            <p className="mt-0.5 text-muted-foreground">{AWAY_COPY.bannerBody(ctx.house.away_makeup)}</p>
           </div>
           <Link href="/house#away" className="text-xs font-bold underline-offset-2 hover:underline">
-            Change
+            {AWAY_COPY.change}
           </Link>
         </section>
       ) : null}
