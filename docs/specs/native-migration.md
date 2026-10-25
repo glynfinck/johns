@@ -19,8 +19,8 @@ What does **not** change, in any phase:
 - The clock: pg_cron, `request_tick()`, the Vault secrets, `/api/cron/tick`
   and its URL, `CRON_SECRET`.
 - Web push: VAPID keys, `/sw.js`, the existing subscriptions.
-- One backend: Supabase, with `apps/api` on Vercel beside it. Google's and
-  Apple's push services only deliver what `apps/api` sends (decision 3).
+- One backend: Supabase, with `apps/api` on Vercel beside it. Expo, Google
+  and Apple only deliver what `apps/api` sends (decision 3).
 - Ports: the app on 3205, Supabase on 54340–54344.
 - Store releases: `release-targets.json` has `ios` and `android` set to
   `false`, and nothing here switches them on.
@@ -104,7 +104,7 @@ where a server is genuinely needed. Going through every server action today:
 | Cast a vote | action: rpc, then a tick (a majority decides at once) | **`POST /api/disputes/:id/votes`** |
 | Catch the house up before showing it | `ensureFresh` on page load | **`POST /api/fresh`** when a screen gains focus, at most once a minute per house, as now |
 | The clock | pg_cron → `/api/cron/tick` | unchanged |
-| Reminders and alerts | web push from the tick and the dispute action | the same messages, also sent to the phone's own push token (decision 3) |
+| Reminders and alerts | web push from the tick and the dispute action | the same messages, also sent to phones through Expo's push service (decision 3) |
 
 For the dispute and vote routes, the rpc itself still runs as the caller
 (a client built from their bearer token), so the database decides exactly as
@@ -182,43 +182,39 @@ Sign in with Apple cannot be tried on a device until there is an Apple
 Developer account. It is built and unit-tested in Phase 4 and must be proven
 on a device before `ios` is ever switched on.
 
-### 3. Push: our own sender in `apps/api`, straight to Google and Apple
+### 3. Push: Expo's push service for iOS and Android, web push stays
 
-**Decided 25 October:** real push on iOS and Android, sent by `apps/api`
-itself. No push service in between, and nothing of Johns stored or run
-anywhere but Supabase and Vercel.
+**Decided 25 October:** real push on iOS and Android through Expo's push
+service. Web push stays exactly as it is.
 
-- The app gets the phone's own push token with `expo-notifications`
-  (`getDevicePushTokenAsync`: an FCM token on Android, an APNs token on iOS)
-  and stores it in a new table, `push_tokens` (additive migration: `user_id`,
+- The app gets an Expo push token with `expo-notifications`
+  (`getExpoPushTokenAsync`, which needs the EAS project ID in `app.json`) and
+  stores it in a new table, `push_tokens` (additive migration: `user_id`,
   `token` unique, `platform`, `created_at`; RLS identical to
   `push_subscriptions`; grants stated for every role including
   `service_role`). Signing out deletes the device's token.
-- `apps/api/lib/push.ts`'s `Notify` fans out to three senders: web push with
-  VAPID exactly as now; Firebase Cloud Messaging's HTTP v1 API for Android
-  (an access token signed from a service-account key); and Apple's APNs over
-  HTTP/2 for iOS (a token signed with the `.p8` key). Each deletes tokens the
-  phone has thrown away (FCM `UNREGISTERED`, APNs `410`), as web push deletes
-  on 404 and 410. The message keeps its `url` (`/week`), which Expo Router
-  opens.
-- The payload builders and the token signing are pure functions with unit
-  tests in `apps/api` (server-only, so not core). A platform whose key isn't
-  configured simply gets nothing, as a deployment without VAPID keys does
-  today. A missing `push_tokens` table also reads as "no tokens", because
-  Vercel can deploy before Supabase does.
+- `apps/api/lib/push.ts`'s `Notify` fans out to both: web push with VAPID
+  exactly as now, and Expo's push API (up to 100 messages a call, sent with
+  an `EXPO_ACCESS_TOKEN` so that only `apps/api` can send to Johns' tokens).
+  `DeviceNotRegistered` deletes the token, as 404 and 410 do for web. The
+  message keeps its `url` (`/week`), which Expo Router opens.
+- The message builder, the batching and the pruning are pure functions with
+  unit tests in `apps/api`. A deployment without Expo's token sends nothing
+  to phones, as one without VAPID keys sends nothing to browsers. A missing
+  `push_tokens` table also reads as "no tokens", because Vercel can deploy
+  before Supabase does.
 
-Google and Apple only deliver for senders they know, so this still needs:
+Expo delivers through Google and Apple, who only deliver for senders they
+know, so this needs:
+- **An Expo account and EAS project** (`eas init`). This is not a store
+  account. Its access token goes only into `apps/api`'s Vercel environment.
 - **A Firebase project, used only for its Cloud Messaging key.** Nothing of
   Johns is stored or run there. The Android app carries the project's
-  `google-services.json` (identifiers, not secrets); the service-account key
-  goes only into `apps/api`'s Vercel environment (`FCM_SERVICE_ACCOUNT`).
-- **Apple's push key** (`APNS_KEY`, `APNS_KEY_ID`, `APNS_TEAM_ID`), from the
-  Apple Developer account. Until it exists, iPhones get no notifications on a
-  closed phone; the app shows everything when it's open.
-
-No Expo account is needed for this. Expo's push service would have saved
-writing the FCM and APNs senders, at the price of a third service; you chose
-to own them.
+  `google-services.json` (identifiers, not secrets); the key is uploaded to
+  Expo's credentials, not to Vercel.
+- **Apple's push key**, from the Apple Developer account, uploaded to Expo
+  too. Until it exists, iPhones get no notifications on a closed phone; the
+  app shows everything when it's open.
 
 ### 4. Photo receipts: camera or library, same bucket, same rules
 
@@ -489,15 +485,16 @@ reminders yet): which stage, when, and never twice. It must still pass, with
 web push unchanged, once `Notify` fans out. Then the `push_tokens` migration
 (revoking and granting as the house rules say) with db tests: you see and
 remove only your own tokens; a housemate can't insert a token for you; the
-service role reads them. Unit tests for the FCM and APNs payloads, the token
-signing, and pruning. The app asks for notification permission from House
-(never on first launch), registers its token, and opens the message's `url`
-when tapped. Android is checked on an emulator with Google Play; iOS waits
-for Apple's key.
+service role reads them. Unit tests for the Expo messages, batching and
+`DeviceNotRegistered` pruning. The app asks for notification permission from
+House (never on first launch), registers its token, and opens the message's
+`url` when tapped. Android is checked on an emulator with Google Play; iOS
+waits for Apple's key.
 Production (ask-first): the migration reaches the database through Supabase's
 GitHub integration if it's on by then, otherwise through provision (`db
-push`); the Firebase project, which you create in Google's console; its key,
-and later Apple's, put into Vercel by provision.
+push`); the Expo account and EAS project; the Firebase project, which you
+create in Google's console, and its key uploaded to Expo; `EXPO_ACCESS_TOKEN`
+put into Vercel by provision; later Apple's key, uploaded to Expo.
 
 ### Phase 13: web parity and the hosting cutover
 
@@ -534,7 +531,7 @@ e2e suite retires; the Expo web suite carries on.
 | --- | --- | --- |
 | 2 | Vercel Root Directory → `apps/api`; preview redeploy; merge; read-only provision check | you, or me through the Vercel connector on your word |
 | 4 | Supabase Auth: Google client IDs, skip nonce, `johns://**` (via provision) | me on your word; Google Cloud clients are yours |
-| 12 | the `push_tokens` migration; the Firebase project (yours to create); the FCM key, and later Apple's, into Vercel through provision | you, or me on your word |
+| 12 | the `push_tokens` migration; the Expo account and EAS project; the Firebase project (yours to create) and its key uploaded to Expo; `EXPO_ACCESS_TOKEN` into Vercel through provision; later Apple's key | you, or me on your word |
 | 13 | new Vercel project, domain, Supabase site and redirect URLs; Vault only if you choose the subdomain | you, or me on your word |
 | any | `npm run provision`, `supabase db push`, a production deploy, Vault, VAPID, `release:*`, `eas build --profile production`, `eas submit`, `eas update` | never without your say-so in that message |
 
@@ -567,14 +564,14 @@ e2e suite retires; the Expo web suite carries on.
 3. **Tabs:** JS tabs with lucide everywhere, or native tabs with SF Symbols
    and Material icons? **JS tabs with lucide.**
 4. **Phase 2's switch:** will you flip Root Directory in the dashboard, or
-   should I do it through the Vercel connector when you say so? **Asked
-   again when Phase 2's PR is green.**
+   should I do it through the Vercel connector when you say so? **Me,
+   through the connector, when you say go.**
 5. **A Mac for the iOS simulator?** **Yes**, so iOS is checked on the
    simulator until the Apple account exists.
 6. **Accounts in Phase 12:** OK to plan on an Expo account and a Firebase
-   project then (neither is a store account)? **Changed:** no Expo account or
-   push service. A Firebase project is used only for Android's delivery key,
-   and `apps/api` sends to Google and Apple itself (decision 3).
+   project then (neither is a store account)? **Yes**, for push through
+   Expo's service. The Firebase project is used only for Android's delivery
+   key (decision 3).
 
 ## Done when
 
