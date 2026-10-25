@@ -1,6 +1,6 @@
 ---
 name: verify
-description: Build, run and drive the Johns app (Next.js + local Supabase) to verify a change end-to-end.
+description: Build, run and drive the Johns apps (Next.js, the Expo app, local Supabase) to verify a change end-to-end.
 ---
 
 # Verifying Johns changes
@@ -14,6 +14,9 @@ description: Build, run and drive the Johns app (Next.js + local Supabase) to ve
   `npm run types`.
 - App: `npm run dev` serves http://localhost:3205. Playwright's webServer
   reuses a running one.
+- Expo app: `npm run dev:client` runs Metro on 8205 (press `w` for web). To
+  look at the web build without Metro, `npm run export:web -w apps/client`
+  writes `apps/client/dist`; serve it on 8205 (it's a single-page app).
 - psql: `psql postgresql://postgres:postgres@127.0.0.1:54342/postgres`.
 
 ## Drive
@@ -29,5 +32,7 @@ description: Build, run and drive the Johns app (Next.js + local Supabase) to ve
 
 ## Gates
 
-`npm run lint`, `npm run typecheck`, `npm test`, `npm run test:db`,
-`npm run build`, `npm run test:e2e`.
+`npm run lint`, `npm run typecheck`, `npm test` (every workspace, the Expo
+app's Jest included), `npm run test:db`, `npm run build`, `npm run test:e2e`.
+For a change to `apps/client`, also `npm run export:web -w apps/client` and,
+with network, `npx expo-doctor` in `apps/client`.

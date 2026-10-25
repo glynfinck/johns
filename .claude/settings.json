@@ -7,5 +7,8 @@
       "Bash(supabase status *)",
       "Bash(supabase --version)"
     ]
+  },
+  "enabledPlugins": {
+    "expo@claude-plugins-official": true
   }
 }

@@ -100,3 +100,41 @@ jobs:
             apps/api/playwright-report/
             apps/api/test-results/
           retention-days: 7
+
+  # The native app's own proof, beside `verify`, whose root lint, typecheck
+  # and test already run every workspace (the client's Jest and its emoji
+  # scan included). This job does what only the client needs.
+  client:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      # Two copies of React break hooks at runtime, and legacy-peer-deps hides
+      # the conflicts that cause them. The root `overrides` pin the Expo SDK's
+      # version; this proves npm installed just that one.
+      - name: One React
+        run: |
+          copies=$(find . -path ./.git -prune -o \( -path '*/node_modules/react/package.json' -o -path '*/node_modules/react-dom/package.json' \) -print)
+          echo "$copies"
+          if [ "$(wc -l <<<"$copies")" -ne 2 ]; then
+            echo "::error title=More than one React::npm installed react or react-dom more than once; run npm dedupe"
+            exit 1
+          fi
+          node -p "'react ' + require('react/package.json').version + ', react-dom ' + require('react-dom/package.json').version"
+
+      - name: Web export
+        run: npm run export:web -w apps/client
+
+      # Pinned, like the Supabase CLI: a new doctor can fail a commit that
+      # changed nothing. Bump it deliberately.
+      - name: Expo doctor
+        working-directory: apps/client
+        run: npx -y expo-doctor@1.21.5

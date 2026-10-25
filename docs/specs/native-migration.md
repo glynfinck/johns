@@ -241,8 +241,9 @@ config, so a refusal is a sentence on screen, never a crash.
   fails if any `--token` differs from core, so the two can't drift while
   both ship. (The test sits in `apps/api` because apps may import packages,
   never the reverse.)
-- **Type:** `@expo-google-fonts/overpass`, embedded with the `expo-font`
-  config plugin so nothing flashes, in the weights the web uses (400–900).
+- **Type:** `@expo-google-fonts/overpass` in the weights the web uses
+  (400–900), loaded behind the splash screen so nothing flashes. (The plan
+  said the `expo-font` config plugin; see Phase 3 for why not.)
   A `Heading` component does the uppercase and the tracking, so screens
   never repeat it.
 - **Signage:** the `road-sign` wordmark, `HazardTape` (diagonal stripes
@@ -417,6 +418,27 @@ deployment (seconds), Root Directory back to empty, revert the merge.
 
 Proof: the web's e2e passes on React 19.3; `npm run release:ios` refuses.
 Production: none (`apps/client` isn't deployed anywhere yet).
+
+As built, where it differs from the above:
+- **Fonts load at runtime**, held behind the splash screen in
+  `_layout.tsx`, instead of the `expo-font` config plugin. One code path
+  covers web (which can't embed), Expo Go (which ignores config plugins)
+  and native builds. Each weight is imported from its own path, so the
+  bundle carries six fonts, not the package's eighteen.
+- **The shell moves to Phase 5.** The only screen is signed out, so there
+  is nothing to put in tabs yet; the shell arrives with the first signed-in
+  screens.
+- **The front door's words moved into core** (`copy.ts`), so both apps
+  say the same thing, and the web's `GROUND` colours now come from
+  `BIN_NIGHT` too.
+- **CI:** the client's lint, typecheck and Jest (the emoji scan is a Jest
+  test) run in `verify`, because the root scripts run every workspace. The
+  parallel `client` job does the rest: one React, `expo export -p web` and
+  `expo-doctor` (pinned).
+- React Native Testing Library 14 (async `render`, Test Renderer instead of
+  React Test Renderer) and TypeScript 6, which no longer loads every
+  `@types` package, so the client's `tsconfig.json` names `jest` and
+  `node`.
 
 ### Phase 4: sign-in
 

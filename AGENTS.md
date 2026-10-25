@@ -13,8 +13,9 @@ you're working in (`apps/api/AGENTS.md` for the Next.js app).
   johns.glyn.dev.
 - Platforms: the web today, served by `apps/api`. iOS, Android and web from
   one Expo app (`apps/client`) as `docs/specs/native-migration.md` lands,
-  phase by phase. Once `apps/client` exists, every feature must work on all
-  three unless its spec says otherwise.
+  phase by phase: its scaffold and front door are in, the screens follow.
+  From here every feature must work on all three unless its spec says
+  otherwise.
 - Solo project. My main language is Python: when code relies on a TypeScript
   or React pattern with no obvious Python equivalent, explain it in one line
   in your summary.
@@ -25,20 +26,21 @@ you're working in (`apps/api/AGENTS.md` for the Next.js app).
 apps/
   api/          Next.js: the web app (its pages stay until Expo web reaches
                 parity), server actions, /api routes, the engine, push  → Vercel "johns"
+  client/       Expo: iOS, Android and web from one codebase (not deployed yet)
 packages/
   core/         @app/core: the pure rules, the shared words, the database types
 supabase/       migrations/ and config.toml (local development only)
 docs/specs/     the migration plan; one short spec per feature (copy _template.md)
-scripts/        provision (production's accounts), tick (the clock by hand), vapid
+scripts/        provision (production's accounts), tick (the clock by hand), vapid,
+                release (the store gate, read from release-targets.json)
 ```
-
-`apps/client` (Expo, iOS, Android and web) arrives in Phase 3 of the plan.
 
 ## Commands (from the repo root)
 
 ```bash
 npm ci                           # install everything, exactly as the lockfile says
 npm run dev                      # the web app on http://localhost:3205
+npm run dev:client               # the Expo app: Metro on 8205
 npm run typecheck && npm run lint && npm test
 npm run db:start                 # local Supabase on 54340–54344 (needs Docker)
 npm run test:db                  # RLS, the housemate functions and the engine
@@ -55,8 +57,12 @@ accounts: never run it without being asked (see "Hosting and deploys").
 
 - npm workspaces with one lockfile at the root. Run `npm install` from the
   root only, and add a dependency to one workspace with
-  `npm install <pkg> -w apps/api`. `.npmrc` sets `legacy-peer-deps` so that
-  install and CI resolve the same way; keep it.
+  `npm install <pkg> -w apps/api` (in `apps/client`, `npx expo install
+  <pkg>`, which picks the Expo SDK's version). `.npmrc` sets
+  `legacy-peer-deps` so that install and CI resolve the same way; keep it.
+- One React for the whole repo: the root `overrides` pin `react` and
+  `react-dom` to the Expo SDK's version, and CI fails if npm installs a
+  second copy (`npm dedupe` fixes it).
 - Imports flow one way: apps import packages. Apps never import from each
   other, and packages never import from apps.
 - `packages/core` is plain TypeScript: no React, React Native or Next.js
@@ -218,10 +224,10 @@ at `<house>/<assignment>/<file>`.
 ## Testing
 
 - Vitest in `packages/core` and `apps/api` (and at the root for `scripts/`).
-  Tests sit beside what they test (`<name>.test.ts`) in core. When
-  `apps/client` arrives it uses Jest with `jest-expo`, the one runner that
-  can test React Native.
-- `npm test`: every workspace's pure tests plus provision's decisions. Pure
+  Tests sit beside what they test (`<name>.test.ts`) in core. `apps/client`
+  uses Jest with `jest-expo`, the one runner that can test React Native, and
+  React Native Testing Library (see `apps/client/AGENTS.md`).
+- `npm test`: every workspace's tests plus the scripts' decisions. Pure
   logic only: no stack, no network, no clock. Every function in
   `packages/core` gets tests, including edge cases: empty input, zero,
   negatives, rounding, dates and time zones.
@@ -242,9 +248,11 @@ at `<house>/<assignment>/<file>`.
 - Always ask first. Never run or change any of these unless I've said to in
   that message: `npm run provision` (even `--check`), `supabase db push`,
   `supabase functions deploy`, a Vercel production deploy, the Vercel
-  project's settings, the Vault secrets, the VAPID keys, and once the native
-  app exists `npm run release:ios` / `release:android`, `eas build` with a
-  production profile, `eas submit` and `eas update`.
+  project's settings, the Vault secrets, the VAPID keys, `npm run
+  release:ios` / `release:android`, `eas build` with a production profile,
+  `eas submit` and `eas update`. Store releases stay switched off in
+  `release-targets.json` (both `false`) until the Apple and Google Play
+  accounts exist; the release scripts refuse while they are.
 
 ## Secrets
 
@@ -262,4 +270,5 @@ at `<house>/<assignment>/<file>`.
 
 Supabase on 54340–54344 (API 54341, DB 54342, Studio 54343): `home` holds the
 54320s and `pub-golf`/`graph-editor` share the 54330s. The web app runs on
-3205.
+3205 and Metro on 8205 (never Expo's default 8081, which every app made from
+the template would fight over).
