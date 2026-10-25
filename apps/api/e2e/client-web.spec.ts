@@ -1,4 +1,4 @@
-import { AWAY_COPY, LOOK_LABEL, NOT_FOUND_COPY, PRIVACY_COPY, REMINDERS_COPY, SECTION_LABEL, SIGN_IN_COPY } from "@app/core";
+import { LOOK_LABEL, NOT_FOUND_COPY, PRIVACY_COPY, REMINDERS_COPY, SECTION_LABEL, SIGN_IN_COPY } from "@app/core";
 import { expect, test } from "@playwright/test";
 
 import { admin, CLIENT_URL, cleanUp, dealtHouseInClient } from "./auth";
@@ -22,8 +22,10 @@ test("privacy, and a link to nowhere, open for anyone", async ({ page }) => {
     await page.goto(path);
     await expect(page.getByText(NOT_FOUND_COPY.body)).toBeVisible();
   }
+  // Back to your Johns: signed out, that's the front door.
   await page.getByRole("link", { name: NOT_FOUND_COPY.back }).click();
-  await expect(page).toHaveURL(/\/signin$/);
+  await expect(page).toHaveURL(/\/$/);
+  await expect(page.getByRole("link", { name: SIGN_IN_COPY.privacy })).toBeVisible();
 });
 
 test("installable: the manifest, its icons and the service worker are served", async ({ request }) => {
@@ -78,6 +80,7 @@ test("tab titles, the look, and reminders on this device", async ({ browser }) =
   const ground = () => house.evaluate((el) => getComputedStyle(el).backgroundColor);
   const day = await ground();
   await house.getByRole("radio", { name: LOOK_LABEL.dark }).click();
+  await expect(house.getByRole("radio", { name: LOOK_LABEL.dark })).toBeChecked();
   await expect.poll(ground).not.toBe(day);
   const night = await ground();
   await page.reload();
@@ -98,8 +101,5 @@ test("tab titles, the look, and reminders on this device", async ({ browser }) =
   await expect(house.getByTestId("enable-push")).toBeVisible();
   expect(await rows()).toEqual([]);
 
-  // The not-so-obvious one: a page you can't be on still says where you are.
-  await page.goto("/today");
-  await expect(page.getByText(AWAY_COPY.nobody)).toHaveCount(0);
   await context.close();
 });

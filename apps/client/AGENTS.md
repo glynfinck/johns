@@ -68,7 +68,11 @@ permanent once a store has seen them.
   `house/new`), and in a house (the `(house)` group). Signing in or out, or creating a
   house, moves you by itself; screens never navigate after auth. A join link
   (`join/[joinCode]`, which is `johns://join/CODE` on a phone) sits outside
-  the guards and signs you in in place, so the code survives.
+  the guards and signs you in in place, so the code survives. So do
+  `privacy` and `+not-found` (anything not a route, `/_sitemap` included:
+  the router plugin's `sitemap` is off), open to anyone. The root layout's
+  `ErrorBoundary` is the web's error page: a screen that throws shows it,
+  with "Try again".
 - `src/api/`: every network call.
   - `supabase.ts`: the Supabase client, typed with `Database` from
     `@app/core`, publishable key only; `storage.ts` / `storage.web.ts` keep
@@ -94,7 +98,10 @@ permanent once a store has seen them.
     the John list and the house rules through the admins' column grants,
     roles and leaving through RPC, and the deal through `POST /api/deal`)
     `away.ts` (time away: reading it, and booking and cancelling through
-    `set_away` and `cancel_away`) and `photos.ts` (receipts: below). RLS filters a write that isn't an
+    `set_away` and `cancel_away`), `push.web.ts` (reminders on this browser:
+    the service worker, `PushManager` with `EXPO_PUBLIC_VAPID_PUBLIC_KEY`,
+    and your `push_subscriptions` row; `push.ts` is the native stub until
+    Phase 12) and `photos.ts` (receipts: below). RLS filters a write that isn't an
     admin's to no rows rather than refusing it, so `settings.ts` asks for
     the written row back and says "Only the house admins can do that." when
     there is none.
@@ -107,7 +114,11 @@ permanent once a store has seen them.
 - `src/hooks/`: connect `@app/core` and `src/api/` to screens (e.g.
   `use-session.ts`). `use-membership.tsx` is the session and the house it's
   in, read behind the splash screen, with `refresh()` for after creating or
-  joining a house. `src/components/`: reusable UI pieces (`Field`, `Choice`
+  joining a house. `look.tsx` is the Day/Night/Auto choice for this device
+  (`LookProvider` in the root layout, `useLook()`), saved in storage under
+  `theme`, the key the web's next-themes uses. `src/components/`: reusable
+  UI pieces (`PageTitle`, which names the browser tab on the web from core's
+  `pageTitle` and is nothing on a phone, `Field`, `Choice`
   for the web's selects, `Alert`, `SignInPanel`, `Screen` for a house
   screen's page, `Sheet` for a form that rises from the bottom, `JohnCard`
   for anyone's John, `DisputeButton` and `VoteButtons`, `SwapSheet`, the
@@ -158,13 +169,23 @@ permanent once a store has seen them.
   `.web.tsx`) or `Platform.OS` only where behaviour truly differs.
 - Web is a single-page build: keep `"web": { "output": "single" }` in
   app.json. It isn't deployed yet: johns.glyn.dev stays `apps/api`'s pages
-  until the Expo web build reaches parity (Phase 13).
+  until the hosting cutover (Phase 13).
+- `public/` is copied to the web build's root. `index.html` is the page
+  every route is served from (Expo fills in `%LANG_ISO_CODE%` and
+  `%WEB_TITLE%`): the description, theme colours and home-screen tags the
+  web's layout has. Beside it the web's `manifest.webmanifest`, icons and
+  `sw.js`, at the same paths and scope, so a phone that installed the site
+  or turned on reminders keeps both. `src/__tests__/web-files.test.ts`
+  checks them against core's words and colours; a change to one of them is
+  made in `apps/api/public` too, until Phase 14.
 - When a change adds a native module or config plugin, say clearly that a
   new development build is needed. The image picker and manipulator (Phase
   6) are native modules: a build from before them can't take a photo.
 - Environment: copy `.env.example` to `.env.local`. Only `EXPO_PUBLIC_`
-  values go here: Supabase's URL and publishable key, and Google's web and
-  iOS client IDs (public; DEPLOYMENT.md says where they come from).
+  values go here: Supabase's URL and publishable key, Google's web and
+  iOS client IDs (public; DEPLOYMENT.md says where they come from), and the
+  VAPID public key for reminders on the web (without it, House offers none;
+  never the private key, which stays in `apps/api`'s Vercel environment).
   `app.config.ts` turns the iOS client ID into Google's URL scheme; without
   it the build works, minus Google sign-in on iOS.
 - Sign-in uses native modules, so Expo Go can't sign in: use a development
@@ -192,7 +213,14 @@ permanent once a store has seen them.
 - **`Link asChild` merges its child's style by spreading it**, so a child
   given a style function or array loses it all. Give it one flat object
   (`StyleSheet.flatten`), as `Button` does.
-- **Light and dark** both ship and follow the system.
+- **Light and dark** both ship and follow the system, unless you choose
+  Day or Night under House, You (`hooks/look.tsx`); `useTheme()` reads that
+  choice.
+- **A chosen, ticked or pressed state is an `aria-*` prop**
+  (`aria-checked`, `aria-selected`, `aria-disabled`; `aria-pressed` on the
+  web only, which React Native lacks), never `accessibilityState`, which
+  react-native-web ignores: a screen reader on the web would hear nothing
+  chosen.
 - **Icons: lucide on every platform, an override of the template.** The
   template asks for native tabs with SF Symbols on iOS and Material on
   Android. Johns uses `expo-router`'s JS `Tabs` with `lucide-react-native`
@@ -217,7 +245,9 @@ the router renders through `renderRouter` from `expo-router/testing-library`;
 the root layout's guard is tested that way with stand-in screens.
 
 - `jest.setup.js` swaps in `react-native-safe-area-context`'s own Jest mock,
-  so a component that reads the safe area renders alone.
+  so a component that reads the safe area renders alone, and an in-memory
+  `authStorage` for `src/api/storage` (the real one opens SQLite, a native
+  module); a test that reads what's saved clears it first.
 - A layout that reads the window's width is tested at both sizes by
   mocking `react-native/Libraries/Utilities/useWindowDimensions` (see
   `week.test.tsx`).

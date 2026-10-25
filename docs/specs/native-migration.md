@@ -669,8 +669,8 @@ As built, where it differs from the above:
   says under each person which days they're away (with someone away and
   holding no Johns shown too) and lists them beside the laptop board.
 - **Signing out moves from Today's foot to House.** Reminders on this
-  device (web push) and the Day/Night/Auto choice stay on the web for now:
-  native push is Phase 12, and the app follows the system's theme.
+  device (web push) and the Day/Night/Auto choice came after, with web
+  parity (Phase 13); native push is Phase 12.
 
 ### Phase 12: native push
 
@@ -712,9 +712,34 @@ the time:
 Production (ask-first, all of it): the new project and its `EXPO_PUBLIC_*`
 env, the domain move, Supabase's site URL and redirect URLs.
 
+Settled: the `johns-web` project with the `/api` rewrite, as recommended;
+each production step asked for on its own and checked before the next.
+
+As built, the parity half (one PR, before the cutover):
+- **What the web had and the app didn't**, found by going through every
+  page and file `apps/api` serves: the privacy page, a not-found page (the
+  router's `/_sitemap` too, now off), the error page, the browser tab's
+  title on each page, the home-screen manifest, icons and head tags, the
+  service worker, reminders on this device, and the Day/Night/Auto choice.
+  Each now has its twin, with words from core (`PRIVACY_COPY`,
+  `NOT_FOUND_COPY`, `ERROR_COPY`, `PAGE_TITLE` and `pageTitle`, `LOOKS` and
+  `LOOK_LABEL`, `REMINDERS_COPY`), which the web's pages use too.
+- **The look is per device**, saved under the web's own key (`theme`), so
+  the choice is the same thing it was; reminders are the web's
+  `push_subscriptions` rows, written under RLS as the web's are.
+- **A bug the parity e2e found:** react-native-web ignores
+  `accessibilityState`, so chosen chips, picked days and your own reactions
+  read as unchosen to a screen reader on the web. They carry `aria-*` props
+  now, and the e2e asserts the state.
+- **Twins:** `house-flow.spec.ts` is covered by `client-run-house`,
+  `client-week` and `client-sign-in`; `groups-away.spec.ts` by
+  `client-groups-away`; `client-web.spec.ts` covers the pages above.
+
 ### Phase 14: `apps/api` goes headless
 
-Once the domain has served Expo web for a while without a rollback: remove
+As soon as the cutover checks out in production (decided at the time;
+rolling back after that is moving the domain back and promoting the `johns`
+project's last deployment with its pages, which Vercel keeps): remove
 the pages, components, shadcn, Tailwind and the server actions, and
 `apps/api` becomes route handlers only, as the template intends. The cookie
 e2e suite retires; the Expo web suite carries on.
