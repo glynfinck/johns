@@ -23,6 +23,7 @@ const routes = {
   '(house)/today': () => <Text>Today</Text>,
   '(house)/week': () => <Text>Week</Text>,
   '(house)/wall': () => <Text>Wall</Text>,
+  '(house)/table': () => <Text>Table</Text>,
   'join/[joinCode]': () => <Text>Join</Text>,
 };
 

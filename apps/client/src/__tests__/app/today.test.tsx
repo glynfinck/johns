@@ -1,13 +1,14 @@
-import { DISPUTE_COPY, INVITE_COPY, JOHN_COPY, NOT_DEALT_COPY, SIGN_IN_COPY, TODAY_COPY } from '@app/core';
+import { DISPUTE_COPY, INVITE_COPY, JOHN_COPY, NOT_DEALT_COPY, SIGN_IN_COPY, TABLE_COPY, TODAY_COPY } from '@app/core';
 import { QueryClientProvider } from '@tanstack/react-query';
 import { Slot } from 'expo-router';
-import { fireEvent, renderRouter, screen, waitFor } from 'expo-router/testing-library';
+import { fireEvent, renderRouter, screen, waitFor, within } from 'expo-router/testing-library';
 
 import { signOut } from '@/api/auth';
 import { loadHouse } from '@/api/board';
 import { castVote } from '@/api/disputes';
 import { catchUp } from '@/api/house';
 import { markDone } from '@/api/johns';
+import { loadTable } from '@/api/table';
 import Today from '@/app/(house)/today';
 import { assignment, snapshot } from '@/testing/house';
 import { testQueryClient } from '@/testing/query';
@@ -15,6 +16,7 @@ import { testQueryClient } from '@/testing/query';
 jest.mock('@/api/auth', () => ({ signOut: jest.fn() }));
 jest.mock('@/api/board', () => ({ loadHouse: jest.fn() }));
 jest.mock('@/api/house', () => ({ catchUp: jest.fn() }));
+jest.mock('@/api/table', () => ({ loadTable: jest.fn() }));
 jest.mock('@/api/disputes', () => ({ castVote: jest.fn(), raiseDispute: jest.fn() }));
 jest.mock('@/api/johns', () => ({ markDone: jest.fn(), undoDone: jest.fn(), spendImmunity: jest.fn() }));
 jest.mock('@/api/photos', () => ({ pickPhoto: jest.fn(), uploadProof: jest.fn() }));
@@ -63,6 +65,14 @@ beforeEach(() => {
   read.mockResolvedValue(snapshot());
   (catchUp as jest.Mock).mockResolvedValue(false);
   (markDone as jest.Mock).mockResolvedValue(undefined);
+  (loadTable as jest.Mock).mockResolvedValue({
+    month: '2026-10',
+    monthTable: [],
+    balances: [
+      { userId: 'priya', balance: -4, weeksToEven: 2 },
+      { userId: 'sam', balance: 4, weeksToEven: 0 },
+    ],
+  });
 });
 
 it('says who is signed in', async () => {
@@ -116,9 +126,19 @@ it('puts the votes waiting for you first, and casts yours', async () => {
   const toVote = screen.getByTestId('to-vote');
   expect(toVote).toHaveTextContent(new RegExp(TODAY_COPY.toVote));
   expect(screen.getByText('Disputed: “Ring round the bath”')).toBeOnTheScreen();
-  expect(screen.getByText('Sam')).toBeOnTheScreen();
+  expect(within(toVote).getByText('Sam')).toBeOnTheScreen();
   await fireEvent.press(screen.getByRole('button', { name: DISPUTE_COPY.notDone }));
   expect(castVote).toHaveBeenCalledWith('d1', true);
+});
+
+it("shows the week's Table and where you stand against your share", async () => {
+  await open();
+  expect(screen.getByText(TABLE_COPY.beside)).toBeOnTheScreen();
+  expect(screen.getAllByTestId('standing')).toHaveLength(2);
+  const share = await screen.findByTestId('my-share');
+  expect(share).toHaveTextContent(new RegExp(TABLE_COPY.yourShare));
+  expect(screen.getByText(TABLE_COPY.shareLine(-4, 2))).toBeOnTheScreen();
+  expect(loadTable).toHaveBeenCalledWith('h1', expect.objectContaining({ timezone: 'Europe/London' }), ['priya', 'sam'], expect.any(Date));
 });
 
 it('says so when nothing on the list is yours this week', async () => {

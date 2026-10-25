@@ -180,6 +180,56 @@ export function carryOver(weeks: readonly PastWeek[], currentMemberIds: readonly
   return balance;
 }
 
+/** The recent weeks as read: their ids, the shares stored when each was dealt, and what each housemate was handed. */
+export interface RecentRows {
+  weekIds: readonly string[];
+  shares: readonly { week_id: string; user_id: string; share: number | string }[];
+  handed: readonly { week_id: string; user_id: string; points: number }[];
+}
+
+/**
+ * Each current housemate's balance over the recent weeks (`carryOver`), and
+ * their usual week's share: the average of the weeks they had one, for
+ * saying how long catching up takes.
+ */
+export function recentBalances(
+  rows: RecentRows,
+  memberIds: readonly string[],
+): { balances: Map<string, number>; usualShare: Map<string, number> } {
+  const weeks: PastWeek[] = rows.weekIds.map((id) => ({
+    shares: rows.shares.filter((s) => s.week_id === id).map((s) => ({ userId: s.user_id, share: Number(s.share) })),
+    assignments: rows.handed.filter((a) => a.week_id === id).map((a) => ({ userId: a.user_id, points: a.points })),
+  }));
+  const usualShare = new Map<string, number>();
+  for (const id of memberIds) {
+    const theirs = rows.shares.filter((s) => s.user_id === id && Number(s.share) > 0).map((s) => Number(s.share));
+    usualShare.set(id, theirs.length ? theirs.reduce((a, b) => a + b, 0) / theirs.length : 0);
+  }
+  return { balances: carryOver(weeks, memberIds), usualShare };
+}
+
+export interface BalanceRow {
+  userId: string;
+  /** Handed minus share over recent weeks, going into this week. Below zero is behind. */
+  balance: number;
+  /** About how many weeks of catching up are left at the catch-up pace. */
+  weeksToEven: number;
+}
+
+/** Everyone's balance against their share, furthest behind first. */
+export function balanceRows(
+  balances: ReadonlyMap<string, number>,
+  usualShare: ReadonlyMap<string, number>,
+  memberIds: readonly string[],
+): BalanceRow[] {
+  return memberIds
+    .map((id) => {
+      const balance = balances.get(id) ?? 0;
+      return { userId: id, balance, weeksToEven: catchUpWeeks(balance, usualShare.get(id) ?? 0) };
+    })
+    .sort((a, b) => a.balance - b.balance);
+}
+
 /**
  * Roughly how many weeks someone behind will take to even out at the
  * catch-up pace, given what a usual week's share is for them. Zero when they

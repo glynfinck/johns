@@ -87,8 +87,9 @@ permanent once a store has seen them.
     `board.ts` (`loadHouse`: one read of a house's rules, people and this
     week's rows), `johns.ts` (ticking, undoing, spending immunity, a swap),
     `disputes.ts` (disputing and voting, through apps/api), `wall.ts` (the
-    Wall's events with their photos signed for an hour, and your reactions)
-    and `photos.ts` (receipts: below).
+    Wall's events with their photos signed for an hour, and your reactions),
+    `table.ts` (the month's Table and the fair shares, summed by core as the
+    deal sums them) and `photos.ts` (receipts: below).
 - **Writes go through the database, as the web's do.** A move is one named
   SQL function (`supabase.rpc('mark_done', …)`) or one column-granted write;
   the database decides, and the client only translates a refusal with
@@ -121,9 +122,9 @@ permanent once a store has seen them.
 - **A move** goes through `useMove(houseId).run(...)`: it runs, then reads the
   house again, and holds the refusal's sentence in `problem`.
 - **Everything a house's screens read is keyed under `houseKey(id)`**
-  (`hooks/keys.ts`): the Wall is `wallKey(id)`, beneath it, so reading the
-  house again (a move, a Realtime change, catching up) refreshes the Wall
-  too. A reaction (`useReact` in `use-wall.ts`) shows at once and goes back
+  (`hooks/keys.ts`): the Wall (`wallKey`) and the Table (`tableKey`) sit
+  beneath it, so reading the house again (a move, a Realtime change,
+  catching up) refreshes them too. A reaction (`useReact` in `use-wall.ts`) shows at once and goes back
   if the database says no: React Query's optimistic update.
 - **Live:** `useLiveHouse(houseId)` listens on Realtime to what
   `supabase_realtime` publishes (`events`, `assignments`, `disputes`; never
@@ -220,7 +221,10 @@ the root layout's guard is tested that way with stand-in screens.
 The web build also runs end to end, in `apps/api`'s Playwright
 (`e2e/client-*.spec.ts`): it is exported against the local stack and served
 on 8205, and `e2e/auth.ts`'s `signInToClient` puts a session in
-localStorage.
+localStorage; `dealtHouseInClient` sets up a house with this week dealt,
+housemates included. The tabs keep a screen you've left laid out (just not
+shown), so a test that counts something two screens show scopes itself to
+one screen's `testID` (`Screen` takes one).
 
 This project uses `@testing-library/react-native`. Its APIs and testing conventions can differ from your training data.
 Before writing or changing RNTL tests, read the relevant guide in

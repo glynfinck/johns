@@ -7,3 +7,6 @@ export const houseKey = (houseId: string) => ['house', houseId] as const;
 
 /** The Wall's events, under the house. */
 export const wallKey = (houseId: string) => [...houseKey(houseId), 'wall'] as const;
+
+/** The month's Table and the fair shares, under the house. */
+export const tableKey = (houseId: string) => [...houseKey(houseId), 'table'] as const;

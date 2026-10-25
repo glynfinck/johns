@@ -209,3 +209,37 @@ export function todayView(board: WeekBoard, userId: string) {
     toVote: board.items.filter((i) => i.dispute && i.userId !== userId && i.dispute.myVote === null),
   };
 }
+
+/** A month's assignment as read, with its week's end (for when an open John turns missed). */
+export type MonthRow = Pick<Row<"assignments">, "user_id" | "points" | "outcome" | "done_at" | "due_at" | "excused"> & {
+  weeks: { ends_at: string } | null;
+};
+
+/** The month's Table: every John due this month, each at its live status. */
+export function monthStandings(
+  rows: readonly MonthRow[],
+  memberIds: readonly string[],
+  disputeHours: number,
+  now: Date,
+): TableRow[] {
+  return standings(
+    rows.map((a) => ({
+      userId: a.user_id,
+      points: a.points,
+      status: liveStatus(
+        {
+          dueAt: new Date(a.due_at),
+          doneAt: a.done_at ? new Date(a.done_at) : null,
+          excused: a.excused,
+          disputeOpen: false,
+          // A John with no week (never, in practice) counts as ending when it's due.
+          weekEndsAt: new Date(a.weeks?.ends_at ?? a.due_at),
+          outcome: a.outcome as Outcome | null,
+        },
+        now,
+        disputeHours,
+      ),
+    })),
+    memberIds,
+  );
+}

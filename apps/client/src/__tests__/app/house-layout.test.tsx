@@ -47,6 +47,7 @@ async function open(url = '/today') {
       '(house)/today': () => <Text>Today screen</Text>,
       '(house)/week': () => <Text>Week screen</Text>,
       '(house)/wall': () => <Text>Wall screen</Text>,
+      '(house)/table': () => <Text>Table screen</Text>,
     },
     { initialUrl: url },
   );
@@ -73,6 +74,10 @@ describe('on a phone', () => {
     await fireEvent.press(screen.getByRole('tab', { name: SECTION_LABEL.wall }));
     expect(screen).toHavePathname('/wall');
     expect(screen.getByText('Wall screen')).toBeOnTheScreen();
+
+    await fireEvent.press(screen.getByRole('tab', { name: SECTION_LABEL.table }));
+    expect(screen).toHavePathname('/table');
+    expect(screen.getByText('Table screen')).toBeOnTheScreen();
   });
 
   it('says which house this is above every screen', async () => {

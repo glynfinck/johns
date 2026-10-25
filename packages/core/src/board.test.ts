@@ -3,11 +3,13 @@ import { describe, expect, it } from "vitest";
 import {
   buildWeekBoard,
   isOpen,
+  monthStandings,
   rulesOf,
   TODAY_ORDER,
   todayView,
   type AssignmentRow,
   type DisputeRow,
+  type MonthRow,
   type WeekRow,
 } from "./board";
 
@@ -201,5 +203,53 @@ describe("isOpen and TODAY_ORDER", () => {
   it("counts only what's still to do as open", () => {
     const open = (Object.keys(TODAY_ORDER) as (keyof typeof TODAY_ORDER)[]).filter(isOpen);
     expect(open.sort()).toEqual(["due-soon", "overdue", "upcoming"]);
+  });
+});
+
+describe("monthStandings", () => {
+  const NOW = new Date("2026-10-21T12:00:00Z");
+  const WEEK_ENDS = "2026-10-25T23:00:00Z";
+  const month = (overrides: Partial<MonthRow>): MonthRow => ({
+    user_id: "ava",
+    points: 4,
+    outcome: null,
+    done_at: null,
+    due_at: "2026-10-10T19:00:00Z",
+    excused: false,
+    weeks: { ends_at: "2026-10-11T23:00:00Z" },
+    ...overrides,
+  });
+
+  it("scores every John due this month at where it has got to", () => {
+    const table = monthStandings(
+      [
+        month({ outcome: "done", done_at: "2026-10-10T18:00:00Z" }),
+        month({ outcome: "late", done_at: "2026-10-11T08:00:00Z" }),
+        month({ user_id: "ben", outcome: "missed" }),
+        // Ticked yesterday, still being checked: it counts, provisionally.
+        month({ user_id: "ben", due_at: "2026-10-21T19:00:00Z", done_at: "2026-10-20T12:00:00Z", weeks: { ends_at: WEEK_ENDS } }),
+        // Still open, and its week isn't over: nothing yet.
+        month({ user_id: "ben", due_at: "2026-10-24T19:00:00Z", weeks: { ends_at: WEEK_ENDS } }),
+      ],
+      ["ava", "ben"],
+      24,
+      NOW,
+    );
+    expect(table).toEqual([
+      { userId: "ava", points: 6, done: 1, late: 1, missed: 0, rank: 1 },
+      { userId: "ben", points: 4, done: 1, late: 0, missed: 1, rank: 2 },
+    ]);
+  });
+
+  it("counts an open John as missed once its week has ended", () => {
+    const [ava] = monthStandings([month({})], ["ava"], 24, NOW);
+    expect(ava).toMatchObject({ points: 0, missed: 1 });
+  });
+
+  it("lists everyone, even with nothing due this month", () => {
+    expect(monthStandings([], ["ava", "ben"], 24, NOW).map((r) => [r.userId, r.points, r.rank])).toEqual([
+      ["ava", 0, 1],
+      ["ben", 0, 1],
+    ]);
   });
 });
