@@ -1,5 +1,6 @@
 "use client";
 
+import { JOHN_COPY, PROOF_QUALITY, proofPath, proofSize } from "@app/core";
 import { CameraIcon, CheckIcon, FlagIcon, RepeatIcon, ShieldIcon, ThumbsDownIcon, ThumbsUpIcon, Undo2Icon } from "lucide-react";
 import { useRef, useState } from "react";
 import { toast } from "sonner";
@@ -12,16 +13,16 @@ import { castVote, markDone, raiseDispute, spendImmunity, spendSwap, undoDone } 
 import { createClient } from "@/lib/supabase/client";
 import { cn } from "@/lib/utils";
 
-/** Shrink a phone photo to something worth uploading: 1600px on the long side, JPEG. */
+/** Shrink a phone photo to something worth uploading, as core says: a JPEG of `proofSize`. */
 async function shrink(file: File): Promise<Blob> {
   const bitmap = await createImageBitmap(file);
-  const scale = Math.min(1, 1600 / Math.max(bitmap.width, bitmap.height));
+  const size = proofSize(bitmap.width, bitmap.height);
   const canvas = document.createElement("canvas");
-  canvas.width = Math.round(bitmap.width * scale);
-  canvas.height = Math.round(bitmap.height * scale);
+  canvas.width = size.width;
+  canvas.height = size.height;
   canvas.getContext("2d")!.drawImage(bitmap, 0, 0, canvas.width, canvas.height);
   return new Promise((resolve, reject) =>
-    canvas.toBlob((b) => (b ? resolve(b) : reject(new Error("Could not read that photo"))), "image/jpeg", 0.82),
+    canvas.toBlob((b) => (b ? resolve(b) : reject(new Error("Could not read that photo"))), "image/jpeg", PROOF_QUALITY),
   );
 }
 
@@ -52,12 +53,12 @@ export function MarkDone({
     setUploading(true);
     try {
       const blob = await shrink(file);
-      const path = `${houseId}/${assignmentId}/${crypto.randomUUID()}.jpg`;
+      const path = proofPath(houseId, assignmentId, crypto.randomUUID());
       const { error } = await createClient().storage.from("proofs").upload(path, blob, { contentType: "image/jpeg" });
       if (error) throw error;
       run(() => markDone(assignmentId, path));
     } catch {
-      toast.error("That photo didn't upload. Try again.");
+      toast.error(JOHN_COPY.photoFailed);
     } finally {
       setUploading(false);
       if (input.current) input.current.value = "";
@@ -91,17 +92,17 @@ export function MarkDone({
       ) : needsPhoto ? (
         <Button className="flex-1" disabled={busy} onClick={() => input.current?.click()} data-testid="mark-done">
           <CameraIcon aria-hidden />
-          {busy ? "Uploading…" : "Photo and done"}
+          {busy ? JOHN_COPY.uploading : JOHN_COPY.photoAndDone}
         </Button>
       ) : (
         <>
           <Button className="flex-1" disabled={busy} onClick={() => run(() => markDone(assignmentId))} data-testid="mark-done">
             <CheckIcon aria-hidden />
-            {pending ? "Ticking…" : "Mark done"}
+            {pending ? JOHN_COPY.ticking : JOHN_COPY.markDone}
           </Button>
           <Button
             variant="outline"
-            aria-label="Mark done with a photo"
+            aria-label={JOHN_COPY.withPhoto}
             disabled={busy}
             onClick={() => input.current?.click()}
             className="px-4"
@@ -119,7 +120,7 @@ export function UndoDone({ assignmentId }: { assignmentId: string }) {
   return (
     <Button variant="ghost" disabled={pending} onClick={() => run(() => undoDone(assignmentId))}>
       <Undo2Icon aria-hidden />
-      Undo
+      {JOHN_COPY.undo}
     </Button>
   );
 }
@@ -203,16 +204,16 @@ export function UseImmunity({ assignmentId, tokens }: { assignmentId: string; to
     <div className="flex items-center gap-2">
       <Button disabled={pending} onClick={() => run(() => spendImmunity(assignmentId))}>
         <ShieldIcon aria-hidden />
-        Spend it
+        {JOHN_COPY.spendIt}
       </Button>
       <Button variant="ghost" onClick={() => setConfirm(false)}>
-        Keep it
+        {JOHN_COPY.keepIt}
       </Button>
     </div>
   ) : (
     <Button variant="ghost" onClick={() => setConfirm(true)}>
       <ShieldIcon aria-hidden />
-      Use immunity
+      {JOHN_COPY.useImmunity}
     </Button>
   );
 }

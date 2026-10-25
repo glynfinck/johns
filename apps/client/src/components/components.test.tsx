@@ -1,5 +1,6 @@
 import { BIN_NIGHT } from '@app/core';
 import { fireEvent, render, screen } from '@testing-library/react-native';
+import { CameraIcon } from 'lucide-react-native';
 
 import { TAP } from '@/theme';
 
@@ -23,6 +24,16 @@ describe('Bin Night components', () => {
 
     await rerender(<Button label="Hand out this week's Johns" onPress={onPress} disabled />);
     await fireEvent.press(screen.getByRole('button'));
+    expect(onPress).toHaveBeenCalledTimes(1);
+  });
+
+  it('can be just an icon, still named and still a thumb wide', async () => {
+    const onPress = jest.fn();
+    await render(<Button label="Mark done with a photo" icon={CameraIcon} iconOnly onPress={onPress} />);
+    const button = screen.getByRole('button', { name: 'Mark done with a photo' });
+    expect(screen.queryByText('Mark done with a photo')).toBeNull();
+    expect(button).toHaveStyle({ minWidth: TAP, minHeight: TAP });
+    await fireEvent.press(button);
     expect(onPress).toHaveBeenCalledTimes(1);
   });
 

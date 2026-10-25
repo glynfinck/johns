@@ -1,3 +1,4 @@
+import { NOT_DEALT_COPY } from "@app/core";
 import Link from "next/link";
 
 import { DealButton } from "@/components/house/deal-button";
@@ -16,10 +17,8 @@ export function NotDealt({
   if (!notStarted) {
     return (
       <section className="rounded-lg border border-border bg-card p-6">
-        <h2 className="text-lg font-extrabold">Nothing&rsquo;s been handed out this week.</h2>
-        <p className="mt-1 text-sm text-muted-foreground">
-          Every John on the list is on a fortnightly or longer cycle, or the list is empty.
-        </p>
+        <h2 className="text-lg font-extrabold">{NOT_DEALT_COPY.nothingThisWeek}</h2>
+        <p className="mt-1 text-sm text-muted-foreground">{NOT_DEALT_COPY.nothingThisWeekBody}</p>
         {isAdmin ? (
           <Button asChild variant="outline" className="mt-4">
             <Link href="/house#johns">Edit the John list</Link>
@@ -31,13 +30,13 @@ export function NotDealt({
   return (
     <section className="relative overflow-hidden rounded-lg border border-border bg-card p-6">
       <span aria-hidden className="absolute inset-x-0 top-0 h-1.5 bg-hivis" />
-      <h2 className="text-lg font-extrabold">No Johns handed out yet.</h2>
+      <h2 className="text-lg font-extrabold">{NOT_DEALT_COPY.notYet}</h2>
       {isAdmin ? (
         <>
           <ol className="mt-3 flex list-decimal flex-col gap-1.5 pl-5 text-sm">
-            <li>Add the house&rsquo;s Johns, with how much effort each one is.</li>
-            <li>Send the join link to everyone who lives there.</li>
-            <li>Hand out the first week. Johns are shared so the effort evens out.</li>
+            {NOT_DEALT_COPY.adminSteps.map((step) => (
+              <li key={step}>{step}</li>
+            ))}
           </ol>
           <div className="mt-5 flex flex-wrap gap-2">
             <Button asChild variant="outline">
@@ -47,9 +46,7 @@ export function NotDealt({
           </div>
         </>
       ) : (
-        <p className="mt-1 text-sm text-muted-foreground">
-          {adminName} will hand out the first week once the John list is ready.
-        </p>
+        <p className="mt-1 text-sm text-muted-foreground">{NOT_DEALT_COPY.waitingFor(adminName)}</p>
       )}
     </section>
   );

@@ -43,4 +43,15 @@ describe('app.config.ts', () => {
     expect(base.ios?.usesAppleSignIn).toBe(true);
     expect(base.plugins).toContain('expo-apple-authentication');
   });
+
+  it('asks for the camera and photos in words, and never for the microphone', () => {
+    const picker = base.plugins?.find((p) => Array.isArray(p) && p[0] === 'expo-image-picker') as
+      | [string, Record<string, unknown>]
+      | undefined;
+    expect(picker).toBeDefined();
+    const [, options] = picker!;
+    expect(options.cameraPermission).toMatch(/^Johns uses the camera for photo receipts/);
+    expect(options.photosPermission).toMatch(/^Johns uses your photos for photo receipts/);
+    expect(options.microphonePermission).toBe(false);
+  });
 });

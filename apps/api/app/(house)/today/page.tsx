@@ -1,4 +1,15 @@
-import { addDaysTo, currentOrNext, dateRange, formatBalance, formatMoney, formatSigned, weekRange } from "@app/core";
+import {
+  addDaysTo,
+  currentOrNext,
+  dateRange,
+  formatBalance,
+  formatMoney,
+  formatSigned,
+  isOpen,
+  TODAY_COPY,
+  todayView,
+  weekRange,
+} from "@app/core";
 import { FlameIcon, PlaneIcon, RepeatIcon, ShieldIcon } from "lucide-react";
 import type { Metadata } from "next";
 import Link from "next/link";
@@ -13,22 +24,9 @@ import { getAway } from "@/lib/data/away";
 import { getBalances } from "@/lib/data/balance";
 import { requireHouse } from "@/lib/data/house";
 import { getStake } from "@/lib/data/stake";
-import { getWeekBoard, type BoardItem } from "@/lib/data/week";
+import { getWeekBoard } from "@/lib/data/week";
 
 export const metadata: Metadata = { title: "Today" };
-
-const ORDER: Record<string, number> = {
-  overdue: 0,
-  "due-soon": 1,
-  upcoming: 2,
-  disputed: 3,
-  checking: 4,
-  late: 5,
-  done: 6,
-  excused: 7,
-  missed: 8,
-};
-const isOpen = (i: BoardItem) => i.status === "overdue" || i.status === "due-soon" || i.status === "upcoming";
 
 export default async function TodayPage() {
   const ctx = await requireHouse();
@@ -45,18 +43,16 @@ export default async function TodayPage() {
   const names = new Map(ctx.members.map((m) => [m.userId, m.name]));
   const admin = ctx.members.find((m) => m.role === "admin");
 
-  const mine = board.items
-    .filter((i) => i.userId === ctx.userId)
-    .sort((a, b) => ORDER[a.status] - ORDER[b.status] || a.dueAt.getTime() - b.dueAt.getTime());
-  const left = mine.filter(isOpen).length;
-  const toVote = board.items.filter((i) => i.dispute && i.userId !== ctx.userId && i.dispute.myVote === null);
+  const { mine, left, toVote } = todayView(board, ctx.userId);
   const myMonth = stake.projection.find((p) => p.userId === ctx.userId);
 
   return (
     <div className="mx-auto max-w-6xl">
       <PageHeader
-        eyebrow={board.week ? `This week · ${weekRange(board.week.startsAt, board.week.endsAt, rules.timezone)}` : "This week"}
-        title="Your Johns"
+        eyebrow={
+          board.week ? TODAY_COPY.thisWeekRange(weekRange(board.week.startsAt, board.week.endsAt, rules.timezone)) : TODAY_COPY.thisWeek
+        }
+        title={TODAY_COPY.title}
       />
 
       {showTrip ? (
@@ -101,26 +97,26 @@ export default async function TodayPage() {
                 {left}
               </span>
               <div className="min-w-0 flex-1">
-                <div className="font-extrabold">{left === 1 ? "John left this week" : "Johns left this week"}</div>
+                <div className="font-extrabold">{TODAY_COPY.left(left)}</div>
                 <div className="mt-2 flex gap-1" aria-hidden>
                   {mine.map((i) => (
-                    <span key={i.id} className={`h-1.5 w-7 rounded-sm ${isOpen(i) ? "bg-secondary" : "bg-good"}`} />
+                    <span key={i.id} className={`h-1.5 w-7 rounded-sm ${isOpen(i.status) ? "bg-secondary" : "bg-good"}`} />
                   ))}
                 </div>
               </div>
               <div className="flex flex-col items-end gap-1.5">
                 <span className="inline-flex items-center gap-1 rounded bg-hivis px-2 py-1 text-xs font-black tracking-wide text-on-hivis uppercase">
                   <FlameIcon className="size-3.5" aria-hidden />
-                  {me.streak} {me.streak === 1 ? "week" : "weeks"}
+                  {TODAY_COPY.streak(me.streak)}
                 </span>
                 {me.immunityTokens > 0 ? (
                   <span className="inline-flex items-center gap-1 text-xs font-bold text-muted-foreground">
-                    <ShieldIcon className="size-3.5" aria-hidden /> {me.immunityTokens} immunity
+                    <ShieldIcon className="size-3.5" aria-hidden /> {TODAY_COPY.immunity(me.immunityTokens)}
                   </span>
                 ) : null}
                 {me.swapTokens > 0 ? (
                   <Link href="/week" className="inline-flex items-center gap-1 text-xs font-bold underline-offset-2 hover:underline">
-                    <RepeatIcon className="size-3.5" aria-hidden /> swap ready
+                    <RepeatIcon className="size-3.5" aria-hidden /> {TODAY_COPY.swapReady}
                   </Link>
                 ) : null}
               </div>
@@ -128,7 +124,7 @@ export default async function TodayPage() {
 
             {toVote.length > 0 ? (
               <section className="flex flex-col gap-3">
-                <h2 className="eyebrow">The house wants your vote</h2>
+                <h2 className="eyebrow">{TODAY_COPY.toVote}</h2>
                 {toVote.map((i) => (
                   <JohnCard
                     key={i.id}
@@ -145,10 +141,10 @@ export default async function TodayPage() {
             ) : null}
 
             <section className="flex flex-col gap-3">
-              {toVote.length > 0 ? <h2 className="eyebrow">Yours</h2> : null}
+              {toVote.length > 0 ? <h2 className="eyebrow">{TODAY_COPY.yours}</h2> : null}
               {mine.length === 0 ? (
                 <p className="rounded-lg border border-border bg-card p-5 text-sm text-muted-foreground">
-                  Nothing on your list this week. Enjoy it while it lasts.
+                  {TODAY_COPY.nothingYours}
                 </p>
               ) : (
                 mine.map((i) => (

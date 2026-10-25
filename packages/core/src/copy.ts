@@ -95,3 +95,61 @@ export const NO_HOUSE_COPY = {
   badCode: "A join code is eight letters and numbers.",
   join: "Join with this code",
 } as const;
+
+/** Today: the week's header and the count of what's left. */
+export const TODAY_COPY = {
+  title: "Your Johns",
+  thisWeek: "This week",
+  thisWeekRange: (range: string) => `This week · ${range}`,
+  left: (count: number) => (count === 1 ? "John left this week" : "Johns left this week"),
+  streak: (weeks: number) => `${weeks} ${weeks === 1 ? "week" : "weeks"}`,
+  immunity: (tokens: number) => `${tokens} immunity`,
+  swapReady: "swap ready",
+  nothingYours: "Nothing on your list this week. Enjoy it while it lasts.",
+  toVote: "The house wants your vote",
+  yours: "Yours",
+} as const;
+
+/** One John, and what its owner can do with it. */
+export const JOHN_COPY = {
+  photo: "photo",
+  markDone: "Mark done",
+  ticking: "Ticking…",
+  withPhoto: "Mark done with a photo",
+  photoAndDone: "Photo and done",
+  choosePhoto: "Choose a photo",
+  uploading: "Uploading…",
+  photoFailed: "That photo didn't upload. Try again.",
+  undo: "Undo",
+  useImmunity: "Use immunity",
+  spendIt: "Spend it",
+  keepIt: "Keep it",
+  standsIn: (when: string) => `Stands ${when} unless someone disputes it.`,
+  disputed: (reason: string) => `Disputed: “${reason}”`,
+  votes: (uphold: number, reject: number, closes: string) => `${uphold} say not done, ${reject} say fine · closes ${closes}`,
+  dueBeforeYouGo: (was: string) => `Due before you go: it was due ${was}, while you're away.`,
+} as const;
+
+/** Before there is anything to do this week. */
+export const NOT_DEALT_COPY = {
+  nothingThisWeek: "Nothing’s been handed out this week.",
+  nothingThisWeekBody: "Every John on the list is on a fortnightly or longer cycle, or the list is empty.",
+  notYet: "No Johns handed out yet.",
+  adminSteps: [
+    "Add the house’s Johns, with how much effort each one is.",
+    "Send the join link to everyone who lives there.",
+    "Hand out the first week. Johns are shared so the effort evens out.",
+  ],
+  waitingFor: (admin: string) => `${admin} will hand out the first week once the John list is ready.`,
+} as const;
+
+/** The join link, ready for the group chat. */
+export const INVITE_COPY = {
+  heading: "Invite the house",
+  body: "Send this link to the group chat. Anyone with it can join after signing in.",
+  code: "Code",
+  share: "Share",
+  copy: "Copy",
+  copied: "Link copied",
+  shareTitle: (house: string) => `Join ${house} on Johns`,
+} as const;

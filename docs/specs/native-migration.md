@@ -520,6 +520,35 @@ in `lib/data/week.ts` becomes a pure builder in core that the web loader also
 uses, so the web's e2e also proves that refactor. e2e on Expo web: tick a
 John with a photo (file chooser) and see its chip change.
 
+As built, where it differs from the above:
+- **The builder is `board.ts` in core** (`rulesOf`, `buildWeekBoard`,
+  `todayView`, `isOpen`); the web's loader and the app both read rows and
+  hand them to it. The app builds at the current minute, so a John turns
+  "due soon" or "overdue" on screen without a read. Today's and the John
+  card's words moved to core too (`TODAY_COPY`, `JOHN_COPY`,
+  `NOT_DEALT_COPY`, `INVITE_COPY`), and the web uses them.
+- **Decision 4's shared sums are `proof.ts`** (`proofSize`, `proofPath`,
+  `PROOF_QUALITY`); the web's photo tick uses them as well.
+- **Today in the app is your part of the week**: your Johns, how many are
+  left, your streak and tokens, the tick (with or without a photo), undo,
+  immunity, the invite while you're the only one in, and the not-dealt
+  card. The web's Today also has the votes waiting for you, the week's
+  Table, your share lately and your stake; those come with the screens that
+  own them (votes need Phase 7's routes; the Table is Phase 9, the Stake
+  Phase 10, time away Phase 11).
+- **No tab bar yet**: Today is the only screen in a house, so the tabs (and
+  the sidebar from `WIDE` on the web) arrive with Week in Phase 7. Sign out
+  sits at the foot of Today until House has it.
+- **Setting a house up stays on the web for now**: an admin's not-dealt card
+  says so, until House (Phase 11) brings the John list and the deal.
+- **Catching up on focus restarts a read already on its way** when the
+  server did something: React Query would otherwise fold the new read into
+  the old one, and the screen could show the house from before the tick.
+- The invite uses the system share sheet, with the link selectable on
+  screen for a browser that has none.
+- The image picker and manipulator are native modules: a development build
+  from before Phase 6 can't take a photo.
+
 ### Phase 7: Week
 
 The board (cards on a phone, a table from `lg` on the web), raising a dispute

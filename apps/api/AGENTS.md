@@ -75,6 +75,8 @@ appear only in the laptop board.
   column-granted write each: they translate refusals with `humanError` and
   refresh. They never decide.
 - `lib/data/`: loaders that read through the user's session (RLS decides).
+  They read rows; core's builders (`buildWeekBoard`, `todayView`) shape
+  them, so the native app shows the same week from the same rows.
 - `lib/engine/`: the tick (`tick.ts`) and the page-load catch-up
   (`fresh.ts`). The only code that uses the service role, apart from the cron
   route and push.
