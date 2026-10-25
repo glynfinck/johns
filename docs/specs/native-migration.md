@@ -619,6 +619,13 @@ As built, where it differs from the above:
 The ledger, settle-up from core's `stake.ts`, "confirm received" through
 `confirm_payment`.
 
+As built, where it differs from the above:
+- **The Stake is built in core** (`buildStake`): this month so far as if it
+  ended now, what closed months left owing after payments, who pays whom,
+  and the latest entries. It is the web's loader, moved, so both apps read
+  `ledger` and `month_closes` and show the same sums.
+- **Today gains "Your stake this month"**, as on the web.
+
 ### Phase 11: House
 
 Settings and the John list (admins, via the column grants), groups, time away

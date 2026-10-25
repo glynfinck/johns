@@ -14,6 +14,7 @@ import {
   SECTIONS,
   SHELL_COPY,
   SIGN_IN_COPY,
+  STAKE_COPY,
   TABLE_COPY,
   TAGLINE,
   TODAY_COPY,
@@ -162,5 +163,23 @@ describe("TABLE_COPY", () => {
     expect(TABLE_COPY.sharesBody).toMatch(/last 12 weeks/);
     expect(TABLE_COPY.rules[1].body).toMatch(/^Every 4 clean weeks/);
     expect(TABLE_COPY.weeks(1)).toBe("1 week");
+  });
+});
+
+describe("STAKE_COPY", () => {
+  it("puts the house's sums into sentences", () => {
+    expect(STAKE_COPY.eyebrow("£20")).toBe("£20 each, every month");
+    expect(STAKE_COPY.soFarBody("£1", "£3")).toMatch(/^Late costs £1, missed costs £3, and nobody/);
+    expect(STAKE_COPY.forfeitedSoFar(null)).toBe("Nothing forfeited so far.");
+    expect(STAKE_COPY.forfeitedSoFar("£4")).toBe("£4 forfeited so far.");
+  });
+
+  it("says which side of a payment you were on", () => {
+    expect(STAKE_COPY.counterparty(500, "Ben")).toBe("to Ben");
+    expect(STAKE_COPY.counterparty(-500, "Ava")).toBe("from Ava");
+  });
+
+  it("names every kind of ledger entry", () => {
+    for (const kind of ["forfeit", "cap_refund", "share", "payment"]) expect(STAKE_COPY.kind[kind]).toBeTruthy();
   });
 });

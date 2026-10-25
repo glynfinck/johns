@@ -6,6 +6,7 @@ import {
   formatMoney,
   formatSigned,
   isOpen,
+  STAKE_COPY,
   TABLE_COPY,
   TODAY_COPY,
   todayView,
@@ -191,17 +192,15 @@ export default async function TodayPage() {
             {myMonth ? (
               <section className="rounded-lg border border-border bg-card p-4">
                 <div className="mb-2 flex items-baseline justify-between">
-                  <h2 className="eyebrow">Your stake this month</h2>
+                  <h2 className="eyebrow">{STAKE_COPY.yours}</h2>
                   <Link href="/stake" className="text-xs font-bold underline-offset-2 hover:underline">
-                    The Stake
+                    {STAKE_COPY.title}
                   </Link>
                 </div>
                 <p className="text-3xl font-black tabular">{formatMoney(stake.stakeMinor, rules.currency)}</p>
                 <p className="mt-1 text-sm text-muted-foreground tabular">
-                  {myMonth.forfeited > 0
-                    ? `${formatMoney(myMonth.forfeited, rules.currency)} forfeited so far.`
-                    : "Nothing forfeited so far."}{" "}
-                  If the month ended now:{" "}
+                  {STAKE_COPY.forfeitedSoFar(myMonth.forfeited > 0 ? formatMoney(myMonth.forfeited, rules.currency) : null)}{" "}
+                  {STAKE_COPY.ifNow}{" "}
                   <span className="whitespace-nowrap">{formatSigned(myMonth.net, rules.currency)}</span>.
                 </p>
               </section>

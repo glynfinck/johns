@@ -11,10 +11,12 @@ import { InviteCard } from '@/components/invite-card';
 import { JohnCard } from '@/components/john-card';
 import { NotDealt } from '@/components/not-dealt';
 import { Screen } from '@/components/screen';
+import { StakeCard } from '@/components/stake-parts';
 import { ShareCard, TableBeside } from '@/components/table-parts';
 import { Body, Eyebrow, Heading } from '@/components/text';
 import { useCatchUp, useHouse, type HouseView } from '@/hooks/use-house';
 import { useMembership } from '@/hooks/use-membership';
+import { useStake } from '@/hooks/use-stake';
 import { useTable } from '@/hooks/use-table';
 import { FONT, RADIUS, SPACE, useTheme } from '@/theme';
 
@@ -61,6 +63,7 @@ function Week({ view }: { view: HouseView }) {
   const { colors } = useTheme();
   const { snapshot, board, today, me, now } = view;
   const table = useTable(snapshot.house.id, snapshot);
+  const stake = useStake(snapshot.house.id, snapshot);
   const myBalance = table.data?.balances.find((b) => b.userId === me?.userId);
   const { rules, house, members } = snapshot;
   const admin = members.find((m) => m.role === 'admin');
@@ -159,6 +162,7 @@ function Week({ view }: { view: HouseView }) {
 
           <TableBeside rows={board.table} people={{ me: me?.userId ?? '', nameOf }} />
           {myBalance ? <ShareCard balance={myBalance} /> : null}
+          {stake.data ? <StakeCard stake={stake.data} me={me?.userId ?? ''} currency={rules.currency} /> : null}
 
           {members.length < 2 ? <InviteCard code={house.joinCode} houseName={house.name} /> : null}
         </>

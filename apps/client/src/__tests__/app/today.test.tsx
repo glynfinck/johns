@@ -1,4 +1,14 @@
-import { DISPUTE_COPY, INVITE_COPY, JOHN_COPY, NOT_DEALT_COPY, SIGN_IN_COPY, TABLE_COPY, TODAY_COPY } from '@app/core';
+import {
+  buildStake,
+  DISPUTE_COPY,
+  INVITE_COPY,
+  JOHN_COPY,
+  NOT_DEALT_COPY,
+  SIGN_IN_COPY,
+  STAKE_COPY,
+  TABLE_COPY,
+  TODAY_COPY,
+} from '@app/core';
 import { QueryClientProvider } from '@tanstack/react-query';
 import { Slot } from 'expo-router';
 import { fireEvent, renderRouter, screen, waitFor, within } from 'expo-router/testing-library';
@@ -8,6 +18,7 @@ import { loadHouse } from '@/api/board';
 import { castVote } from '@/api/disputes';
 import { catchUp } from '@/api/house';
 import { markDone } from '@/api/johns';
+import { loadStake } from '@/api/stake';
 import { loadTable } from '@/api/table';
 import Today from '@/app/(house)/today';
 import { assignment, snapshot } from '@/testing/house';
@@ -17,6 +28,7 @@ jest.mock('@/api/auth', () => ({ signOut: jest.fn() }));
 jest.mock('@/api/board', () => ({ loadHouse: jest.fn() }));
 jest.mock('@/api/house', () => ({ catchUp: jest.fn() }));
 jest.mock('@/api/table', () => ({ loadTable: jest.fn() }));
+jest.mock('@/api/stake', () => ({ loadStake: jest.fn(), confirmPayment: jest.fn() }));
 jest.mock('@/api/disputes', () => ({ castVote: jest.fn(), raiseDispute: jest.fn() }));
 jest.mock('@/api/johns', () => ({ markDone: jest.fn(), undoDone: jest.fn(), spendImmunity: jest.fn() }));
 jest.mock('@/api/photos', () => ({ pickPhoto: jest.fn(), uploadProof: jest.fn() }));
@@ -65,6 +77,15 @@ beforeEach(() => {
   read.mockResolvedValue(snapshot());
   (catchUp as jest.Mock).mockResolvedValue(false);
   (markDone as jest.Mock).mockResolvedValue(undefined);
+  (loadStake as jest.Mock).mockResolvedValue(
+    buildStake({
+      ledger: [{ id: 1, user_id: 'priya', kind: 'forfeit', amount_minor: -100, month: '2026-10', counterparty: null, created_at: '2026-10-10T12:00:00Z' }],
+      closedMonths: [],
+      memberIds: ['priya', 'sam'],
+      stakeMinor: 2000,
+      month: '2026-10',
+    }),
+  );
   (loadTable as jest.Mock).mockResolvedValue({
     month: '2026-10',
     monthTable: [],
@@ -139,6 +160,14 @@ it("shows the week's Table and where you stand against your share", async () => 
   expect(share).toHaveTextContent(new RegExp(TABLE_COPY.yourShare));
   expect(screen.getByText(TABLE_COPY.shareLine(-4, 2))).toBeOnTheScreen();
   expect(loadTable).toHaveBeenCalledWith('h1', expect.objectContaining({ timezone: 'Europe/London' }), ['priya', 'sam'], expect.any(Date));
+});
+
+it('shows your stake this month, and where you would stand if it ended now', async () => {
+  await open();
+  const card = await screen.findByTestId('my-stake');
+  expect(card).toHaveTextContent(new RegExp(STAKE_COPY.yours));
+  expect(screen.getByText('£20')).toBeOnTheScreen();
+  expect(screen.getByText(`£1 forfeited so far. ${STAKE_COPY.ifNow} −£1.`)).toBeOnTheScreen();
 });
 
 it('says so when nothing on the list is yours this week', async () => {

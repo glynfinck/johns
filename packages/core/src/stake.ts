@@ -137,3 +137,96 @@ export function settleUp(balance: ReadonlyMap<string, number>): Transfer[] {
   }
   return out;
 }
+
+/** A `ledger` row as read. */
+export interface LedgerRow {
+  id: number;
+  user_id: string;
+  kind: string;
+  amount_minor: number;
+  month: string;
+  counterparty: string | null;
+  created_at: string;
+}
+
+export interface StakeView {
+  month: string;
+  stakeMinor: number;
+  /** This month so far, as if it closed now. */
+  projection: {
+    userId: string;
+    /** Before the cap. */
+    forfeitedRaw: number;
+    forfeited: number;
+    received: number;
+    net: number;
+  }[];
+  /** Everything owed from closed months, after payments. */
+  outstanding: Map<string, number>;
+  transfers: Transfer[];
+  /** The latest entries, newest first. */
+  history: {
+    id: number;
+    userId: string;
+    kind: string;
+    amount: number;
+    month: string;
+    counterparty: string | null;
+    createdAt: string;
+  }[];
+}
+
+/** How many ledger entries the Stake lists. */
+export const HISTORY_LENGTH = 50;
+
+/**
+ * The Stake as both apps show it, from the house's ledger (newest first) and
+ * the months already closed: this month so far as if it ended now, what is
+ * owed from closed months after payments, who pays whom to settle it, and
+ * the latest entries. Only closed months (and payments against them) are
+ * owed for real: this month's forfeits aren't shared out until it ends.
+ */
+export function buildStake(input: {
+  ledger: readonly LedgerRow[];
+  closedMonths: readonly string[];
+  memberIds: readonly string[];
+  stakeMinor: number;
+  month: string;
+}): StakeView {
+  const { ledger, memberIds, stakeMinor, month } = input;
+  const thisMonthForfeits = ledger
+    .filter((r) => r.month === month && r.kind === "forfeit")
+    .map((r) => ({ userId: r.user_id, amount: -r.amount_minor }));
+  const live = settleMonth(memberIds, stakeMinor, thisMonthForfeits);
+  const raw = new Map<string, number>();
+  for (const f of thisMonthForfeits) raw.set(f.userId, (raw.get(f.userId) ?? 0) + f.amount);
+
+  const projection = memberIds.map((id) => ({
+    userId: id,
+    forfeitedRaw: raw.get(id) ?? 0,
+    forfeited: live.forfeited[id] ?? 0,
+    received: live.received[id] ?? 0,
+    net: (live.received[id] ?? 0) - (live.forfeited[id] ?? 0),
+  }));
+
+  const closed = new Set(input.closedMonths);
+  const settled = ledger.filter((r) => r.kind === "payment" || closed.has(r.month));
+  const outstanding = balances(settled.map((r) => ({ userId: r.user_id, amount: r.amount_minor })));
+
+  return {
+    month,
+    stakeMinor,
+    projection,
+    outstanding,
+    transfers: settleUp(outstanding),
+    history: ledger.slice(0, HISTORY_LENGTH).map((r) => ({
+      id: r.id,
+      userId: r.user_id,
+      kind: r.kind,
+      amount: r.amount_minor,
+      month: r.month,
+      counterparty: r.counterparty,
+      createdAt: r.created_at,
+    })),
+  };
+}

@@ -255,3 +255,34 @@ export const TABLE_COPY = {
         ? "Points ahead of your share, so the next weeks go a little easier on you."
         : "You've done your share.",
 } as const;
+
+/** The Stake: this month so far, settling up, and the ledger. Money arrives already formatted. */
+export const STAKE_COPY = {
+  title: "The Stake",
+  eyebrow: (stake: string) => `${stake} each, every month`,
+  soFar: (month: string) => `${month} so far`,
+  soFarBody: (late: string, missed: string) =>
+    `Late costs ${late}, missed costs ${missed}, and nobody loses more than their stake. What’s forfeited is shared among everyone else when the month ends.`,
+  columns: { who: "Housemate", forfeited: "Forfeited", share: "Share", ifNow: "If it ended now" },
+  capped: "capped",
+  settleUp: "Settle up",
+  settleBody: "From closed months. Pay however the house pays each other, then whoever was paid marks it received.",
+  square: "Everyone’s square.",
+  pays: "pays",
+  markReceived: "Mark received",
+  saving: "Saving…",
+  ledger: "The ledger",
+  ledgerEmpty: "Nothing yet. Forfeits appear as Johns are settled.",
+  ledgerColumns: { month: "Month", who: "Who", what: "What", amount: "Amount" },
+  kind: {
+    forfeit: "Forfeit",
+    cap_refund: "Over the stake, returned",
+    share: "Share of the month's forfeits",
+    payment: "Payment",
+  } as Record<string, string>,
+  /** A payment's other side: "to Ben" for the one who paid, "from Ava" for the one paid. */
+  counterparty: (amountMinor: number, name: string) => `${amountMinor > 0 ? "to" : "from"} ${name}`,
+  yours: "Your stake this month",
+  forfeitedSoFar: (forfeited: string | null) => (forfeited ? `${forfeited} forfeited so far.` : "Nothing forfeited so far."),
+  ifNow: "If the month ended now:",
+} as const;

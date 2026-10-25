@@ -89,7 +89,9 @@ permanent once a store has seen them.
     `disputes.ts` (disputing and voting, through apps/api), `wall.ts` (the
     Wall's events with their photos signed for an hour, and your reactions),
     `table.ts` (the month's Table and the fair shares, summed by core as the
-    deal sums them) and `photos.ts` (receipts: below).
+    deal sums them), `stake.ts` (the ledger, built by core's `buildStake`,
+    and "Mark received" through `confirm_payment`) and `photos.ts`
+    (receipts: below).
 - **Writes go through the database, as the web's do.** A move is one named
   SQL function (`supabase.rpc('mark_done', …)`) or one column-granted write;
   the database decides, and the client only translates a refusal with
@@ -122,8 +124,8 @@ permanent once a store has seen them.
 - **A move** goes through `useMove(houseId).run(...)`: it runs, then reads the
   house again, and holds the refusal's sentence in `problem`.
 - **Everything a house's screens read is keyed under `houseKey(id)`**
-  (`hooks/keys.ts`): the Wall (`wallKey`) and the Table (`tableKey`) sit
-  beneath it, so reading the house again (a move, a Realtime change,
+  (`hooks/keys.ts`): the Wall (`wallKey`), the Table (`tableKey`) and the
+  Stake (`stakeKey`) sit beneath it, so reading the house again (a move, a Realtime change,
   catching up) refreshes them too. A reaction (`useReact` in `use-wall.ts`) shows at once and goes back
   if the database says no: React Query's optimistic update.
 - **Live:** `useLiveHouse(houseId)` listens on Realtime to what
