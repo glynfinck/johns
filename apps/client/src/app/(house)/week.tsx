@@ -1,4 +1,4 @@
-import { awayThisWeek, isOpen, weekRange, WEEK_COPY, TODAY_COPY } from '@app/core';
+import { awayThisWeek, isOpen, PAGE_TITLE, TODAY_COPY, WEEK_COPY, weekRange } from '@app/core';
 import { RefreshCwIcon } from 'lucide-react-native';
 import { useState } from 'react';
 import { ActivityIndicator, StyleSheet, View, useWindowDimensions } from 'react-native';
@@ -6,6 +6,7 @@ import { ActivityIndicator, StyleSheet, View, useWindowDimensions } from 'react-
 import { Alert } from '@/components/alert';
 import { Button } from '@/components/button';
 import { NotDealt } from '@/components/not-dealt';
+import { PageTitle } from '@/components/page-title';
 import { Screen } from '@/components/screen';
 import { SwapSheet } from '@/components/swap-sheet';
 import { TableBeside } from '@/components/table-parts';
@@ -39,6 +40,7 @@ function WeekFor({ houseId, userId }: { houseId: string; userId: string }) {
 
   return (
     <Screen maxWidth={wide ? 1280 : 720} refreshing={refreshing} onRefresh={() => void pull()}>
+      <PageTitle page={PAGE_TITLE.week} />
       {!view ? (
         query.isError ? (
           <View style={styles.stack}>

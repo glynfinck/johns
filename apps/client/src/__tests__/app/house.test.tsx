@@ -21,6 +21,7 @@ import { cancelAway, loadAway, setAway } from '@/api/away';
 import { loadHouse } from '@/api/board';
 import { catchUp } from '@/api/house';
 import { renameMe } from '@/api/profile';
+import { authStorage } from '@/api/storage';
 import {
   archiveJohn,
   dealThisWeek,
@@ -33,6 +34,7 @@ import {
   updateHouse,
 } from '@/api/settings';
 import HouseScreen from '@/app/(house)/house';
+import { LookProvider } from '@/hooks/look';
 import { snapshot } from '@/testing/house';
 import { testQueryClient } from '@/testing/query';
 
@@ -74,7 +76,9 @@ async function open(as: 'priya' | 'sam' = 'priya') {
     {
       _layout: () => (
         <QueryClientProvider client={client}>
-          <Slot />
+          <LookProvider>
+            <Slot />
+          </LookProvider>
         </QueryClientProvider>
       ),
       house: HouseScreen,
@@ -86,6 +90,7 @@ async function open(as: 'priya' | 'sam' = 'priya') {
 
 beforeEach(() => {
   jest.clearAllMocks();
+  authStorage!.clear();
   (loadAway as jest.Mock).mockResolvedValue({ today: '2026-10-21', periods: [] });
   (loadHouse as jest.Mock).mockResolvedValue(snapshot());
   (catchUp as jest.Mock).mockResolvedValue(false);
@@ -334,6 +339,14 @@ describe('you', () => {
     await waitFor(() => expect(screen.getAllByTestId('member')[0]).toHaveTextContent(/Priya P/));
     expect(screen.getByText(ME_COPY.saved)).toBeOnTheScreen();
     expect(screen.getByTestId('save-name')).toBeDisabled();
+  });
+
+  it('chooses the look for this device', async () => {
+    await open();
+    expect(screen.getByRole('radio', { name: 'Auto' })).toBeChecked();
+    await fireEvent.press(screen.getByRole('radio', { name: 'Night' }));
+    expect(screen.getByRole('radio', { name: 'Night' })).toBeChecked();
+    expect(authStorage!.getItem('theme')).toBe('dark');
   });
 
   it('signs you out, and lets you try again when that fails', async () => {

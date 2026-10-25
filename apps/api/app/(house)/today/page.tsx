@@ -7,6 +7,7 @@ import {
   formatMoney,
   formatSigned,
   isOpen,
+  PAGE_TITLE,
   STAKE_COPY,
   TABLE_COPY,
   TODAY_COPY,
@@ -29,7 +30,7 @@ import { requireHouse } from "@/lib/data/house";
 import { getStake } from "@/lib/data/stake";
 import { getWeekBoard } from "@/lib/data/week";
 
-export const metadata: Metadata = { title: "Today" };
+export const metadata: Metadata = { title: PAGE_TITLE.today };
 
 export default async function TodayPage() {
   const ctx = await requireHouse();

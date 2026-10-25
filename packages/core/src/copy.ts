@@ -9,6 +9,50 @@ import { IMMUNITY_EVERY } from "./streak";
 export const APP_NAME = "Johns";
 export const TAGLINE = "Fair shares of the housework, and a house that keeps score.";
 
+/** A page's title in the browser tab: "Today · Johns", or just the name on the front door. */
+export function pageTitle(page?: string): string {
+  return page ? `${page} · ${APP_NAME}` : APP_NAME;
+}
+
+/** What each page is called in the browser tab, as the web's metadata names them. */
+export const PAGE_TITLE = {
+  signIn: "Sign in",
+  newHouse: "Set up your house",
+  join: "Join a house",
+  today: "Today",
+  week: "This week",
+  wall: "The Wall",
+  table: "The Table",
+  stake: "The Stake",
+  house: "House",
+  privacy: "Privacy",
+  notFound: "Nothing here",
+} as const;
+
+/** What Johns keeps, and who sees it. */
+export const PRIVACY_COPY = {
+  title: "Privacy",
+  paragraphs: [
+    "Johns keeps what it needs to share out your house’s Johns and nothing more: your name from Google, the house you belong to, the Johns you were given and when you ticked them, any photos you add, disputes and votes, and the Stake ledger.",
+    "Only people in your house can see any of it. Photos are stored privately and shown to your housemates through links that expire after an hour.",
+    "Johns never moves money. The ledger records what housemates owe each other; you settle up however you like, outside the app.",
+    "If you turn on reminders, your browser gives us an address to send notifications to. Turning reminders off deletes it. Leaving a house removes you from it; your past Johns stay in its history.",
+  ],
+} as const;
+
+/** A page that isn't there, and a page that broke. */
+export const NOT_FOUND_COPY = {
+  title: "Nothing here",
+  body: "That page isn’t on the list.",
+  back: "Back to your Johns",
+} as const;
+
+export const ERROR_COPY = {
+  title: "Something went wrong",
+  body: "It wasn’t you. Try again, and if it keeps happening, tell the house admin.",
+  retry: "Try again",
+} as const;
+
 export const FRONT_DOOR = {
   eyebrow: "For houses that share a bin",
   headline: "Johns: who’s on what this week.",
@@ -385,6 +429,26 @@ export const MEMBERS_COPY = {
 } as const;
 
 /** You: your name, the way out, and leaving. */
+/** The look: day, night, or whatever this device is set to. */
+export const LOOKS = ["light", "dark", "system"] as const;
+export type Look = (typeof LOOKS)[number];
+export const LOOK_LABEL: Record<Look, string> = { light: "Day", dark: "Night", system: "Auto" };
+
+/** A look as it was saved on a device, or "system" for anything else (nothing saved, an old value). */
+export function lookOf(saved: string | null | undefined): Look {
+  return (LOOKS as readonly string[]).includes(saved ?? "") ? (saved as Look) : "system";
+}
+
+/** Reminders on this device: a browser's push notifications. */
+export const REMINDERS_COPY = {
+  on: "Remind me on this device",
+  off: "Turn reminders off on this device",
+  unsupported: "Reminders need a browser that supports notifications. On iPhone, add Johns to your home screen first.",
+  blocked: "Notifications are blocked for this site in your browser settings.",
+  failed: "Couldn't turn reminders on. Try again.",
+  turnedOn: "Reminders on for this device",
+} as const;
+
 export const ME_COPY = {
   name: "Your name",
   save: "Save",

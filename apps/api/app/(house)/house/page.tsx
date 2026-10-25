@@ -1,4 +1,4 @@
-import { AWAY_COPY, DEAL_COPY, GROUPS_COPY, HOUSE_COPY, johnDef } from "@app/core";
+import { AWAY_COPY, DEAL_COPY, GROUPS_COPY, HOUSE_COPY, johnDef, PAGE_TITLE } from "@app/core";
 import type { Metadata } from "next";
 
 import { AwayCalendar } from "@/components/house/away-calendar";
@@ -16,7 +16,7 @@ import { getAway } from "@/lib/data/away";
 import { getGroups } from "@/lib/data/groups";
 import { requireHouse } from "@/lib/data/house";
 
-export const metadata: Metadata = { title: "House" };
+export const metadata: Metadata = { title: PAGE_TITLE.house };
 
 function Panel({ id, title, children }: { id?: string; title: string; children: React.ReactNode }) {
   return (

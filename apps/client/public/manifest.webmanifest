@@ -1,0 +1,14 @@
+{
+  "name": "Johns",
+  "short_name": "Johns",
+  "description": "Fair shares of the housework, and a house that keeps score.",
+  "start_url": "/today",
+  "display": "standalone",
+  "background_color": "#e7e9e5",
+  "theme_color": "#e7e9e5",
+  "icons": [
+    { "src": "/icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any" },
+    { "src": "/icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any" },
+    { "src": "/icon-maskable-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
+  ]
+}

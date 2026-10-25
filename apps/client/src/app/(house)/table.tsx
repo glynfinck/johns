@@ -1,9 +1,10 @@
-import { monthLabel, TABLE_COPY } from '@app/core';
+import { monthLabel, PAGE_TITLE, TABLE_COPY } from '@app/core';
 import { useState } from 'react';
 import { ActivityIndicator, StyleSheet, View, useWindowDimensions } from 'react-native';
 
 import { Alert } from '@/components/alert';
 import { Card } from '@/components/card';
+import { PageTitle } from '@/components/page-title';
 import { Screen } from '@/components/screen';
 import { FairShares, Standings, Streaks, type People } from '@/components/table-parts';
 import { Body, Eyebrow, Heading } from '@/components/text';
@@ -40,6 +41,7 @@ function TableFor({ houseId, userId }: { houseId: string; userId: string }) {
 
   return (
     <Screen maxWidth={wide ? 1152 : 720} refreshing={refreshing} onRefresh={() => void pull()} testID="table-screen">
+      <PageTitle page={PAGE_TITLE.table} />
       <View style={styles.stack}>
         <View>
           <Eyebrow>{TABLE_COPY.eyebrow}</Eyebrow>

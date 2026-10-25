@@ -1,4 +1,4 @@
-import { currencyForCountry, NEW_HOUSE_COPY } from "@app/core";
+import { currencyForCountry, NEW_HOUSE_COPY, PAGE_TITLE } from "@app/core";
 import type { Metadata } from "next";
 import { headers } from "next/headers";
 import { redirect } from "next/navigation";
@@ -7,7 +7,7 @@ import { Wordmark } from "@/components/brand/wordmark";
 import { CreateHouseForm } from "@/components/house/create-house-form";
 import { getMembership } from "@/lib/data/house";
 
-export const metadata: Metadata = { title: "Set up your house" };
+export const metadata: Metadata = { title: PAGE_TITLE.newHouse };
 
 /**
  * Where someone with no house lands. The time zone and currency start from

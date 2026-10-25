@@ -1,4 +1,4 @@
-import { ME_COPY } from '@app/core';
+import { LOOK_LABEL, LOOKS, ME_COPY } from '@app/core';
 import { useQueryClient } from '@tanstack/react-query';
 import { LogOutIcon } from 'lucide-react-native';
 import { useState } from 'react';
@@ -9,9 +9,12 @@ import { renameMe } from '@/api/profile';
 import { removeMember } from '@/api/settings';
 import { Alert } from '@/components/alert';
 import { Button } from '@/components/button';
+import { Choice } from '@/components/choice';
 import { Field } from '@/components/field';
+import { Reminders } from '@/components/house/reminders';
 import { Body } from '@/components/text';
 import { houseKey } from '@/hooks/keys';
+import { useLook } from '@/hooks/look';
 import { useMembership } from '@/hooks/use-membership';
 import { useMove } from '@/hooks/use-move';
 import { SPACE, useTheme } from '@/theme';
@@ -19,7 +22,7 @@ import { SPACE, useTheme } from '@/theme';
 /**
  * You: your name, signing out, and leaving the house, as the web's card.
  * Leaving takes two taps, and then the house's screens close behind you.
- * (Reminders on this device arrive with native push, Phase 12.)
+ * Reminders and the look are this device's own.
  */
 export function MeCard({
   houseId,
@@ -43,6 +46,7 @@ export function MeCard({
   const [leaving, setLeaving] = useState(false);
   const [busy, setBusy] = useState(false);
   const [problem, setProblem] = useState<string | null>(null);
+  const [look, setLook] = useLook();
 
   const wrong = move.problem ?? problem;
 
@@ -102,6 +106,8 @@ export function MeCard({
       </View>
       <View accessibilityLiveRegion="polite">{saved ? <Body muted>{ME_COPY.saved}</Body> : null}</View>
       {wrong ? <Alert message={wrong} /> : null}
+      <Reminders userId={userId} />
+      <Choice label={ME_COPY.look} options={LOOK_OPTIONS} value={look} onChange={setLook} />
       <View style={[styles.actions, { borderTopColor: colors.border }]}>
         <Button variant="outline" icon={LogOutIcon} label={ME_COPY.signOut} disabled={busy} onPress={() => void out()} testID="sign-out" />
         {leaving ? (
@@ -116,6 +122,8 @@ export function MeCard({
     </View>
   );
 }
+
+const LOOK_OPTIONS = LOOKS.map((value) => ({ value, label: LOOK_LABEL[value] }));
 
 const styles = StyleSheet.create({
   stack: { gap: SPACE.md },

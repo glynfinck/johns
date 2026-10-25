@@ -26,6 +26,8 @@ const routes = {
   '(house)/table': () => <Text>Table</Text>,
   '(house)/stake': () => <Text>Stake</Text>,
   'join/[joinCode]': () => <Text>Join</Text>,
+  privacy: () => <Text>Privacy</Text>,
+  '+not-found': () => <Text>Nothing here</Text>,
 };
 
 const SESSION = { user: { id: 'user-1' } } as Session;
@@ -111,4 +113,25 @@ it("offers to try again when the house can't be read", async () => {
   expect(screen.queryByText('Welcome')).toBeNull();
   await fireEvent.press(screen.getByRole('button', { name: 'Try again' }));
   expect(refresh).toHaveBeenCalled();
+});
+
+describe('the pages anyone can open', () => {
+  it('shows privacy signed out, signed in and in a house', async () => {
+    for (const [session, house] of [
+      [null, null],
+      [SESSION, null],
+      [SESSION, FLAT],
+    ] as const) {
+      as(session, house);
+      await open('/privacy');
+      expect(screen.getByText('Privacy')).toBeOnTheScreen();
+      expect(screen).toHavePathname('/privacy');
+    }
+  });
+
+  it('says there is nothing at a link to nowhere', async () => {
+    as(null);
+    await open('/nowhere/at-all');
+    expect(screen.getByText('Nothing here')).toBeOnTheScreen();
+  });
 });

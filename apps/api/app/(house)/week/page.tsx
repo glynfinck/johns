@@ -1,4 +1,15 @@
-import { AWAY_COPY, awayThisWeek as awayLabelOf, dueLabel, firstName, pointsEarned, relative, TABLE_COPY, WEEK_COPY, weekRange } from "@app/core";
+import {
+  AWAY_COPY,
+  awayThisWeek as awayLabelOf,
+  dueLabel,
+  firstName,
+  PAGE_TITLE,
+  pointsEarned,
+  relative,
+  TABLE_COPY,
+  WEEK_COPY,
+  weekRange,
+} from "@app/core";
 import type { Metadata } from "next";
 
 import { DealButton } from "@/components/house/deal-button";
@@ -14,7 +25,7 @@ import { getAway } from "@/lib/data/away";
 import { requireHouse } from "@/lib/data/house";
 import { getWeekBoard } from "@/lib/data/week";
 
-export const metadata: Metadata = { title: "This week" };
+export const metadata: Metadata = { title: PAGE_TITLE.week };
 
 const OPEN = new Set(["upcoming", "due-soon", "overdue"]);
 

@@ -1,4 +1,4 @@
-import { AWAY_COPY, DEAL_COPY, GROUPS_COPY, HOUSE_COPY } from '@app/core';
+import { AWAY_COPY, DEAL_COPY, GROUPS_COPY, HOUSE_COPY, PAGE_TITLE } from '@app/core';
 import { useFocusEffect } from 'expo-router';
 import { useCallback, useRef, useState, type ReactNode } from 'react';
 import { ActivityIndicator, StyleSheet, View, useWindowDimensions } from 'react-native';
@@ -13,6 +13,7 @@ import { MembersList } from '@/components/house/members-list';
 import { RulesForm } from '@/components/house/rules-form';
 import { AwayCalendar, AwayForm, MyTrips } from '@/components/house/time-away';
 import { InviteCard } from '@/components/invite-card';
+import { PageTitle } from '@/components/page-title';
 import { Screen } from '@/components/screen';
 import { Body, Eyebrow, Heading } from '@/components/text';
 import { useAway } from '@/hooks/use-away';
@@ -82,6 +83,7 @@ function HouseFor({ houseId, userId }: { houseId: string; userId: string }) {
 
   return (
     <Screen maxWidth={wide ? 1152 : 720} refreshing={refreshing} onRefresh={() => void pull()} testID="house-screen">
+      <PageTitle page={PAGE_TITLE.house} />
       <View style={styles.stack}>
         <View>
           <Eyebrow>{HOUSE_COPY.eyebrow}</Eyebrow>
