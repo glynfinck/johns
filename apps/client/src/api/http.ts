@@ -1,4 +1,5 @@
 import { ApiError } from '@app/core';
+import { Platform } from 'react-native';
 
 import { getAccessToken } from './auth';
 
@@ -17,13 +18,24 @@ export class ApiRequestError extends Error {
 }
 
 /**
+ * Where apps/api answers. Unset on the web, it's the page's own origin:
+ * johns.glyn.dev passes /api/* on to apps/api (apps/client/vercel.json), so
+ * the browser needs no CORS. A phone has no origin, so there it must be set.
+ */
+export function apiBase(): string {
+  const base = process.env.EXPO_PUBLIC_API_URL?.replace(/\/+$/, '');
+  if (base) return base;
+  if (Platform.OS === 'web') return '';
+  throw new Error('Missing EXPO_PUBLIC_API_URL. Copy .env.example to .env.local and fill it in.');
+}
+
+/**
  * POSTs to apps/api as the signed-in user (their Supabase access token as a
  * bearer token), and checks the answer against the response's schema from
  * @app/core.
  */
 export async function apiPost<T>(path: string, body: unknown, schema: { parse: (value: unknown) => T }): Promise<T> {
-  const base = process.env.EXPO_PUBLIC_API_URL;
-  if (!base) throw new Error('Missing EXPO_PUBLIC_API_URL. Copy .env.example to .env.local and fill it in.');
+  const base = apiBase();
   const token = await getAccessToken();
   if (!token) throw new ApiRequestError('Sign in first.', 401);
 

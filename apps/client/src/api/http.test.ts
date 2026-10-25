@@ -1,7 +1,8 @@
 import { FreshResponse } from '@app/core';
+import { Platform } from 'react-native';
 
 import { getAccessToken } from './auth';
-import { apiPost, ApiRequestError } from './http';
+import { apiBase, apiPost, ApiRequestError } from './http';
 
 jest.mock('./auth', () => ({ getAccessToken: jest.fn() }));
 
@@ -16,6 +17,7 @@ beforeAll(() => {
 beforeEach(() => {
   jest.clearAllMocks();
   token.mockResolvedValue('access-token');
+  process.env.EXPO_PUBLIC_API_URL = 'http://localhost:3205';
 });
 
 const reply = (status: number, body: unknown) => ({ ok: status < 400, status, json: async () => body });
@@ -55,5 +57,29 @@ describe('apiPost', () => {
     token.mockResolvedValue(null);
     await expect(apiPost('/api/fresh', {}, FreshResponse)).rejects.toMatchObject({ status: 401 });
     expect(fetchMock).not.toHaveBeenCalled();
+  });
+});
+
+describe('apiBase', () => {
+  afterEach(() => jest.restoreAllMocks());
+
+  it('is the API named, without a trailing slash', () => {
+    process.env.EXPO_PUBLIC_API_URL = 'https://api.example.test/';
+    expect(apiBase()).toBe('https://api.example.test');
+  });
+
+  it("is the page's own origin on the web when none is named", async () => {
+    jest.replaceProperty(Platform, 'OS', 'web');
+    process.env.EXPO_PUBLIC_API_URL = '';
+    expect(apiBase()).toBe('');
+    fetchMock.mockResolvedValue(reply(200, { ticked: false }));
+    await apiPost('/api/fresh', {}, FreshResponse);
+    expect(fetchMock).toHaveBeenCalledWith('/api/fresh', expect.anything());
+  });
+
+  it('must be named on a phone, which has no origin', () => {
+    jest.replaceProperty(Platform, 'OS', 'ios');
+    delete process.env.EXPO_PUBLIC_API_URL;
+    expect(() => apiBase()).toThrow('Missing EXPO_PUBLIC_API_URL');
   });
 });

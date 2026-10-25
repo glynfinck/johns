@@ -168,8 +168,13 @@ permanent once a store has seen them.
 - Shared code by default. Use platform files (`.ios.tsx`, `.android.tsx`,
   `.web.tsx`) or `Platform.OS` only where behaviour truly differs.
 - Web is a single-page build: keep `"web": { "output": "single" }` in
-  app.json. It isn't deployed yet: johns.glyn.dev stays `apps/api`'s pages
-  until the hosting cutover (Phase 13).
+  app.json. Vercel's `johns-web` project serves it from `vercel.json`
+  (`src/__tests__/vercel.test.ts` says why each line is there), taking over
+  johns.glyn.dev from `apps/api`'s pages at the hosting cutover (Phase 13,
+  DEPLOYMENT.md). With `EXPO_PUBLIC_API_URL` unset, as in production, the
+  web build calls `/api/*` on its own origin, which passes it on to
+  `apps/api`; the e2e serves it the same way (`e2e/serve-client.mjs`
+  follows `vercel.json`).
 - `public/` is copied to the web build's root. `index.html` is the page
   every route is served from (Expo fills in `%LANG_ISO_CODE%` and
   `%WEB_TITLE%`): the description, theme colours and home-screen tags the

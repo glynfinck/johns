@@ -26,6 +26,7 @@ import {
   authProblems,
   authSettings,
   authorizeProblems,
+  domainPlan,
   envPlan,
   googleClientIds,
   googleConsoleValues,
@@ -42,6 +43,7 @@ import {
   todoText,
   tokenHint,
   vaultUpsertSql,
+  webEnvPlan,
 } from "./provision/lib.mjs";
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
@@ -300,7 +302,7 @@ if (repoId) pass(`${C.vercel.project} deploys from ${vercelProject.link.org}/${v
 else fail(`${C.vercel.project} isn't connected to its GitHub repository`);
 // Checked, never set: moving it is a production change made by hand, at the
 // moment the code it points at is merged.
-const rootProblem = rootDirectoryProblem(vercelProject.rootDirectory, C);
+const rootProblem = rootDirectoryProblem(vercelProject.rootDirectory, C.vercel);
 if (!rootProblem) pass(`${C.vercel.project} builds from ${C.vercel.rootDirectory}`);
 else {
   fail(rootProblem);
@@ -329,19 +331,24 @@ const absent = [...plan.map((e) => e.key), "NEXT_PUBLIC_VAPID_PUBLIC_KEY", "VAPI
 );
 if (absent.length === 0) pass(`production has its ${plan.length + (vapid ? 0 : 2)} environment variables`);
 else fail(`production is missing ${absent.join(", ")}`);
-const domains = (await vercel("GET", `/v9/projects/${vercelProject.id}/domains`)).domains ?? [];
-if (domains.some((d) => d.name === C.domain && d.verified)) pass(`${C.domain} is attached and verified`);
-else fail(`${C.domain} isn't attached to ${C.vercel.project}, or isn't verified`);
+/**
+ * Checked, never moved: which project answers on which name is a production
+ * change made on purpose (DEPLOYMENT.md, the cutover).
+ */
+async function checkDomain(project, name) {
+  const domains = (await vercel("GET", `/v9/projects/${project.id}/domains`)).domains ?? [];
+  if (domains.some((d) => d.name === name && d.verified)) pass(`${name} is attached to ${project.name} and verified`);
+  else fail(`${name} isn't attached to ${project.name}, or isn't verified`);
+}
 
-if (DEPLOY && repoId && rootProblem) {
-  say("  · not deploying: it would build from the wrong directory and fail");
-} else if (DEPLOY && repoId) {
-  say("  · deploying main to production");
+/** Builds main for production and waits for it. */
+async function deployMain(project, repo) {
+  say(`  · deploying main to production (${project.name})`);
   let deployment = await vercel("POST", "/v13/deployments?forceNew=1", {
-    name: C.vercel.project,
-    project: vercelProject.id,
+    name: project.name,
+    project: project.id,
     target: "production",
-    gitSource: { type: "github", repoId, ref: "main" },
+    gitSource: { type: "github", repoId: repo, ref: "main" },
   });
   for (let i = 0; !["READY", "ERROR", "CANCELED"].includes(deployment.readyState); i++) {
     if (i > 120) throw new Error("the deployment is still building after ten minutes");
@@ -349,10 +356,61 @@ if (DEPLOY && repoId && rootProblem) {
     deployment = await vercel("GET", `/v13/deployments/${deployment.id}`);
   }
   if (deployment.readyState === "READY") pass(`deployed (${deployment.url})`);
-  else fail(`the deployment ended ${deployment.readyState}: https://vercel.com/${vercelProject.accountId}/${C.vercel.project}`);
+  else fail(`the deployment ended ${deployment.readyState}: https://vercel.com/${project.accountId}/${project.name}`);
 }
 
-// --- 6. End to end ------------------------------------------------------------------------
+const names = domainPlan(C);
+await checkDomain(vercelProject, names.find((n) => n.project === C.vercel.project).domain);
+
+if (DEPLOY && repoId && rootProblem) say("  · not deploying: it would build from the wrong directory and fail");
+else if (DEPLOY && repoId) await deployMain(vercelProject, repoId);
+
+// --- 6. The web build ------------------------------------------------------------------
+
+step(`The web build (${C.web.project})`);
+// Created by hand, like the first: provision never makes a project. Only a
+// 404 means it isn't there yet; any other refusal stops the run.
+const webProject = await vercel("GET", `/v9/projects/${C.web.project}`).catch((e) => {
+  if (/ → 404/.test(e.message)) return null;
+  throw e;
+});
+if (!webProject) {
+  fail(`there's no ${C.web.project} project`);
+  todo.push({
+    title: `Create the Vercel project ${C.web.project} from glynfinck/johns with Root Directory ${C.web.rootDirectory} (DEPLOYMENT.md, the cutover), then run this again`,
+    url: `https://vercel.com/new`,
+  });
+} else {
+  const webRepo = webProject.link?.repoId;
+  if (webRepo) pass(`${C.web.project} deploys from ${webProject.link.org}/${webProject.link.repo}`);
+  else fail(`${C.web.project} isn't connected to its GitHub repository`);
+  const webRootProblem = rootDirectoryProblem(webProject.rootDirectory, C.web);
+  if (!webRootProblem) pass(`${C.web.project} builds from ${C.web.rootDirectory}`);
+  else fail(webRootProblem);
+
+  // The public key apps/api signs reminders with, read back rather than
+  // made: a new one would orphan every subscribed phone.
+  let vapidPublicKey = vapid?.publicKey ?? null;
+  if (!vapidPublicKey) {
+    const entry = after.find((e) => e.key === "NEXT_PUBLIC_VAPID_PUBLIC_KEY" && e.target?.includes("production"));
+    if (entry) vapidPublicKey = (await vercel("GET", `/v1/projects/${vercelProject.id}/env/${entry.id}`)).value ?? null;
+  }
+  if (!vapidPublicKey) fail("couldn't read the VAPID public key from apps/api's environment");
+  else {
+    const webPlan = webEnvPlan({ supabaseUrl, anonKey: keys.anon, vapidPublicKey });
+    if (!CHECK_ONLY) await vercel("POST", `/v10/projects/${webProject.id}/env?upsert=true`, webPlan);
+    const webAfter = (await vercel("GET", `/v10/projects/${webProject.id}/env`)).envs ?? [];
+    const webAbsent = webPlan.map((e) => e.key).filter((key) => !webAfter.some((e) => e.key === key && e.target?.includes("production")));
+    if (webAbsent.length === 0) pass(`the web build has its ${webPlan.length} public environment variables`);
+    else fail(`the web build is missing ${webAbsent.join(", ")}`);
+  }
+  await checkDomain(webProject, names.find((n) => n.project === C.web.project).domain);
+
+  if (DEPLOY && webRepo && webRootProblem) say("  · not deploying: it would build from the wrong directory and fail");
+  else if (DEPLOY && webRepo) await deployMain(webProject, webRepo);
+}
+
+// --- 7. End to end ------------------------------------------------------------------------
 
 step("End to end");
 const page = await fetch(`${siteUrl(C)}/signin`).catch(() => null);
@@ -368,7 +426,7 @@ else fail(`the clock's tick answers ${tick?.status ?? "nothing"}`);
 
 if (google) {
   const start = await fetch(
-    `${supabaseUrl}/auth/v1/authorize?provider=google&redirect_to=${encodeURIComponent(`${siteUrl(C)}/auth/callback`)}`,
+    `${supabaseUrl}/auth/v1/authorize?provider=google&redirect_to=${encodeURIComponent(`${siteUrl(C)}/signin`)}`,
     { redirect: "manual" },
   );
   const location = start.headers.get("location");

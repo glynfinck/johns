@@ -16,6 +16,17 @@ export const CONFIG = {
     // Where the Next app lives in the workspace. Set by hand in the
     // project's settings (Build and Deployment); provision only checks it.
     rootDirectory: "apps/api",
+    // apps/api's own name. `domain` belongs to the web build, which passes
+    // /api/* on to this name (apps/client/vercel.json), so the clock's URL
+    // and the app's calls stay on `domain`.
+    domain: "api.johns.glyn.dev",
+  },
+  // The Expo app's web build, which serves `domain` (Phase 13 of
+  // docs/specs/native-migration.md). Created by hand, in the same team;
+  // provision checks it and gives it its public environment.
+  web: {
+    project: "johns-web",
+    rootDirectory: "apps/client",
   },
   // Google's native clients for the Expo app (public IDs, from Google Cloud;
   // DEPLOYMENT.md says how to make them). One Android client per signing

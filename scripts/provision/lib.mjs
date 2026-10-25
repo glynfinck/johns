@@ -117,16 +117,40 @@ export function envPlan(c, { supabaseUrl, anonKey, serviceKey, cronSecret, vapid
 }
 
 /**
- * What is wrong with the Vercel project's Root Directory, or null. The
- * project builds the Next app, which lives in `apps/api`; built from anywhere
- * else a deploy fails (the live one keeps serving, but nothing new ships).
- * Vercel reads back `null` for the repository's root.
+ * The web build's production environment: public values only, since the
+ * export bakes them into the page. No API URL: on the web the app calls
+ * /api/* on its own origin. Without the VAPID public key (the one apps/api
+ * signs with) it offers no reminders.
  */
-export function rootDirectoryProblem(actual, c) {
+export function webEnvPlan({ supabaseUrl, anonKey, vapidPublicKey }) {
+  const plain = (key, value) => ({ key, value, type: "plain", target: ["production"] });
+  return [
+    plain("EXPO_PUBLIC_SUPABASE_URL", supabaseUrl),
+    plain("EXPO_PUBLIC_SUPABASE_PUBLISHABLE_KEY", anonKey),
+    plain("EXPO_PUBLIC_VAPID_PUBLIC_KEY", vapidPublicKey),
+  ];
+}
+
+/** Which Vercel project answers on which name: the site on the web build, apps/api on its own. */
+export function domainPlan(c) {
+  return [
+    { project: c.web.project, domain: c.domain },
+    { project: c.vercel.project, domain: c.vercel.domain },
+  ];
+}
+
+/**
+ * What is wrong with a Vercel project's Root Directory, or null. `project`
+ * is `c.vercel` (the Next app, in `apps/api`) or `c.web` (the Expo app, in
+ * `apps/client`); built from anywhere else a deploy fails (the live one keeps
+ * serving, but nothing new ships). Vercel reads back `null` for the
+ * repository's root.
+ */
+export function rootDirectoryProblem(actual, project) {
   const clean = (dir) => String(dir ?? "").replace(/^\.?\/*/, "").replace(/\/+$/, "");
-  if (clean(actual) === clean(c.vercel.rootDirectory)) return null;
+  if (clean(actual) === clean(project.rootDirectory)) return null;
   const now = clean(actual) ? `\`${clean(actual)}\`` : "the repository root";
-  return `${c.vercel.project} builds from ${now}, not \`${c.vercel.rootDirectory}\``;
+  return `${project.project} builds from ${now}, not \`${project.rootDirectory}\``;
 }
 
 /** Local migrations the database hasn't recorded, by version. */

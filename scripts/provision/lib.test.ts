@@ -1,3 +1,5 @@
+import { readFileSync } from "node:fs";
+
 import { describe, expect, it } from "vitest";
 
 import { CONFIG } from "./config.mjs";
@@ -7,6 +9,7 @@ import {
   authSettings,
   authorizeProblems,
   envPlan,
+  webEnvPlan,
   googleClientIds,
   googleConsoleValues,
   googleSkipsNonce,
@@ -16,6 +19,7 @@ import {
   missingMigrations,
   parseEnvFile,
   pickKeys,
+  domainPlan,
   rootDirectoryProblem,
   setEnvLine,
   summaryMarkdown,
@@ -174,16 +178,44 @@ describe("keys and environment", () => {
   });
 });
 
-describe("the Vercel project", () => {
+describe("the Vercel projects", () => {
   it("builds the Next app from apps/api, however the path is written", () => {
-    expect(rootDirectoryProblem("apps/api", CONFIG)).toBeNull();
-    expect(rootDirectoryProblem("./apps/api/", CONFIG)).toBeNull();
+    expect(rootDirectoryProblem("apps/api", CONFIG.vercel)).toBeNull();
+    expect(rootDirectoryProblem("./apps/api/", CONFIG.vercel)).toBeNull();
   });
 
   it("names where it builds from instead", () => {
-    expect(rootDirectoryProblem(null, CONFIG)).toBe("johns builds from the repository root, not `apps/api`");
-    expect(rootDirectoryProblem("", CONFIG)).toBe("johns builds from the repository root, not `apps/api`");
-    expect(rootDirectoryProblem("apps/client", CONFIG)).toBe("johns builds from `apps/client`, not `apps/api`");
+    expect(rootDirectoryProblem(null, CONFIG.vercel)).toBe("johns builds from the repository root, not `apps/api`");
+    expect(rootDirectoryProblem("", CONFIG.vercel)).toBe("johns builds from the repository root, not `apps/api`");
+    expect(rootDirectoryProblem("apps/client", CONFIG.vercel)).toBe("johns builds from `apps/client`, not `apps/api`");
+  });
+
+  it("builds the web from apps/client", () => {
+    expect(rootDirectoryProblem("apps/client", CONFIG.web)).toBeNull();
+    expect(rootDirectoryProblem("apps/api", CONFIG.web)).toBe("johns-web builds from `apps/api`, not `apps/client`");
+  });
+
+  it("puts the site on the web build and apps/api on a name of its own", () => {
+    expect(domainPlan(CONFIG)).toEqual([
+      { project: "johns-web", domain: "johns.glyn.dev" },
+      { project: "johns", domain: "api.johns.glyn.dev" },
+    ]);
+  });
+
+  it("passes /api/* on to that same name", () => {
+    const web = JSON.parse(readFileSync(new URL("../../apps/client/vercel.json", import.meta.url), "utf8"));
+    const api = web.rewrites.find((r: { source: string }) => r.source === "/api/:path*");
+    expect(new URL(api.destination).host).toBe(CONFIG.vercel.domain);
+  });
+
+  it("gives the web build public values only, and no API URL, since it calls its own origin", () => {
+    const plan = webEnvPlan({ supabaseUrl: `https://${REF}.supabase.co`, anonKey: "a", vapidPublicKey: "p" });
+    expect(plan.map((e) => [e.key, e.value])).toEqual([
+      ["EXPO_PUBLIC_SUPABASE_URL", `https://${REF}.supabase.co`],
+      ["EXPO_PUBLIC_SUPABASE_PUBLISHABLE_KEY", "a"],
+      ["EXPO_PUBLIC_VAPID_PUBLIC_KEY", "p"],
+    ]);
+    expect(plan.every((e) => e.type === "plain" && e.target.join() === "production")).toBe(true);
   });
 });
 
