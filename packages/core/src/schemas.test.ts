@@ -3,11 +3,16 @@ import { describe, expect, it } from "vitest";
 import {
   CastVote,
   CreateHouse,
+  DealRequest,
+  DisplayName,
   disputeProblem,
   FreshRequest,
+  HouseSettings,
   JOIN_CODE_ALPHABET,
   JOIN_CODE_LENGTH,
   JoinCode,
+  JohnDraft,
+  MAX_AMOUNT_MINOR,
   MoveResponse,
   normaliseJoinCode,
   RaiseDispute,
@@ -112,5 +117,114 @@ describe("CastVote and MoveResponse", () => {
   it("answers ok", () => {
     expect(MoveResponse.parse({ ok: true })).toEqual({ ok: true });
     expect(MoveResponse.safeParse({ ok: false }).success).toBe(false);
+  });
+});
+
+describe("HouseSettings", () => {
+  const rules = {
+    name: " Flat 3 ",
+    timezone: "Europe/London",
+    currency: "GBP",
+    weekStarts: 1,
+    stakeMinor: 2000,
+    lateForfeitMinor: 100,
+    missedForfeitMinor: 300,
+    disputeHours: 24,
+    awayMakeup: 100,
+  };
+
+  it("takes the rules an admin sets, tidied", () => {
+    expect(HouseSettings.parse(rules)).toEqual({ ...rules, name: "Flat 3" });
+    // A form's strings coerce, as the web's fields send them.
+    expect(HouseSettings.parse({ ...rules, weekStarts: "7", stakeMinor: "0", disputeHours: "0" })).toMatchObject({
+      weekStarts: 7,
+      stakeMinor: 0,
+      disputeHours: 0,
+    });
+  });
+
+  it("says what's wrong in words", () => {
+    const problem = (patch: object) => HouseSettings.safeParse({ ...rules, ...patch }).error?.issues[0].message;
+    expect(problem({ name: "  " })).toBe("Give the house a name.");
+    expect(problem({ timezone: "" })).toBe("Say which time zone the house is in.");
+    expect(problem({ stakeMinor: -1 })).toBe("Amounts can't be negative.");
+    expect(problem({ missedForfeitMinor: MAX_AMOUNT_MINOR + 1 })).toBe("Amounts are up to 1,000.");
+    expect(problem({ stakeMinor: MAX_AMOUNT_MINOR })).toBeUndefined();
+  });
+
+  it("refuses rules the house can't have", () => {
+    for (const patch of [
+      { currency: "JPY" },
+      { weekStarts: 0 },
+      { weekStarts: 8 },
+      { disputeHours: 73 },
+      { awayMakeup: 75 },
+      { stakeMinor: 2.5 },
+    ]) {
+      expect(HouseSettings.safeParse({ ...rules, ...patch }).success).toBe(false);
+    }
+  });
+});
+
+describe("JohnDraft", () => {
+  const john = {
+    name: " Bins ",
+    category: "bins",
+    points: 2,
+    everyWeeks: 1,
+    dueDow: 7,
+    dueTime: "21:00",
+    needsPhoto: false,
+    groupId: null,
+  };
+
+  it("takes a new John, and an edit of one", () => {
+    expect(JohnDraft.parse(john)).toEqual({ ...john, name: "Bins" });
+    const id = crypto.randomUUID();
+    expect(JohnDraft.parse({ ...john, id, groupId: id })).toMatchObject({ id, groupId: id });
+  });
+
+  it("says what's wrong in words", () => {
+    const problem = (patch: object) => JohnDraft.safeParse({ ...john, ...patch }).error?.issues[0].message;
+    expect(problem({ name: "" })).toBe("Name the John.");
+    expect(problem({ dueTime: "9pm" })).toBe("Give a time like 21:00.");
+    expect(problem({ dueTime: "24:00" })).toBe("Give a time like 21:00.");
+    expect(problem({ dueTime: "23:59" })).toBeUndefined();
+    expect(problem({ dueTime: "00:00" })).toBeUndefined();
+  });
+
+  it("keeps effort, cadence and the day in range", () => {
+    for (const patch of [
+      { points: 0 },
+      { points: 11 },
+      { everyWeeks: 0 },
+      { everyWeeks: 5 },
+      { dueDow: 0 },
+      { dueDow: 8 },
+      { category: "garden" },
+      { name: "x".repeat(61) },
+      { groupId: "upstairs" },
+      { id: "j1" },
+    ]) {
+      expect(JohnDraft.safeParse({ ...john, ...patch }).success).toBe(false);
+    }
+  });
+});
+
+describe("DisplayName", () => {
+  it("takes 1 to 60 characters, trimmed", () => {
+    expect(DisplayName.parse("  Ava  ")).toBe("Ava");
+    expect(DisplayName.safeParse(" ").error?.issues[0].message).toBe("Names are 1 to 60 characters.");
+    expect(DisplayName.safeParse("x".repeat(61)).error?.issues[0].message).toBe("Names are 1 to 60 characters.");
+    expect(DisplayName.safeParse("x".repeat(60)).success).toBe(true);
+  });
+});
+
+describe("DealRequest", () => {
+  it("names the house by its id", () => {
+    const houseId = crypto.randomUUID();
+    expect(DealRequest.parse({ houseId })).toEqual({ houseId });
+    expect(DealRequest.safeParse({ houseId: "flat-3" }).success).toBe(false);
+    expect(DealRequest.safeParse({}).success).toBe(false);
   });
 });

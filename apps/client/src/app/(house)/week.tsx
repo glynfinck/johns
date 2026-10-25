@@ -10,6 +10,7 @@ import { Screen } from '@/components/screen';
 import { SwapSheet } from '@/components/swap-sheet';
 import { TableBeside } from '@/components/table-parts';
 import { Eyebrow, Heading } from '@/components/text';
+import { DealButton } from '@/components/house/deal-button';
 import { DisputeList, PersonSection, Stats, WeekTable, type BoardContext } from '@/components/week-board';
 import { useCatchUp, useHouse, type HouseView } from '@/hooks/use-house';
 import { useMembership } from '@/hooks/use-membership';
@@ -70,7 +71,7 @@ function Board({ view, wide }: { view: HouseView; wide: boolean }) {
           <Eyebrow>{TODAY_COPY.thisWeek}</Eyebrow>
           <Heading style={styles.title}>{WEEK_COPY.title}</Heading>
         </View>
-        <NotDealt notStarted={board.notStarted} isAdmin={me?.role === 'admin'} adminName={admin?.name ?? 'An admin'} />
+        <NotDealt houseId={house.id} notStarted={board.notStarted} isAdmin={me?.role === 'admin'} adminName={admin?.name ?? 'An admin'} />
       </View>
     );
   }
@@ -78,6 +79,7 @@ function Board({ view, wide }: { view: HouseView; wide: boolean }) {
   const items = board.items;
   const myOpen = items.filter((i) => i.userId === userId && isOpen(i.status));
   const theirOpen = items.filter((i) => i.userId !== userId && isOpen(i.status));
+  const nothingTicked = items.every((i) => !i.doneAt && !i.outcome);
   // Everyone with a John this week, in the order they joined.
   const people = members.filter((m) => items.some((i) => i.userId === m.userId));
 
@@ -95,6 +97,8 @@ function Board({ view, wide }: { view: HouseView; wide: boolean }) {
             theirs={theirOpen.map((i) => ({ id: i.id, name: i.name, owner: nameOf(i.userId) }))}
           />
         ) : null}
+        {/* As on the web: a week nobody has ticked in can be dealt again. */}
+        {me?.role === 'admin' && nothingTicked ? <DealButton houseId={house.id} started /> : null}
       </View>
 
       <Stats items={items} />

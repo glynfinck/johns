@@ -36,6 +36,11 @@ export function parseMoney(input: string): number | null {
   return Number(whole) * 100 + Number(frac.padEnd(2, "0"));
 }
 
+/** An amount as a money field starts out: "20", or "2.50" when there are pence. The inverse of parseMoney. */
+export function moneyInput(minor: number): string {
+  return (minor / 100).toFixed(minor % 100 ? 2 : 0);
+}
+
 const EURO_ZONE = new Set([
   "AT", "BE", "CY", "DE", "EE", "ES", "FI", "FR", "GR", "HR", "IE",
   "IT", "LT", "LU", "LV", "MT", "NL", "PT", "SI", "SK",

@@ -1,9 +1,19 @@
-import { INVITE_COPY, NOT_DEALT_COPY } from '@app/core';
+import { DEAL_COPY, INVITE_COPY, NOT_DEALT_COPY } from '@app/core';
+import { QueryClientProvider } from '@tanstack/react-query';
 import { fireEvent, render, screen } from '@testing-library/react-native';
+import type { ReactElement } from 'react';
 import { Share } from 'react-native';
+
+import { dealThisWeek } from '@/api/settings';
+import { testQueryClient } from '@/testing/query';
 
 import { InviteCard } from './invite-card';
 import { NotDealt } from './not-dealt';
+
+jest.mock('@/api/settings', () => ({ dealThisWeek: jest.fn() }));
+
+/** The deal is a move on the house, so the card needs the app's cache. */
+const withCache = (ui: ReactElement) => <QueryClientProvider client={testQueryClient()}>{ui}</QueryClientProvider>;
 
 describe('InviteCard', () => {
   beforeEach(() => jest.restoreAllMocks());
@@ -34,23 +44,33 @@ describe('InviteCard', () => {
 });
 
 describe('NotDealt', () => {
-  it("gives an admin the first steps, and says they're on the web for now", async () => {
-    await render(<NotDealt notStarted isAdmin adminName="Priya" />);
+  it('gives an admin the first steps, the way to House, and the deal', async () => {
+    await render(withCache(<NotDealt houseId="h1" notStarted isAdmin adminName="Priya" />));
     expect(screen.getByRole('header', { name: NOT_DEALT_COPY.notYet })).toBeOnTheScreen();
     for (const [i, step] of NOT_DEALT_COPY.adminSteps.entries()) {
       expect(screen.getByText(`${i + 1}. ${step}`)).toBeOnTheScreen();
     }
-    expect(screen.getByText('For now, do these on the web at johns.glyn.dev.')).toBeOnTheScreen();
+    expect(screen.getByRole('link', { name: DEAL_COPY.openHouse })).toBeOnTheScreen();
+    await fireEvent.press(screen.getByRole('button', { name: DEAL_COPY.first }));
+    expect(dealThisWeek).toHaveBeenCalledWith('h1');
+  });
+
+  it("says why the deal didn't happen", async () => {
+    (dealThisWeek as jest.Mock).mockRejectedValueOnce(new Error('Add at least one John first.'));
+    await render(withCache(<NotDealt houseId="h1" notStarted isAdmin adminName="Priya" />));
+    await fireEvent.press(screen.getByRole('button', { name: DEAL_COPY.first }));
+    expect(await screen.findByRole('alert')).toHaveTextContent('Add at least one John first.');
   });
 
   it('tells everyone else who to wait for', async () => {
-    await render(<NotDealt notStarted isAdmin={false} adminName="Priya" />);
+    await render(withCache(<NotDealt houseId="h1" notStarted isAdmin={false} adminName="Priya" />));
     expect(screen.getByText(NOT_DEALT_COPY.waitingFor('Priya'))).toBeOnTheScreen();
     expect(screen.queryByText(`1. ${NOT_DEALT_COPY.adminSteps[0]}`)).toBeNull();
+    expect(screen.queryByRole('button', { name: DEAL_COPY.first })).toBeNull();
   });
 
   it('explains a quiet week in a house that has started', async () => {
-    await render(<NotDealt notStarted={false} isAdmin adminName="Priya" />);
+    await render(withCache(<NotDealt houseId="h1" notStarted={false} isAdmin adminName="Priya" />));
     expect(screen.getByRole('header', { name: NOT_DEALT_COPY.nothingThisWeek })).toBeOnTheScreen();
     expect(screen.getByText(NOT_DEALT_COPY.nothingThisWeekBody)).toBeOnTheScreen();
   });

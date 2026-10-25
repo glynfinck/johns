@@ -1,6 +1,9 @@
 import { describe, expect, it } from "vitest";
 
 import {
+  johnDef,
+  NEW_JOHN,
+  weeklyEffort,
   buildWeekBoard,
   isOpen,
   monthStandings,
@@ -12,6 +15,7 @@ import {
   type MonthRow,
   type WeekRow,
 } from "./board";
+import { JohnDraft } from "./schemas";
 
 const HOUR = 3_600_000;
 // Wednesday 14 Oct 2026, noon in London (BST).
@@ -49,6 +53,49 @@ function john(id: string, overrides: Partial<AssignmentRow> = {}): AssignmentRow
 function board(assignments: AssignmentRow[], disputes: DisputeRow[] = [], week: WeekRow | null = WEEK, everDealt = true) {
   return buildWeekBoard({ week, assignments, disputes, memberIds: [ME, YOU], userId: ME, everDealt, disputeHours: 24, now });
 }
+
+describe("johnDef", () => {
+  it("reads a John's row as House shows it, the time to the minute", () => {
+    expect(
+      johnDef({
+        id: "j1",
+        name: "Bins",
+        category: "bins",
+        points: 2,
+        every_weeks: 2,
+        due_dow: 7,
+        due_time: "21:00:00",
+        needs_photo: true,
+        group_id: null,
+      }),
+    ).toEqual({
+      id: "j1",
+      name: "Bins",
+      category: "bins",
+      points: 2,
+      everyWeeks: 2,
+      dueDow: 7,
+      dueTime: "21:00",
+      needsPhoto: true,
+      groupId: null,
+    });
+  });
+});
+
+describe("NEW_JOHN", () => {
+  it("is a John the editor can save once it has a name", () => {
+    expect(JohnDraft.safeParse(NEW_JOHN).success).toBe(false);
+    expect(JohnDraft.parse({ ...NEW_JOHN, name: "Hob" })).toEqual({ ...NEW_JOHN, name: "Hob" });
+  });
+});
+
+describe("weeklyEffort", () => {
+  it("counts a John every N weeks as 1/N of its points", () => {
+    expect(weeklyEffort([])).toBe(0);
+    expect(weeklyEffort([{ points: 4, everyWeeks: 1 }])).toBe(4);
+    expect(weeklyEffort([{ points: 4, everyWeeks: 2 }, { points: 3, everyWeeks: 3 }])).toBe(3);
+  });
+});
 
 describe("rulesOf", () => {
   it("reads a house's rules from its row", () => {

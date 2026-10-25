@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 
 import { CURRENCIES } from "./domain";
-import { CURRENCY_SYMBOL, currencyForCountry, formatMoney, formatSigned, parseMoney } from "./money";
+import { CURRENCY_SYMBOL, currencyForCountry, formatMoney, formatSigned, moneyInput, parseMoney } from "./money";
 import { balances, buildStake, forfeitFor, HISTORY_LENGTH, settleMonth, settleUp, type LedgerEntry, type LedgerRow } from "./stake";
 
 const RULES = { lateForfeitMinor: 100, missedForfeitMinor: 300 };
@@ -122,6 +122,14 @@ describe("money", () => {
     expect(parseMoney("2,75")).toBe(275);
     expect(parseMoney("1.234")).toBeNull();
     expect(parseMoney("")).toBeNull();
+  });
+
+  it("starts a field from an amount, and reads back the same", () => {
+    expect(moneyInput(2000)).toBe("20");
+    expect(moneyInput(250)).toBe("2.50");
+    expect(moneyInput(5)).toBe("0.05");
+    expect(moneyInput(0)).toBe("0");
+    for (const minor of [0, 5, 250, 2000, 100_000]) expect(parseMoney(moneyInput(minor))).toBe(minor);
   });
 
   it("guesses currency from the country", () => {

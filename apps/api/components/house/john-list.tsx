@@ -1,6 +1,17 @@
 "use client";
 
-import { CATEGORIES, CATEGORY_LABEL, DOW_LABEL, pointsLabel, type Category, type IsoDow } from "@app/core";
+import {
+  CATEGORIES,
+  CATEGORY_LABEL,
+  DOW_LABEL,
+  JOHN_LIST_COPY,
+  NEW_JOHN,
+  pointsLabel,
+  weeklyEffort,
+  type Category,
+  type IsoDow,
+  type JohnDef,
+} from "@app/core";
 import { CameraIcon, PencilIcon, PlusIcon } from "lucide-react";
 import { useState } from "react";
 
@@ -13,36 +24,10 @@ import { Switch } from "@/components/ui/switch";
 import { useAction } from "@/hooks/use-action";
 import { archiveJohn, saveJohn } from "@/lib/actions/house";
 
-export interface JohnDef {
-  id: string;
-  name: string;
-  category: Category;
-  points: number;
-  everyWeeks: number;
-  dueDow: IsoDow;
-  dueTime: string;
-  needsPhoto: boolean;
-  /** The group that shares it; null means the whole house. */
-  groupId: string | null;
-}
-
 export interface GroupOption {
   id: string;
   name: string;
 }
-
-const BLANK: Omit<JohnDef, "id"> = {
-  name: "",
-  category: "kitchen",
-  points: 2,
-  everyWeeks: 1,
-  dueDow: 7,
-  dueTime: "21:00",
-  needsPhoto: false,
-  groupId: null,
-};
-
-const EVERY: Record<number, string> = { 1: "Every week", 2: "Every 2 weeks", 3: "Every 3 weeks", 4: "Every 4 weeks" };
 
 /** The house's list of Johns. Changes land in next week's deal (or a re-deal). */
 export function JohnList({
@@ -56,14 +41,12 @@ export function JohnList({
 }) {
   const groupName = (id: string | null) => groups.find((g) => g.id === id)?.name ?? null;
   const [editing, setEditing] = useState<(Omit<JohnDef, "id"> & { id?: string }) | null>(null);
-  const total = johns.reduce((s, j) => s + j.points / j.everyWeeks, 0);
+  const total = weeklyEffort(johns);
 
   return (
     <div className="flex flex-col gap-3">
       {johns.length === 0 ? (
-        <p className="rounded-md bg-secondary p-4 text-sm">
-          No Johns yet. Start with the ones that cause arguments: bins, the bathroom, the kitchen.
-        </p>
+        <p className="rounded-md bg-secondary p-4 text-sm">{JOHN_LIST_COPY.empty}</p>
       ) : (
         <ul className="flex flex-col gap-2" data-testid="john-list">
           {johns.map((j) => (
@@ -75,10 +58,10 @@ export function JohnList({
               <div className="min-w-0 flex-1">
                 <div className="flex items-center gap-1.5 font-bold">
                   {j.name}
-                  {j.needsPhoto ? <CameraIcon className="size-3.5 text-muted-foreground" aria-label="needs a photo" /> : null}
+                  {j.needsPhoto ? <CameraIcon className="size-3.5 text-muted-foreground" aria-label={JOHN_LIST_COPY.needsPhoto} /> : null}
                 </div>
                 <div className="text-xs text-muted-foreground">
-                  {EVERY[j.everyWeeks]} · due {DOW_LABEL[j.dueDow].slice(0, 3)} {j.dueTime}
+                  {JOHN_LIST_COPY.when(j.everyWeeks, DOW_LABEL[j.dueDow], j.dueTime)}
                   {groupName(j.groupId) ? (
                     <>
                       {" · "}
@@ -89,7 +72,7 @@ export function JohnList({
               </div>
               <span className="text-sm font-black tabular">{pointsLabel(j.points)}</span>
               {editable ? (
-                <Button variant="ghost" size="icon-lg" aria-label={`Edit ${j.name}`} onClick={() => setEditing(j)}>
+                <Button variant="ghost" size="icon-lg" aria-label={JOHN_LIST_COPY.edit(j.name)} onClick={() => setEditing(j)}>
                   <PencilIcon aria-hidden />
                 </Button>
               ) : null}
@@ -97,13 +80,11 @@ export function JohnList({
           ))}
         </ul>
       )}
-      <p className="text-xs text-muted-foreground tabular">
-        About {Math.round(total)} points a week across the house. Changes apply from the next deal.
-      </p>
+      <p className="text-xs text-muted-foreground tabular">{JOHN_LIST_COPY.perWeek(total)}</p>
       {editable ? (
-        <Button variant="outline" className="self-start" onClick={() => setEditing({ ...BLANK })} data-testid="add-john">
+        <Button variant="outline" className="self-start" onClick={() => setEditing({ ...NEW_JOHN })} data-testid="add-john">
           <PlusIcon aria-hidden />
-          Add a John
+          {JOHN_LIST_COPY.add}
         </Button>
       ) : null}
       <JohnEditor value={editing} groups={groups} onClose={() => setEditing(null)} />
@@ -124,8 +105,8 @@ function JohnEditor({
     <Sheet open={value !== null} onOpenChange={(open) => !open && onClose()}>
       <SheetContent side="bottom" className="mx-auto max-h-[90dvh] max-w-lg overflow-y-auto rounded-t-xl">
         <SheetHeader>
-          <SheetTitle>{value?.id ? `Edit ${value.name}` : "Add a John"}</SheetTitle>
-          <SheetDescription>Points are effort: 1 for taking the bins out, 5 for a deep clean.</SheetDescription>
+          <SheetTitle>{value?.id ? JOHN_LIST_COPY.edit(value.name) : JOHN_LIST_COPY.add}</SheetTitle>
+          <SheetDescription>{JOHN_LIST_COPY.hint}</SheetDescription>
         </SheetHeader>
         {value ? <JohnForm key={value.id ?? "new"} initial={value} groups={groups} onDone={onClose} /> : null}
       </SheetContent>
@@ -155,18 +136,18 @@ function JohnForm({
       }}
     >
       <div>
-        <FieldLabel htmlFor="john-name">Name</FieldLabel>
+        <FieldLabel htmlFor="john-name">{JOHN_LIST_COPY.name}</FieldLabel>
         <Input
           id="john-name"
           value={v.name}
           maxLength={60}
           required
-          placeholder="Bathroom clean"
+          placeholder={JOHN_LIST_COPY.namePlaceholder}
           onChange={(e) => set({ name: e.target.value })}
         />
       </div>
       <div>
-        <FieldLabel htmlFor="john-category">Kind</FieldLabel>
+        <FieldLabel htmlFor="john-category">{JOHN_LIST_COPY.kind}</FieldLabel>
         <NativeSelect id="john-category" value={v.category} onChange={(e) => set({ category: e.target.value as Category })}>
           {CATEGORIES.map((c) => (
             <option key={c} value={c}>
@@ -177,13 +158,13 @@ function JohnForm({
         <LidSwatch category={v.category} className="mt-2 text-xs text-muted-foreground" />
       </div>
       <div>
-        <FieldLabel htmlFor="john-group">Shared by</FieldLabel>
+        <FieldLabel htmlFor="john-group">{JOHN_LIST_COPY.sharedBy}</FieldLabel>
         <NativeSelect
           id="john-group"
           value={v.groupId ?? ""}
           onChange={(e) => set({ groupId: e.target.value || null })}
         >
-          <option value="">Everyone</option>
+          <option value="">{JOHN_LIST_COPY.everyone}</option>
           {groups.map((g) => (
             <option key={g.id} value={g.id}>
               {g.name}
@@ -191,14 +172,12 @@ function JohnForm({
           ))}
         </NativeSelect>
         <p className="mt-1.5 text-xs text-muted-foreground">
-          {groups.length === 0
-            ? "For a John only some of you share, like one of two bathrooms, make a group first."
-            : "Only that group is handed it, and it only counts toward their share."}
+          {groups.length === 0 ? JOHN_LIST_COPY.noGroups : JOHN_LIST_COPY.groupOnly}
         </p>
       </div>
       <div>
-        <FieldLabel>Effort</FieldLabel>
-        <div className="grid grid-cols-5 gap-1.5" role="radiogroup" aria-label="Effort points">
+        <FieldLabel>{JOHN_LIST_COPY.effort}</FieldLabel>
+        <div className="grid grid-cols-5 gap-1.5" role="radiogroup" aria-label={JOHN_LIST_COPY.effortPoints}>
           {[1, 2, 3, 4, 5, 6, 7, 8, 9, 10].map((p) => (
             <button
               key={p}
@@ -217,9 +196,9 @@ function JohnForm({
       </div>
       <div className="grid grid-cols-2 gap-3">
         <div>
-          <FieldLabel htmlFor="john-every">How often</FieldLabel>
+          <FieldLabel htmlFor="john-every">{JOHN_LIST_COPY.often}</FieldLabel>
           <NativeSelect id="john-every" value={v.everyWeeks} onChange={(e) => set({ everyWeeks: Number(e.target.value) })}>
-            {Object.entries(EVERY).map(([n, label]) => (
+            {Object.entries(JOHN_LIST_COPY.every).map(([n, label]) => (
               <option key={n} value={n}>
                 {label}
               </option>
@@ -227,7 +206,7 @@ function JohnForm({
           </NativeSelect>
         </div>
         <div>
-          <FieldLabel htmlFor="john-day">Due</FieldLabel>
+          <FieldLabel htmlFor="john-day">{JOHN_LIST_COPY.due}</FieldLabel>
           <NativeSelect id="john-day" value={v.dueDow} onChange={(e) => set({ dueDow: Number(e.target.value) as IsoDow })}>
             {(Object.entries(DOW_LABEL) as [string, string][]).map(([d, label]) => (
               <option key={d} value={d}>
@@ -238,23 +217,23 @@ function JohnForm({
         </div>
       </div>
       <div>
-        <FieldLabel htmlFor="john-time">By</FieldLabel>
+        <FieldLabel htmlFor="john-time">{JOHN_LIST_COPY.by}</FieldLabel>
         <Input id="john-time" type="time" value={v.dueTime} required onChange={(e) => set({ dueTime: e.target.value })} />
       </div>
       <label className="flex min-h-11 items-center justify-between gap-3">
         <span>
-          <span className="block font-bold">Needs a photo</span>
-          <span className="text-sm text-muted-foreground">The tick only counts with a photo of the result.</span>
+          <span className="block font-bold">{JOHN_LIST_COPY.photo}</span>
+          <span className="text-sm text-muted-foreground">{JOHN_LIST_COPY.photoHint}</span>
         </span>
         <Switch checked={v.needsPhoto} onCheckedChange={(on) => set({ needsPhoto: on })} />
       </label>
       <div className="flex flex-wrap gap-2">
         <Button type="submit" disabled={pending} className="flex-1">
-          {pending ? "Saving…" : v.id ? "Save" : "Add John"}
+          {pending ? JOHN_LIST_COPY.saving : v.id ? JOHN_LIST_COPY.save : JOHN_LIST_COPY.create}
         </Button>
         {v.id ? (
           <Button type="button" variant="destructive" disabled={pending} onClick={() => run(() => archiveJohn(v.id!), onDone)}>
-            Remove
+            {JOHN_LIST_COPY.remove}
           </Button>
         ) : null}
       </div>

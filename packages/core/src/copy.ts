@@ -286,3 +286,113 @@ export const STAKE_COPY = {
   forfeitedSoFar: (forfeited: string | null) => (forfeited ? `${forfeited} forfeited so far.` : "Nothing forfeited so far."),
   ifNow: "If the month ended now:",
 } as const;
+
+/** House: the John list and the deal, the house rules, who lives here, and you. */
+export const HOUSE_COPY = {
+  eyebrow: "Settings",
+  johns: "The John list",
+  rules: "House rules",
+  members: "Who lives here",
+  you: "You",
+} as const;
+
+const EVERY: Record<number, string> = { 1: "Every week", 2: "Every 2 weeks", 3: "Every 3 weeks", 4: "Every 4 weeks" };
+
+/** The house's list of Johns, and the sheet an admin adds or edits one in. */
+export const JOHN_LIST_COPY = {
+  empty: "No Johns yet. Start with the ones that cause arguments: bins, the bathroom, the kitchen.",
+  every: EVERY,
+  /** "Every 2 weeks · due Sun 21:00". */
+  when: (everyWeeks: number, day: string, time: string) =>
+    `${EVERY[everyWeeks] ?? `Every ${everyWeeks} weeks`} · due ${day.slice(0, 3)} ${time}`,
+  needsPhoto: "needs a photo",
+  perWeek: (points: number) =>
+    `About ${Math.round(points)} points a week across the house. Changes apply from the next deal.`,
+  add: "Add a John",
+  edit: (name: string) => `Edit ${name}`,
+  hint: "Points are effort: 1 for taking the bins out, 5 for a deep clean.",
+  name: "Name",
+  namePlaceholder: "Bathroom clean",
+  kind: "Kind",
+  sharedBy: "Shared by",
+  everyone: "Everyone",
+  noGroups: "For a John only some of you share, like one of two bathrooms, make a group first.",
+  groupOnly: "Only that group is handed it, and it only counts toward their share.",
+  effort: "Effort",
+  effortPoints: "Effort points",
+  often: "How often",
+  due: "Due",
+  by: "By",
+  photo: "Needs a photo",
+  photoHint: "The tick only counts with a photo of the result.",
+  save: "Save",
+  create: "Add John",
+  saving: "Saving…",
+  remove: "Remove",
+} as const;
+
+/** Handing out the week: the first time it starts the house; afterwards it re-deals an unticked week. */
+export const DEAL_COPY = {
+  first: "Hand out this week's Johns",
+  again: "Re-deal this week",
+  dealing: "Dealing…",
+  firstBody: "When the list is ready and the house has joined, hand out the first week.",
+  againBody: "Re-deal this week to include new Johns or housemates. Only works while nothing this week has been ticked.",
+  /** Today's card for an admin before the first deal: where the John list and the deal are. */
+  fromHouse: "The John list, the join link and the first deal are all on House.",
+  openHouse: "Open House",
+} as const;
+
+/** The house rules. Admins change them; everyone else reads them. Symbols arrive with the currency. */
+export const RULES_COPY = {
+  name: "House name",
+  timezone: "Time zone",
+  timezoneHint: "Weeks and due times follow the house's time zone, wherever each of you is.",
+  phoneZone: (zone: string) => `Use this phone’s: ${zone.replaceAll("_", " ")}`,
+  weekStarts: "Week starts",
+  currency: "Currency",
+  stake: (symbol: string) => `Monthly stake (${symbol})`,
+  late: (symbol: string) => `Late forfeit (${symbol})`,
+  missed: (symbol: string) => `Missed forfeit (${symbol})`,
+  disputes: "Disputes can be raised for",
+  disputeHours: (hours: number) => (hours === 0 ? "No disputes (honour system)" : `${hours} hours after a tick`),
+  away: "Time away is made up",
+  awayNote: "Nobody is handed a John due while they’re away.",
+  makeupHint: {
+    100: "Their share still counts, so they do a little extra each week when they're back until it evens out.",
+    50: "Half their share still counts and is made up when they're back; the rest falls to whoever is home.",
+    0: "Their share falls to whoever is home, and there's nothing to make up.",
+  } as Record<number, string>,
+  badAmount: "Amounts are numbers like 20 or 2.50.",
+  check: "Check the settings and try again.",
+  save: "Save house rules",
+  saving: "Saving…",
+  saved: "Saved",
+  adminsOnly: "Only admins can change the house rules.",
+} as const;
+
+/** Who lives here, and what an admin can do about it. */
+export const MEMBERS_COPY = {
+  admin: "Admin",
+  housemate: "Housemate",
+  you: "(you)",
+  makeAdmin: "Make admin",
+  makeHousemate: "Make housemate",
+  remove: "Remove",
+  /** The second tap, which means it: "Remove Ben". */
+  removeName: (name: string) => `Remove ${name.split(" ")[0]}`,
+  cancel: "Cancel",
+} as const;
+
+/** You: your name, the way out, and leaving. */
+export const ME_COPY = {
+  name: "Your name",
+  save: "Save",
+  saved: "Name saved",
+  reminders: "Reminders",
+  look: "Look",
+  signOut: "Sign out",
+  leave: "Leave the house",
+  leaveForGood: "Leave the house for good",
+  stay: "Stay",
+} as const;

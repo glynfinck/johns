@@ -1,11 +1,11 @@
-import type { Category, IsoDow } from "@app/core";
+import { DEAL_COPY, HOUSE_COPY, johnDef } from "@app/core";
 import type { Metadata } from "next";
 
 import { AwayCalendar } from "@/components/house/away-calendar";
 import { AwayForm, MyTrips } from "@/components/house/away-form";
 import { GroupsList } from "@/components/house/groups-list";
 import { InviteCard } from "@/components/house/invite-card";
-import { JohnList, type JohnDef } from "@/components/house/john-list";
+import { JohnList } from "@/components/house/john-list";
 import { MeCard } from "@/components/house/me-card";
 import { MembersList } from "@/components/house/members-list";
 import { SettingsForm } from "@/components/house/settings-form";
@@ -42,31 +42,19 @@ export default async function HousePage() {
   ]);
   const people = ctx.members.map((m) => ({ userId: m.userId, name: m.name }));
   const myTrips = away.periods.filter((p) => p.userId === ctx.userId && p.endsOn >= away.today);
-  const johns: JohnDef[] = (rows ?? []).map((j) => ({
-    id: j.id,
-    name: j.name,
-    category: j.category as Category,
-    points: j.points,
-    everyWeeks: j.every_weeks,
-    dueDow: j.due_dow as IsoDow,
-    dueTime: j.due_time.slice(0, 5),
-    needsPhoto: j.needs_photo,
-    groupId: j.group_id,
-  }));
+  const johns = (rows ?? []).map(johnDef);
 
   return (
     <div className="mx-auto max-w-6xl">
-      <PageHeader eyebrow="Settings" title={house.name} />
+      <PageHeader eyebrow={HOUSE_COPY.eyebrow} title={house.name} />
       <div className="grid gap-5 lg:grid-cols-[minmax(0,1fr)_380px]">
         <div className="flex min-w-0 flex-col gap-5">
-          <Panel id="johns" title="The John list">
+          <Panel id="johns" title={HOUSE_COPY.johns}>
             <JohnList johns={johns} groups={groups} editable={ctx.isAdmin} />
             {ctx.isAdmin && johns.length > 0 ? (
               <div className="mt-5 border-t border-border pt-4">
                 <p className="mb-3 text-sm text-muted-foreground">
-                  {house.first_dealt_at
-                    ? "Re-deal this week to include new Johns or housemates. Only works while nothing this week has been ticked."
-                    : "When the list is ready and the house has joined, hand out the first week."}
+                  {house.first_dealt_at ? DEAL_COPY.againBody : DEAL_COPY.firstBody}
                 </p>
                 <DealButton started={Boolean(house.first_dealt_at)} />
               </div>
@@ -75,7 +63,7 @@ export default async function HousePage() {
           <Panel id="groups" title="Groups">
             <GroupsList groups={groups} people={people} me={ctx.userId} editable={ctx.isAdmin} />
           </Panel>
-          <Panel title="House rules">
+          <Panel title={HOUSE_COPY.rules}>
             <SettingsForm
               editable={ctx.isAdmin}
               values={{
@@ -114,14 +102,14 @@ export default async function HousePage() {
               </div>
             </div>
           </Panel>
-          <Panel title="Who lives here">
+          <Panel title={HOUSE_COPY.members}>
             <MembersList
               members={ctx.members.map((m) => ({ userId: m.userId, name: m.name, role: m.role, streak: m.streak }))}
               me={ctx.userId}
               isAdmin={ctx.isAdmin}
             />
           </Panel>
-          <Panel title="You">
+          <Panel title={HOUSE_COPY.you}>
             <MeCard name={ctx.me.name} userId={ctx.userId} houseId={house.id} vapidKey={VAPID_PUBLIC_KEY} />
           </Panel>
         </div>

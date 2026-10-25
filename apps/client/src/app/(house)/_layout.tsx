@@ -46,6 +46,7 @@ export default function HouseLayout() {
       <Tabs.Screen name="wall" options={{ title: SECTION_LABEL.wall }} />
       <Tabs.Screen name="table" options={{ title: SECTION_LABEL.table }} />
       <Tabs.Screen name="stake" options={{ title: SECTION_LABEL.stake }} />
+      <Tabs.Screen name="house" options={{ title: SECTION_LABEL.house }} />
     </Tabs>
   );
 }
