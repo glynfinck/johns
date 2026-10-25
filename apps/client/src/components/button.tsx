@@ -12,7 +12,8 @@ export type ButtonIcon = ComponentType<{ size?: number; color?: string; 'aria-hi
 /**
  * A button at least a thumb tall. `primary` wears hi-vis amber: the one thing
  * to do on a screen. With `href` it is a link dressed as a button (an anchor
- * on the web), as the web app's are.
+ * on the web), as the web app's are. `iconOnly` shows just the icon, square,
+ * and `label` still names it for screen readers.
  */
 export function Button({
   label,
@@ -21,6 +22,7 @@ export function Button({
   variant = 'primary',
   icon: Icon,
   disabled = false,
+  iconOnly = false,
   testID,
 }: {
   label: string;
@@ -29,6 +31,7 @@ export function Button({
   variant?: Variant;
   icon?: ButtonIcon;
   disabled?: boolean;
+  iconOnly?: boolean;
   testID?: string;
 }) {
   const { colors } = useTheme();
@@ -43,6 +46,7 @@ export function Button({
     <Pressable
       accessibilityRole={href ? 'link' : 'button'}
       accessibilityState={{ disabled }}
+      accessibilityLabel={iconOnly ? label : undefined}
       disabled={disabled}
       onPress={onPress}
       onPressIn={() => setPressed(true)}
@@ -52,11 +56,12 @@ export function Button({
       // styles by spreading them, which would drop either.
       style={StyleSheet.flatten([
         styles.button,
+        iconOnly && styles.square,
         { backgroundColor: look.background, borderColor: look.edge, opacity: disabled ? 0.5 : pressed ? 0.85 : 1 },
       ])}
     >
       {Icon ? <Icon size={18} color={look.ink} aria-hidden /> : null}
-      <Text style={[styles.label, { color: look.ink }]}>{label}</Text>
+      {iconOnly ? null : <Text style={[styles.label, { color: look.ink }]}>{label}</Text>}
     </Pressable>
   );
   return href ? (
@@ -79,5 +84,6 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     gap: SPACE.sm,
   },
+  square: { minWidth: TAP, paddingHorizontal: SPACE.md },
   label: { fontFamily: FONT.bold, fontSize: 16 },
 });

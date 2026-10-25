@@ -1,4 +1,4 @@
-import { JOIN_COPY, NEW_HOUSE_COPY, NO_HOUSE_COPY, signInReason, SIGN_IN_COPY } from "@app/core";
+import { JOIN_COPY, NEW_HOUSE_COPY, NO_HOUSE_COPY, signInReason, SIGN_IN_COPY, TODAY_COPY } from "@app/core";
 import { expect, test, type Page } from "@playwright/test";
 
 import { CLIENT_URL, cleanUp, houseOf, signInToClient } from "./auth";
@@ -31,7 +31,8 @@ test("start a house, and land on it caught up", async ({ context, page }) => {
   await page.getByTestId("create-house").click();
 
   await expect(page).toHaveURL(/\/today$/);
-  await expect(page.getByRole("heading", { name })).toBeVisible();
+  await expect(page.getByRole("heading", { name: TODAY_COPY.title })).toBeVisible();
+  await expect(page.getByText(name)).toBeVisible();
   const answer = await fresh;
   expect(answer.status()).toBe(200);
   expect(await answer.json()).toEqual({ ticked: true });
@@ -59,7 +60,8 @@ test("a join link signs you in on the spot, then joins", async ({ context, page 
   const catching = caughtUp(joiner);
   await joiner.getByRole("button", { name: JOIN_COPY.join("Number 9") }).click();
   await expect(joiner).toHaveURL(/\/today$/);
-  await expect(joiner.getByRole("heading", { name: "Number 9" })).toBeVisible();
+  await expect(joiner.getByRole("heading", { name: TODAY_COPY.title })).toBeVisible();
+  await expect(joiner.getByText("Number 9")).toBeVisible();
   expect((await catching).status()).toBe(200);
 });
 

@@ -83,7 +83,10 @@ permanent once a store has seen them.
     token and parsing the answer with its schema from `@app/core`; a refusal
     throws `ApiRequestError` with the API's sentence. One small module per
     resource beside it: `house.ts` (your house, join codes, creating and
-    joining through RPC, and `catchUp` through `POST /api/fresh`).
+    joining through RPC, and `catchUp` through `POST /api/fresh`),
+    `board.ts` (`loadHouse`: one read of a house's rules, people and this
+    week's rows), `johns.ts` (ticking, undoing, spending immunity) and
+    `photos.ts` (receipts: below).
 - **Writes go through the database, as the web's do.** A move is one named
   SQL function (`supabase.rpc('mark_done', …)`) or one column-granted write;
   the database decides, and the client only translates a refusal with
@@ -91,20 +94,47 @@ permanent once a store has seen them.
   the four moves that need a server: `POST /api/deal`, `POST /api/disputes`,
   `POST /api/disputes/:id/votes` and `POST /api/fresh`.
 - `src/hooks/`: connect `@app/core` and `src/api/` to screens (e.g.
-  `use-session.ts`). `use-membership.tsx` is the one provider: the session
-  and the house it's in, read behind the splash screen, with `refresh()` for
-  after creating or joining a house. `src/components/`: reusable UI pieces
-  (`Field`, `Choice` for the web's selects, `Alert`, `SignInPanel`).
-- **Screens that show a house catch it up as they come into view**
-  (`useFocusEffect` → `catchUp`), as a web page load does; the server ticks
-  at most once a minute per house, so calling it freely is fine.
+  `use-session.ts`). `use-membership.tsx` is the session and the house it's
+  in, read behind the splash screen, with `refresh()` for after creating or
+  joining a house. `src/components/`: reusable UI pieces (`Field`, `Choice`
+  for the web's selects, `Alert`, `SignInPanel`, `JohnCard`, `InviteCard`,
+  `NotDealt`).
+- **What a house screen shows comes through React Query**
+  (`@tanstack/react-query`; `QueryProvider` in `hooks/query.tsx` wraps the
+  root layout). One cache entry per house, `houseKey(id)` from
+  `hooks/keys.ts`, holds `loadHouse`'s rows; `useHouse(houseId, userId)`
+  builds the week from them with core's `buildWeekBoard` and `todayView` at
+  the current minute (`useNow`), so statuses move on with the clock between
+  reads, and the web and the app can't disagree. Screens never shape rows
+  themselves.
+- **A move** goes through `useMove(houseId).run(...)`: it runs, then reads the
+  house again, and holds the refusal's sentence in `problem`.
+- **Live:** `useLiveHouse(houseId)` listens on Realtime to what
+  `supabase_realtime` publishes (`events`, `assignments`, `disputes`; never
+  `members`) with the user's token, and folds a burst into one read. Coming
+  back to the app refetches anyway (`QueryProvider` turns AppState into
+  React Query's focus).
+- **Screens that show a house catch it up as they come into view** with
+  `useCatchUp(houseId)` (`useFocusEffect` → `catchUp`), as a web page load
+  does, and use the function it returns for pull to refresh. The server ticks
+  at most once a minute per house, so calling it freely is fine. When the
+  server did something, a read already on its way is started again (React
+  Query would otherwise fold the new read into the old one).
+- **Photo receipts** (`api/photos.ts`): `expo-image-picker` for the camera or
+  the library (on the web, the browser's file chooser), shrunk with
+  `expo-image-manipulator` to core's `proofSize` as a JPEG, uploaded to the
+  private `proofs` bucket at core's `proofPath`, then `mark_done` with that
+  path. The camera and photos permission sentences are the image picker
+  plugin's options in `app.json`; the microphone is never asked for. A
+  refusal is a sentence on the card, never a crash.
 - Shared code by default. Use platform files (`.ios.tsx`, `.android.tsx`,
   `.web.tsx`) or `Platform.OS` only where behaviour truly differs.
 - Web is a single-page build: keep `"web": { "output": "single" }` in
   app.json. It isn't deployed yet: johns.glyn.dev stays `apps/api`'s pages
   until the Expo web build reaches parity (Phase 13).
 - When a change adds a native module or config plugin, say clearly that a
-  new development build is needed.
+  new development build is needed. The image picker and manipulator (Phase
+  6) are native modules: a build from before them can't take a photo.
 - Environment: copy `.env.example` to `.env.local`. Only `EXPO_PUBLIC_`
   values go here: Supabase's URL and publishable key, and Google's web and
   iOS client IDs (public; DEPLOYMENT.md says where they come from).
@@ -158,6 +188,13 @@ what they test (`<name>.test.ts(x)`), except screens', which live in
 `src/api` with Supabase and the sign-in modules mocked. A screen that uses
 the router renders through `renderRouter` from `expo-router/testing-library`;
 the root layout's guard is tested that way with stand-in screens.
+
+- `src/testing/`: what tests share, never imported by the app.
+  `testQueryClient()` gives each test its own cache with no retries and no
+  garbage collection (its five-minute timer would keep Jest running after a
+  test that leaves a read pending); `house.ts` builds a house as `loadHouse`
+  reads it, dated around the real clock. A screen that reads a house renders
+  under a stand-in `_layout` with `QueryClientProvider` and `Slot`.
 
 The web build also runs end to end, in `apps/api`'s Playwright
 (`e2e/client-*.spec.ts`): it is exported against the local stack and served

@@ -38,7 +38,15 @@
         }
       ],
       "expo-sqlite",
-      "expo-apple-authentication"
+      "expo-apple-authentication",
+      [
+        "expo-image-picker",
+        {
+          "cameraPermission": "Johns uses the camera for photo receipts, so the house can see a John is done.",
+          "photosPermission": "Johns uses your photos for photo receipts, so the house can see a John is done.",
+          "microphonePermission": false
+        }
+      ]
     ],
     "experiments": {
       "typedRoutes": true,

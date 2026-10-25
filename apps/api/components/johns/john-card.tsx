@@ -1,4 +1,4 @@
-import { CATEGORY_LABEL, dueLabel, pointsLabel, relative, type Category } from "@app/core";
+import { CATEGORY_LABEL, dueLabel, JOHN_COPY, pointsLabel, relative, type Category } from "@app/core";
 import { CameraIcon, PlaneIcon } from "lucide-react";
 
 import { DisputeButton, MarkDone, UndoDone, UseImmunity, VoteButtons } from "@/components/johns/john-actions";
@@ -64,7 +64,7 @@ export function JohnCard({
                 <span className="inline-flex items-center gap-1">
                   <span aria-hidden>·</span>
                   <CameraIcon className="size-3.5" aria-hidden />
-                  photo
+                  {JOHN_COPY.photo}
                 </span>
               ) : null}
             </p>
@@ -84,10 +84,9 @@ export function JohnCard({
 
         {item.dispute ? (
           <div className="rounded-md bg-hazard/10 p-3 text-sm">
-            <p className="font-bold text-hazard">Disputed: &ldquo;{item.dispute.reason}&rdquo;</p>
+            <p className="font-bold text-hazard">{JOHN_COPY.disputed(item.dispute.reason)}</p>
             <p className="mt-1 text-muted-foreground tabular">
-              {item.dispute.uphold} say not done, {item.dispute.reject} say fine · closes{" "}
-              {relative(item.dispute.closesAt, now)}
+              {JOHN_COPY.votes(item.dispute.uphold, item.dispute.reject, relative(item.dispute.closesAt, now))}
             </p>
             {!mine ? (
               <div className="mt-3">
@@ -117,7 +116,7 @@ export function JohnCard({
 
         {item.status === "checking" && item.standsAt ? (
           <div className="flex items-center justify-between gap-2 text-sm text-muted-foreground">
-            <span>Stands {relative(item.standsAt, now)} unless someone disputes it.</span>
+            <span>{JOHN_COPY.standsIn(relative(item.standsAt, now))}</span>
             {mine ? (
               <UndoDone assignmentId={item.id} />
             ) : (

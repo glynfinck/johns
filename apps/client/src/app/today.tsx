@@ -1,41 +1,157 @@
-import { SIGN_IN_COPY } from '@app/core';
-import { useFocusEffect } from 'expo-router';
-import { LogOutIcon } from 'lucide-react-native';
-import { useCallback, useState } from 'react';
-import { ScrollView, StyleSheet, View } from 'react-native';
+import { isOpen, SIGN_IN_COPY, TODAY_COPY, weekRange } from '@app/core';
+import { FlameIcon, LogOutIcon, RefreshCwIcon, RepeatIcon, ShieldIcon } from 'lucide-react-native';
+import { useState } from 'react';
+import { ActivityIndicator, RefreshControl, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { signOut } from '@/api/auth';
-import { catchUp } from '@/api/house';
+import { Alert } from '@/components/alert';
 import { Button } from '@/components/button';
 import { Card } from '@/components/card';
+import { InviteCard } from '@/components/invite-card';
+import { JohnCard } from '@/components/john-card';
+import { NotDealt } from '@/components/not-dealt';
 import { Body, Eyebrow, Heading } from '@/components/text';
-import { Wordmark } from '@/components/wordmark';
+import { useCatchUp, useHouse, useLiveHouse, type HouseView } from '@/hooks/use-house';
 import { useMembership } from '@/hooks/use-membership';
-import { useMyName } from '@/hooks/use-my-name';
-import { SITE_URL } from '@/links';
-import { SPACE, useTheme } from '@/theme';
+import { FONT, RADIUS, SPACE, useTheme } from '@/theme';
 
-/**
- * Your house, signed in. For now it names the house and who you are, and
- * catches the house up whenever it comes into view, as a web page load does;
- * the real Today arrives in Phase 6 of docs/specs/native-migration.md.
- */
+/** Today: your Johns this week, what's left, and the tick, as the web's Today. */
 export default function Today() {
-  const { colors } = useTheme();
   const { session, house } = useMembership();
-  const name = useMyName(session?.user.id);
-  const [leaving, setLeaving] = useState(false);
-  const houseId = house?.id;
+  // The layout's guard only shows Today with a house and a session.
+  return <TodayFor houseId={house!.id} userId={session!.user.id} />;
+}
 
-  useFocusEffect(
-    useCallback(() => {
-      // The server ticks at most once a minute per house; a failure only
-      // means the next look is a little out of date.
-      if (houseId) catchUp(houseId).catch((reason: unknown) => console.warn('Catching up failed', reason));
-    }, [houseId]),
+function TodayFor({ houseId, userId }: { houseId: string; userId: string }) {
+  const { colors } = useTheme();
+  const { query, view } = useHouse(houseId, userId);
+  const [refreshing, setRefreshing] = useState(false);
+  const freshen = useCatchUp(houseId);
+  useLiveHouse(houseId);
+
+  async function pull() {
+    setRefreshing(true);
+    if (!(await freshen())) await query.refetch();
+    setRefreshing(false);
+  }
+
+  return (
+    <SafeAreaView style={[styles.screen, { backgroundColor: colors.background }]}>
+      <ScrollView
+        contentContainerStyle={styles.page}
+        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={() => void pull()} tintColor={colors.foreground} />}
+      >
+        {!view ? (
+          query.isError ? (
+            <View style={styles.stack}>
+              <Alert message="Couldn't read the house. Check the connection." />
+              <View style={styles.start}>
+                <Button variant="outline" icon={RefreshCwIcon} label="Try again" onPress={() => void query.refetch()} />
+              </View>
+            </View>
+          ) : (
+            <ActivityIndicator color={colors.foreground} accessibilityLabel="Reading the house" style={styles.loading} />
+          )
+        ) : (
+          <Week view={view} />
+        )}
+      </ScrollView>
+    </SafeAreaView>
   );
+}
 
+function Week({ view }: { view: HouseView }) {
+  const { colors } = useTheme();
+  const { snapshot, board, today, me, now } = view;
+  const { rules, house, members } = snapshot;
+  const admin = members.find((m) => m.role === 'admin');
+
+  return (
+    <View style={styles.stack}>
+      <View>
+        <Eyebrow>
+          {board.week ? TODAY_COPY.thisWeekRange(weekRange(board.week.startsAt, board.week.endsAt, rules.timezone)) : TODAY_COPY.thisWeek}
+        </Eyebrow>
+        <Heading style={styles.title}>{TODAY_COPY.title}</Heading>
+        <Body muted>{house.name}</Body>
+      </View>
+
+      {!board.week ? (
+        <>
+          <NotDealt notStarted={board.notStarted} isAdmin={me?.role === 'admin'} adminName={admin?.name ?? 'An admin'} />
+          <InviteCard code={house.joinCode} houseName={house.name} />
+        </>
+      ) : (
+        <>
+          <Card style={[styles.hero, { borderLeftColor: colors.hivis }]}>
+            <Text style={[styles.left, { color: colors.foreground }]} testID="johns-left">
+              {today.left}
+            </Text>
+            <View style={styles.heroText}>
+              <Text style={[styles.heroLabel, { color: colors.foreground }]}>{TODAY_COPY.left(today.left)}</Text>
+              <View style={styles.bars} aria-hidden>
+                {today.mine.map((i) => (
+                  <View
+                    key={i.id}
+                    style={[styles.bar, { backgroundColor: isOpen(i.status) ? colors.secondary : colors.good }]}
+                  />
+                ))}
+              </View>
+            </View>
+            {me ? (
+              <View style={styles.perks}>
+                <View style={[styles.streak, { backgroundColor: colors.hivis }]}>
+                  <FlameIcon size={14} color={colors.onHivis} aria-hidden />
+                  <Text style={[styles.streakText, { color: colors.onHivis }]}>{TODAY_COPY.streak(me.streak)}</Text>
+                </View>
+                {me.immunityTokens > 0 ? (
+                  <View style={styles.perk}>
+                    <ShieldIcon size={14} color={colors.mutedForeground} aria-hidden />
+                    <Body muted style={styles.perkText}>
+                      {TODAY_COPY.immunity(me.immunityTokens)}
+                    </Body>
+                  </View>
+                ) : null}
+                {me.swapTokens > 0 ? (
+                  <View style={styles.perk}>
+                    <RepeatIcon size={14} color={colors.foreground} aria-hidden />
+                    <Body style={styles.perkText}>{TODAY_COPY.swapReady}</Body>
+                  </View>
+                ) : null}
+              </View>
+            ) : null}
+          </Card>
+
+          {today.mine.length === 0 ? (
+            <Card>
+              <Body muted>{TODAY_COPY.nothingYours}</Body>
+            </Card>
+          ) : (
+            today.mine.map((item) => (
+              <JohnCard
+                key={item.id}
+                item={item}
+                houseId={house.id}
+                zone={rules.timezone}
+                now={now}
+                immunityTokens={me?.immunityTokens ?? 0}
+              />
+            ))
+          )}
+
+          {members.length < 2 ? <InviteCard code={house.joinCode} houseName={house.name} /> : null}
+        </>
+      )}
+
+      <SignOut name={me?.name} />
+    </View>
+  );
+}
+
+/** Who's signed in, and the way out, until House (Phase 11) has them. */
+function SignOut({ name }: { name?: string }) {
+  const [leaving, setLeaving] = useState(false);
   async function leave() {
     setLeaving(true);
     try {
@@ -46,37 +162,45 @@ export default function Today() {
       setLeaving(false);
     }
   }
-
   return (
-    <SafeAreaView style={[styles.screen, { backgroundColor: colors.background }]}>
-      <ScrollView contentContainerStyle={styles.page}>
-        <Wordmark />
-        <Card>
-          <Eyebrow>{name ? `Signed in as ${name}` : ' '}</Eyebrow>
-          <Heading style={styles.name}>{house?.name ?? ' '}</Heading>
-          <Body muted style={styles.body}>
-            {`Your house's Johns are on their way to the app. Until then, play them at ${SITE_URL.replace('https://', '')}.`}
-          </Body>
-        </Card>
-        <View style={styles.actions}>
-          <Button
-            variant="outline"
-            icon={LogOutIcon}
-            label={SIGN_IN_COPY.signOut}
-            disabled={leaving}
-            onPress={() => void leave()}
-            testID="sign-out"
-          />
-        </View>
-      </ScrollView>
-    </SafeAreaView>
+    <View style={styles.footer}>
+      {name ? <Body muted style={styles.perkText}>{`Signed in as ${name}`}</Body> : null}
+      <Button
+        variant="ghost"
+        icon={LogOutIcon}
+        label={SIGN_IN_COPY.signOut}
+        disabled={leaving}
+        onPress={() => void leave()}
+        testID="sign-out"
+      />
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
   screen: { flex: 1 },
-  page: { width: '100%', maxWidth: 1024, alignSelf: 'center', padding: SPACE.xl, gap: SPACE.xl },
-  name: { marginTop: SPACE.sm },
-  body: { marginTop: SPACE.md },
-  actions: { alignItems: 'flex-start' },
+  page: { width: '100%', maxWidth: 720, alignSelf: 'center', padding: SPACE.xl, flexGrow: 1 },
+  stack: { gap: SPACE.lg },
+  start: { alignItems: 'flex-start' },
+  loading: { marginTop: SPACE.xxl },
+  title: { marginTop: SPACE.xs },
+  hero: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: SPACE.lg,
+    padding: SPACE.lg,
+    borderLeftWidth: 10,
+    borderRadius: RADIUS * 1.4,
+  },
+  left: { fontFamily: FONT.black, fontSize: 52, lineHeight: 56 },
+  heroText: { flex: 1, minWidth: 0 },
+  heroLabel: { fontFamily: FONT.extrabold, fontSize: 16 },
+  bars: { flexDirection: 'row', flexWrap: 'wrap', gap: SPACE.xs, marginTop: SPACE.sm },
+  bar: { height: 6, width: 28, borderRadius: 2 },
+  perks: { alignItems: 'flex-end', gap: SPACE.xs },
+  streak: { flexDirection: 'row', alignItems: 'center', gap: SPACE.xs, borderRadius: 4, paddingHorizontal: SPACE.sm, paddingVertical: 4 },
+  streakText: { fontFamily: FONT.black, fontSize: 12, textTransform: 'uppercase', letterSpacing: 0.5 },
+  perk: { flexDirection: 'row', alignItems: 'center', gap: SPACE.xs },
+  perkText: { fontSize: 12 },
+  footer: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginTop: SPACE.xl },
 });

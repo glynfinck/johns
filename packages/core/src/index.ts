@@ -5,6 +5,7 @@
 export * from "./auth-paths";
 export * from "./away";
 export * from "./bin-night";
+export * from "./board";
 export * from "./copy";
 export * from "./deal";
 export * from "./dispute";
@@ -14,6 +15,7 @@ export * from "./format";
 export * from "./money";
 export * from "./outcome";
 export * from "./points";
+export * from "./proof";
 export * from "./schemas";
 export * from "./stake";
 export * from "./streak";

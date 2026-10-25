@@ -13,8 +13,8 @@ you're working in (`apps/api/AGENTS.md` for the Next.js app).
   johns.glyn.dev.
 - Platforms: the web today, served by `apps/api`. iOS, Android and web from
   one Expo app (`apps/client`) as `docs/specs/native-migration.md` lands,
-  phase by phase: its scaffold, front door, sign-in and starting or joining
-  a house are in, the house's own screens follow.
+  phase by phase: its scaffold, front door, sign-in, starting or joining a
+  house, and Today are in; the house's other screens follow.
   From here every feature must work on all three unless its spec says
   otherwise.
 - Solo project. My main language is Python: when code relies on a TypeScript
@@ -110,9 +110,12 @@ each app's AGENTS.md.
   balances, catch-up), `away.ts` (away days as local dates), `outcome.ts`
   (when a tick stands, live status), `points.ts` (the Table), `streak.ts`
   (streaks, immunity and swap tokens), `stake.ts` (forfeits, month
-  settlement, settle-up), `dispute.ts` (verdicts), `money.ts`, `format.ts`,
-  `domain.ts` (the shared words), `errors.ts`, `auth-paths.ts`. Every
-  function takes `now`.
+  settlement, settle-up), `dispute.ts` (verdicts), `board.ts` (the week's
+  board and Today's view of it, built from the rows each app reads),
+  `proof.ts` (a photo receipt's size and bucket path), `money.ts`,
+  `format.ts`, `domain.ts` (the shared words), `copy.ts` (both apps'
+  sentences), `schemas.ts` (what crosses the API), `errors.ts`,
+  `auth-paths.ts`. Every function takes `now`.
 - **The engine** (`apps/api/lib/engine/tick.ts`): decides with those rules
   and applies each decision through one service-role SQL function that is
   atomic and refuses to apply twice (`deal_week`, `settle_assignments`,

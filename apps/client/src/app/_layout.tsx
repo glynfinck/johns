@@ -10,6 +10,7 @@ import { StyleSheet, View } from 'react-native';
 
 import { Button } from '@/components/button';
 import { Body, Heading } from '@/components/text';
+import { QueryProvider } from '@/hooks/query';
 import { MembershipProvider, useMembership } from '@/hooks/use-membership';
 import { FONT_FILES, SPACE, useTheme } from '@/theme';
 
@@ -20,9 +21,11 @@ void SplashScreen.preventAutoHideAsync();
 
 export default function RootLayout() {
   return (
-    <MembershipProvider>
-      <Routes />
-    </MembershipProvider>
+    <QueryProvider>
+      <MembershipProvider>
+        <Routes />
+      </MembershipProvider>
+    </QueryProvider>
   );
 }
 

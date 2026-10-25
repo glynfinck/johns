@@ -1,6 +1,18 @@
 import { describe, expect, it } from "vitest";
 
-import { APP_NAME, FRONT_DOOR, JOIN_COPY, NEW_HOUSE_COPY, NO_HOUSE_COPY, SIGN_IN_COPY, TAGLINE } from "./copy";
+import {
+  APP_NAME,
+  FRONT_DOOR,
+  INVITE_COPY,
+  JOHN_COPY,
+  JOIN_COPY,
+  NEW_HOUSE_COPY,
+  NO_HOUSE_COPY,
+  NOT_DEALT_COPY,
+  SIGN_IN_COPY,
+  TAGLINE,
+  TODAY_COPY,
+} from "./copy";
 
 const signIn = Object.values(SIGN_IN_COPY).flatMap((value) =>
   typeof value === "function" ? [value("Google"), value("Apple")] : [value],
@@ -14,6 +26,25 @@ const house = [
   JOIN_COPY.livesHere(4),
   JOIN_COPY.join("Flat 3"),
 ];
+const today = [
+  ...[TODAY_COPY, JOHN_COPY, INVITE_COPY].flatMap((copy) => Object.values(copy).filter((v) => typeof v === "string")),
+  TODAY_COPY.thisWeekRange("12–18 Oct"),
+  TODAY_COPY.left(1),
+  TODAY_COPY.left(3),
+  TODAY_COPY.streak(1),
+  TODAY_COPY.streak(4),
+  TODAY_COPY.immunity(2),
+  JOHN_COPY.standsIn("in 3 hours"),
+  JOHN_COPY.disputed("Still filthy"),
+  JOHN_COPY.votes(1, 2, "in 5 hours"),
+  JOHN_COPY.dueBeforeYouGo("Fri 21:00"),
+  NOT_DEALT_COPY.nothingThisWeek,
+  NOT_DEALT_COPY.nothingThisWeekBody,
+  NOT_DEALT_COPY.notYet,
+  ...NOT_DEALT_COPY.adminSteps,
+  NOT_DEALT_COPY.waitingFor("Ava"),
+  INVITE_COPY.shareTitle("Flat 3"),
+];
 const words = [
   APP_NAME,
   TAGLINE,
@@ -25,6 +56,7 @@ const words = [
   ...FRONT_DOOR.points.flatMap((p) => [p.title, p.body]),
   ...signIn,
   ...house,
+  ...today,
 ];
 
 describe("the words before signing in", () => {
@@ -55,5 +87,14 @@ describe("JOIN_COPY", () => {
     expect(JOIN_COPY.livesHere(3)).toBe("3 people live here. Join and you’re dealt Johns from next week.");
     expect(JOIN_COPY.alreadyIn("Flat 3")).toBe("You’re already in Flat 3");
     expect(JOIN_COPY.join("Flat 3")).toBe("Join Flat 3");
+  });
+});
+
+describe("TODAY_COPY", () => {
+  it("counts in words", () => {
+    expect(TODAY_COPY.left(1)).toBe("John left this week");
+    expect(TODAY_COPY.left(0)).toBe("Johns left this week");
+    expect(TODAY_COPY.streak(1)).toBe("1 week");
+    expect(TODAY_COPY.streak(2)).toBe("2 weeks");
   });
 });

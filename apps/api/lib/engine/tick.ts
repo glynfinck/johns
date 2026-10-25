@@ -12,6 +12,7 @@ import {
   localDate,
   monthOf,
   monthWindow,
+  rulesOf,
   settleMonth,
   settleOutcome,
   standings,
@@ -21,10 +22,8 @@ import {
   weekWindow,
   weekWinners,
   type AwayPeriod,
-  type Currency,
   type Database,
   type DealJohn,
-  type HouseRules,
   type IsoDow,
   type Outcome,
   type PastWeek,
@@ -70,17 +69,8 @@ export interface TickSummary {
   reminders: number;
 }
 
-export function rulesOf(house: HouseRow): HouseRules {
-  return {
-    timezone: house.timezone,
-    currency: house.currency as Currency,
-    weekStarts: house.week_starts as IsoDow,
-    stakeMinor: house.stake_minor,
-    lateForfeitMinor: house.late_forfeit_minor,
-    missedForfeitMinor: house.missed_forfeit_minor,
-    disputeHours: house.dispute_hours,
-  };
-}
+// The house's rules from its row live in core, beside the board both apps build.
+export { rulesOf };
 
 type Ok<R> = Extract<R, { error: null }>;
 

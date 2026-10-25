@@ -1,8 +1,11 @@
 import { randomUUID } from "node:crypto";
 
+import { weekIndex, weekWindow } from "@app/core";
 import type { BrowserContext } from "@playwright/test";
 import { createBrowserClient } from "@supabase/ssr";
-import { createClient } from "@supabase/supabase-js";
+import { createClient, type SupabaseClient } from "@supabase/supabase-js";
+
+import { dealWeek, loadHouse } from "../lib/engine/tick";
 
 const SUPABASE_URL = process.env.NEXT_PUBLIC_SUPABASE_URL;
 const ANON_KEY = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
@@ -63,6 +66,11 @@ export async function signInAs(context: BrowserContext, name: string): Promise<s
  * once per tab, so a test that signs out stays signed out across reloads.
  */
 export async function signInToClient(context: BrowserContext, name: string): Promise<string> {
+  return (await clientSession(context, name)).id;
+}
+
+/** signInToClient's session, with a supabase-js client signed in as the same person. */
+async function clientSession(context: BrowserContext, name: string): Promise<{ id: string; client: SupabaseClient }> {
   const { email, id } = await createHousemate(name);
 
   const store = new Map<string, string>();
@@ -88,7 +96,52 @@ export async function signInToClient(context: BrowserContext, name: string): Pro
     },
     { origin: CLIENT_URL, entries: [...store] },
   );
-  return id;
+  return { id, client };
+}
+
+/**
+ * Someone signed in to the Expo app's web build, in a house of their own
+ * with this week already handed out: they create the house as the app does,
+ * its Johns are added as an admin adds them, and the week is dealt through
+ * the engine, as "Hand out this week's Johns" does. Every John lands on them.
+ */
+export async function dealtHouseInClient(
+  context: BrowserContext,
+  name: string,
+  houseName: string,
+  johns: { name: string; category?: string; needsPhoto?: boolean }[],
+): Promise<{ userId: string; houseId: string }> {
+  const { id, client } = await clientSession(context, name);
+  const { data: houseId, error } = await client.rpc("create_house", {
+    p_name: houseName,
+    p_timezone: "Europe/London",
+    p_currency: "GBP",
+    p_week_starts: 1,
+  });
+  if (error) throw error;
+
+  const db = admin();
+  const now = new Date();
+  const week = weekWindow(now, "Europe/London", 1);
+  const { error: johnsError } = await db.from("johns").insert(
+    johns.map((j) => ({
+      house_id: houseId,
+      name: j.name,
+      category: j.category ?? "other",
+      points: 2,
+      // Sunday night: anything already due when the week is dealt gets a day's grace.
+      due_dow: 7,
+      due_time: "21:00",
+      every_weeks: 1,
+      anchor_week: weekIndex(week.startsOn),
+      needs_photo: j.needsPhoto ?? false,
+    })),
+  );
+  if (johnsError) throw johnsError;
+  const { house, members } = await loadHouse(db, houseId);
+  const { weekId } = await dealWeek(db, house, members, week, now, false);
+  if (!weekId) throw new Error("Nothing was dealt");
+  return { userId: id, houseId };
 }
 
 /**
