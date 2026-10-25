@@ -8,6 +8,7 @@
   ],
   "scripts": {
     "dev": "npm run dev -w apps/api --",
+    "dev:client": "npm run start -w apps/client --",
     "build": "npm run build -w apps/api --",
     "start": "npm run start -w apps/api --",
     "lint": "eslint \"scripts/**/*.test.ts\" && npm run lint --workspaces --if-present",
@@ -20,6 +21,8 @@
     "tick": "node scripts/tick.mjs",
     "provision": "node scripts/provision.mjs",
     "vapid": "node scripts/vapid.mjs",
+    "release:ios": "node scripts/release.mjs ios",
+    "release:android": "node scripts/release.mjs android",
     "types": "supabase gen types typescript --local > packages/core/src/db-types.ts",
     "db:types": "npm run types",
     "db:start": "supabase start",
@@ -32,5 +35,9 @@
     "typescript-eslint": "^8.46.0",
     "vitest": "^4.1.9",
     "web-push": "^3.6.7"
+  },
+  "overrides": {
+    "react": "19.3.0",
+    "react-dom": "19.3.0"
   }
 }

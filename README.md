@@ -36,14 +36,15 @@ style: council signage, hi-vis amber, a bin-lid colour per kind of John.
 The same shape as Pub Golf, Graph Editor and glyn.dev: Next.js 16 on Vercel,
 Supabase (Postgres, RLS, Auth with Google, Storage, Realtime, pg_cron),
 shadcn/ui on Tailwind 4, Vitest and Playwright, in an npm workspace shaped
-like `glynfinck/app-template`, on its way to iOS and Android
-(`docs/specs/native-migration.md`). See `AGENTS.md` for how it fits together
-and why.
+like `glynfinck/app-template`, on its way to iOS and Android with an Expo app
+(SDK 58, Expo Router, Jest; `docs/specs/native-migration.md`). See
+`AGENTS.md` for how it fits together and why.
 
 ## Repo map
 
 ```
-packages/core/                 @app/core, the pure rules: week, deal, outcome, points, streak, stake, dispute
+packages/core/                 @app/core, the pure rules: week, deal, outcome, points, streak, stake, dispute;
+                               Bin Night's colours and the shared words
 apps/api/                      the Next.js app at johns.glyn.dev
   app/(house)/                 today · week · wall · table · stake · house
   app/join/[code]/             the join link
@@ -53,8 +54,11 @@ apps/api/                      the Next.js app at johns.glyn.dev
   lib/actions/ lib/data/       server actions and loaders
   tests/db/                    the database attacked (the rules' tests sit beside them in core)
   e2e/                         phones and a laptop, end to end
+apps/client/                   the Expo app for iOS, Android and web (so far: the front door)
+  src/app/                     screens (Expo Router)
+  src/components/ src/theme.ts Bin Night in React Native
 supabase/migrations/           schema, RLS, the housemate functions, the cron job
-scripts/                       provision, the clock by hand, VAPID keys
+scripts/                       provision, the clock by hand, VAPID keys, the store release gate
 ```
 
 ## Develop
@@ -67,7 +71,11 @@ cp supabase/.env.example supabase/.env.local
 supabase start                         # ports 54340–54344
 cp apps/api/.env.example apps/api/.env.local   # then fill in from `supabase status -o env`
 npm run dev                            # http://localhost:3205
+npm run dev:client                     # the Expo app: Metro on 8205 (w for web, or Expo Go)
 ```
+
+The Expo app reads `apps/client/.env.local` (copy `.env.example`). Its front
+door needs nothing; sign-in arrives in Phase 4.
 
 Sign-in is Google-only. To use the app locally without a Google client,
 create a user in Studio (http://127.0.0.1:54343) and sign in with the
@@ -77,14 +85,15 @@ localhost.
 ## Test
 
 ```sh
-npm test            # pure rules (@app/core) and provision's decisions, no stack
+npm test            # pure rules (@app/core), the Expo app's Jest, the scripts' decisions; no stack
 npm run test:db     # RLS, the housemate functions and the engine, on the local stack
 npm run test:e2e    # Playwright: Pixel 7, iPhone 15, desktop Firefox, a 1440px laptop
 ```
 
 ## Deploy
 
-See `DEPLOYMENT.md`.
+See `DEPLOYMENT.md`. The Expo app isn't deployed anywhere yet, and store
+releases stay off in `release-targets.json` until the store accounts exist.
 
 ## Later
 
