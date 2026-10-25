@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 
 import { CURRENCIES } from "./domain";
 import { CURRENCY_SYMBOL, currencyForCountry, formatMoney, formatSigned, parseMoney } from "./money";
-import { balances, forfeitFor, settleMonth, settleUp, type LedgerEntry } from "./stake";
+import { balances, buildStake, forfeitFor, HISTORY_LENGTH, settleMonth, settleUp, type LedgerEntry, type LedgerRow } from "./stake";
 
 const RULES = { lateForfeitMinor: 100, missedForfeitMinor: 300 };
 
@@ -139,5 +139,77 @@ describe("CURRENCY_SYMBOL", () => {
     expect(Object.keys(CURRENCY_SYMBOL).sort()).toEqual([...CURRENCIES].sort());
     expect(CURRENCY_SYMBOL.GBP).toBe("£");
     expect(CURRENCY_SYMBOL.EUR).toBe("€");
+  });
+});
+
+describe("buildStake", () => {
+  let id = 0;
+  const entry = (user_id: string, kind: string, amount_minor: number, month: string, counterparty: string | null = null): LedgerRow => ({
+    id: ++id,
+    user_id,
+    kind,
+    amount_minor,
+    month,
+    counterparty,
+    created_at: `2026-10-${String(10 + (id % 18)).padStart(2, "0")}T12:00:00Z`,
+  });
+
+  it("projects this month as if it ended now, capped at the stake", () => {
+    const view = buildStake({
+      ledger: [entry("ava", "forfeit", -300, "2026-10"), entry("ava", "forfeit", -2500, "2026-10"), entry("ben", "forfeit", -100, "2026-10")],
+      closedMonths: [],
+      memberIds: ["ava", "ben", "cal"],
+      stakeMinor: 2000,
+      month: "2026-10",
+    });
+    expect(view.projection).toEqual([
+      { userId: "ava", forfeitedRaw: 2800, forfeited: 2000, received: 50, net: -1950 },
+      { userId: "ben", forfeitedRaw: 100, forfeited: 100, received: 1000, net: 900 },
+      { userId: "cal", forfeitedRaw: 0, forfeited: 0, received: 1050, net: 1050 },
+    ]);
+    // Nothing is owed until the month closes.
+    expect(view.transfers).toEqual([]);
+    // A month's projection sums to zero.
+    expect(view.projection.reduce((sum, p) => sum + p.net, 0)).toBe(0);
+  });
+
+  it("owes only what closed months left, after payments", () => {
+    const view = buildStake({
+      ledger: [
+        entry("ava", "forfeit", -400, "2026-09"),
+        entry("ben", "share", 400, "2026-09"),
+        entry("ava", "payment", 100, "2026-10", "ben"),
+        entry("ben", "payment", -100, "2026-10", "ava"),
+        entry("cal", "forfeit", -300, "2026-10"),
+      ],
+      closedMonths: ["2026-09"],
+      memberIds: ["ava", "ben", "cal"],
+      stakeMinor: 2000,
+      month: "2026-10",
+    });
+    expect(view.outstanding).toEqual(new Map([["ava", -300], ["ben", 300]]));
+    expect(view.transfers).toEqual([{ from: "ava", to: "ben", amount: 300 }]);
+  });
+
+  it("is square, with nothing listed, for a house with no ledger yet", () => {
+    const view = buildStake({ ledger: [], closedMonths: [], memberIds: ["ava"], stakeMinor: 2000, month: "2026-10" });
+    expect(view.transfers).toEqual([]);
+    expect(view.history).toEqual([]);
+    expect(view.projection).toEqual([{ userId: "ava", forfeitedRaw: 0, forfeited: 0, received: 0, net: 0 }]);
+  });
+
+  it("lists the latest entries, as many as the Stake shows", () => {
+    const ledger = Array.from({ length: HISTORY_LENGTH + 5 }, () => entry("ava", "forfeit", -100, "2026-08"));
+    const view = buildStake({ ledger, closedMonths: [], memberIds: ["ava"], stakeMinor: 2000, month: "2026-10" });
+    expect(view.history).toHaveLength(HISTORY_LENGTH);
+    expect(view.history[0]).toEqual({
+      id: ledger[0].id,
+      userId: "ava",
+      kind: "forfeit",
+      amount: -100,
+      month: "2026-08",
+      counterparty: null,
+      createdAt: ledger[0].created_at,
+    });
   });
 });

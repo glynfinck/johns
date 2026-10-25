@@ -1,5 +1,6 @@
 "use client";
 
+import { STAKE_COPY } from "@app/core";
 import { BanknoteIcon } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
@@ -22,7 +23,7 @@ export function ConfirmReceived({
   return (
     <Button size="compact" variant="outline" disabled={pending} onClick={() => run(() => confirmPayment(houseId, fromUserId, amount))}>
       <BanknoteIcon aria-hidden />
-      {pending ? "Saving…" : label}
+      {pending ? STAKE_COPY.saving : label}
     </Button>
   );
 }
