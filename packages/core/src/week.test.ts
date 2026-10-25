@@ -10,7 +10,7 @@ import {
   previousMonth,
   weekIndex,
   weekWindow,
-} from "@/lib/week";
+} from "./week";
 
 const LONDON = "Europe/London";
 

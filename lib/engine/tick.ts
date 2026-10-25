@@ -1,31 +1,42 @@
-import type { SupabaseClient } from "@supabase/supabase-js";
-
-import { verdict } from "@/lib/dispute";
-import type { Currency, HouseRules, IsoDow, Outcome } from "@/lib/domain";
-import { settleOutcome } from "@/lib/outcome";
-import { standings, weekWinners } from "@/lib/points";
-import { awayOn, type AwayPeriod } from "@/lib/away";
-import { BALANCE_WEEKS, carryOver, fairShares, weekShares, type DealJohn, type PastWeek } from "@/lib/deal";
-import { forfeitFor, settleMonth } from "@/lib/stake";
-import { earnsImmunity, isCleanWeek } from "@/lib/streak";
 import {
+  BALANCE_WEEKS,
+  awayOn,
+  carryOver,
   dueAt,
+  earnsImmunity,
+  fairShares,
+  forfeitFor,
   graceDue,
+  isCleanWeek,
   isDueInWeek,
   localDate,
   monthOf,
   monthWindow,
+  settleMonth,
+  settleOutcome,
+  standings,
+  verdict,
   weekIndex,
+  weekShares,
   weekWindow,
+  weekWinners,
+  type AwayPeriod,
+  type Currency,
+  type Database,
+  type DealJohn,
+  type HouseRules,
+  type IsoDow,
+  type Outcome,
+  type PastWeek,
   type WeekWindow,
-} from "@/lib/week";
-import type { Database } from "@/types/database";
+} from "@app/core";
+import type { SupabaseClient } from "@supabase/supabase-js";
 
 /**
  * The engine: everything the clock does to a house.
  *
- * It decides with the pure rules in lib/ and applies each decision through
- * one service-role SQL function that refuses to apply it twice
+ * It decides with the pure rules in @app/core and applies each decision
+ * through one service-role SQL function that refuses to apply it twice
  * (supabase/migrations/*_init.sql). So the tick is safe to run as often as
  * anyone likes, from pg_cron, from a page load (lib/engine/fresh.ts) or from
  * two of those at once.
@@ -143,7 +154,7 @@ export async function tickAll(db: Db, now: Date, notify?: Notify) {
 
 /**
  * Each housemate's balance going into a week: what they were handed minus
- * their share, over the weeks before it (lib/deal.ts). Reads through whatever
+ * their share, over the weeks before it (@app/core deal.ts). Reads through whatever
  * client it is given, so a screen can show the same number the deal used.
  */
 export async function loadBalances(

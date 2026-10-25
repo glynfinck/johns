@@ -1,3 +1,4 @@
+import { formatMoney, formatSigned, monthLabel } from "@app/core";
 import { ArrowRightIcon } from "lucide-react";
 import type { Metadata } from "next";
 
@@ -6,8 +7,6 @@ import { ConfirmReceived } from "@/components/stake/confirm-received";
 import { Avatar } from "@/components/ui/avatar";
 import { nameOf, requireHouse } from "@/lib/data/house";
 import { getStake } from "@/lib/data/stake";
-import { monthLabel } from "@/lib/format";
-import { formatMoney, formatSigned } from "@/lib/money";
 import { cn } from "@/lib/utils";
 
 export const metadata: Metadata = { title: "The Stake" };

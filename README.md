@@ -45,11 +45,11 @@ app/(house)/          today · week · wall · table · stake · house
 app/join/[code]/      the join link
 app/api/cron/tick/    the clock (called by pg_cron)
 components/           shell, John cards and actions, house settings, ui (shadcn)
-lib/                  pure rules: week, deal, outcome, points, streak, stake, dispute
+packages/core/        @app/core, the pure rules: week, deal, outcome, points, streak, stake, dispute
 lib/engine/           the tick: applies the rules to the database
 lib/actions/ data/    server actions and loaders
 supabase/migrations/  schema, RLS, the housemate functions, the cron job
-tests/unit/ tests/db/ pure rules, and the database attacked
+tests/db/             the database attacked (the rules' tests sit beside them in core)
 e2e/                  phones and a laptop, end to end
 ```
 
@@ -71,7 +71,7 @@ create a user in Studio (http://127.0.0.1:54343) and sign in with the
 ## Test
 
 ```sh
-npm test            # pure rules, no stack
+npm test            # pure rules (@app/core) and provision's decisions, no stack
 npm run test:db     # RLS, the housemate functions and the engine, on the local stack
 npm run test:e2e    # Playwright: Pixel 7, iPhone 15, desktop Firefox, a 1440px laptop
 ```

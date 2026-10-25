@@ -1,9 +1,9 @@
 "use server";
 
+import { humanError } from "@app/core";
 import { refresh } from "next/cache";
 
 import { tickHouse } from "@/lib/engine/tick";
-import { humanError } from "@/lib/errors";
 import { pushNotifier } from "@/lib/push";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { createClient } from "@/lib/supabase/server";

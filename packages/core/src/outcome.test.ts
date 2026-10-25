@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { liveStatus, settleOutcome, standsAt, tickWouldBe, type AssignmentFacts } from "@/lib/outcome";
+import { liveStatus, settleOutcome, standsAt, tickWouldBe, type AssignmentFacts } from "./outcome";
 
 const due = new Date("2026-10-08T18:00:00Z");
 const weekEnds = new Date("2026-10-11T23:00:00Z");

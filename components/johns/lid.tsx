@@ -1,6 +1,6 @@
+import { CATEGORY_LABEL, type Category } from "@app/core";
 import type { CSSProperties } from "react";
 
-import { CATEGORY_LABEL, type Category } from "@/lib/domain";
 import { cn } from "@/lib/utils";
 
 /** The bin-lid colour for a kind of John, as a CSS variable reference. */

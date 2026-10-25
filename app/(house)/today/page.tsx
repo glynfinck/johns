@@ -1,3 +1,4 @@
+import { addDaysTo, currentOrNext, dateRange, formatBalance, formatMoney, formatSigned, weekRange } from "@app/core";
 import { FlameIcon, PlaneIcon, RepeatIcon, ShieldIcon } from "lucide-react";
 import type { Metadata } from "next";
 import Link from "next/link";
@@ -7,16 +8,12 @@ import { JohnCard } from "@/components/johns/john-card";
 import { NotDealt } from "@/components/johns/not-dealt";
 import { PageHeader } from "@/components/shell/app-shell";
 import { Standings } from "@/components/table/standings";
-import { currentOrNext } from "@/lib/away";
 import { SITE_URL } from "@/lib/config";
 import { getAway } from "@/lib/data/away";
 import { getBalances } from "@/lib/data/balance";
 import { requireHouse } from "@/lib/data/house";
 import { getStake } from "@/lib/data/stake";
 import { getWeekBoard, type BoardItem } from "@/lib/data/week";
-import { dateRange, formatBalance, weekRange } from "@/lib/format";
-import { addDaysTo } from "@/lib/week";
-import { formatMoney, formatSigned } from "@/lib/money";
 
 export const metadata: Metadata = { title: "Today" };
 

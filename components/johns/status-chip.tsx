@@ -1,7 +1,6 @@
+import { STATUS_LABEL, type LiveStatus } from "@app/core";
 import { CheckIcon, ClockIcon, EyeIcon, ShieldIcon, TriangleAlertIcon, XIcon } from "lucide-react";
 
-import { STATUS_LABEL } from "@/lib/format";
-import type { LiveStatus } from "@/lib/outcome";
 import { cn } from "@/lib/utils";
 
 const STYLE: Record<LiveStatus, string> = {

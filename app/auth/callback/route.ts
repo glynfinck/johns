@@ -1,6 +1,6 @@
+import { safeNext } from "@app/core";
 import { NextResponse } from "next/server";
 
-import { safeNext } from "@/lib/auth-paths";
 import { createClient } from "@/lib/supabase/server";
 
 /** OAuth callback: exchanges Google's PKCE code for a session, then goes on. */

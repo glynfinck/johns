@@ -1,5 +1,6 @@
+import type { TableRow } from "@app/core";
+
 import { Avatar } from "@/components/ui/avatar";
-import type { TableRow } from "@/lib/points";
 import { cn } from "@/lib/utils";
 
 /**

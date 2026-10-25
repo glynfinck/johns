@@ -1,3 +1,4 @@
+import { dateRange, formatMoney, monthLabel, relative } from "@app/core";
 import {
   BadgeCheckIcon,
   BanknoteIcon,
@@ -18,8 +19,6 @@ import { Avatar } from "@/components/ui/avatar";
 import { ReactionBar } from "@/components/wall/reaction-bar";
 import { nameOf, requireHouse, type HouseContext } from "@/lib/data/house";
 import { getWall, type WallEvent } from "@/lib/data/wall";
-import { dateRange, monthLabel, relative } from "@/lib/format";
-import { formatMoney } from "@/lib/money";
 import { cn } from "@/lib/utils";
 
 export const metadata: Metadata = { title: "The Wall" };

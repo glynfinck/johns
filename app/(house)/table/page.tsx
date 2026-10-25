@@ -1,3 +1,4 @@
+import { BALANCE_WEEKS, IMMUNITY_EVERY, MAKEUP_LABEL, formatBalance, monthLabel } from "@app/core";
 import { FlameIcon, RepeatIcon, ShieldIcon } from "lucide-react";
 import type { Metadata } from "next";
 
@@ -7,10 +8,7 @@ import { Avatar } from "@/components/ui/avatar";
 import { getBalances } from "@/lib/data/balance";
 import { requireHouse } from "@/lib/data/house";
 import { getMonthTable, getWeekBoard } from "@/lib/data/week";
-import { BALANCE_WEEKS, MAKEUP_LABEL } from "@/lib/deal";
-import { formatBalance, monthLabel } from "@/lib/format";
 import { cn } from "@/lib/utils";
-import { IMMUNITY_EVERY } from "@/lib/streak";
 
 export const metadata: Metadata = { title: "The Table" };
 

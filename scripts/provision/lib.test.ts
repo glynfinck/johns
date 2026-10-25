@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { CONFIG } from "@/scripts/provision/config.mjs";
+import { CONFIG } from "./config.mjs";
 import {
   apexDomain,
   authProblems,
@@ -19,7 +19,7 @@ import {
   todoText,
   tokenHint,
   vaultUpsertSql,
-} from "@/scripts/provision/lib.mjs";
+} from "./lib.mjs";
 
 /**
  * The decisions `npm run provision` makes before it calls anything. The

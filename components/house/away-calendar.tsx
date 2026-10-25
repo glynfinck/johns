@@ -1,8 +1,6 @@
+import { addDaysTo, awayOn, dateRange, datesBetween, firstName, type AwayPeriod, type IsoDow } from "@app/core";
+
 import { Avatar } from "@/components/ui/avatar";
-import { awayOn, datesBetween, type AwayPeriod } from "@/lib/away";
-import type { IsoDow } from "@/lib/domain";
-import { dateRange, firstName } from "@/lib/format";
-import { addDaysTo } from "@/lib/week";
 import { cn } from "@/lib/utils";
 
 const isoDay = (date: string): IsoDow => {

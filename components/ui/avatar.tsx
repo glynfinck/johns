@@ -1,4 +1,5 @@
-import { initials } from "@/lib/format";
+import { initials } from "@app/core";
+
 import { cn } from "@/lib/utils";
 
 /**

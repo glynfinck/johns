@@ -1,3 +1,4 @@
+import { currencyForCountry } from "@app/core";
 import type { Metadata } from "next";
 import { headers } from "next/headers";
 import { redirect } from "next/navigation";
@@ -5,7 +6,6 @@ import { redirect } from "next/navigation";
 import { Wordmark } from "@/components/brand/wordmark";
 import { CreateHouseForm } from "@/components/house/create-house-form";
 import { getMembership } from "@/lib/data/house";
-import { currencyForCountry } from "@/lib/money";
 
 export const metadata: Metadata = { title: "Set up your house" };
 

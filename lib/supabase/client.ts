@@ -1,8 +1,7 @@
 "use client";
 
+import type { Database } from "@app/core";
 import { createBrowserClient } from "@supabase/ssr";
-
-import type { Database } from "@/types/database";
 
 /** Browser Supabase client (singleton per tab). */
 export function createClient() {

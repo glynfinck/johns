@@ -1,9 +1,16 @@
 import "server-only";
 
-import type { Outcome } from "@/lib/domain";
-import { liveStatus, standsAt, type LiveStatus } from "@/lib/outcome";
-import { standings, type TableRow } from "@/lib/points";
-import { monthWindow, monthOf, weekWindow } from "@/lib/week";
+import {
+  liveStatus,
+  monthOf,
+  monthWindow,
+  standings,
+  standsAt,
+  weekWindow,
+  type LiveStatus,
+  type Outcome,
+  type TableRow,
+} from "@app/core";
 
 import type { HouseContext } from "./house";
 

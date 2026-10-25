@@ -1,5 +1,6 @@
 "use client";
 
+import { CURRENCIES, DOW_LABEL, type Currency, type IsoDow } from "@app/core";
 import { useState } from "react";
 
 import { timeZones } from "@/components/house/settings-form";
@@ -8,7 +9,6 @@ import { FieldLabel, Input } from "@/components/ui/input";
 import { NativeSelect } from "@/components/ui/native-select";
 import { useAction } from "@/hooks/use-action";
 import { createHouse } from "@/lib/actions/house";
-import { CURRENCIES, DOW_LABEL, type Currency, type IsoDow } from "@/lib/domain";
 
 const SYMBOL: Record<Currency, string> = { GBP: "£", CAD: "$", USD: "$", EUR: "€" };
 

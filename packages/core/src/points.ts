@@ -1,4 +1,4 @@
-import type { LiveStatus } from "@/lib/outcome";
+import type { LiveStatus } from "./outcome";
 
 /**
  * The Table: effort points earned, not points handed out.
@@ -60,7 +60,7 @@ export function standings(rows: readonly TableInput[], memberIds: readonly strin
 
 /**
  * Who topped a closed week: everyone tied for the most points, as long as
- * somebody scored. They each earn a swap token (see lib/streak.ts).
+ * somebody scored. They each earn a swap token (see streak.ts).
  */
 export function weekWinners(rows: readonly TableRow[]): string[] {
   const top = rows.reduce((max, r) => Math.max(max, r.points), 0);

@@ -1,7 +1,7 @@
+import { monthOf, nextWeek } from "@app/core";
 import { describe, expect, it } from "vitest";
 
 import { tickHouse } from "@/lib/engine/tick";
-import { monthOf, nextWeek } from "@/lib/week";
 import { adminClient } from "@/tests/support/clients";
 import { expectOk } from "@/tests/support/expect";
 import { actorFor, addJohns, deal, makeHouse, someoneElse, thisWeek, weeksAgo, ZONE } from "@/tests/support/factories";

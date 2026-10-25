@@ -1,8 +1,7 @@
 import "server-only";
 
+import type { Database } from "@app/core";
 import { createClient } from "@supabase/supabase-js";
-
-import type { Database } from "@/types/database";
 
 /**
  * The service-role client. It bypasses RLS, so it is for the engine

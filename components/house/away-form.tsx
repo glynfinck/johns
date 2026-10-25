@@ -1,5 +1,6 @@
 "use client";
 
+import { dateRange, type AwayPeriod } from "@app/core";
 import { PlaneIcon } from "lucide-react";
 import { useState, useTransition } from "react";
 import { toast } from "sonner";
@@ -8,8 +9,6 @@ import { Button } from "@/components/ui/button";
 import { FieldLabel, Input } from "@/components/ui/input";
 import { useAction } from "@/hooks/use-action";
 import { cancelAway, setAway } from "@/lib/actions/away";
-import type { AwayPeriod } from "@/lib/away";
-import { dateRange } from "@/lib/format";
 
 /** Book time away for yourself. */
 export function AwayForm({ today }: { today: string }) {
