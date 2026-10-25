@@ -23,7 +23,7 @@ export default async function Home() {
       <header className="flex items-center justify-between py-2">
         <Wordmark className="text-2xl" />
         <Link href="/signin" className="text-sm font-bold underline-offset-4 hover:underline">
-          Sign in
+          {FRONT_DOOR.signIn}
         </Link>
       </header>
 
@@ -36,10 +36,10 @@ export default async function Home() {
         <p className="mt-4 max-w-xl text-lg text-muted-foreground">{TAGLINE}</p>
         <div className="mt-7 flex flex-wrap gap-3">
           <Button asChild>
-            <Link href="/signin">Start your house</Link>
+            <Link href="/signin">{FRONT_DOOR.start}</Link>
           </Button>
           <Button asChild variant="outline">
-            <Link href="/signin">I have a join link</Link>
+            <Link href="/signin">{FRONT_DOOR.join}</Link>
           </Button>
         </div>
       </section>

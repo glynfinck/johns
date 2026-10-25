@@ -23,7 +23,8 @@ description: Build, run and drive the Johns apps (Next.js, the Expo app, local S
 
 - Signed-in flows without Google: `apps/api/e2e/auth.ts` `signInAs(context, name)`
   mints a real session with the admin API and hands the cookies to a browser
-  context. `cleanUp(userIds)` removes what it made.
+  context; `signInToClient(context, name)` does the same for the Expo web
+  build, in localStorage. `cleanUp(userIds)` removes what it made.
 - The clock: open any house page (it catches the house up), or
   `npm run tick` to run the cron tick for every house (needs `CRON_SECRET`).
   To see a week end, drive `tickHouse(adminClient, houseId, futureDate)` from

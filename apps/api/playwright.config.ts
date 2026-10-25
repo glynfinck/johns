@@ -6,6 +6,8 @@ import dotenv from "dotenv";
 dotenv.config({ path: ".env.local", quiet: true });
 
 const PORT = 3205;
+// The Expo app's web build, beside it (the e2e/client-*.spec.ts files).
+const CLIENT_PORT = 8205;
 
 // A sandbox whose preinstalled Chromium does not match this Playwright can
 // point at it instead of downloading (PW_CHROMIUM=/opt/pw-browsers/chromium).
@@ -14,7 +16,8 @@ const chromium = process.env.PW_CHROMIUM ? { launchOptions: { executablePath: pr
 /**
  * E2E against the local Supabase stack (ports 54341-54344), once per row of
  * the platform matrix: the phones a house actually has, and the laptop the
- * week board is designed for.
+ * week board is designed for. Two apps under test: the Next app on 3205 and
+ * the Expo app's web build on 8205.
  */
 export default defineConfig({
   testDir: "./e2e",
@@ -40,10 +43,25 @@ export default defineConfig({
       use: { ...devices["Desktop Chrome"], viewport: { width: 1440, height: 900 }, ...chromium },
     },
   ],
-  webServer: {
-    command: process.env.CI ? `npx next start -p ${PORT}` : `npx next dev -p ${PORT}`,
-    url: `http://localhost:${PORT}/signin`,
-    reuseExistingServer: !process.env.CI,
-    timeout: 120_000,
-  },
+  webServer: [
+    {
+      command: process.env.CI ? `npx next start -p ${PORT}` : `npx next dev -p ${PORT}`,
+      url: `http://localhost:${PORT}/signin`,
+      reuseExistingServer: !process.env.CI,
+      timeout: 120_000,
+    },
+    {
+      // Exported against the same local stack (EXPO_PUBLIC_ values are baked
+      // in at export), then served as a host would serve a single-page app.
+      command: `npx expo export -p web && node ../api/e2e/serve-client.mjs dist ${CLIENT_PORT}`,
+      cwd: "../client",
+      url: `http://localhost:${CLIENT_PORT}/`,
+      reuseExistingServer: !process.env.CI,
+      timeout: 300_000,
+      env: {
+        EXPO_PUBLIC_SUPABASE_URL: process.env.NEXT_PUBLIC_SUPABASE_URL ?? "",
+        EXPO_PUBLIC_SUPABASE_PUBLISHABLE_KEY: process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY ?? "",
+      },
+    },
+  ],
 });

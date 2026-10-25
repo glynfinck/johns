@@ -1,4 +1,4 @@
-import { safeNext, signInReason } from "@app/core";
+import { safeNext, SIGN_IN_COPY, signInReason } from "@app/core";
 import type { Metadata } from "next";
 import Link from "next/link";
 import { redirect } from "next/navigation";
@@ -21,17 +21,20 @@ export default async function SignInPage({ searchParams }: PageProps<"/signin">)
         <Wordmark className="text-4xl" />
       </Link>
       <div>
-        <h1 className="text-2xl font-black tracking-tight uppercase">Sign in</h1>
+        <h1 className="text-2xl font-black tracking-tight uppercase">{SIGN_IN_COPY.heading}</h1>
         <p className="mt-1 text-muted-foreground">{signInReason(next)}</p>
       </div>
       {params.error ? (
         <p role="alert" className="rounded-md bg-hazard/10 p-3 text-sm font-bold text-hazard">
-          Google didn&rsquo;t finish signing you in. Try again.
+          {SIGN_IN_COPY.failed("Google")}
         </p>
       ) : null}
       <GoogleSignIn next={next === "/" ? "/today" : next} />
       <p className="text-xs text-muted-foreground">
-        By signing in you agree to the house rules your housemates set. <Link href="/privacy" className="underline">Privacy</Link>
+        {SIGN_IN_COPY.terms}{" "}
+        <Link href="/privacy" className="underline">
+          {SIGN_IN_COPY.privacy}
+        </Link>
       </p>
     </main>
   );

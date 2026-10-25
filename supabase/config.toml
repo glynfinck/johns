@@ -160,7 +160,8 @@ site_url = "http://localhost:3205"
 # The public URL that Auth serves on. Defaults to the API external URL with `/auth/v1` appended.
 # external_url = ""
 # A list of *exact* URLs that auth providers are permitted to redirect to post authentication.
-additional_redirect_urls = ["http://localhost:3205", "http://127.0.0.1:3205"]
+# The web app on 3205; the Expo app's web build on 8205 comes back to /signin.
+additional_redirect_urls = ["http://localhost:3205", "http://127.0.0.1:3205", "http://localhost:8205/**"]
 # How long tokens are valid for, in seconds. Defaults to 3600 (1 hour), maximum 604,800 (1 week).
 jwt_expiry = 3600
 # JWT issuer URL. If not set, defaults to auth.external_url.
@@ -319,11 +320,14 @@ max_frequency = "5s"
 # Use an external OAuth provider. The full list of providers are: `apple`, `azure`, `bitbucket`,
 # `discord`, `facebook`, `github`, `gitlab`, `google`, `keycloak`, `linkedin_oidc`, `notion`, `twitch`,
 # `twitter`, `x`, `slack`, `spotify`, `workos`, `zoom`.
+# Sign in with Apple, from the iOS app only: native sign-in hands Supabase an
+# identity token for the bundle ID, so no secret is needed. Off until there is
+# an Apple Developer account to sign the app with the capability; then set
+# enabled = true to try it on the simulator against this stack.
 [auth.external.apple]
 enabled = false
-client_id = ""
-# DO NOT commit your OAuth provider secret to git. Use environment variable substitution instead:
-secret = "env(SUPABASE_AUTH_EXTERNAL_APPLE_SECRET)"
+client_id = "dev.glyn.johns"
+secret = ""
 # Overrides the default auth callback URL derived from auth.external_url.
 redirect_uri = ""
 # Overrides the default auth provider URL. Used to support self-hosted gitlab, single-tenant Azure,
@@ -336,9 +340,11 @@ email_optional = false
 
 # Allow Solana wallet holders to sign in to your project via the Sign in with Solana (SIWS, EIP-4361) standard.
 # You can configure "web3" rate limit in the [auth.rate_limit] section and set up [auth.captcha] if self-hosting.
-# Google is the only way in (see AGENTS.md). Locally the e2e and db suites mint
-# sessions with the admin API + email/password, which is why [auth.email]
-# signup stays on here and is switched off in [remotes.*].
+# Google is the way in (see AGENTS.md), and Apple too on iOS. Locally the e2e
+# and db suites mint sessions with the admin API + email/password, which is
+# why [auth.email] signup stays on here and is switched off in [remotes.*].
+# AUTH_GOOGLE_CLIENT_ID may list the iOS and Android clients after the web's,
+# comma-separated, to sign in from a development build.
 [auth.external.google]
 enabled = true
 client_id = "env(AUTH_GOOGLE_CLIENT_ID)"

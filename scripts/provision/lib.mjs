@@ -20,11 +20,27 @@ export function authSettings(c, google) {
   };
   if (google) {
     body.external_google_enabled = true;
-    body.external_google_client_id = google.clientId;
+    body.external_google_client_id = googleClientIds(c, google);
     body.external_google_secret = google.secret;
+    body.external_google_skip_nonce_check = googleSkipsNonce(c);
   }
   return body;
 }
+
+/**
+ * Every Google client Supabase accepts an ID token for, comma-separated: the
+ * web's first (its OAuth redirect uses the first), then iOS and Android.
+ */
+export function googleClientIds(c, google) {
+  return [google.clientId, c.google.iosClientId, ...c.google.androidClientIds].filter(Boolean).join(",");
+}
+
+/**
+ * Google's iOS sign-in puts a nonce in its token that the app can't see, so
+ * Supabase can only accept it with the nonce check off (Supabase's guide).
+ * That weakens replay protection, so it stays on until there is an iOS client.
+ */
+export const googleSkipsNonce = (c) => Boolean(c.google.iosClientId);
 
 /**
  * What is wrong with the auth settings as read back. Each failure here once
@@ -43,7 +59,10 @@ export function authProblems(actual, c, google) {
     const id = String(actual.external_google_client_id ?? "");
     if (!actual.external_google_enabled) problems.push("Google sign-in is off");
     if (id.startsWith("env(")) problems.push(`the Google client ID is the unresolved placeholder ${id}`);
-    else if (id !== google.clientId) problems.push("the Google client ID isn't the one given");
+    else if (id !== googleClientIds(c, google)) problems.push("the Google client IDs aren't the ones given");
+    if (Boolean(actual.external_google_skip_nonce_check) !== googleSkipsNonce(c)) {
+      problems.push(`Google's nonce check is ${actual.external_google_skip_nonce_check ? "skipped" : "on"}, not ${googleSkipsNonce(c) ? "skipped (iOS)" : "on"}`);
+    }
   }
   return problems;
 }

@@ -1,6 +1,8 @@
 import { BIN_NIGHT } from '@app/core';
 import { fireEvent, render, screen } from '@testing-library/react-native';
 
+import { TAP } from '@/theme';
+
 import { Button } from './button';
 import { HazardTape } from './hazard-tape';
 import { Lid } from './lid';
@@ -22,6 +24,13 @@ describe('Bin Night components', () => {
     await rerender(<Button label="Hand out this week's Johns" onPress={onPress} disabled />);
     await fireEvent.press(screen.getByRole('button'));
     expect(onPress).toHaveBeenCalledTimes(1);
+  });
+
+  it('dresses a link as a button, keeping its look', async () => {
+    await render(<Button href="/signin" label="Start your house" />);
+    const link = screen.getByRole('link', { name: 'Start your house' });
+    expect(link).toHaveProp('href', '/signin');
+    expect(link).toHaveStyle({ minHeight: TAP, backgroundColor: BIN_NIGHT.light.hivis });
   });
 
   it('labels the wordmark for screen readers', async () => {

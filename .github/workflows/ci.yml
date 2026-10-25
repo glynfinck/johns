@@ -86,6 +86,8 @@ jobs:
       - name: Install Playwright browsers
         run: npx playwright install --with-deps chromium webkit firefox
 
+      # Both web apps: the Next app, and the Expo app's web build, which
+      # Playwright exports against this stack and serves on 8205.
       - name: End-to-end (phones and a laptop)
         run: npm run test:e2e
         env:

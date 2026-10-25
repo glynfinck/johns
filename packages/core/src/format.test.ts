@@ -7,6 +7,8 @@ import {
   formatBalance,
   initials,
   monthLabel,
+  NAME_MAX,
+  nameFromParts,
   pointsLabel,
   relative,
   weekRange,
@@ -80,5 +82,38 @@ describe("formatBalance", () => {
     expect(formatBalance(3.4)).toBe("+3.5");
     expect(formatBalance(-9)).toBe("−9");
     expect(formatBalance(0.1)).toBe("level");
+  });
+});
+
+describe("nameFromParts", () => {
+  it("joins Apple's given, middle and family names", () => {
+    expect(nameFromParts(["Priya", null, "Shah"])).toBe("Priya Shah");
+    expect(nameFromParts(["Priya", "Anjali", "Shah"])).toBe("Priya Anjali Shah");
+    expect(nameFromParts(["Tom"])).toBe("Tom");
+  });
+
+  it("drops blank parts and closes up whitespace", () => {
+    expect(nameFromParts(["  Priya ", "", "   ", "Shah  "])).toBe("Priya Shah");
+    expect(nameFromParts(["Mary\tJane", undefined, "Watson"])).toBe("Mary Jane Watson");
+  });
+
+  it("is null when there is no name to keep", () => {
+    expect(nameFromParts([])).toBeNull();
+    expect(nameFromParts([null, undefined, ""])).toBeNull();
+    expect(nameFromParts(["   ", "\n"])).toBeNull();
+  });
+
+  it("stops at the profile's limit, counting characters as Postgres does", () => {
+    const long = nameFromParts(["A".repeat(40), "B".repeat(40)]);
+    expect(long).toHaveLength(NAME_MAX);
+    // One code point, two UTF-16 units: never split in half.
+    const astral = nameFromParts(["𠀋".repeat(70)])!;
+    expect(Array.from(astral)).toHaveLength(NAME_MAX);
+    expect(astral).toBe("𠀋".repeat(NAME_MAX));
+  });
+
+  it("never ends on a space when the limit falls between words", () => {
+    const name = nameFromParts(["A".repeat(59), "Shah"])!;
+    expect(name).toBe("A".repeat(59));
   });
 });

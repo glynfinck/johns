@@ -8,6 +8,8 @@ const SUPABASE_URL = process.env.NEXT_PUBLIC_SUPABASE_URL;
 const ANON_KEY = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
 const SERVICE_ROLE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY;
 const BASE_URL = "http://localhost:3205";
+/** The Expo app's web build, served from its static export (playwright.config.ts). */
+export const CLIENT_URL = "http://localhost:8205";
 
 if (!SUPABASE_URL || !ANON_KEY || !SERVICE_ROLE_KEY) {
   throw new Error(
@@ -35,14 +37,7 @@ export function admin() {
  * names and encoding always match what the app reads back.
  */
 export async function signInAs(context: BrowserContext, name: string): Promise<string> {
-  const email = `e2e-${randomUUID()}@test.local`;
-  const { data, error } = await admin().auth.admin.createUser({
-    email,
-    password: PASSWORD,
-    email_confirm: true,
-    user_metadata: { display_name: name },
-  });
-  if (error) throw error;
+  const { email, id } = await createHousemate(name);
 
   const jar = new Map<string, string>();
   const client = createBrowserClient(SUPABASE_URL!, ANON_KEY!, {
@@ -57,7 +52,56 @@ export async function signInAs(context: BrowserContext, name: string): Promise<s
   const { error: signInError } = await client.auth.signInWithPassword({ email, password: PASSWORD });
   if (signInError) throw signInError;
   await context.addCookies([...jar].map(([cookieName, value]) => ({ name: cookieName, value, url: BASE_URL })));
-  return data.user.id;
+  return id;
+}
+
+/**
+ * The same, for the Expo app's web build, which keeps its session where
+ * supabase-js does in a browser: localStorage, not cookies. The tokens come
+ * from a client with the app's URL and key, so the entry's name is the one the
+ * app reads back. It is written before the app's first page load and only
+ * once per tab, so a test that signs out stays signed out across reloads.
+ */
+export async function signInToClient(context: BrowserContext, name: string): Promise<string> {
+  const { email, id } = await createHousemate(name);
+
+  const store = new Map<string, string>();
+  const client = createClient(SUPABASE_URL!, ANON_KEY!, {
+    auth: {
+      autoRefreshToken: false,
+      persistSession: true,
+      storage: {
+        getItem: (key) => store.get(key) ?? null,
+        setItem: (key, value) => void store.set(key, value),
+        removeItem: (key) => void store.delete(key),
+      },
+    },
+  });
+  const { error } = await client.auth.signInWithPassword({ email, password: PASSWORD });
+  if (error) throw error;
+
+  await context.addInitScript(
+    ({ origin, entries }: { origin: string; entries: [string, string][] }) => {
+      if (window.location.origin !== origin || sessionStorage.getItem("e2e-session-minted")) return;
+      for (const [key, value] of entries) localStorage.setItem(key, value);
+      sessionStorage.setItem("e2e-session-minted", "1");
+    },
+    { origin: CLIENT_URL, entries: [...store] },
+  );
+  return id;
+}
+
+/** A confirmed user with a password, named as housemates will see them. */
+async function createHousemate(name: string): Promise<{ email: string; id: string }> {
+  const email = `e2e-${randomUUID()}@test.local`;
+  const { data, error } = await admin().auth.admin.createUser({
+    email,
+    password: PASSWORD,
+    email_confirm: true,
+    user_metadata: { display_name: name },
+  });
+  if (error) throw error;
+  return { email, id: data.user.id };
 }
 
 /** Scoped teardown: the houses these users made, then the users. */
