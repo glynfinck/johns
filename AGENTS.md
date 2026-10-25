@@ -14,7 +14,7 @@ you're working in (`apps/api/AGENTS.md` for the Next.js app).
 - Platforms: the web today, served by `apps/api`. iOS, Android and web from
   one Expo app (`apps/client`) as `docs/specs/native-migration.md` lands,
   phase by phase: its scaffold, front door, sign-in, starting or joining a
-  house, Today and Week are in; the house's other screens follow. Until
+  house, Today, Week and the Wall are in; the house's other screens follow. Until
   they are (Phase 11), the app is checked on its web build; iOS- and
   Android-only work (native push, device checks, the stores) waits.
   From here every feature must work on all three unless its spec says
@@ -114,6 +114,7 @@ each app's AGENTS.md.
   (streaks, immunity and swap tokens), `stake.ts` (forfeits, month
   settlement, settle-up), `dispute.ts` (verdicts), `board.ts` (the week's
   board and Today's view of it, built from the rows each app reads),
+  `wall.ts` (the Wall's events in words, and their reactions),
   `proof.ts` (a photo receipt's size and bucket path), `money.ts`,
   `format.ts`, `domain.ts` (the shared words), `copy.ts` (both apps'
   sentences), `schemas.ts` (what crosses the API), `errors.ts`,

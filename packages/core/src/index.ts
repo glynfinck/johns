@@ -19,5 +19,6 @@ export * from "./proof";
 export * from "./schemas";
 export * from "./stake";
 export * from "./streak";
+export * from "./wall";
 export * from "./week";
 export type * from "./db-types";
