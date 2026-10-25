@@ -35,22 +35,26 @@ style: council signage, hi-vis amber, a bin-lid colour per kind of John.
 
 The same shape as Pub Golf, Graph Editor and glyn.dev: Next.js 16 on Vercel,
 Supabase (Postgres, RLS, Auth with Google, Storage, Realtime, pg_cron),
-shadcn/ui on Tailwind 4, Vitest and Playwright. See `CLAUDE.md` for how it
-fits together and why.
+shadcn/ui on Tailwind 4, Vitest and Playwright, in an npm workspace shaped
+like `glynfinck/app-template`, on its way to iOS and Android
+(`docs/specs/native-migration.md`). See `AGENTS.md` for how it fits together
+and why.
 
 ## Repo map
 
 ```
-app/(house)/          today · week · wall · table · stake · house
-app/join/[code]/      the join link
-app/api/cron/tick/    the clock (called by pg_cron)
-components/           shell, John cards and actions, house settings, ui (shadcn)
-packages/core/        @app/core, the pure rules: week, deal, outcome, points, streak, stake, dispute
-lib/engine/           the tick: applies the rules to the database
-lib/actions/ data/    server actions and loaders
-supabase/migrations/  schema, RLS, the housemate functions, the cron job
-tests/db/             the database attacked (the rules' tests sit beside them in core)
-e2e/                  phones and a laptop, end to end
+packages/core/                 @app/core, the pure rules: week, deal, outcome, points, streak, stake, dispute
+apps/api/                      the Next.js app at johns.glyn.dev
+  app/(house)/                 today · week · wall · table · stake · house
+  app/join/[code]/             the join link
+  app/api/cron/tick/           the clock (called by pg_cron)
+  components/                  shell, John cards and actions, house settings, ui (shadcn)
+  lib/engine/                  the tick: applies the rules to the database
+  lib/actions/ lib/data/       server actions and loaders
+  tests/db/                    the database attacked (the rules' tests sit beside them in core)
+  e2e/                         phones and a laptop, end to end
+supabase/migrations/           schema, RLS, the housemate functions, the cron job
+scripts/                       provision, the clock by hand, VAPID keys
 ```
 
 ## Develop
@@ -59,14 +63,16 @@ Node 22, Docker, the Supabase CLI.
 
 ```sh
 npm ci
-cp .env.example .env.local            # then fill in from `supabase status -o env`
+cp supabase/.env.example supabase/.env.local
 supabase start                         # ports 54340–54344
+cp apps/api/.env.example apps/api/.env.local   # then fill in from `supabase status -o env`
 npm run dev                            # http://localhost:3205
 ```
 
 Sign-in is Google-only. To use the app locally without a Google client,
 create a user in Studio (http://127.0.0.1:54343) and sign in with the
-`e2e/auth.ts` approach, or configure a Google OAuth client for localhost.
+`apps/api/e2e/auth.ts` approach, or configure a Google OAuth client for
+localhost.
 
 ## Test
 

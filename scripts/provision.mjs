@@ -34,6 +34,7 @@ import {
   missingMigrations,
   parseEnvFile,
   pickKeys,
+  rootDirectoryProblem,
   setEnvLine,
   siteUrl,
   summaryMarkdown,
@@ -44,6 +45,10 @@ import {
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const LOCAL_FILE = path.join(ROOT, ".env.provision.local");
+// Local development is set up when the app has its settings; `supabase start`
+// reads the Google client for local sign-in from its own directory.
+const APP_ENV = path.join(ROOT, "apps", "api", ".env.local");
+const SUPABASE_ENV = path.join(ROOT, "supabase", ".env.local");
 const args = new Set(process.argv.slice(2));
 const CHECK_ONLY = args.has("--check");
 const DEPLOY = !CHECK_ONLY && !args.has("--no-deploy");
@@ -273,13 +278,13 @@ if (!google) {
       ["Authorised redirect URIs", v.redirectUris],
     ],
   });
-} else if (!CHECK_ONLY && existsSync(path.join(ROOT, ".env.local"))) {
+} else if (!CHECK_ONLY && existsSync(APP_ENV)) {
   // Local sign-in uses the same client, through config.toml's env() names.
-  let local = readFileSync(path.join(ROOT, ".env.local"), "utf8");
+  let local = existsSync(SUPABASE_ENV) ? readFileSync(SUPABASE_ENV, "utf8") : "";
   local = setEnvLine(local, "AUTH_GOOGLE_CLIENT_ID", google.clientId);
   local = setEnvLine(local, "AUTH_GOOGLE_SECRET", google.secret);
-  writeFileSync(path.join(ROOT, ".env.local"), local);
-  say("  · .env.local has the Google client for local sign-in (restart supabase to pick it up)");
+  writeFileSync(SUPABASE_ENV, local, { mode: 0o600 });
+  say("  · supabase/.env.local has the Google client for local sign-in (restart supabase to pick it up)");
 }
 
 // --- 5. Vercel ------------------------------------------------------------------------
@@ -289,6 +294,17 @@ const vercelProject = await vercel("GET", `/v9/projects/${C.vercel.project}`);
 const repoId = vercelProject.link?.repoId;
 if (repoId) pass(`${C.vercel.project} deploys from ${vercelProject.link.org}/${vercelProject.link.repo}`);
 else fail(`${C.vercel.project} isn't connected to its GitHub repository`);
+// Checked, never set: moving it is a production change made by hand, at the
+// moment the code it points at is merged.
+const rootProblem = rootDirectoryProblem(vercelProject.rootDirectory, C);
+if (!rootProblem) pass(`${C.vercel.project} builds from ${C.vercel.rootDirectory}`);
+else {
+  fail(rootProblem);
+  todo.push({
+    title: `Set the Vercel project's Root Directory to ${C.vercel.rootDirectory} (Settings → Build and Deployment), then run this again`,
+    url: `https://vercel.com/${vercelProject.accountId}/${C.vercel.project}/settings/build-and-deployment`,
+  });
+}
 
 const keys = pickKeys(await supa("GET", `/v1/projects/${ref}/api-keys?reveal=true`));
 if (!keys.anon || !keys.service) throw new Error("Supabase returned no usable API keys for the project");
@@ -313,7 +329,9 @@ const domains = (await vercel("GET", `/v9/projects/${vercelProject.id}/domains`)
 if (domains.some((d) => d.name === C.domain && d.verified)) pass(`${C.domain} is attached and verified`);
 else fail(`${C.domain} isn't attached to ${C.vercel.project}, or isn't verified`);
 
-if (DEPLOY && repoId) {
+if (DEPLOY && repoId && rootProblem) {
+  say("  · not deploying: it would build from the wrong directory and fail");
+} else if (DEPLOY && repoId) {
   say("  · deploying main to production");
   let deployment = await vercel("POST", "/v13/deployments?forceNew=1", {
     name: C.vercel.project,

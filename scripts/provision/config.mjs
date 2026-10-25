@@ -13,6 +13,9 @@ export const CONFIG = {
   vercel: {
     project: "johns",
     teamId: "team_efHn4CGsL2iT0Xmp3qdWG9d2",
+    // Where the Next app lives in the workspace. Set by hand in the
+    // project's settings (Build and Deployment); provision only checks it.
+    rootDirectory: "apps/api",
   },
   // The names supabase/migrations/*_tick_schedule.sql reads.
   vault: { url: "johns_tick_url", secret: "johns_tick_secret" },

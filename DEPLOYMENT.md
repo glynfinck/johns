@@ -1,7 +1,8 @@
 # Deploying Johns
 
-The same arrangement as Pub Golf: Vercel's git integration builds the app,
-Supabase's GitHub integration applies the migrations, and CI only proves.
+The same arrangement as Pub Golf: Vercel's git integration builds the app
+(the Next.js workspace in `apps/api`), Supabase's GitHub integration applies
+the migrations, and CI only proves.
 `main` is production. There is no preview database yet, so preview
 deployments get no keys (a preview writing to production's data would be
 worse than one that doesn't start); add a persistent `preview` branch project
@@ -47,7 +48,7 @@ reset the password if you ever need a direct connection.
 | Migrations | Pushes any `supabase/migrations` the database hasn't recorded (`supabase db push`, with the saved password) | Compares versions both ways |
 | The clock | Writes the two Vault secrets `request_tick()` reads. The tick secret is reused if it exists, so it never drifts from Vercel's `CRON_SECRET` | Reads both back; finds the `johns-tick` pg_cron job |
 | Sign-in | Sets only production's auth fields through the Management API: site URL, redirect URLs, email sign-up off, and Google once its client is given | Reads them back and refuses an unresolved `env(...)` client ID |
-| Vercel | Upserts the production environment (Supabase URL and keys, site URL, `CRON_SECRET`, VAPID keys, made once and then kept, since new ones would orphan every subscribed phone) and deploys `main` | Reads the variables back; checks the domain is attached and verified; waits for the deploy |
+| Vercel | Upserts the production environment (Supabase URL and keys, site URL, `CRON_SECRET`, VAPID keys, made once and then kept, since new ones would orphan every subscribed phone) and deploys `main` | Reads the variables back; checks the project builds from `apps/api` (its Root Directory, which it never sets: that one is by hand) and that the domain is attached and verified; waits for the deploy |
 | End to end | | `/signin` answers; the deployed app accepts the clock's tick (so Vercel and the Vault share one secret); Supabase sends sign-in to Google with this client and this callback, and Google doesn't refuse it |
 
 It never runs `supabase config push`. That would write `config.toml`'s
@@ -61,8 +62,8 @@ is exactly what local development needs and production must not have.
   what to paste where (a Cloud project for Johns, its branding page with the
   home page and privacy URLs, and a Web client with these redirect URIs); run
   it again with `GOOGLE_CLIENT_ID` and `GOOGLE_CLIENT_SECRET` set and it
-  configures Supabase, writes the same client into `.env.local` for local
-  sign-in, and checks the round trip. The secret itself is only proved by a
+  configures Supabase, writes the same client into `supabase/.env.local` for
+  local sign-in, and checks the round trip. The secret itself is only proved by a
   real sign-in: Google checks it when it exchanges the code, after the user
   has chosen an account.
 - **The Supabase GitHub integration**, so that later migrations apply on
@@ -76,6 +77,13 @@ Already done (October 2026): the Vercel project `johns` exists, deploys
 `glynfinck/johns`, runs its functions in London next to the database, and
 has `johns.glyn.dev` attached. glyn.dev's DNS is on Vercel, so the domain
 needed no record.
+
+The project's **Root Directory** is `apps/api` (Settings → Build and
+Deployment), where the Next app moved in Phase 2 of
+`docs/specs/native-migration.md`. Vercel installs the whole npm workspace from
+the repository root and builds that directory. Changing the setting doesn't
+redeploy anything, and a build from the wrong directory fails without
+replacing the live deployment, which keeps serving.
 
 ## Day to day
 

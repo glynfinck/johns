@@ -7,7 +7,7 @@ import { Button } from "@/components/ui/button";
 import { GoogleIcon } from "@/components/ui/google-icon";
 import { createClient } from "@/lib/supabase/client";
 
-/** The only way in: Google for everyone (see CLAUDE.md, Auth). */
+/** The only way in: Google for everyone (see AGENTS.md, "Data: Supabase"). */
 export function GoogleSignIn({ next = "/" }: { next?: string }) {
   const [busy, setBusy] = useState(false);
 

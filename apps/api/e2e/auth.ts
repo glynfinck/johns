@@ -12,7 +12,7 @@ const BASE_URL = "http://localhost:3205";
 if (!SUPABASE_URL || !ANON_KEY || !SERVICE_ROLE_KEY) {
   throw new Error(
     "E2E needs NEXT_PUBLIC_SUPABASE_URL, NEXT_PUBLIC_SUPABASE_ANON_KEY and " +
-      "SUPABASE_SERVICE_ROLE_KEY in .env.local (run `supabase start`).",
+      "SUPABASE_SERVICE_ROLE_KEY in apps/api/.env.local (run `supabase start`).",
   );
 }
 

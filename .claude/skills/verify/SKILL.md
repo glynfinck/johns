@@ -7,16 +7,18 @@ description: Build, run and drive the Johns app (Next.js + local Supabase) to ve
 
 ## Run
 
-- Local Supabase: `supabase start` (API 127.0.0.1:54341, DB 54342). `.env.local`
-  points at it (see `.env.example`). New migration: `supabase db reset` (or
-  `supabase migration up`), then `npm run types`.
+- Local Supabase: `supabase start` (API 127.0.0.1:54341, DB 54342), with its
+  Google values in `supabase/.env.local` (see `supabase/.env.example`).
+  `apps/api/.env.local` points the app at it (see `apps/api/.env.example`).
+  New migration: `supabase db reset` (or `supabase migration up`), then
+  `npm run types`.
 - App: `npm run dev` serves http://localhost:3205. Playwright's webServer
   reuses a running one.
 - psql: `psql postgresql://postgres:postgres@127.0.0.1:54342/postgres`.
 
 ## Drive
 
-- Signed-in flows without Google: `e2e/auth.ts` `signInAs(context, name)`
+- Signed-in flows without Google: `apps/api/e2e/auth.ts` `signInAs(context, name)`
   mints a real session with the admin API and hands the cookies to a browser
   context. `cleanUp(userIds)` removes what it made.
 - The clock: open any house page (it catches the house up), or

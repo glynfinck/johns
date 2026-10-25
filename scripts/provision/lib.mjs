@@ -97,6 +97,19 @@ export function envPlan(c, { supabaseUrl, anonKey, serviceKey, cronSecret, vapid
   return plan;
 }
 
+/**
+ * What is wrong with the Vercel project's Root Directory, or null. The
+ * project builds the Next app, which lives in `apps/api`; built from anywhere
+ * else a deploy fails (the live one keeps serving, but nothing new ships).
+ * Vercel reads back `null` for the repository's root.
+ */
+export function rootDirectoryProblem(actual, c) {
+  const clean = (dir) => String(dir ?? "").replace(/^\.?\/*/, "").replace(/\/+$/, "");
+  if (clean(actual) === clean(c.vercel.rootDirectory)) return null;
+  const now = clean(actual) ? `\`${clean(actual)}\`` : "the repository root";
+  return `${c.vercel.project} builds from ${now}, not \`${c.vercel.rootDirectory}\``;
+}
+
 /** Local migrations the database hasn't recorded, by version. */
 export function missingMigrations(localVersions, remoteVersions) {
   const applied = new Set(remoteVersions);

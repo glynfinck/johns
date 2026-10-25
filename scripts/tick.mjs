@@ -3,20 +3,20 @@
 //   npm run tick                      → http://localhost:3205
 //   TICK_URL=https://… npm run tick   → anywhere, with that deployment's secret
 //
-// Reads CRON_SECRET from the environment or .env.local.
+// Reads CRON_SECRET from the environment or apps/api/.env.local.
 import { readFileSync } from "node:fs";
 
 let secret = process.env.CRON_SECRET;
 if (!secret) {
   try {
-    const env = readFileSync(".env.local", "utf8");
+    const env = readFileSync(new URL("../apps/api/.env.local", import.meta.url), "utf8");
     secret = env.match(/^CRON_SECRET=(.*)$/m)?.[1]?.trim();
   } catch {
     // No .env.local: fall through to the error below.
   }
 }
 if (!secret) {
-  console.error("CRON_SECRET is not set (environment or .env.local).");
+  console.error("CRON_SECRET is not set (environment or apps/api/.env.local).");
   process.exit(1);
 }
 
