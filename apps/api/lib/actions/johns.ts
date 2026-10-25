@@ -1,11 +1,9 @@
 "use server";
 
-import { humanError } from "@app/core";
+import { disputeProblem, humanError, RaiseDispute } from "@app/core";
 import { refresh } from "next/cache";
 
-import { tickHouse } from "@/lib/engine/tick";
-import { pushNotifier } from "@/lib/push";
-import { createAdminClient } from "@/lib/supabase/admin";
+import * as moves from "@/lib/moves/disputes";
 import { createClient } from "@/lib/supabase/server";
 
 export type Outcome = { error?: string } | void;
@@ -15,6 +13,15 @@ export type Outcome = { error?: string } | void;
  * function that owns the rule (supabase/migrations): these wrappers only
  * translate refusals into sentences and refresh the screen.
  */
+
+/** The signed-in housemate, as the shared moves (lib/moves) take them. */
+async function signedIn(): Promise<moves.Caller | null> {
+  const db = await createClient();
+  const {
+    data: { user },
+  } = await db.auth.getUser();
+  return user ? { db, userId: user.id } : null;
+}
 
 async function call<T>(fn: (db: Awaited<ReturnType<typeof createClient>>) => PromiseLike<{ error: T | null }>) {
   const supabase = await createClient();
@@ -37,42 +44,20 @@ export async function undoDone(assignmentId: string): Promise<Outcome> {
 }
 
 export async function raiseDispute(assignmentId: string, reason: string): Promise<Outcome> {
-  const text = reason.trim();
-  if (!text) return { error: "Say what's wrong with it." };
-  if (text.length > 280) return { error: "Keep it under 280 characters." };
-  const { supabase, error } = await call((db) =>
-    db.rpc("raise_dispute", { p_assignment: assignmentId, p_reason: text }),
-  );
-  if (error) return { error: humanError(error) };
-
-  // Tell the house there is something to vote on. Who to tell is read
-  // through the caller's own session, so this can only reach their house.
-  const { data: a } = await supabase.from("assignments").select("house_id, user_id, name").eq("id", assignmentId).single();
-  if (a) {
-    const admin = createAdminClient();
-    const notify = pushNotifier(admin);
-    const { data: members } = await supabase.from("members").select("user_id").eq("house_id", a.house_id);
-    const {
-      data: { user },
-    } = await supabase.auth.getUser();
-    if (notify && members) {
-      const voters = members.map((m) => m.user_id).filter((id) => id !== a.user_id && id !== user?.id);
-      await notify([a.user_id], { title: `Your ${a.name} tick is disputed`, body: text, url: "/week" });
-      await notify(voters, { title: `Vote: was ${a.name} really done?`, body: text, url: "/week" });
-    }
-    // In a house of two the raiser's own vote is already the majority.
-    await tickHouse(admin, a.house_id, new Date());
-  }
+  const input = RaiseDispute.safeParse({ assignmentId, reason });
+  if (!input.success) return { error: disputeProblem(input.error.issues) };
+  const caller = await signedIn();
+  if (!caller) return { error: humanError({ message: "sign_in_required" }) };
+  const refusal = await moves.raiseDispute(caller, input.data.assignmentId, input.data.reason, new Date());
+  if (refusal) return { error: humanError(refusal) };
   refresh();
 }
 
 export async function castVote(disputeId: string, uphold: boolean): Promise<Outcome> {
-  const { supabase, error } = await call((db) => db.rpc("cast_vote", { p_dispute: disputeId, p_uphold: uphold }));
-  if (error) return { error: humanError(error) };
-  // Decide it now if this vote made a majority, rather than on the next tick.
-  // The house is the one the caller just voted in, read through RLS.
-  const { data: d } = await supabase.from("disputes").select("house_id").eq("id", disputeId).single();
-  if (d) await tickHouse(createAdminClient(), d.house_id, new Date());
+  const caller = await signedIn();
+  if (!caller) return { error: humanError({ message: "sign_in_required" }) };
+  const refusal = await moves.castVote(caller, disputeId, uphold, new Date());
+  if (refusal) return { error: humanError(refusal) };
   refresh();
 }
 

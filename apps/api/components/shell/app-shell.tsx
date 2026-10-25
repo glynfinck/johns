@@ -1,3 +1,4 @@
+import { SHELL_COPY } from "@app/core";
 import { SettingsIcon } from "lucide-react";
 import Link from "next/link";
 
@@ -32,9 +33,7 @@ export function AppShell({
         </Link>
         <div className="px-1">
           <div className="text-sm font-extrabold">{houseName}</div>
-          <div className="text-xs text-muted-foreground">
-            {memberCount} {memberCount === 1 ? "housemate" : "housemates"}
-          </div>
+          <div className="text-xs text-muted-foreground">{SHELL_COPY.housemates(memberCount)}</div>
         </div>
         <SideNav />
         <div className="mt-auto flex items-center gap-3 border-t border-border px-1 pt-4">
@@ -42,8 +41,7 @@ export function AppShell({
           <div className="min-w-0">
             <div className="truncate text-sm font-bold">{me.name}</div>
             <div className="text-xs text-muted-foreground tabular">
-              {me.streak}-week streak · {me.immunityTokens + me.swapTokens}{" "}
-              {me.immunityTokens + me.swapTokens === 1 ? "token" : "tokens"}
+              {SHELL_COPY.standing(me.streak, me.immunityTokens + me.swapTokens)}
             </div>
           </div>
         </div>

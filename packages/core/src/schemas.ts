@@ -54,3 +54,23 @@ export type FreshRequest = z.infer<typeof FreshRequest>;
 /** `ticked`: false when the house was already caught up in the last minute. */
 export const FreshResponse = z.object({ ticked: z.boolean() });
 export type FreshResponse = z.infer<typeof FreshResponse>;
+
+/** POST /api/disputes: say a housemate's tick wasn't really done. */
+export const RaiseDispute = z.object({
+  assignmentId: z.uuid(),
+  reason: z.string().trim().min(1, "Say what's wrong with it.").max(280, "Keep it under 280 characters."),
+});
+export type RaiseDispute = z.infer<typeof RaiseDispute>;
+
+/** The sentence for a RaiseDispute that didn't parse: the reason's own, or which John. */
+export function disputeProblem(issues: readonly { path: readonly PropertyKey[]; message: string }[]): string {
+  return issues.find((issue) => issue.path[0] === "reason")?.message ?? "Say which John to dispute.";
+}
+
+/** POST /api/disputes/:id/votes: `uphold` true says it wasn't done. */
+export const CastVote = z.object({ uphold: z.boolean() });
+export type CastVote = z.infer<typeof CastVote>;
+
+/** What a move answers when the database took it. */
+export const MoveResponse = z.object({ ok: z.literal(true) });
+export type MoveResponse = z.infer<typeof MoveResponse>;

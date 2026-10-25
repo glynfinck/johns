@@ -1,4 +1,4 @@
-import { addDaysTo, awayDays, dateRange, dueLabel, firstName, pointsEarned, relative, weekRange } from "@app/core";
+import { addDaysTo, awayDays, dateRange, dueLabel, firstName, pointsEarned, relative, WEEK_COPY, weekRange } from "@app/core";
 import type { Metadata } from "next";
 
 import { DealButton } from "@/components/house/deal-button";
@@ -28,7 +28,7 @@ export default async function WeekPage() {
   if (!board.week) {
     return (
       <div className="mx-auto max-w-3xl">
-        <PageHeader eyebrow="This week" title="The board" />
+        <PageHeader eyebrow="This week" title={WEEK_COPY.title} />
         <NotDealt notStarted={board.notStarted} isAdmin={ctx.isAdmin} adminName={admin?.name ?? "An admin"} />
       </div>
     );
@@ -57,7 +57,7 @@ export default async function WeekPage() {
     <div className="mx-auto max-w-7xl">
       <PageHeader
         eyebrow={`This week · ${weekRange(board.week.startsAt, board.week.endsAt, rules.timezone)}`}
-        title="The board"
+        title={WEEK_COPY.title}
         action={
           <div className="flex flex-wrap gap-2">
             {me.swapTokens > 0 ? (
@@ -73,10 +73,10 @@ export default async function WeekPage() {
 
       <div className="mb-5 grid grid-cols-2 gap-2.5 sm:grid-cols-4">
         {[
-          { label: "Done", value: `${done} of ${items.length}` },
-          { label: "Being checked", value: items.filter((i) => i.status === "checking").length },
-          { label: "Overdue", value: items.filter((i) => i.status === "overdue").length, hazard: true },
-          { label: "Disputed", value: disputes.length, hazard: true },
+          { label: WEEK_COPY.done, value: WEEK_COPY.doneOf(done, items.length) },
+          { label: WEEK_COPY.checking, value: items.filter((i) => i.status === "checking").length },
+          { label: WEEK_COPY.overdue, value: items.filter((i) => i.status === "overdue").length, hazard: true },
+          { label: WEEK_COPY.disputed, value: disputes.length, hazard: true },
         ].map((s) => (
           <div key={s.label} className="rounded-lg border border-border bg-card px-4 py-3">
             <div className="eyebrow">{s.label}</div>
@@ -87,16 +87,16 @@ export default async function WeekPage() {
 
       <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_300px] xl:grid-cols-[minmax(0,1fr)_340px]">
         {/* Laptop: the whole house on one board. */}
-        <section className="hidden overflow-hidden rounded-lg border border-border bg-card lg:block" aria-label="Every John this week">
+        <section className="hidden overflow-hidden rounded-lg border border-border bg-card lg:block" aria-label={WEEK_COPY.everyJohn}>
           <table className="w-full text-sm">
             <thead>
               <tr className="border-b-2 border-foreground text-left">
                 <th className="w-3 p-0" aria-label="Kind" />
-                <th className="eyebrow px-3 py-2.5">John</th>
-                <th className="eyebrow px-3 py-2.5">Who</th>
-                <th className="eyebrow px-3 py-2.5">Due</th>
-                <th className="eyebrow px-3 py-2.5 text-right">Pts</th>
-                <th className="eyebrow px-3 py-2.5">Status</th>
+                <th className="eyebrow px-3 py-2.5">{WEEK_COPY.columns.john}</th>
+                <th className="eyebrow px-3 py-2.5">{WEEK_COPY.columns.who}</th>
+                <th className="eyebrow px-3 py-2.5">{WEEK_COPY.columns.due}</th>
+                <th className="eyebrow px-3 py-2.5 text-right">{WEEK_COPY.columns.points}</th>
+                <th className="eyebrow px-3 py-2.5">{WEEK_COPY.columns.status}</th>
                 <th className="px-3 py-2.5" aria-label="Actions" />
               </tr>
             </thead>
@@ -120,7 +120,7 @@ export default async function WeekPage() {
                     <td className="px-3 py-2">
                       <span className="inline-flex items-center gap-2">
                         <Avatar name={names.get(i.userId) ?? "?"} me={mine} className="size-6 text-[10px]" />
-                        {mine ? "You" : firstName(names.get(i.userId) ?? "")}
+                        {mine ? WEEK_COPY.you : firstName(names.get(i.userId) ?? "")}
                       </span>
                     </td>
                     <td className="px-3 py-2 whitespace-nowrap text-muted-foreground tabular">
@@ -152,7 +152,7 @@ export default async function WeekPage() {
             <section key={p.userId} className="flex flex-col gap-3">
               <h2 className="flex items-center gap-2.5">
                 <Avatar name={p.name} me={p.userId === ctx.userId} />
-                <span className="text-base font-extrabold">{p.userId === ctx.userId ? "You" : p.name}</span>
+                <span className="text-base font-extrabold">{p.userId === ctx.userId ? WEEK_COPY.you : p.name}</span>
                 <span className="ml-auto text-sm text-muted-foreground tabular">
                   {p.items.filter((i) => !OPEN.has(i.status)).length}/{p.items.length}
                 </span>
@@ -180,16 +180,16 @@ export default async function WeekPage() {
           {disputes.length > 0 ? (
             // On a phone the cards above carry their own vote buttons.
             <section className="hidden rounded-lg border border-border bg-card p-4 lg:block">
-              <h2 className="eyebrow mb-3">Disputes</h2>
+              <h2 className="eyebrow mb-3">{WEEK_COPY.disputes}</h2>
               <ul className="flex flex-col gap-4">
                 {disputes.map((i) => (
                   <li key={i.id} className="flex flex-col gap-2 border-t border-border pt-3 first:border-0 first:pt-0">
                     <p className="text-sm">
                       <span className="font-bold">{i.userId === ctx.userId ? "Your" : `${firstName(names.get(i.userId) ?? "")}'s`}</span>{" "}
-                      {i.name}: &ldquo;{i.dispute!.reason}&rdquo;
+                      {WEEK_COPY.disputeOn(i.name, i.dispute!.reason)}
                     </p>
                     <p className="text-xs text-muted-foreground tabular">
-                      {i.dispute!.uphold} not done · {i.dispute!.reject} fine · closes {relative(i.dispute!.closesAt, now)}
+                      {WEEK_COPY.tally(i.dispute!.uphold, i.dispute!.reject, relative(i.dispute!.closesAt, now))}
                     </p>
                     {i.userId !== ctx.userId ? <VoteButtons disputeId={i.dispute!.id} myVote={i.dispute!.myVote} /> : null}
                   </li>

@@ -1,12 +1,16 @@
 import { describe, expect, it } from "vitest";
 
 import {
+  CastVote,
   CreateHouse,
+  disputeProblem,
   FreshRequest,
   JOIN_CODE_ALPHABET,
   JOIN_CODE_LENGTH,
   JoinCode,
+  MoveResponse,
   normaliseJoinCode,
+  RaiseDispute,
 } from "./schemas";
 
 describe("join codes", () => {
@@ -61,5 +65,52 @@ describe("FreshRequest", () => {
     expect(FreshRequest.parse({ houseId })).toEqual({ houseId });
     expect(FreshRequest.safeParse({ houseId: "not-a-uuid" }).success).toBe(false);
     expect(FreshRequest.safeParse({}).success).toBe(false);
+  });
+});
+
+describe("RaiseDispute", () => {
+  const assignmentId = "8f14e45f-ceea-467f-a8f5-2fbf7c2d9b1a";
+  const message = (input: unknown) => RaiseDispute.safeParse(input).error?.issues[0]?.message;
+
+  it("takes the John and the reason, tidied", () => {
+    expect(RaiseDispute.parse({ assignmentId, reason: "  Bins still full  " })).toEqual({
+      assignmentId,
+      reason: "Bins still full",
+    });
+    expect(RaiseDispute.parse({ assignmentId, reason: "x".repeat(280) }).reason).toHaveLength(280);
+  });
+
+  it("asks for a reason, and a short one, in words", () => {
+    expect(message({ assignmentId, reason: "" })).toBe("Say what's wrong with it.");
+    expect(message({ assignmentId, reason: "   " })).toBe("Say what's wrong with it.");
+    expect(message({ assignmentId, reason: "x".repeat(281) })).toBe("Keep it under 280 characters.");
+  });
+
+  it("refuses anything but a John's id", () => {
+    expect(RaiseDispute.safeParse({ assignmentId: "a1", reason: "Still full" }).success).toBe(false);
+    expect(RaiseDispute.safeParse({ reason: "Still full" }).success).toBe(false);
+  });
+
+  it("says what's wrong in one sentence, the reason's first", () => {
+    const problem = (input: unknown) => disputeProblem(RaiseDispute.safeParse(input).error!.issues);
+    expect(problem({ assignmentId, reason: "" })).toBe("Say what's wrong with it.");
+    expect(problem({ assignmentId: "a1", reason: "" })).toBe("Say what's wrong with it.");
+    expect(problem({ assignmentId: "a1", reason: "Still full" })).toBe("Say which John to dispute.");
+    expect(problem(null)).toBe("Say which John to dispute.");
+    expect(disputeProblem([])).toBe("Say which John to dispute.");
+  });
+});
+
+describe("CastVote and MoveResponse", () => {
+  it("takes a yes or a no, and nothing else", () => {
+    expect(CastVote.parse({ uphold: true })).toEqual({ uphold: true });
+    expect(CastVote.parse({ uphold: false })).toEqual({ uphold: false });
+    expect(CastVote.safeParse({ uphold: "yes" }).success).toBe(false);
+    expect(CastVote.safeParse({}).success).toBe(false);
+  });
+
+  it("answers ok", () => {
+    expect(MoveResponse.parse({ ok: true })).toEqual({ ok: true });
+    expect(MoveResponse.safeParse({ ok: false }).success).toBe(false);
   });
 });

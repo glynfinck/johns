@@ -1,13 +1,15 @@
-import { JOHN_COPY, type BoardItem } from '@app/core';
+import { DISPUTE_COPY, JOHN_COPY, type BoardItem } from '@app/core';
 import { QueryClientProvider, type QueryClient } from '@tanstack/react-query';
 import { fireEvent, render, screen } from '@testing-library/react-native';
 
+import { castVote, raiseDispute } from '@/api/disputes';
 import { markDone, spendImmunity, undoDone } from '@/api/johns';
 import { pickPhoto, uploadProof } from '@/api/photos';
 import { testQueryClient } from '@/testing/query';
 
-import { JohnCard } from './john-card';
+import { CompactTick, JohnCard } from './john-card';
 
+jest.mock('@/api/disputes', () => ({ castVote: jest.fn(), raiseDispute: jest.fn() }));
 jest.mock('@/api/johns', () => ({ markDone: jest.fn(), undoDone: jest.fn(), spendImmunity: jest.fn() }));
 jest.mock('@/api/photos', () => ({ pickPhoto: jest.fn(), uploadProof: jest.fn() }));
 jest.mock('@/api/supabase', () => ({ supabase: {} }));
@@ -43,6 +45,34 @@ async function show(item: Partial<BoardItem> = {}, immunityTokens = 0) {
   );
 }
 
+/** A housemate's John, as the board shows it. */
+async function showTheirs(item: Partial<BoardItem> = {}) {
+  await render(
+    <QueryClientProvider client={client}>
+      <JohnCard
+        item={{ ...BINS, userId: 'u2', ...item }}
+        houseId="h1"
+        zone="Europe/London"
+        now={NOW}
+        mine={false}
+        ownerName="Ben Ford"
+        showOwner
+      />
+    </QueryClientProvider>,
+  );
+}
+
+const DISPUTE = {
+  id: 'd1',
+  assignmentId: 'a1',
+  raisedBy: 'u3',
+  reason: 'Still full',
+  closesAt: new Date('2026-10-22T12:00:00Z'),
+  uphold: 1,
+  reject: 0,
+  myVote: null,
+};
+
 beforeEach(() => {
   jest.clearAllMocks();
   client = testQueryClient();
@@ -52,6 +82,8 @@ beforeEach(() => {
   (spendImmunity as jest.Mock).mockResolvedValue(undefined);
   (pickPhoto as jest.Mock).mockResolvedValue('file:///small.jpg');
   (uploadProof as jest.Mock).mockResolvedValue('h1/a1/receipt.jpg');
+  (raiseDispute as jest.Mock).mockResolvedValue(undefined);
+  (castVote as jest.Mock).mockResolvedValue(undefined);
 });
 
 it('shows the John: its kind, when it is due, its status and its points', async () => {
@@ -189,4 +221,75 @@ it('says when time away moved it earlier, until it is done', async () => {
 
   await show({ movedFrom: new Date('2026-10-24T09:00:00Z'), status: 'done', outcome: 'done' });
   expect(screen.queryByTestId('due-before-you-go')).toBeNull();
+});
+
+describe("a housemate's John", () => {
+  it('names whose it is, and offers no tick', async () => {
+    await showTheirs();
+    expect(screen.getByText('Ben Ford')).toBeOnTheScreen();
+    expect(screen.queryByRole('button', { name: JOHN_COPY.markDone })).toBeNull();
+  });
+
+  it('can be disputed while its tick is being checked, with a reason', async () => {
+    await showTheirs({ status: 'checking', doneAt: NOW, standsAt: new Date('2026-10-22T12:00:00Z') });
+    expect(screen.queryByRole('button', { name: JOHN_COPY.undo })).toBeNull();
+    await fireEvent.press(screen.getByRole('button', { name: DISPUTE_COPY.open }));
+    expect(screen.getByText(DISPUTE_COPY.body('Ben Ford'))).toBeOnTheScreen();
+    const send = screen.getByRole('button', { name: DISPUTE_COPY.send });
+    expect(send).toBeDisabled();
+
+    await fireEvent.changeText(screen.getByLabelText(DISPUTE_COPY.label), 'Still full');
+    await fireEvent.press(send);
+    expect(raiseDispute).toHaveBeenCalledWith('a1', 'Still full');
+    expect(client.invalidateQueries).toHaveBeenCalledWith({ queryKey: ['house', 'h1'] });
+    expect(screen.queryByText(DISPUTE_COPY.body('Ben Ford'))).toBeNull();
+  });
+
+  it("keeps the sheet open and says why when the dispute isn't taken", async () => {
+    (raiseDispute as jest.Mock).mockRejectedValue(new Error("Someone's already disputing that tick."));
+    await showTheirs({ status: 'checking', doneAt: NOW, standsAt: new Date('2026-10-22T12:00:00Z') });
+    await fireEvent.press(screen.getByRole('button', { name: DISPUTE_COPY.open }));
+    await fireEvent.changeText(screen.getByLabelText(DISPUTE_COPY.label), 'Still full');
+    await fireEvent.press(screen.getByRole('button', { name: DISPUTE_COPY.send }));
+    expect(screen.getByRole('alert')).toHaveTextContent("Someone's already disputing that tick.");
+    expect(screen.getByText(DISPUTE_COPY.body('Ben Ford'))).toBeOnTheScreen();
+  });
+
+  it('takes your vote on a dispute, either way', async () => {
+    await showTheirs({ status: 'disputed', doneAt: NOW, dispute: DISPUTE });
+    await fireEvent.press(screen.getByRole('button', { name: DISPUTE_COPY.fine }));
+    expect(castVote).toHaveBeenCalledWith('d1', false);
+    await fireEvent.press(screen.getByRole('button', { name: DISPUTE_COPY.notDone }));
+    expect(castVote).toHaveBeenLastCalledWith('d1', true);
+  });
+
+  it("says whose trip pulled it forward", async () => {
+    await showTheirs({ movedFrom: new Date('2026-10-24T09:00:00Z') });
+    expect(screen.getByTestId('due-before-you-go')).toHaveTextContent(/^Due before Ben Ford goes: it was due sat/i);
+  });
+});
+
+describe('the compact tick', () => {
+  async function compact(item: Partial<BoardItem> = {}) {
+    await render(
+      <QueryClientProvider client={client}>
+        <CompactTick item={{ ...BINS, ...item }} houseId="h1" />
+      </QueryClientProvider>,
+    );
+  }
+
+  it('ticks a John in one press', async () => {
+    await compact();
+    await fireEvent.press(screen.getByRole('button', { name: JOHN_COPY.done }));
+    expect(markDone).toHaveBeenCalledWith('a1');
+  });
+
+  it('takes the photo first on a photo John, and says when it fails', async () => {
+    (uploadProof as jest.Mock).mockRejectedValue(new Error('offline'));
+    await compact({ needsPhoto: true });
+    await fireEvent.press(screen.getByRole('button', { name: JOHN_COPY.done }));
+    expect(pickPhoto).toHaveBeenCalledWith('camera');
+    expect(screen.getByText(JOHN_COPY.photoFailed)).toBeOnTheScreen();
+    expect(markDone).not.toHaveBeenCalled();
+  });
 });

@@ -14,7 +14,9 @@ you're working in (`apps/api/AGENTS.md` for the Next.js app).
 - Platforms: the web today, served by `apps/api`. iOS, Android and web from
   one Expo app (`apps/client`) as `docs/specs/native-migration.md` lands,
   phase by phase: its scaffold, front door, sign-in, starting or joining a
-  house, and Today are in; the house's other screens follow.
+  house, Today and Week are in; the house's other screens follow. Until
+  they are (Phase 11), the app is checked on its web build; iOS- and
+  Android-only work (native push, device checks, the stores) waits.
   From here every feature must work on all three unless its spec says
   otherwise.
 - Solo project. My main language is Python: when code relies on a TypeScript

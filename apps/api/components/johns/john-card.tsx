@@ -36,6 +36,8 @@ export function JohnCard({
   const open = OPEN.has(item.status);
   const finished = item.status === "done" || item.status === "late" || item.status === "checking";
   const alarming = item.status === "overdue" || item.status === "missed";
+  // "it was due tomorrow 20:00", mid-sentence.
+  const was = (at: Date) => dueLabel(at, now, zone).replace(/^(Today|Tomorrow|Yesterday)/, (w) => w.toLowerCase());
 
   return (
     <article
@@ -99,11 +101,7 @@ export function JohnCard({
         {open && item.movedFrom ? (
           <p className="flex items-start gap-2 rounded-md bg-secondary p-3 text-sm" data-testid="due-before-you-go">
             <PlaneIcon className="mt-0.5 size-4 shrink-0" aria-hidden />
-            <span>
-              Due before {mine ? "you go" : `${ownerName} goes`}: it was due{" "}
-              {dueLabel(item.movedFrom, now, zone).replace(/^(Today|Tomorrow|Yesterday)/, (w) => w.toLowerCase())}, while{" "}
-              {mine ? "you're" : "they're"} away.
-            </span>
+            <span>{mine ? JOHN_COPY.dueBeforeYouGo(was(item.movedFrom)) : JOHN_COPY.dueBeforeTheyGo(ownerName, was(item.movedFrom))}</span>
           </p>
         ) : null}
 

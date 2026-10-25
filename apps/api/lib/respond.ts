@@ -1,3 +1,5 @@
+import { humanError } from "@app/core";
+
 import { corsHeaders } from "./cors";
 import { env } from "./env";
 
@@ -16,6 +18,16 @@ export function json(request: Request, body: unknown, status = 200): Response {
 /** `{ "error": "..." }`: a sentence fit to show. Never a stack trace, a key or a query. */
 export function error(request: Request, status: number, message: string): Response {
   return json(request, { error: message }, status);
+}
+
+/**
+ * The database's refusal of a move, in its own words: 403 when it isn't the
+ * caller's to make (42501), 409 when the rules say not now (a short code
+ * from `raise exception`), 500 for anything else, which isn't a refusal.
+ */
+export function refused(request: Request, refusal: { message?: string; code?: string }): Response {
+  const status = refusal.code === "42501" ? 403 : refusal.code === "P0001" ? 409 : 500;
+  return error(request, status, humanError(refusal));
 }
 
 /** Answers a browser's CORS preflight. Export it as OPTIONS from every route. */

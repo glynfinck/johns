@@ -1,4 +1,4 @@
-import { markDone, spendImmunity, undoDone } from './johns';
+import { markDone, spendImmunity, spendSwap, undoDone } from './johns';
 import { supabase } from './supabase';
 
 jest.mock('./supabase', () => ({ supabase: { rpc: jest.fn() } }));
@@ -22,6 +22,13 @@ it('takes a tick back, and spends immunity, through their own functions', async 
   expect(rpc).toHaveBeenCalledWith('undo_done', { p_assignment: 'a1' });
   await spendImmunity('a1');
   expect(rpc).toHaveBeenLastCalledWith('use_immunity', { p_assignment: 'a1' });
+});
+
+it('swaps one of yours for a housemate\'s through use_swap', async () => {
+  await spendSwap('a1', 'a2');
+  expect(rpc).toHaveBeenCalledWith('use_swap', { p_mine: 'a1', p_theirs: 'a2' });
+  rpc.mockResolvedValue({ data: null, error: { message: 'no_swap', code: 'P0001' } });
+  await expect(spendSwap('a1', 'a2')).rejects.toThrow("You don't have a swap token.");
 });
 
 it("says the database's refusal in words", async () => {

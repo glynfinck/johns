@@ -1,4 +1,5 @@
 import type { Session } from '@supabase/supabase-js';
+import { Slot } from 'expo-router';
 import { fireEvent, renderRouter, screen } from 'expo-router/testing-library';
 import { Text } from 'react-native';
 
@@ -18,7 +19,9 @@ const routes = {
   signin: () => <Text>Sign in</Text>,
   welcome: () => <Text>Welcome</Text>,
   'house/new': () => <Text>New house</Text>,
-  today: () => <Text>Today</Text>,
+  '(house)/_layout': () => <Slot />,
+  '(house)/today': () => <Text>Today</Text>,
+  '(house)/week': () => <Text>Week</Text>,
   'join/[joinCode]': () => <Text>Join</Text>,
 };
 
@@ -43,7 +46,7 @@ describe('signed out', () => {
   });
 
   it('sends every signed-in screen to sign-in', async () => {
-    for (const url of ['/today', '/welcome', '/house/new']) {
+    for (const url of ['/today', '/week', '/welcome', '/house/new']) {
       await open(url);
       expect(screen).toHavePathname('/signin');
     }
@@ -59,7 +62,7 @@ describe('signed in, in no house', () => {
   beforeEach(() => as(SESSION));
 
   it('goes to starting or joining a house, from anywhere else', async () => {
-    for (const url of ['/', '/signin', '/today']) {
+    for (const url of ['/', '/signin', '/today', '/week']) {
       await open(url);
       expect(screen).toHavePathname('/welcome');
     }
@@ -79,6 +82,12 @@ describe('in a house', () => {
       await open(url);
       expect(screen).toHavePathname('/today');
     }
+  });
+
+  it("opens the house's other screens", async () => {
+    await open('/week');
+    expect(screen).toHavePathname('/week');
+    expect(screen.getByText('Week')).toBeOnTheScreen();
   });
 
   it('still opens a join link, which says you are in a house already', async () => {

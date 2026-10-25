@@ -4,15 +4,16 @@ import { Pressable, StyleSheet, Text } from 'react-native';
 
 import { FONT, RADIUS, SPACE, TAP, useTheme } from '@/theme';
 
-type Variant = 'primary' | 'outline' | 'ghost';
+type Variant = 'primary' | 'outline' | 'ghost' | 'hazard';
 
 /** A lucide icon, or anything drawn the same way (Google's mark). */
 export type ButtonIcon = ComponentType<{ size?: number; color?: string; 'aria-hidden'?: boolean }>;
 
 /**
  * A button at least a thumb tall. `primary` wears hi-vis amber: the one thing
- * to do on a screen. With `href` it is a link dressed as a button (an anchor
- * on the web), as the web app's are. `iconOnly` shows just the icon, square,
+ * to do on a screen; `hazard` is for a choice that strikes something out.
+ * With `href` it is a link dressed as a button (an anchor on the web), as
+ * the web app's are. `iconOnly` shows just the icon, square,
  * and `label` still names it for screen readers.
  */
 export function Button({
@@ -40,6 +41,7 @@ export function Button({
     primary: { background: colors.hivis, ink: colors.onHivis, edge: colors.hivis },
     outline: { background: 'transparent', ink: colors.foreground, edge: colors.border },
     ghost: { background: 'transparent', ink: colors.foreground, edge: 'transparent' },
+    hazard: { background: colors.hazard, ink: colors.onHazard, edge: colors.hazard },
   }[variant];
 
   const button = (

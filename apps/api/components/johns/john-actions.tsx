@@ -1,6 +1,6 @@
 "use client";
 
-import { JOHN_COPY, PROOF_QUALITY, proofPath, proofSize } from "@app/core";
+import { DISPUTE_COPY, JOHN_COPY, PROOF_QUALITY, proofPath, proofSize, SWAP_COPY } from "@app/core";
 import { CameraIcon, CheckIcon, FlagIcon, RepeatIcon, ShieldIcon, ThumbsDownIcon, ThumbsUpIcon, Undo2Icon } from "lucide-react";
 import { useRef, useState } from "react";
 import { toast } from "sonner";
@@ -87,7 +87,7 @@ export function MarkDone({
           onClick={() => (needsPhoto ? input.current?.click() : run(() => markDone(assignmentId)))}
         >
           {needsPhoto ? <CameraIcon aria-hidden /> : <CheckIcon aria-hidden />}
-          {busy ? "…" : "Done"}
+          {busy ? "…" : JOHN_COPY.done}
         </Button>
       ) : needsPhoto ? (
         <Button className="flex-1" disabled={busy} onClick={() => input.current?.click()} data-testid="mark-done">
@@ -135,15 +135,13 @@ export function DisputeButton({ assignmentId, john, owner }: { assignmentId: str
       <SheetTrigger asChild>
         <Button variant="ghost" className="text-muted-foreground">
           <FlagIcon aria-hidden />
-          Dispute
+          {DISPUTE_COPY.open}
         </Button>
       </SheetTrigger>
       <SheetContent side="bottom" className="mx-auto max-w-lg rounded-t-xl">
         <SheetHeader>
-          <SheetTitle>Was {john} really done?</SheetTitle>
-          <SheetDescription>
-            {owner}&rsquo;s tick goes to a house vote. If the house agrees with you, the John opens again.
-          </SheetDescription>
+          <SheetTitle>{DISPUTE_COPY.title(john)}</SheetTitle>
+          <SheetDescription>{DISPUTE_COPY.body(owner)}</SheetDescription>
         </SheetHeader>
         <form
           className="flex flex-col gap-3 px-4 pb-6"
@@ -153,18 +151,18 @@ export function DisputeButton({ assignmentId, john, owner }: { assignmentId: str
           }}
         >
           <label htmlFor="dispute-reason" className="eyebrow">
-            What&rsquo;s wrong with it
+            {DISPUTE_COPY.label}
           </label>
           <Textarea
             id="dispute-reason"
             value={reason}
             onChange={(e) => setReason(e.target.value)}
             maxLength={280}
-            placeholder="The hob's still greasy"
+            placeholder={DISPUTE_COPY.placeholder}
             required
           />
           <Button type="submit" disabled={pending || !reason.trim()}>
-            {pending ? "Sending…" : "Put it to the house"}
+            {pending ? DISPUTE_COPY.sending : DISPUTE_COPY.send}
           </Button>
         </form>
       </SheetContent>
@@ -182,7 +180,7 @@ export function VoteButtons({ disputeId, myVote }: { disputeId: string; myVote: 
         onClick={() => run(() => castVote(disputeId, false))}
       >
         <ThumbsUpIcon aria-hidden />
-        It&rsquo;s fine
+        {DISPUTE_COPY.fine}
       </Button>
       <Button
         variant={myVote === true ? "destructive" : "outline"}
@@ -190,7 +188,7 @@ export function VoteButtons({ disputeId, myVote }: { disputeId: string; myVote: 
         onClick={() => run(() => castVote(disputeId, true))}
       >
         <ThumbsDownIcon aria-hidden />
-        Not done
+        {DISPUTE_COPY.notDone}
       </Button>
     </div>
   );
@@ -236,17 +234,17 @@ export function SwapSheet({
       <SheetTrigger asChild>
         <Button variant="outline">
           <RepeatIcon aria-hidden />
-          Use your swap
+          {SWAP_COPY.open}
         </Button>
       </SheetTrigger>
       <SheetContent side="bottom" className="mx-auto max-h-[85dvh] max-w-lg overflow-y-auto rounded-t-xl">
         <SheetHeader>
-          <SheetTitle>Swap a John</SheetTitle>
-          <SheetDescription>You topped the table, so you pick. They get yours, you get theirs.</SheetDescription>
+          <SheetTitle>{SWAP_COPY.title}</SheetTitle>
+          <SheetDescription>{SWAP_COPY.body}</SheetDescription>
         </SheetHeader>
         <div className="flex flex-col gap-4 px-4 pb-6">
           <fieldset className="flex flex-col gap-2">
-            <legend className="eyebrow mb-2">Give away</legend>
+            <legend className="eyebrow mb-2">{SWAP_COPY.give}</legend>
             {mine.map((m) => (
               <label key={m.id} className="flex min-h-11 items-center gap-3 rounded-md border px-3 has-checked:border-foreground">
                 <input type="radio" name="give" value={m.id} checked={give === m.id} onChange={() => setGive(m.id)} />
@@ -255,7 +253,7 @@ export function SwapSheet({
             ))}
           </fieldset>
           <fieldset className="flex flex-col gap-2">
-            <legend className="eyebrow mb-2">Take instead</legend>
+            <legend className="eyebrow mb-2">{SWAP_COPY.take}</legend>
             {theirs.map((t) => (
               <label key={t.id} className="flex min-h-11 items-center gap-3 rounded-md border px-3 has-checked:border-foreground">
                 <input type="radio" name="take" value={t.id} checked={take === t.id} onChange={() => setTake(t.id)} />
@@ -265,7 +263,7 @@ export function SwapSheet({
             ))}
           </fieldset>
           <Button disabled={pending || !give || !take} onClick={() => run(() => spendSwap(give, take), () => setOpen(false))}>
-            {pending ? "Swapping…" : "Swap them"}
+            {pending ? SWAP_COPY.swapping : SWAP_COPY.swap}
           </Button>
         </div>
       </SheetContent>

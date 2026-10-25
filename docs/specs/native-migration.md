@@ -334,6 +334,14 @@ of what to check on Android, iOS (simulator until the Apple account) and
 web. "Production" says what the merge touches beyond an ordinary deploy;
 anything listed there waits for your word in that message.
 
+**Order from Phase 7 (decided 25 Oct):** the screens first, so the UI can be
+iterated on. Phases 7–11 land one PR each, checked on the Expo web build and
+merged once CI is green; the code stays cross-platform, but iOS- and
+Android-only work waits until after Phase 11: Phase 12 (native push),
+checking each phase on a simulator or emulator, native sign-in's client IDs,
+and anything to do with the stores. Phase 13 (the cutover) is still asked
+for step by step.
+
 ### Phase 1: workspaces and `@app/core` (zero behaviour change)
 
 - Root `package.json` gains `"workspaces": ["packages/*"]` and depends on
@@ -555,6 +563,27 @@ The board (cards on a phone, a table from `lg` on the web), raising a dispute
 and voting via the two routes (`apps/api/lib/moves/` shared with the server
 actions), swaps. db tests: in a house of two, a dispute decides at once
 through the route; a vote can't be cast on your own John.
+
+As built, where it differs from the above:
+- **The routes and the web's actions share `lib/moves/disputes.ts`**: the
+  caller's own `raise_dispute` / `cast_vote`, then the push and the tick as
+  the service role. A refusal answers 403 (not yours) or 409 (not now) in
+  `humanError`'s words; the reason's own problem is a 400 from core's
+  `RaiseDispute` and `disputeProblem`, which the web's action uses too.
+- **The tabs arrive here** (`src/app/(house)/`): Expo Router's JS tabs with a
+  custom bar in the web's look, one tab per screen along the bottom of a
+  phone, and from `WIDE` on the web a sidebar of signs with the house above
+  and you below. The house is followed live once, in that layout, for every
+  tab. Only Today and Week have tabs so far; each later screen adds its own.
+- **Week** is the web's: four counts, then each housemate's cards on a phone
+  or the house as one table from `WIDE`, with the open disputes beside it.
+  Disputing and voting are on the cards and the table; Today gains the
+  votes waiting for you. "Use your swap" trades through `use_swap`
+  directly. Still to come on Week: the week's Table beside the board
+  (Phase 9), who's away (Phase 11) and an admin's re-deal (Phase 11, with
+  `POST /api/deal`).
+- The words for all of it moved to core (`WEEK_COPY`, `DISPUTE_COPY`,
+  `SWAP_COPY`, `SECTION_LABEL`, `SHELL_COPY`), and the web uses them.
 
 ### Phase 8: the Wall
 

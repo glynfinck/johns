@@ -2,7 +2,7 @@ import { afterEach, describe, expect, it } from "vitest";
 
 import { getBearerToken } from "@/lib/auth";
 import { corsHeaders } from "@/lib/cors";
-import { error, json, preflight } from "@/lib/respond";
+import { error, json, preflight, refused } from "@/lib/respond";
 
 describe("getBearerToken", () => {
   it("reads a bearer token", () => {
@@ -60,5 +60,25 @@ describe("responses", () => {
     const ok = json(from("https://example.test"), { ticked: true });
     expect(ok.headers.get("access-control-allow-origin")).toBe("https://example.test");
     expect(await ok.json()).toEqual({ ticked: true });
+  });
+});
+
+describe("refused", () => {
+  const request = new Request("http://localhost:3205/api/disputes", { method: "POST" });
+
+  it("says a refusal in words, with what kind it was", async () => {
+    const notYours = refused(request, { message: "own_john", code: "42501" });
+    expect(notYours.status).toBe(403);
+    expect(await notYours.json()).toEqual({ error: "You can't vote on your own John." });
+
+    const notNow = refused(request, { message: "already_disputed", code: "P0001" });
+    expect(notNow.status).toBe(409);
+    expect(await notNow.json()).toEqual({ error: "Someone's already disputing that tick." });
+  });
+
+  it("calls anything else a fault, never repeating the database's own message", async () => {
+    const fault = refused(request, { message: "connection terminated unexpectedly", code: "08006" });
+    expect(fault.status).toBe(500);
+    expect(await fault.json()).toEqual({ error: "Something went wrong. Try again." });
   });
 });

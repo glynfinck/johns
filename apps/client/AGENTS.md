@@ -65,7 +65,7 @@ permanent once a store has seen them.
 - The root layout reads the saved session and its house behind the splash
   screen and splits the routes with `Stack.Protected` three ways: signed
   out (front door, sign-in), signed in with no house (`welcome`,
-  `house/new`), and in a house (the rest). Signing in or out, or creating a
+  `house/new`), and in a house (the `(house)` group). Signing in or out, or creating a
   house, moves you by itself; screens never navigate after auth. A join link
   (`join/[joinCode]`, which is `johns://join/CODE` on a phone) sits outside
   the guards and signs you in in place, so the code survives.
@@ -85,8 +85,9 @@ permanent once a store has seen them.
     resource beside it: `house.ts` (your house, join codes, creating and
     joining through RPC, and `catchUp` through `POST /api/fresh`),
     `board.ts` (`loadHouse`: one read of a house's rules, people and this
-    week's rows), `johns.ts` (ticking, undoing, spending immunity) and
-    `photos.ts` (receipts: below).
+    week's rows), `johns.ts` (ticking, undoing, spending immunity, a swap),
+    `disputes.ts` (disputing and voting, through apps/api) and `photos.ts`
+    (receipts: below).
 - **Writes go through the database, as the web's do.** A move is one named
   SQL function (`supabase.rpc('mark_done', …)`) or one column-granted write;
   the database decides, and the client only translates a refusal with
@@ -97,8 +98,17 @@ permanent once a store has seen them.
   `use-session.ts`). `use-membership.tsx` is the session and the house it's
   in, read behind the splash screen, with `refresh()` for after creating or
   joining a house. `src/components/`: reusable UI pieces (`Field`, `Choice`
-  for the web's selects, `Alert`, `SignInPanel`, `JohnCard`, `InviteCard`,
-  `NotDealt`).
+  for the web's selects, `Alert`, `SignInPanel`, `Screen` for a house
+  screen's page, `Sheet` for a form that rises from the bottom, `JohnCard`
+  for anyone's John, `DisputeButton` and `VoteButtons`, `SwapSheet`, the
+  board's pieces in `week-board.tsx`, and the shell in `shell/`).
+- **A house's screens are tabs** (`src/app/(house)/_layout.tsx`, Expo
+  Router's JS tabs from `expo-router/js-tabs`): `HouseTabBar` draws them in
+  the web's look, along the bottom of a phone and as a sidebar from `WIDE`
+  on the web; `HouseHeader` names the house above each screen on a phone.
+  The layout follows the house live (`useLiveHouse`) once for every tab. A
+  new screen adds its file to the group and a `Tabs.Screen`, with its label
+  from `SECTION_LABEL` in core.
 - **What a house screen shows comes through React Query**
   (`@tanstack/react-query`; `QueryProvider` in `hooks/query.tsx` wraps the
   root layout). One cache entry per house, `houseKey(id)` from
@@ -189,6 +199,11 @@ what they test (`<name>.test.ts(x)`), except screens', which live in
 the router renders through `renderRouter` from `expo-router/testing-library`;
 the root layout's guard is tested that way with stand-in screens.
 
+- `jest.setup.js` swaps in `react-native-safe-area-context`'s own Jest mock,
+  so a component that reads the safe area renders alone.
+- A layout that reads the window's width is tested at both sizes by
+  mocking `react-native/Libraries/Utilities/useWindowDimensions` (see
+  `week.test.tsx`).
 - `src/testing/`: what tests share, never imported by the app.
   `testQueryClient()` gives each test its own cache with no retries and no
   garbage collection (its five-minute timer would keep Jest running after a
