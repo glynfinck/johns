@@ -1,19 +1,21 @@
-import { INVITE_COPY, JOHN_COPY, NOT_DEALT_COPY, SIGN_IN_COPY, TODAY_COPY } from '@app/core';
+import { DISPUTE_COPY, INVITE_COPY, JOHN_COPY, NOT_DEALT_COPY, SIGN_IN_COPY, TODAY_COPY } from '@app/core';
 import { QueryClientProvider } from '@tanstack/react-query';
 import { Slot } from 'expo-router';
 import { fireEvent, renderRouter, screen, waitFor } from 'expo-router/testing-library';
 
 import { signOut } from '@/api/auth';
 import { loadHouse } from '@/api/board';
+import { castVote } from '@/api/disputes';
 import { catchUp } from '@/api/house';
 import { markDone } from '@/api/johns';
-import Today from '@/app/today';
+import Today from '@/app/(house)/today';
 import { assignment, snapshot } from '@/testing/house';
 import { testQueryClient } from '@/testing/query';
 
 jest.mock('@/api/auth', () => ({ signOut: jest.fn() }));
 jest.mock('@/api/board', () => ({ loadHouse: jest.fn() }));
 jest.mock('@/api/house', () => ({ catchUp: jest.fn() }));
+jest.mock('@/api/disputes', () => ({ castVote: jest.fn(), raiseDispute: jest.fn() }));
 jest.mock('@/api/johns', () => ({ markDone: jest.fn(), undoDone: jest.fn(), spendImmunity: jest.fn() }));
 jest.mock('@/api/photos', () => ({ pickPhoto: jest.fn(), uploadProof: jest.fn() }));
 jest.mock('@/api/supabase', () => {
@@ -63,9 +65,9 @@ beforeEach(() => {
   (markDone as jest.Mock).mockResolvedValue(undefined);
 });
 
-it('names the house and who is signed in', async () => {
+it('says who is signed in', async () => {
   await open();
-  expect(screen.getByText('Flat 3')).toBeOnTheScreen();
+  expect(screen.getByRole('header', { name: TODAY_COPY.title })).toBeOnTheScreen();
   expect(screen.getByText('Signed in as Priya')).toBeOnTheScreen();
   expect(read).toHaveBeenCalledWith('h1', expect.any(Date));
 });
@@ -90,6 +92,33 @@ it('ticks a John, and reads the house again', async () => {
   expect(markDone).toHaveBeenCalledWith('a1');
   await waitFor(() => expect(screen.getByTestId('johns-left')).toHaveTextContent('0'));
   expect(screen.getByText('Done, being checked')).toBeOnTheScreen();
+});
+
+it('puts the votes waiting for you first, and casts yours', async () => {
+  (castVote as jest.Mock).mockResolvedValue(undefined);
+  const done = new Date(Date.now() - 3_600_000).toISOString();
+  read.mockResolvedValue(
+    snapshot({
+      assignments: [...snapshot().assignments.slice(0, 3), assignment({ id: 'a4', user_id: 'sam', name: 'Clean the bath', done_at: done })],
+      disputes: [
+        {
+          id: 'd1',
+          assignment_id: 'a4',
+          raised_by: 'cal',
+          reason: 'Ring round the bath',
+          closes_at: new Date(Date.now() + 3_600_000).toISOString(),
+          dispute_votes: [{ user_id: 'cal', uphold: true }],
+        },
+      ],
+    }),
+  );
+  await open();
+  const toVote = screen.getByTestId('to-vote');
+  expect(toVote).toHaveTextContent(new RegExp(TODAY_COPY.toVote));
+  expect(screen.getByText('Disputed: “Ring round the bath”')).toBeOnTheScreen();
+  expect(screen.getByText('Sam')).toBeOnTheScreen();
+  await fireEvent.press(screen.getByRole('button', { name: DISPUTE_COPY.notDone }));
+  expect(castVote).toHaveBeenCalledWith('d1', true);
 });
 
 it('says so when nothing on the list is yours this week', async () => {
@@ -129,7 +158,7 @@ describe('catching up', () => {
     jest.spyOn(console, 'warn').mockImplementation(() => undefined);
     (catchUp as jest.Mock).mockRejectedValue(new Error('offline'));
     await open();
-    expect(screen.getByText('Flat 3')).toBeOnTheScreen();
+    expect(screen.getByText(TODAY_COPY.title)).toBeOnTheScreen();
   });
 });
 

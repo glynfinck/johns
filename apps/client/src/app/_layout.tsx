@@ -66,9 +66,9 @@ function Routes() {
           <Stack.Screen name="welcome" />
           <Stack.Screen name="house/new" />
         </Stack.Protected>
-        {/* In a house. */}
+        {/* In a house: its screens, as tabs. */}
         <Stack.Protected guard={signedIn && housed} redirectTo={home}>
-          <Stack.Screen name="today" />
+          <Stack.Screen name="(house)" />
         </Stack.Protected>
         {/* A join link opens for anyone, and signs you in in place. */}
         <Stack.Screen name="join/[joinCode]" />

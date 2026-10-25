@@ -2,16 +2,21 @@ import { describe, expect, it } from "vitest";
 
 import {
   APP_NAME,
+  DISPUTE_COPY,
   FRONT_DOOR,
   INVITE_COPY,
   JOHN_COPY,
   JOIN_COPY,
   NEW_HOUSE_COPY,
-  NO_HOUSE_COPY,
   NOT_DEALT_COPY,
+  NO_HOUSE_COPY,
+  SECTION_LABEL,
+  SECTIONS,
+  SHELL_COPY,
   SIGN_IN_COPY,
   TAGLINE,
   TODAY_COPY,
+  WEEK_COPY,
 } from "./copy";
 
 const signIn = Object.values(SIGN_IN_COPY).flatMap((value) =>
@@ -96,5 +101,44 @@ describe("TODAY_COPY", () => {
     expect(TODAY_COPY.left(0)).toBe("Johns left this week");
     expect(TODAY_COPY.streak(1)).toBe("1 week");
     expect(TODAY_COPY.streak(2)).toBe("2 weeks");
+  });
+});
+
+describe("JOHN_COPY's time away", () => {
+  it("says whose trip pulled a John forward", () => {
+    expect(JOHN_COPY.dueBeforeYouGo("sat 09:00")).toBe("Due before you go: it was due sat 09:00, while you're away.");
+    expect(JOHN_COPY.dueBeforeTheyGo("Ben", "sat 09:00")).toBe("Due before Ben goes: it was due sat 09:00, while they're away.");
+  });
+});
+
+describe("WEEK_COPY", () => {
+  it("counts and tallies in words", () => {
+    expect(WEEK_COPY.doneOf(0, 0)).toBe("0 of 0");
+    expect(WEEK_COPY.doneOf(3, 7)).toBe("3 of 7");
+    expect(WEEK_COPY.tally(1, 0, "in 5h")).toBe("1 not done · 0 fine · closes in 5h");
+    expect(WEEK_COPY.disputeOn("Bins", "Still full")).toBe("Bins: “Still full”");
+  });
+});
+
+describe("DISPUTE_COPY", () => {
+  it("names the John and whose tick it is", () => {
+    expect(DISPUTE_COPY.title("Bins")).toBe("Was Bins really done?");
+    expect(DISPUTE_COPY.body("Ben")).toBe(
+      "Ben’s tick goes to a house vote. If the house agrees with you, the John opens again.",
+    );
+  });
+});
+
+describe("SECTIONS", () => {
+  it("names every screen once, in the house's words", () => {
+    expect(new Set(SECTIONS).size).toBe(SECTIONS.length);
+    expect(SECTIONS.map((s) => SECTION_LABEL[s])).toEqual(["Today", "Week", "Wall", "Table", "Stake", "House"]);
+  });
+
+  it("counts the house and your standing in words", () => {
+    expect(SHELL_COPY.housemates(1)).toBe("1 housemate");
+    expect(SHELL_COPY.housemates(4)).toBe("4 housemates");
+    expect(SHELL_COPY.standing(0, 1)).toBe("0-week streak · 1 token");
+    expect(SHELL_COPY.standing(5, 0)).toBe("5-week streak · 0 tokens");
   });
 });

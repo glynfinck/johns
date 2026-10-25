@@ -1,8 +1,7 @@
 import { isOpen, SIGN_IN_COPY, TODAY_COPY, weekRange } from '@app/core';
 import { FlameIcon, LogOutIcon, RefreshCwIcon, RepeatIcon, ShieldIcon } from 'lucide-react-native';
 import { useState } from 'react';
-import { ActivityIndicator, RefreshControl, ScrollView, StyleSheet, Text, View } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { ActivityIndicator, StyleSheet, Text, View } from 'react-native';
 
 import { signOut } from '@/api/auth';
 import { Alert } from '@/components/alert';
@@ -11,8 +10,9 @@ import { Card } from '@/components/card';
 import { InviteCard } from '@/components/invite-card';
 import { JohnCard } from '@/components/john-card';
 import { NotDealt } from '@/components/not-dealt';
+import { Screen } from '@/components/screen';
 import { Body, Eyebrow, Heading } from '@/components/text';
-import { useCatchUp, useHouse, useLiveHouse, type HouseView } from '@/hooks/use-house';
+import { useCatchUp, useHouse, type HouseView } from '@/hooks/use-house';
 import { useMembership } from '@/hooks/use-membership';
 import { FONT, RADIUS, SPACE, useTheme } from '@/theme';
 
@@ -28,7 +28,6 @@ function TodayFor({ houseId, userId }: { houseId: string; userId: string }) {
   const { query, view } = useHouse(houseId, userId);
   const [refreshing, setRefreshing] = useState(false);
   const freshen = useCatchUp(houseId);
-  useLiveHouse(houseId);
 
   async function pull() {
     setRefreshing(true);
@@ -37,27 +36,22 @@ function TodayFor({ houseId, userId }: { houseId: string; userId: string }) {
   }
 
   return (
-    <SafeAreaView style={[styles.screen, { backgroundColor: colors.background }]}>
-      <ScrollView
-        contentContainerStyle={styles.page}
-        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={() => void pull()} tintColor={colors.foreground} />}
-      >
-        {!view ? (
-          query.isError ? (
-            <View style={styles.stack}>
-              <Alert message="Couldn't read the house. Check the connection." />
-              <View style={styles.start}>
-                <Button variant="outline" icon={RefreshCwIcon} label="Try again" onPress={() => void query.refetch()} />
-              </View>
+    <Screen refreshing={refreshing} onRefresh={() => void pull()}>
+      {!view ? (
+        query.isError ? (
+          <View style={styles.stack}>
+            <Alert message="Couldn't read the house. Check the connection." />
+            <View style={styles.start}>
+              <Button variant="outline" icon={RefreshCwIcon} label="Try again" onPress={() => void query.refetch()} />
             </View>
-          ) : (
-            <ActivityIndicator color={colors.foreground} accessibilityLabel="Reading the house" style={styles.loading} />
-          )
+          </View>
         ) : (
-          <Week view={view} />
-        )}
-      </ScrollView>
-    </SafeAreaView>
+          <ActivityIndicator color={colors.foreground} accessibilityLabel="Reading the house" style={styles.loading} />
+        )
+      ) : (
+        <Week view={view} />
+      )}
+    </Screen>
   );
 }
 
@@ -66,6 +60,7 @@ function Week({ view }: { view: HouseView }) {
   const { snapshot, board, today, me, now } = view;
   const { rules, house, members } = snapshot;
   const admin = members.find((m) => m.role === 'admin');
+  const nameOf = (userId: string) => members.find((m) => m.userId === userId)?.name ?? 'Housemate';
 
   return (
     <View style={styles.stack}>
@@ -74,7 +69,6 @@ function Week({ view }: { view: HouseView }) {
           {board.week ? TODAY_COPY.thisWeekRange(weekRange(board.week.startsAt, board.week.endsAt, rules.timezone)) : TODAY_COPY.thisWeek}
         </Eyebrow>
         <Heading style={styles.title}>{TODAY_COPY.title}</Heading>
-        <Body muted>{house.name}</Body>
       </View>
 
       {!board.week ? (
@@ -122,6 +116,25 @@ function Week({ view }: { view: HouseView }) {
               </View>
             ) : null}
           </Card>
+
+          {today.toVote.length > 0 ? (
+            <View style={styles.stack} testID="to-vote">
+              <Eyebrow>{TODAY_COPY.toVote}</Eyebrow>
+              {today.toVote.map((item) => (
+                <JohnCard
+                  key={item.id}
+                  item={item}
+                  houseId={house.id}
+                  zone={rules.timezone}
+                  now={now}
+                  mine={false}
+                  ownerName={nameOf(item.userId)}
+                  showOwner
+                />
+              ))}
+              <Eyebrow style={styles.yours}>{TODAY_COPY.yours}</Eyebrow>
+            </View>
+          ) : null}
 
           {today.mine.length === 0 ? (
             <Card>
@@ -178,12 +191,11 @@ function SignOut({ name }: { name?: string }) {
 }
 
 const styles = StyleSheet.create({
-  screen: { flex: 1 },
-  page: { width: '100%', maxWidth: 720, alignSelf: 'center', padding: SPACE.xl, flexGrow: 1 },
   stack: { gap: SPACE.lg },
   start: { alignItems: 'flex-start' },
   loading: { marginTop: SPACE.xxl },
   title: { marginTop: SPACE.xs },
+  yours: { marginTop: SPACE.sm },
   hero: {
     flexDirection: 'row',
     alignItems: 'center',

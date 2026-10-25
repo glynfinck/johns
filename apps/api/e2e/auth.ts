@@ -102,15 +102,18 @@ async function clientSession(context: BrowserContext, name: string): Promise<{ i
 /**
  * Someone signed in to the Expo app's web build, in a house of their own
  * with this week already handed out: they create the house as the app does,
- * its Johns are added as an admin adds them, and the week is dealt through
- * the engine, as "Hand out this week's Johns" does. Every John lands on them.
+ * any `housemates` join it by its code (each signed in to their own
+ * context), its Johns are added as an admin adds them, and the week is dealt
+ * through the engine, as "Hand out this week's Johns" does. Alone, every John
+ * lands on them; with housemates, the deal shares them out.
  */
 export async function dealtHouseInClient(
   context: BrowserContext,
   name: string,
   houseName: string,
   johns: { name: string; category?: string; needsPhoto?: boolean }[],
-): Promise<{ userId: string; houseId: string }> {
+  housemates: { context: BrowserContext; name: string }[] = [],
+): Promise<{ userId: string; houseId: string; housemateIds: string[] }> {
   const { id, client } = await clientSession(context, name);
   const { data: houseId, error } = await client.rpc("create_house", {
     p_name: houseName,
@@ -121,6 +124,15 @@ export async function dealtHouseInClient(
   if (error) throw error;
 
   const db = admin();
+  const { data: codeRow } = await db.from("houses").select("join_code").eq("id", houseId).single();
+  const housemateIds: string[] = [];
+  for (const mate of housemates) {
+    const joiner = await clientSession(mate.context, mate.name);
+    const { error: joinError } = await joiner.client.rpc("join_house", { p_code: codeRow!.join_code });
+    if (joinError) throw joinError;
+    housemateIds.push(joiner.id);
+  }
+
   const now = new Date();
   const week = weekWindow(now, "Europe/London", 1);
   const { error: johnsError } = await db.from("johns").insert(
@@ -141,7 +153,7 @@ export async function dealtHouseInClient(
   const { house, members } = await loadHouse(db, houseId);
   const { weekId } = await dealWeek(db, house, members, week, now, false);
   if (!weekId) throw new Error("Nothing was dealt");
-  return { userId: id, houseId };
+  return { userId: id, houseId, housemateIds };
 }
 
 /**

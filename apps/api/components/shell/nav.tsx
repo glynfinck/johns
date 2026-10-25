@@ -1,5 +1,6 @@
 "use client";
 
+import { SECTION_LABEL } from "@app/core";
 import {
   CalendarDaysIcon,
   CoinsIcon,
@@ -14,11 +15,11 @@ import { usePathname } from "next/navigation";
 import { cn } from "@/lib/utils";
 
 export const NAV = [
-  { href: "/today", label: "Today", icon: ListChecksIcon },
-  { href: "/week", label: "Week", icon: CalendarDaysIcon },
-  { href: "/wall", label: "Wall", icon: MessagesSquareIcon },
-  { href: "/table", label: "Table", icon: TrophyIcon },
-  { href: "/stake", label: "Stake", icon: CoinsIcon },
+  { href: "/today", label: SECTION_LABEL.today, icon: ListChecksIcon },
+  { href: "/week", label: SECTION_LABEL.week, icon: CalendarDaysIcon },
+  { href: "/wall", label: SECTION_LABEL.wall, icon: MessagesSquareIcon },
+  { href: "/table", label: SECTION_LABEL.table, icon: TrophyIcon },
+  { href: "/stake", label: SECTION_LABEL.stake, icon: CoinsIcon },
 ] as const;
 
 function useActive() {
@@ -31,7 +32,7 @@ export function SideNav() {
   const active = useActive();
   return (
     <nav aria-label="Main" className="flex flex-col gap-1">
-      {[...NAV, { href: "/house", label: "House", icon: HouseIcon }].map(({ href, label, icon: Icon }) => (
+      {[...NAV, { href: "/house", label: SECTION_LABEL.house, icon: HouseIcon }].map(({ href, label, icon: Icon }) => (
         <Link
           key={href}
           href={href}

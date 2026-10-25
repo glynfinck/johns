@@ -24,3 +24,8 @@ export function undoDone(assignmentId: string): Promise<void> {
 export function spendImmunity(assignmentId: string): Promise<void> {
   return call(supabase.rpc('use_immunity', { p_assignment: assignmentId }));
 }
+
+/** Spend a swap token: one of your open Johns for a housemate's, this week. */
+export function spendSwap(mine: string, theirs: string): Promise<void> {
+  return call(supabase.rpc('use_swap', { p_mine: mine, p_theirs: theirs }));
+}

@@ -6,6 +6,7 @@ import {
   pointsLabel,
   relative,
   withAlpha,
+  WEEK_COPY,
   type BoardItem,
   type Category,
 } from '@app/core';
@@ -13,39 +14,51 @@ import { CameraIcon, CheckIcon, ImagesIcon, PlaneIcon, ShieldIcon, Undo2Icon } f
 import { useState } from 'react';
 import { StyleSheet, Text, View } from 'react-native';
 
-import { markDone, spendImmunity, undoDone } from '@/api/johns';
-import { pickPhoto, uploadProof } from '@/api/photos';
+import { spendImmunity, undoDone } from '@/api/johns';
 import { Alert } from '@/components/alert';
+import { Avatar } from '@/components/avatar';
 import { Button } from '@/components/button';
+import { DisputeButton, VoteButtons } from '@/components/dispute';
 import { HazardTape } from '@/components/hazard-tape';
 import { Lid } from '@/components/lid';
 import { StatusChip } from '@/components/status-chip';
 import { Body } from '@/components/text';
 import { useMove } from '@/hooks/use-move';
+import { useTick } from '@/hooks/use-tick';
 import { FONT, RADIUS, SPACE, useTheme } from '@/theme';
 
 /**
- * One of your Johns, wearing its bin lid along the top, as the web's card:
- * what you can do with it depends on where it has got to, and nothing else.
+ * One John, wearing its bin lid along the top, as the web's card: what you
+ * can do with it depends on whose it is and where it has got to, and
+ * nothing else. Yours can be ticked; a housemate's tick can be disputed, and
+ * voted on once it is.
  */
 export function JohnCard({
   item,
   houseId,
   zone,
   now,
-  immunityTokens,
+  mine = true,
+  ownerName = '',
+  showOwner = false,
+  immunityTokens = 0,
 }: {
   item: BoardItem;
   houseId: string;
   zone: string;
   now: Date;
-  immunityTokens: number;
+  mine?: boolean;
+  ownerName?: string;
+  showOwner?: boolean;
+  immunityTokens?: number;
 }) {
   const { colors } = useTheme();
   const open = isOpen(item.status);
   const finished = item.status === 'done' || item.status === 'late' || item.status === 'checking';
   const alarming = item.status === 'overdue' || item.status === 'missed';
   const kind = item.groupName ?? CATEGORY_LABEL[item.category as Category] ?? 'John';
+  // "it was due tomorrow 20:00", mid-sentence.
+  const was = (at: Date) => dueLabel(at, now, zone).replace(/^(Today|Tomorrow|Yesterday)/, (w) => w.toLowerCase());
 
   return (
     <View
@@ -78,12 +91,20 @@ export function JohnCard({
             </View>
           </View>
 
+          {showOwner ? (
+            <View style={styles.owner}>
+              <Avatar name={ownerName} me={mine} size={24} />
+              <Text style={[styles.ownerName, { color: colors.foreground }]}>{mine ? WEEK_COPY.you : ownerName}</Text>
+            </View>
+          ) : null}
+
           {item.dispute ? (
             <View style={[styles.note, { backgroundColor: withAlpha(colors.hazard, 0.1) }]}>
               <Text style={[styles.noteStrong, { color: colors.hazard }]}>{JOHN_COPY.disputed(item.dispute.reason)}</Text>
               <Body muted style={styles.small}>
                 {JOHN_COPY.votes(item.dispute.uphold, item.dispute.reject, relative(item.dispute.closesAt, now))}
               </Body>
+              {!mine ? <VoteButtons houseId={houseId} disputeId={item.dispute.id} myVote={item.dispute.myVote} /> : null}
             </View>
           ) : null}
 
@@ -91,17 +112,15 @@ export function JohnCard({
             <View style={[styles.note, styles.moved, { backgroundColor: colors.secondary }]} testID="due-before-you-go">
               <PlaneIcon size={16} color={colors.foreground} aria-hidden />
               <Body style={[styles.small, styles.grow]}>
-                {JOHN_COPY.dueBeforeYouGo(
-                  dueLabel(item.movedFrom, now, zone).replace(/^(Today|Tomorrow|Yesterday)/, (w) => w.toLowerCase()),
-                )}
+                {mine ? JOHN_COPY.dueBeforeYouGo(was(item.movedFrom)) : JOHN_COPY.dueBeforeTheyGo(ownerName, was(item.movedFrom))}
               </Body>
             </View>
           ) : null}
 
-          {open ? <Tick item={item} houseId={houseId} immunityTokens={immunityTokens} /> : null}
+          {mine && open ? <Tick item={item} houseId={houseId} immunityTokens={immunityTokens} /> : null}
 
           {item.status === 'checking' && item.standsAt ? (
-            <Stands item={item} houseId={houseId} now={now} />
+            <Stands item={item} houseId={houseId} now={now} mine={mine} ownerName={ownerName} />
           ) : null}
         </View>
       </View>
@@ -114,34 +133,10 @@ export function JohnCard({
  * square button) the library; on any other, a photo is offered, never required.
  */
 function Tick({ item, houseId, immunityTokens }: { item: BoardItem; houseId: string; immunityTokens: number }) {
+  const tick = useTick(houseId, item.id);
   const move = useMove(houseId);
-  const [uploading, setUploading] = useState(false);
-  const [photoProblem, setPhotoProblem] = useState<string | null>(null);
   const [confirming, setConfirming] = useState(false);
-  const busy = move.pending || uploading;
-
-  async function withPhoto(source: 'camera' | 'library') {
-    setPhotoProblem(null);
-    let uri: string | null;
-    try {
-      uri = await pickPhoto(source);
-    } catch (reason) {
-      setPhotoProblem(reason instanceof Error ? reason.message : JOHN_COPY.photoFailed);
-      return;
-    }
-    if (!uri) return;
-    setUploading(true);
-    let path: string;
-    try {
-      path = await uploadProof(houseId, item.id, uri);
-    } catch {
-      setPhotoProblem(JOHN_COPY.photoFailed);
-      setUploading(false);
-      return;
-    }
-    setUploading(false);
-    await move.run(() => markDone(item.id, path));
-  }
+  const busy = tick.busy || move.pending;
 
   return (
     <View style={styles.actions}>
@@ -150,9 +145,9 @@ function Tick({ item, houseId, immunityTokens }: { item: BoardItem; houseId: str
           <View style={styles.grow}>
             <Button
               icon={CameraIcon}
-              label={busy ? JOHN_COPY.uploading : JOHN_COPY.photoAndDone}
+              label={tick.uploading ? JOHN_COPY.uploading : JOHN_COPY.photoAndDone}
               disabled={busy}
-              onPress={() => void withPhoto('camera')}
+              onPress={() => void tick.tickWithPhoto('camera')}
               testID="mark-done"
             />
           </View>
@@ -162,7 +157,7 @@ function Tick({ item, houseId, immunityTokens }: { item: BoardItem; houseId: str
             label={JOHN_COPY.choosePhoto}
             iconOnly
             disabled={busy}
-            onPress={() => void withPhoto('library')}
+            onPress={() => void tick.tickWithPhoto('library')}
             testID="choose-photo"
           />
         </View>
@@ -171,9 +166,9 @@ function Tick({ item, houseId, immunityTokens }: { item: BoardItem; houseId: str
           <View style={styles.grow}>
             <Button
               icon={CheckIcon}
-              label={move.pending ? JOHN_COPY.ticking : uploading ? JOHN_COPY.uploading : JOHN_COPY.markDone}
+              label={tick.pending ? JOHN_COPY.ticking : tick.uploading ? JOHN_COPY.uploading : JOHN_COPY.markDone}
               disabled={busy}
-              onPress={() => void move.run(() => markDone(item.id))}
+              onPress={() => void tick.tick()}
               testID="mark-done"
             />
           </View>
@@ -183,7 +178,7 @@ function Tick({ item, houseId, immunityTokens }: { item: BoardItem; houseId: str
             label={JOHN_COPY.withPhoto}
             iconOnly
             disabled={busy}
-            onPress={() => void withPhoto('camera')}
+            onPress={() => void tick.tickWithPhoto('camera')}
             testID="done-with-photo"
           />
         </View>
@@ -207,13 +202,25 @@ function Tick({ item, houseId, immunityTokens }: { item: BoardItem; houseId: str
         )
       ) : null}
 
-      {photoProblem || move.problem ? <Alert message={(photoProblem ?? move.problem)!} /> : null}
+      {tick.problem || move.problem ? <Alert message={(tick.problem ?? move.problem)!} /> : null}
     </View>
   );
 }
 
-/** A tick being checked: when it stands, and the owner's way to take it back meanwhile. */
-function Stands({ item, houseId, now }: { item: BoardItem; houseId: string; now: Date }) {
+/** A tick being checked: when it stands; meanwhile its owner can take it back and anyone else can dispute it. */
+function Stands({
+  item,
+  houseId,
+  now,
+  mine,
+  ownerName,
+}: {
+  item: BoardItem;
+  houseId: string;
+  now: Date;
+  mine: boolean;
+  ownerName: string;
+}) {
   const move = useMove(houseId);
   return (
     <View style={styles.actions}>
@@ -221,15 +228,40 @@ function Stands({ item, houseId, now }: { item: BoardItem; houseId: string; now:
         <Body muted style={[styles.small, styles.grow]}>
           {JOHN_COPY.standsIn(relative(item.standsAt!, now))}
         </Body>
-        <Button
-          variant="ghost"
-          icon={Undo2Icon}
-          label={JOHN_COPY.undo}
-          disabled={move.pending}
-          onPress={() => void move.run(() => undoDone(item.id))}
-        />
+        {mine ? (
+          <Button
+            variant="ghost"
+            icon={Undo2Icon}
+            label={JOHN_COPY.undo}
+            disabled={move.pending}
+            onPress={() => void move.run(() => undoDone(item.id))}
+          />
+        ) : (
+          <DisputeButton houseId={houseId} assignmentId={item.id} john={item.name} owner={ownerName} />
+        )}
       </View>
       {move.problem ? <Alert message={move.problem} /> : null}
+    </View>
+  );
+}
+
+/**
+ * The laptop table's tick: one small button. A photo John opens the camera
+ * (the file chooser, on the web) first, as on the card.
+ */
+export function CompactTick({ item, houseId }: { item: BoardItem; houseId: string }) {
+  const { colors } = useTheme();
+  const tick = useTick(houseId, item.id);
+  return (
+    <View style={styles.compact}>
+      <Button
+        icon={item.needsPhoto ? CameraIcon : CheckIcon}
+        label={tick.busy ? '…' : JOHN_COPY.done}
+        disabled={tick.busy}
+        onPress={() => void (item.needsPhoto ? tick.tickWithPhoto('camera') : tick.tick())}
+        testID="mark-done"
+      />
+      {tick.problem ? <Body style={[styles.small, { color: colors.hazard }]}>{tick.problem}</Body> : null}
     </View>
   );
 }
@@ -254,4 +286,7 @@ const styles = StyleSheet.create({
   buttons: { flexDirection: 'row', gap: SPACE.sm, alignItems: 'center' },
   start: { alignItems: 'flex-start' },
   stands: { flexDirection: 'row', alignItems: 'center', gap: SPACE.sm },
+  owner: { flexDirection: 'row', alignItems: 'center', gap: SPACE.sm },
+  ownerName: { fontFamily: FONT.bold, fontSize: 14 },
+  compact: { alignItems: 'flex-end', gap: SPACE.xs },
 });

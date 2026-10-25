@@ -114,6 +114,8 @@ export const TODAY_COPY = {
 export const JOHN_COPY = {
   photo: "photo",
   markDone: "Mark done",
+  /** The laptop board's one small tick. */
+  done: "Done",
   ticking: "Ticking…",
   withPhoto: "Mark done with a photo",
   photoAndDone: "Photo and done",
@@ -128,6 +130,7 @@ export const JOHN_COPY = {
   disputed: (reason: string) => `Disputed: “${reason}”`,
   votes: (uphold: number, reject: number, closes: string) => `${uphold} say not done, ${reject} say fine · closes ${closes}`,
   dueBeforeYouGo: (was: string) => `Due before you go: it was due ${was}, while you're away.`,
+  dueBeforeTheyGo: (owner: string, was: string) => `Due before ${owner} goes: it was due ${was}, while they're away.`,
 } as const;
 
 /** Before there is anything to do this week. */
@@ -152,4 +155,65 @@ export const INVITE_COPY = {
   copy: "Copy",
   copied: "Link copied",
   shareTitle: (house: string) => `Join ${house} on Johns`,
+} as const;
+
+/** The week's board: everyone's Johns, and where each has got to. */
+export const WEEK_COPY = {
+  title: "The board",
+  done: "Done",
+  checking: "Being checked",
+  overdue: "Overdue",
+  disputed: "Disputed",
+  doneOf: (done: number, total: number) => `${done} of ${total}`,
+  you: "You",
+  everyJohn: "Every John this week",
+  columns: { john: "John", who: "Who", due: "Due", points: "Pts", status: "Status" },
+  disputes: "Disputes",
+  /** A dispute in the laptop's side column, after whose it is ("Ben's", "Your"). */
+  disputeOn: (john: string, reason: string) => `${john}: “${reason}”`,
+  tally: (uphold: number, reject: number, closes: string) => `${uphold} not done · ${reject} fine · closes ${closes}`,
+} as const;
+
+/** Housemate check: disputing a tick, and voting on one. */
+export const DISPUTE_COPY = {
+  open: "Dispute",
+  title: (john: string) => `Was ${john} really done?`,
+  body: (owner: string) => `${owner}’s tick goes to a house vote. If the house agrees with you, the John opens again.`,
+  label: "What’s wrong with it",
+  placeholder: "The hob's still greasy",
+  send: "Put it to the house",
+  sending: "Sending…",
+  fine: "It’s fine",
+  notDone: "Not done",
+} as const;
+
+/** A swap token: one of your open Johns for a housemate's. */
+export const SWAP_COPY = {
+  open: "Use your swap",
+  title: "Swap a John",
+  body: "You topped the table, so you pick. They get yours, you get theirs.",
+  give: "Give away",
+  take: "Take instead",
+  swap: "Swap them",
+  swapping: "Swapping…",
+} as const;
+
+/** A house's screens, in the order the tabs and the sidebar show them. */
+export const SECTIONS = ["today", "week", "wall", "table", "stake", "house"] as const;
+export type Section = (typeof SECTIONS)[number];
+
+export const SECTION_LABEL: Record<Section, string> = {
+  today: "Today",
+  week: "Week",
+  wall: "Wall",
+  table: "Table",
+  stake: "Stake",
+  house: "House",
+};
+
+/** The house and you, at the foot of the laptop's sidebar. */
+export const SHELL_COPY = {
+  housemates: (count: number) => `${count} ${count === 1 ? "housemate" : "housemates"}`,
+  close: "Close",
+  standing: (streak: number, tokens: number) => `${streak}-week streak · ${tokens} ${tokens === 1 ? "token" : "tokens"}`,
 } as const;

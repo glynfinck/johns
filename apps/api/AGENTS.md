@@ -70,7 +70,13 @@ appear only in the laptop board.
   preflight`. Errors are `{ "error": "<sentence>" }`, never a stack or a
   query. CORS only for `ALLOWED_ORIGINS` (`lib/env.ts`): the Expo web build
   on 8205 locally; phones send no Origin. `proxy.ts` doesn't touch `/api/`.
-  Today: `POST /api/fresh` (catch a house up, at most once a minute).
+  Today: `POST /api/fresh` (catch a house up, at most once a minute),
+  `POST /api/disputes` and `POST /api/disputes/:id/votes`. A database
+  refusal answers through `refused`: 403 when it isn't the caller's to make
+  (42501), 409 when the rules say not now (P0001), in `humanError`'s words.
+- `lib/moves/`: a move that needs the service role after the caller's own
+  RPC (tell the house, decide at once), shared by the server action and the
+  route so the web and the app can't drift: `disputes.ts` (raise, vote).
 - `lib/actions/`: server actions. Thin wrappers around one SQL function or
   column-granted write each: they translate refusals with `humanError` and
   refresh. They never decide.
