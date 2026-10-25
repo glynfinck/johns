@@ -1,7 +1,6 @@
 import {
   BALANCE_WEEKS,
   awayOn,
-  carryOver,
   dueAt,
   earnsImmunity,
   fairShares,
@@ -12,6 +11,7 @@ import {
   localDate,
   monthOf,
   monthWindow,
+  recentBalances,
   rulesOf,
   settleMonth,
   settleOutcome,
@@ -26,7 +26,6 @@ import {
   type DealJohn,
   type IsoDow,
   type Outcome,
-  type PastWeek,
   type WeekWindow,
 } from "@app/core";
 import type { SupabaseClient } from "@supabase/supabase-js";
@@ -170,19 +169,7 @@ export async function loadBalances(
         db.from("assignments").select("week_id, user_id, points").in("week_id", ids),
       ]).then(([a, b]) => [must(a, "shares"), must(b, "past assignments")] as const)
     : [[], []];
-  const weeks: PastWeek[] = ids.map((id) => ({
-    shares: shares.filter((s) => s.week_id === id).map((s) => ({ userId: s.user_id, share: Number(s.share) })),
-    assignments: handed.filter((a) => a.week_id === id).map((a) => ({ userId: a.user_id, points: a.points })),
-  }));
-
-  // A usual week, for saying how long catching up takes: the average of the
-  // weeks someone had a share in.
-  const usualShare = new Map<string, number>();
-  for (const id of memberIds) {
-    const theirs = shares.filter((s) => s.user_id === id && Number(s.share) > 0).map((s) => Number(s.share));
-    usualShare.set(id, theirs.length ? theirs.reduce((a, b) => a + b, 0) / theirs.length : 0);
-  }
-  return { balances: carryOver(weeks, memberIds), usualShare };
+  return recentBalances({ weekIds: ids, shares, handed }, memberIds);
 }
 
 /**

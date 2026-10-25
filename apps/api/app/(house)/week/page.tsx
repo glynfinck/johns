@@ -1,4 +1,4 @@
-import { addDaysTo, awayDays, dateRange, dueLabel, firstName, pointsEarned, relative, WEEK_COPY, weekRange } from "@app/core";
+import { addDaysTo, awayDays, dateRange, dueLabel, firstName, pointsEarned, relative, TABLE_COPY, WEEK_COPY, weekRange } from "@app/core";
 import type { Metadata } from "next";
 
 import { DealButton } from "@/components/house/deal-button";
@@ -212,7 +212,7 @@ export default async function WeekPage() {
             </section>
           ) : null}
           <section className="rounded-lg border border-border bg-card p-4">
-            <h2 className="eyebrow mb-3">The Table · this week</h2>
+            <h2 className="eyebrow mb-3">{TABLE_COPY.beside}</h2>
             <Standings rows={board.table} names={names} me={ctx.userId} dense />
           </section>
         </aside>

@@ -1,3 +1,6 @@
+import { BALANCE_WEEKS } from "./deal";
+import { IMMUNITY_EVERY } from "./streak";
+
 /**
  * The words both apps say before anyone signs in: the name, the tagline and
  * the front door. One copy, so the web and the phone can't tell the house
@@ -216,4 +219,39 @@ export const SHELL_COPY = {
   housemates: (count: number) => `${count} ${count === 1 ? "housemate" : "housemates"}`,
   close: "Close",
   standing: (streak: number, tokens: number) => `${streak}-week streak · ${tokens} ${tokens === 1 ? "token" : "tokens"}`,
+} as const;
+
+/** The Table: effort points for the week and the month, fair shares, streaks and perks. */
+export const TABLE_COPY = {
+  eyebrow: "Effort points",
+  title: "The Table",
+  thisWeek: "This week",
+  beside: "The Table · this week",
+  full: "Full table",
+  /** A housemate's week or month in a line: "3 done · 1 late · 1 missed". */
+  record: (r: { done: number; late: number; missed: number }) =>
+    `${r.done} done${r.late ? ` · ${r.late} late` : ""}${r.missed ? ` · ${r.missed} missed` : ""}`,
+  shares: "Fair shares",
+  sharesBody: `What each of you was handed over the last ${BALANCE_WEEKS} weeks, against your share. Each deal hands a little more to whoever is behind, never more than half a week extra, until it evens out.`,
+  sharesKey: "Below zero is behind, above is ahead. Time away is made up:",
+  streaks: "Streaks and perks",
+  weeks: (n: number) => `${n} ${n === 1 ? "week" : "weeks"}`,
+  swap: "swap",
+  rules: [
+    { term: "Points", body: "A John done on time earns its points. A late one earns half. A missed one earns nothing." },
+    {
+      term: "Immunity",
+      body: `Every ${IMMUNITY_EVERY} clean weeks in a row earns a token (hold up to two). Spend one to skip a John with no forfeit.`,
+    },
+    { term: "Swap", body: "Top the week and you can trade one of your open Johns for anyone’s, once." },
+  ],
+  yourShare: "Your share, lately",
+  everyones: "Everyone’s",
+  /** Where you stand against your share, in a sentence. */
+  shareLine: (balance: number, weeksToEven: number) =>
+    balance <= -0.5
+      ? `Points behind your share. The next weeks hand you a little extra, never more than half a week's worth, for about ${weeksToEven} ${weeksToEven === 1 ? "week" : "weeks"}.`
+      : balance >= 0.5
+        ? "Points ahead of your share, so the next weeks go a little easier on you."
+        : "You've done your share.",
 } as const;

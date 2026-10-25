@@ -8,6 +8,7 @@ import { Button } from '@/components/button';
 import { NotDealt } from '@/components/not-dealt';
 import { Screen } from '@/components/screen';
 import { SwapSheet } from '@/components/swap-sheet';
+import { TableBeside } from '@/components/table-parts';
 import { Eyebrow, Heading } from '@/components/text';
 import { DisputeList, PersonSection, Stats, WeekTable, type BoardContext } from '@/components/week-board';
 import { useCatchUp, useHouse, type HouseView } from '@/hooks/use-house';
@@ -103,23 +104,25 @@ function Board({ view, wide }: { view: HouseView; wide: boolean }) {
           <View style={styles.main}>
             <WeekTable context={context} items={items} />
           </View>
-          {/* The side column holds the open disputes, so with none the table takes the width. */}
-          {items.some((i) => i.dispute) ? (
-            <View style={styles.aside}>
-              <DisputeList context={context} items={items} />
-            </View>
-          ) : null}
+          <View style={styles.aside}>
+            <DisputeList context={context} items={items} />
+            <TableBeside rows={board.table} people={{ me: userId, nameOf }} />
+          </View>
         </View>
       ) : (
-        people.map((p) => (
-          <PersonSection
-            key={p.userId}
-            context={context}
-            userId={p.userId}
-            items={items.filter((i) => i.userId === p.userId)}
-            immunityTokens={me?.immunityTokens ?? 0}
-          />
-        ))
+        <>
+          {people.map((p) => (
+            <PersonSection
+              key={p.userId}
+              context={context}
+              userId={p.userId}
+              items={items.filter((i) => i.userId === p.userId)}
+              immunityTokens={me?.immunityTokens ?? 0}
+            />
+          ))}
+          {/* On a phone each card carries its own votes, so only the Table follows. */}
+          <TableBeside rows={board.table} people={{ me: userId, nameOf }} />
+        </>
       )}
     </View>
   );

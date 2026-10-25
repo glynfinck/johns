@@ -14,6 +14,7 @@ import {
   SECTIONS,
   SHELL_COPY,
   SIGN_IN_COPY,
+  TABLE_COPY,
   TAGLINE,
   TODAY_COPY,
   WEEK_COPY,
@@ -140,5 +141,26 @@ describe("SECTIONS", () => {
     expect(SHELL_COPY.housemates(4)).toBe("4 housemates");
     expect(SHELL_COPY.standing(0, 1)).toBe("0-week streak · 1 token");
     expect(SHELL_COPY.standing(5, 0)).toBe("5-week streak · 0 tokens");
+  });
+});
+
+describe("TABLE_COPY", () => {
+  it("tells a record without the zeros", () => {
+    expect(TABLE_COPY.record({ done: 3, late: 0, missed: 0 })).toBe("3 done");
+    expect(TABLE_COPY.record({ done: 0, late: 1, missed: 2 })).toBe("0 done · 1 late · 2 missed");
+  });
+
+  it("says where you stand against your share", () => {
+    expect(TABLE_COPY.shareLine(-4, 1)).toMatch(/for about 1 week\.$/);
+    expect(TABLE_COPY.shareLine(-0.5, 3)).toMatch(/^Points behind your share.*about 3 weeks\.$/);
+    expect(TABLE_COPY.shareLine(0.5, 0)).toBe("Points ahead of your share, so the next weeks go a little easier on you.");
+    expect(TABLE_COPY.shareLine(0.49, 0)).toBe("You've done your share.");
+    expect(TABLE_COPY.shareLine(-0.49, 0)).toBe("You've done your share.");
+  });
+
+  it("names the rules' numbers from the rules", () => {
+    expect(TABLE_COPY.sharesBody).toMatch(/last 12 weeks/);
+    expect(TABLE_COPY.rules[1].body).toMatch(/^Every 4 clean weeks/);
+    expect(TABLE_COPY.weeks(1)).toBe("1 week");
   });
 });

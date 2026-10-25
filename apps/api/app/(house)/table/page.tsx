@@ -1,4 +1,4 @@
-import { BALANCE_WEEKS, IMMUNITY_EVERY, MAKEUP_LABEL, formatBalance, monthLabel } from "@app/core";
+import { MAKEUP_LABEL, TABLE_COPY, formatBalance, monthLabel } from "@app/core";
 import { FlameIcon, RepeatIcon, ShieldIcon } from "lucide-react";
 import type { Metadata } from "next";
 
@@ -10,7 +10,7 @@ import { requireHouse } from "@/lib/data/house";
 import { getMonthTable, getWeekBoard } from "@/lib/data/week";
 import { cn } from "@/lib/utils";
 
-export const metadata: Metadata = { title: "The Table" };
+export const metadata: Metadata = { title: TABLE_COPY.title };
 
 export default async function TablePage() {
   const ctx = await requireHouse();
@@ -21,10 +21,10 @@ export default async function TablePage() {
 
   return (
     <div className="mx-auto max-w-6xl">
-      <PageHeader eyebrow="Effort points" title="The Table" />
+      <PageHeader eyebrow={TABLE_COPY.eyebrow} title={TABLE_COPY.title} />
       <div className="grid gap-5 lg:grid-cols-2">
         <section className="rounded-lg border border-border bg-card p-5">
-          <h2 className="eyebrow mb-4">This week</h2>
+          <h2 className="eyebrow mb-4">{TABLE_COPY.thisWeek}</h2>
           <Standings rows={board.table} names={names} me={ctx.userId} />
         </section>
         <section className="rounded-lg border border-border bg-card p-5">
@@ -33,11 +33,8 @@ export default async function TablePage() {
         </section>
 
         <section id="shares" className="scroll-mt-20 rounded-lg border border-border bg-card p-5 lg:col-span-2">
-          <h2 className="eyebrow mb-1">Fair shares</h2>
-          <p className="mb-4 text-sm text-muted-foreground">
-            What each of you was handed over the last {BALANCE_WEEKS} weeks, against your share. Each deal hands a
-            little more to whoever is behind, never more than half a week extra, until it evens out.
-          </p>
+          <h2 className="eyebrow mb-1">{TABLE_COPY.shares}</h2>
+          <p className="mb-4 text-sm text-muted-foreground">{TABLE_COPY.sharesBody}</p>
           <ul className="flex flex-col gap-2.5">
             {balances.map((b) => {
               const name = b.userId === ctx.userId ? "You" : (names.get(b.userId) ?? "Housemate");
@@ -69,13 +66,13 @@ export default async function TablePage() {
             })}
           </ul>
           <p className="mt-4 text-xs text-muted-foreground">
-            Below zero is behind, above is ahead. Time away is made up:{" "}
+            {TABLE_COPY.sharesKey}{" "}
             <b className="text-foreground">{MAKEUP_LABEL[ctx.house.away_makeup].toLowerCase()}</b>.
           </p>
         </section>
 
         <section className="rounded-lg border border-border bg-card p-5 lg:col-span-2">
-          <h2 className="eyebrow mb-4">Streaks and perks</h2>
+          <h2 className="eyebrow mb-4">{TABLE_COPY.streaks}</h2>
           <ul className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
             {byStreak.map((m) => (
               <li key={m.userId} className="flex items-center gap-3 rounded-md border border-border p-3">
@@ -85,7 +82,7 @@ export default async function TablePage() {
                   <div className="mt-0.5 flex flex-wrap gap-x-3 text-xs text-muted-foreground tabular">
                     <span className="inline-flex items-center gap-1">
                       <FlameIcon className="size-3.5" aria-hidden />
-                      {m.streak} {m.streak === 1 ? "week" : "weeks"}
+                      {TABLE_COPY.weeks(m.streak)}
                     </span>
                     {m.immunityTokens > 0 ? (
                       <span className="inline-flex items-center gap-1">
@@ -96,7 +93,7 @@ export default async function TablePage() {
                     {m.swapTokens > 0 ? (
                       <span className="inline-flex items-center gap-1">
                         <RepeatIcon className="size-3.5" aria-hidden />
-                        swap
+                        {TABLE_COPY.swap}
                       </span>
                     ) : null}
                   </div>
@@ -105,25 +102,12 @@ export default async function TablePage() {
             ))}
           </ul>
           <dl className="mt-5 grid gap-3 text-sm sm:grid-cols-3">
-            <div>
-              <dt className="font-extrabold">Points</dt>
-              <dd className="text-muted-foreground">
-                A John done on time earns its points. A late one earns half. A missed one earns nothing.
-              </dd>
-            </div>
-            <div>
-              <dt className="font-extrabold">Immunity</dt>
-              <dd className="text-muted-foreground">
-                Every {IMMUNITY_EVERY} clean weeks in a row earns a token (hold up to two). Spend one to skip a John
-                with no forfeit.
-              </dd>
-            </div>
-            <div>
-              <dt className="font-extrabold">Swap</dt>
-              <dd className="text-muted-foreground">
-                Top the week and you can trade one of your open Johns for anyone&rsquo;s, once.
-              </dd>
-            </div>
+            {TABLE_COPY.rules.map((rule) => (
+              <div key={rule.term}>
+                <dt className="font-extrabold">{rule.term}</dt>
+                <dd className="text-muted-foreground">{rule.body}</dd>
+              </div>
+            ))}
           </dl>
         </section>
       </div>

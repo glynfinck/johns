@@ -6,6 +6,7 @@ import {
   formatMoney,
   formatSigned,
   isOpen,
+  TABLE_COPY,
   TODAY_COPY,
   todayView,
   weekRange,
@@ -166,9 +167,9 @@ export default async function TodayPage() {
           <aside className="flex flex-col gap-4">
             <section className="rounded-lg border border-border bg-card p-4">
               <div className="mb-3 flex items-baseline justify-between">
-                <h2 className="eyebrow">The Table · this week</h2>
+                <h2 className="eyebrow">{TABLE_COPY.beside}</h2>
                 <Link href="/table" className="text-xs font-bold underline-offset-2 hover:underline">
-                  Full table
+                  {TABLE_COPY.full}
                 </Link>
               </div>
               <Standings rows={board.table} names={names} me={ctx.userId} dense />
@@ -176,18 +177,14 @@ export default async function TodayPage() {
             {myBalance ? (
               <section className="rounded-lg border border-border bg-card p-4" data-testid="my-share">
                 <div className="mb-2 flex items-baseline justify-between">
-                  <h2 className="eyebrow">Your share, lately</h2>
+                  <h2 className="eyebrow">{TABLE_COPY.yourShare}</h2>
                   <Link href="/table#shares" className="text-xs font-bold underline-offset-2 hover:underline">
-                    Everyone&rsquo;s
+                    {TABLE_COPY.everyones}
                   </Link>
                 </div>
                 <p className="text-3xl font-black tabular">{formatBalance(myBalance.balance)}</p>
                 <p className="mt-1 text-sm text-muted-foreground">
-                  {myBalance.balance <= -0.5
-                    ? `Points behind your share. The next weeks hand you a little extra, never more than half a week's worth, for about ${myBalance.weeksToEven} ${myBalance.weeksToEven === 1 ? "week" : "weeks"}.`
-                    : myBalance.balance >= 0.5
-                      ? "Points ahead of your share, so the next weeks go a little easier on you."
-                      : "You've done your share."}
+                  {TABLE_COPY.shareLine(myBalance.balance, myBalance.weeksToEven)}
                 </p>
               </section>
             ) : null}

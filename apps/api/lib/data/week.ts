@@ -1,15 +1,6 @@
 import "server-only";
 
-import {
-  buildWeekBoard,
-  liveStatus,
-  monthOf,
-  monthWindow,
-  standings,
-  weekWindow,
-  type Outcome,
-  type WeekBoard,
-} from "@app/core";
+import { buildWeekBoard, monthOf, monthStandings, monthWindow, weekWindow, type WeekBoard } from "@app/core";
 
 import type { HouseContext } from "./house";
 
@@ -60,24 +51,6 @@ export async function getMonthTable(ctx: HouseContext) {
     .eq("house_id", house.id)
     .gte("due_at", window.startsAt.toISOString())
     .lt("due_at", window.endsAt.toISOString());
-  const table = standings(
-    (rows ?? []).map((a) => ({
-      userId: a.user_id,
-      points: a.points,
-      status: liveStatus(
-        {
-          dueAt: new Date(a.due_at),
-          doneAt: a.done_at ? new Date(a.done_at) : null,
-          excused: a.excused,
-          disputeOpen: false,
-          weekEndsAt: new Date(a.weeks!.ends_at),
-          outcome: a.outcome as Outcome | null,
-        },
-        now,
-        rules.disputeHours,
-      ),
-    })),
-    ctx.members.map((m) => m.userId),
-  );
+  const table = monthStandings(rows ?? [], ctx.members.map((m) => m.userId), rules.disputeHours, now);
   return { month, table };
 }

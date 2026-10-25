@@ -1,10 +1,12 @@
 import { describe, expect, it } from "vitest";
 
 import {
+  balanceRows,
   CATCH_UP_PACE,
   canDeal,
   carryOver,
   catchUpWeeks,
+  recentBalances,
   fairShares,
   weekShares,
   type DealAssignment,
@@ -283,5 +285,64 @@ describe("catchUpWeeks", () => {
   it("counts the weeks at half a share extra each", () => {
     expect(catchUpWeeks(-12, 6)).toBe(4);
     expect(catchUpWeeks(-1, 6)).toBe(1);
+  });
+});
+
+describe("recentBalances", () => {
+  const rows = {
+    weekIds: ["w2", "w1"],
+    shares: [
+      { week_id: "w1", user_id: "ava", share: 4 },
+      { week_id: "w1", user_id: "ben", share: 4 },
+      { week_id: "w2", user_id: "ava", share: "3" },
+      { week_id: "w2", user_id: "ben", share: 3 },
+      { week_id: "w0", user_id: "ava", share: 100 },
+    ],
+    handed: [
+      { week_id: "w1", user_id: "ava", points: 2 },
+      { week_id: "w1", user_id: "ben", points: 6 },
+      { week_id: "w2", user_id: "ava", points: 3 },
+      { week_id: "w2", user_id: "ben", points: 3 },
+      { week_id: "w0", user_id: "ben", points: 100 },
+    ],
+  };
+
+  it("balances what each was handed against their share, over the weeks asked for", () => {
+    const { balances } = recentBalances(rows, ["ava", "ben"]);
+    expect(balances).toEqual(new Map([["ava", -2], ["ben", 2]]));
+  });
+
+  it("takes a usual week's share as the average of the weeks they had one", () => {
+    const { usualShare } = recentBalances(rows, ["ava", "ben", "cal"]);
+    expect(usualShare.get("ben")).toBe(3.5);
+    // Ava's 100 is from a week outside the ones asked for, but it is still one of her shares.
+    expect(usualShare.get("ava")).toBeCloseTo(107 / 3);
+    expect(usualShare.get("cal")).toBe(0);
+  });
+
+  it("is level for everyone with no weeks behind them", () => {
+    const { balances, usualShare } = recentBalances({ weekIds: [], shares: [], handed: [] }, ["ava"]);
+    expect(balances).toEqual(new Map([["ava", 0]]));
+    expect(usualShare).toEqual(new Map([["ava", 0]]));
+  });
+});
+
+describe("balanceRows", () => {
+  it("puts whoever is furthest behind first, with how long catching up takes", () => {
+    const rows = balanceRows(
+      new Map([["ava", -6], ["ben", 4], ["cal", 2]]),
+      new Map([["ava", 4], ["ben", 4], ["cal", 0]]),
+      ["ben", "ava", "cal"],
+    );
+    expect(rows).toEqual([
+      { userId: "ava", balance: -6, weeksToEven: catchUpWeeks(-6, 4) },
+      { userId: "cal", balance: 2, weeksToEven: 0 },
+      { userId: "ben", balance: 4, weeksToEven: 0 },
+    ]);
+  });
+
+  it("counts someone with no balance yet as level", () => {
+    expect(balanceRows(new Map(), new Map(), ["ava"])).toEqual([{ userId: "ava", balance: 0, weeksToEven: 0 }]);
+    expect(balanceRows(new Map(), new Map(), [])).toEqual([]);
   });
 });

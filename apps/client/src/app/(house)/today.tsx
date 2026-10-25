@@ -11,9 +11,11 @@ import { InviteCard } from '@/components/invite-card';
 import { JohnCard } from '@/components/john-card';
 import { NotDealt } from '@/components/not-dealt';
 import { Screen } from '@/components/screen';
+import { ShareCard, TableBeside } from '@/components/table-parts';
 import { Body, Eyebrow, Heading } from '@/components/text';
 import { useCatchUp, useHouse, type HouseView } from '@/hooks/use-house';
 import { useMembership } from '@/hooks/use-membership';
+import { useTable } from '@/hooks/use-table';
 import { FONT, RADIUS, SPACE, useTheme } from '@/theme';
 
 /** Today: your Johns this week, what's left, and the tick, as the web's Today. */
@@ -58,6 +60,8 @@ function TodayFor({ houseId, userId }: { houseId: string; userId: string }) {
 function Week({ view }: { view: HouseView }) {
   const { colors } = useTheme();
   const { snapshot, board, today, me, now } = view;
+  const table = useTable(snapshot.house.id, snapshot);
+  const myBalance = table.data?.balances.find((b) => b.userId === me?.userId);
   const { rules, house, members } = snapshot;
   const admin = members.find((m) => m.role === 'admin');
   const nameOf = (userId: string) => members.find((m) => m.userId === userId)?.name ?? 'Housemate';
@@ -152,6 +156,9 @@ function Week({ view }: { view: HouseView }) {
               />
             ))
           )}
+
+          <TableBeside rows={board.table} people={{ me: me?.userId ?? '', nameOf }} />
+          {myBalance ? <ShareCard balance={myBalance} /> : null}
 
           {members.length < 2 ? <InviteCard code={house.joinCode} houseName={house.name} /> : null}
         </>

@@ -13,15 +13,18 @@ export function Screen({
   maxWidth = 720,
   refreshing,
   onRefresh,
+  testID,
 }: {
   children: ReactNode;
   maxWidth?: number;
   refreshing?: boolean;
   onRefresh?: () => void;
+  testID?: string;
 }) {
   const { colors } = useTheme();
   return (
     <ScrollView
+      testID={testID}
       style={{ backgroundColor: colors.background }}
       contentContainerStyle={[styles.page, { maxWidth }]}
       refreshControl={

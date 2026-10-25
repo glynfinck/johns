@@ -603,6 +603,17 @@ As built, where it differs from the above:
 
 Standings for the week and the month, from core's `points.ts`.
 
+As built, where it differs from the above:
+- **Fair shares come too**, with streaks and perks, as on the web's Table.
+  The sums the engine did inside `loadBalances` move to core
+  (`recentBalances`, `balanceRows`), and the month's standings with them
+  (`monthStandings`), so the engine, the web and the app add up the same
+  rows the same way. The app reads the recent weeks' `week_shares`, which
+  RLS already shows to the house.
+- **The week's Table also sits beside the board** (beside it from `WIDE`,
+  under the cards on a phone) and **on Today**, with your share lately, as
+  on the web. Today's stake comes with the Stake (Phase 10).
+
 ### Phase 10: the Stake
 
 The ledger, settle-up from core's `stake.ts`, "confirm received" through

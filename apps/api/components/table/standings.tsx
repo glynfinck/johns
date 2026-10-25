@@ -1,4 +1,4 @@
-import type { TableRow } from "@app/core";
+import { TABLE_COPY, type TableRow } from "@app/core";
 
 import { Avatar } from "@/components/ui/avatar";
 import { cn } from "@/lib/utils";
@@ -34,10 +34,7 @@ export function Standings({
                   {r.userId === me ? "You" : names.get(r.userId)}
                 </span>
                 {!dense ? (
-                  <span className="shrink-0 text-xs text-muted-foreground tabular">
-                    {r.done} done{r.late ? ` · ${r.late} late` : ""}
-                    {r.missed ? ` · ${r.missed} missed` : ""}
-                  </span>
+                  <span className="shrink-0 text-xs text-muted-foreground tabular">{TABLE_COPY.record(r)}</span>
                 ) : null}
               </div>
               <div className="mt-1 h-2 overflow-hidden rounded-sm bg-secondary">
