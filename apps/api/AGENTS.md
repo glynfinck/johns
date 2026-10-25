@@ -71,12 +71,15 @@ appear only in the laptop board.
   query. CORS only for `ALLOWED_ORIGINS` (`lib/env.ts`): the Expo web build
   on 8205 locally; phones send no Origin. `proxy.ts` doesn't touch `/api/`.
   Today: `POST /api/fresh` (catch a house up, at most once a minute),
-  `POST /api/disputes` and `POST /api/disputes/:id/votes`. A database
+  `POST /api/disputes`, `POST /api/disputes/:id/votes` and `POST /api/deal`
+  (an admin hands out or re-deals the week). A database
   refusal answers through `refused`: 403 when it isn't the caller's to make
   (42501), 409 when the rules say not now (P0001), in `humanError`'s words.
 - `lib/moves/`: a move that needs the service role after the caller's own
   RPC (tell the house, decide at once), shared by the server action and the
-  route so the web and the app can't drift: `disputes.ts` (raise, vote).
+  route so the web and the app can't drift: `disputes.ts` (raise, vote) and
+  `deal.ts` (the deal: deal_week is the engine's, so the move itself checks,
+  through the caller's own session, that an admin of the house is asking).
 - `lib/actions/`: server actions. Thin wrappers around one SQL function or
   column-granted write each: they translate refusals with `humanError` and
   refresh. They never decide.

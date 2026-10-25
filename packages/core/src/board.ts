@@ -1,5 +1,5 @@
 import type { Database } from "./db-types";
-import type { Currency, HouseRules, IsoDow, Outcome } from "./domain";
+import type { Category, Currency, HouseRules, IsoDow, Outcome } from "./domain";
 import { liveStatus, standsAt, type LiveStatus } from "./outcome";
 import { standings, type TableRow } from "./points";
 
@@ -8,6 +8,55 @@ import { standings, type TableRow } from "./points";
 // disagree about what a John's status is.
 
 type Row<T extends keyof Database["public"]["Tables"]> = Database["public"]["Tables"][T]["Row"];
+
+/** One John on the house's list, as House shows and edits it (the shape of a JohnDraft). */
+export interface JohnDef {
+  id: string;
+  name: string;
+  category: Category;
+  points: number;
+  everyWeeks: number;
+  dueDow: IsoDow;
+  /** "21:00": the database's time, to the minute. */
+  dueTime: string;
+  needsPhoto: boolean;
+  /** The group that shares it; null means the whole house. */
+  groupId: string | null;
+}
+
+/** Where a new John starts in the editor: a weekly kitchen John, due Sunday night, for the whole house. */
+export const NEW_JOHN: Omit<JohnDef, "id"> = {
+  name: "",
+  category: "kitchen",
+  points: 2,
+  everyWeeks: 1,
+  dueDow: 7,
+  dueTime: "21:00",
+  needsPhoto: false,
+  groupId: null,
+};
+
+/** A John on the list, from its row. */
+export function johnDef(
+  row: Pick<Row<"johns">, "id" | "name" | "category" | "points" | "every_weeks" | "due_dow" | "due_time" | "needs_photo" | "group_id">,
+): JohnDef {
+  return {
+    id: row.id,
+    name: row.name,
+    category: row.category as Category,
+    points: row.points,
+    everyWeeks: row.every_weeks,
+    dueDow: row.due_dow as IsoDow,
+    dueTime: row.due_time.slice(0, 5),
+    needsPhoto: row.needs_photo,
+    groupId: row.group_id,
+  };
+}
+
+/** How much effort the list asks of the house in an average week: a fortnightly John counts half. */
+export function weeklyEffort(johns: readonly Pick<JohnDef, "points" | "everyWeeks">[]): number {
+  return johns.reduce((sum, j) => sum + j.points / j.everyWeeks, 0);
+}
 
 /** The house's rules, from its row. */
 export function rulesOf(

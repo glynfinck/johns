@@ -1,12 +1,22 @@
 "use server";
 
-import { CATEGORIES, CreateHouse, CURRENCIES, humanError, JoinCode, weekIndex, weekWindow, type IsoDow } from "@app/core";
+import {
+  CreateHouse,
+  DisplayName,
+  HouseSettings,
+  humanError,
+  JohnDraft,
+  JoinCode,
+  RULES_COPY,
+  weekIndex,
+  weekWindow,
+  type IsoDow,
+} from "@app/core";
 import { refresh } from "next/cache";
 import { redirect } from "next/navigation";
 import { z } from "zod";
 
-import { dealWeek, loadHouse } from "@/lib/engine/tick";
-import { createAdminClient } from "@/lib/supabase/admin";
+import * as moves from "@/lib/moves/deal";
 import { createClient } from "@/lib/supabase/server";
 
 export type Outcome = { error?: string } | void;
@@ -57,21 +67,9 @@ export async function joinHouse(code: string): Promise<Outcome> {
   redirect("/today");
 }
 
-const Settings = z.object({
-  name: z.string().trim().min(1).max(60),
-  timezone: z.string().min(1),
-  currency: z.enum(CURRENCIES),
-  weekStarts: z.coerce.number().int().min(1).max(7),
-  stakeMinor: z.coerce.number().int().min(0).max(100000),
-  lateForfeitMinor: z.coerce.number().int().min(0).max(100000),
-  missedForfeitMinor: z.coerce.number().int().min(0).max(100000),
-  disputeHours: z.coerce.number().int().min(0).max(72),
-  awayMakeup: z.coerce.number().int().refine((n) => n === 0 || n === 50 || n === 100),
-});
-
-export async function updateHouse(input: z.input<typeof Settings>): Promise<Outcome> {
-  const parsed = Settings.safeParse(input);
-  if (!parsed.success) return { error: "Check the settings and try again." };
+export async function updateHouse(input: z.input<typeof HouseSettings>): Promise<Outcome> {
+  const parsed = HouseSettings.safeParse(input);
+  if (!parsed.success) return { error: RULES_COPY.check };
   const ctx = await myHouse();
   if (!ctx?.isAdmin) return { error: humanError({ message: "admins_only" }) };
   const s = parsed.data;
@@ -93,24 +91,12 @@ export async function updateHouse(input: z.input<typeof Settings>): Promise<Outc
   refresh();
 }
 
-/**
- * Hand out this week's Johns. The first time, it starts the house off;
- * after that it re-deals the week, which deal_week only allows while nothing in it
- * has been ticked (someone new moved in, a John was added).
- */
+/** Hand out this week's Johns, or re-deal it (lib/moves/deal.ts, shared with POST /api/deal). */
 export async function dealThisWeek(): Promise<Outcome> {
   const ctx = await myHouse();
-  if (!ctx?.isAdmin) return { error: humanError({ message: "admins_only" }) };
-  const admin = createAdminClient();
-  const now = new Date();
-  const { house, members } = await loadHouse(admin, ctx.house.id);
-  const week = weekWindow(now, house.timezone, house.week_starts as IsoDow);
-  try {
-    const { weekId } = await dealWeek(admin, house, members, week, now, true);
-    if (!weekId) return { error: "Add at least one John first." };
-  } catch (e) {
-    return { error: humanError({ message: e instanceof Error ? e.message : String(e) }) };
-  }
+  if (!ctx) return { error: humanError({ message: "sign_in_required" }) };
+  const refusal = await moves.dealThisWeek({ db: ctx.supabase, userId: ctx.user.id }, ctx.house.id, new Date());
+  if (refusal) return { error: humanError(refusal) };
   refresh();
 }
 
@@ -135,20 +121,8 @@ export async function removeMember(userId: string): Promise<Outcome> {
   refresh();
 }
 
-const JohnInput = z.object({
-  id: z.string().uuid().optional(),
-  name: z.string().trim().min(1, "Name the John.").max(60),
-  category: z.enum(CATEGORIES),
-  points: z.coerce.number().int().min(1).max(10),
-  everyWeeks: z.coerce.number().int().min(1).max(4),
-  dueDow: z.coerce.number().int().min(1).max(7),
-  dueTime: z.string().regex(/^\d{2}:\d{2}$/),
-  needsPhoto: z.boolean(),
-  groupId: z.string().uuid().nullable(),
-});
-
-export async function saveJohn(input: z.input<typeof JohnInput>): Promise<Outcome> {
-  const parsed = JohnInput.safeParse(input);
+export async function saveJohn(input: z.input<typeof JohnDraft>): Promise<Outcome> {
+  const parsed = JohnDraft.safeParse(input);
   if (!parsed.success) return { error: parsed.error.issues[0].message };
   const ctx = await myHouse();
   if (!ctx?.isAdmin) return { error: humanError({ message: "admins_only" }) };
@@ -218,8 +192,9 @@ export async function deleteGroup(id: string): Promise<Outcome> {
 }
 
 export async function renameMe(name: string): Promise<Outcome> {
-  const trimmed = name.trim();
-  if (!trimmed || trimmed.length > 60) return { error: "Names are 1 to 60 characters." };
+  const parsed = DisplayName.safeParse(name);
+  if (!parsed.success) return { error: parsed.error.issues[0].message };
+  const trimmed = parsed.data;
   const { supabase, user } = await session();
   if (!user) return { error: humanError({ message: "sign_in_required" }) };
   const { error } = await supabase.from("profiles").update({ display_name: trimmed }).eq("id", user.id);

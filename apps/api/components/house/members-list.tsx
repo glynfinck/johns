@@ -1,5 +1,6 @@
 "use client";
 
+import { MEMBERS_COPY } from "@app/core";
 import { useState } from "react";
 
 import { Avatar } from "@/components/ui/avatar";
@@ -27,18 +28,18 @@ export function MembersList({ members, me, isAdmin }: { members: MemberView[]; m
           <div className="min-w-0 flex-1">
             <div className="truncate font-bold">
               {m.name}
-              {m.userId === me ? <span className="text-muted-foreground"> (you)</span> : null}
+              {m.userId === me ? <span className="text-muted-foreground"> {MEMBERS_COPY.you}</span> : null}
             </div>
-            <div className="text-xs text-muted-foreground">{m.role === "admin" ? "Admin" : "Housemate"}</div>
+            <div className="text-xs text-muted-foreground">{m.role === "admin" ? MEMBERS_COPY.admin : MEMBERS_COPY.housemate}</div>
           </div>
           {isAdmin && m.userId !== me ? (
             removing === m.userId ? (
               <div className="flex gap-1.5">
                 <Button size="compact" variant="destructive" disabled={pending} onClick={() => run(() => removeMember(m.userId))}>
-                  Remove {m.name.split(" ")[0]}
+                  {MEMBERS_COPY.removeName(m.name)}
                 </Button>
                 <Button size="compact" variant="ghost" onClick={() => setRemoving(null)}>
-                  Cancel
+                  {MEMBERS_COPY.cancel}
                 </Button>
               </div>
             ) : (
@@ -49,10 +50,10 @@ export function MembersList({ members, me, isAdmin }: { members: MemberView[]; m
                   disabled={pending}
                   onClick={() => run(() => setRole(m.userId, m.role === "admin" ? "member" : "admin"))}
                 >
-                  {m.role === "admin" ? "Make housemate" : "Make admin"}
+                  {m.role === "admin" ? MEMBERS_COPY.makeHousemate : MEMBERS_COPY.makeAdmin}
                 </Button>
                 <Button size="compact" variant="ghost" onClick={() => setRemoving(m.userId)}>
-                  Remove
+                  {MEMBERS_COPY.remove}
                 </Button>
               </div>
             )

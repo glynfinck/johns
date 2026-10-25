@@ -5,18 +5,22 @@ import { FONT, RADIUS, SPACE, TAP, useTheme } from '@/theme';
 
 /**
  * Pick one of a few, as a row of chips: the native stand-in for the web's
- * select. Each chip says its full name to a screen reader.
+ * select. Each chip says its full name to a screen reader. `disabled`
+ * shows the choice without letting it change (the house rules, to a
+ * housemate who isn't an admin).
  */
 export function Choice<T extends string | number>({
   label,
   options,
   value,
   onChange,
+  disabled = false,
 }: {
   label: string;
   options: readonly { value: T; label: string; spoken?: string }[];
   value: T;
   onChange: (value: T) => void;
+  disabled?: boolean;
 }) {
   const { colors, type } = useTheme();
   return (
@@ -30,10 +34,12 @@ export function Choice<T extends string | number>({
               key={String(option.value)}
               accessibilityRole="radio"
               accessibilityLabel={option.spoken ?? option.label}
-              accessibilityState={{ checked: chosen }}
+              accessibilityState={{ checked: chosen, disabled }}
+              disabled={disabled}
               onPress={() => onChange(option.value)}
               style={[
                 styles.chip,
+                disabled && !chosen && styles.off,
                 chosen
                   ? { backgroundColor: colors.foreground, borderColor: colors.foreground }
                   : { backgroundColor: 'transparent', borderColor: colors.border },
@@ -61,5 +67,6 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
+  off: { opacity: 0.5 },
   chipText: { fontFamily: FONT.bold, fontSize: 15 },
 });

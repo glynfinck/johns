@@ -1,6 +1,18 @@
 "use client";
 
-import { CURRENCIES, DOW_LABEL, MAKEUP_LABEL, parseMoney, type Currency, type IsoDow } from "@app/core";
+import {
+  AWAY_MAKEUP,
+  CURRENCIES,
+  CURRENCY_SYMBOL,
+  DISPUTE_HOURS,
+  DOW_LABEL,
+  MAKEUP_LABEL,
+  moneyInput,
+  parseMoney,
+  RULES_COPY,
+  type Currency,
+  type IsoDow,
+} from "@app/core";
 import { useState } from "react";
 import { toast } from "sonner";
 
@@ -22,14 +34,6 @@ export interface SettingsValues {
   awayMakeup: number;
 }
 
-const MAKEUP_HINT: Record<number, string> = {
-  100: "Their share still counts, so they do a little extra each week when they're back until it evens out.",
-  50: "Half their share still counts and is made up when they're back; the rest falls to whoever is home.",
-  0: "Their share falls to whoever is home, and there's nothing to make up.",
-};
-
-const SYMBOL: Record<Currency, string> = { GBP: "£", CAD: "$", USD: "$", EUR: "€" };
-
 export function timeZones(current: string): string[] {
   let zones: string[] = [];
   try {
@@ -40,19 +44,17 @@ export function timeZones(current: string): string[] {
   return zones.includes(current) ? zones : [current, ...zones];
 }
 
-const toMoney = (minor: number) => (minor / 100).toFixed(minor % 100 ? 2 : 0);
-
 /** The house's rules. Admins edit; everyone else reads the same form, disabled. */
 export function SettingsForm({ values, editable }: { values: SettingsValues; editable: boolean }) {
   const { pending, run } = useAction();
   const [v, setV] = useState({
     ...values,
-    stake: toMoney(values.stakeMinor),
-    late: toMoney(values.lateForfeitMinor),
-    missed: toMoney(values.missedForfeitMinor),
+    stake: moneyInput(values.stakeMinor),
+    late: moneyInput(values.lateForfeitMinor),
+    missed: moneyInput(values.missedForfeitMinor),
   });
   const set = (patch: Partial<typeof v>) => setV((old) => ({ ...old, ...patch }));
-  const symbol = SYMBOL[v.currency];
+  const symbol = CURRENCY_SYMBOL[v.currency];
 
   function save(e: React.FormEvent) {
     e.preventDefault();
@@ -60,7 +62,7 @@ export function SettingsForm({ values, editable }: { values: SettingsValues; edi
     const lateForfeitMinor = parseMoney(v.late);
     const missedForfeitMinor = parseMoney(v.missed);
     if (stakeMinor === null || lateForfeitMinor === null || missedForfeitMinor === null) {
-      toast.error("Amounts are numbers like 20 or 2.50.");
+      toast.error(RULES_COPY.badAmount);
       return;
     }
     run(
@@ -76,7 +78,7 @@ export function SettingsForm({ values, editable }: { values: SettingsValues; edi
           disputeHours: v.disputeHours,
           awayMakeup: v.awayMakeup,
         }),
-      () => toast.success("Saved"),
+      () => toast.success(RULES_COPY.saved),
     );
   }
 
@@ -84,11 +86,11 @@ export function SettingsForm({ values, editable }: { values: SettingsValues; edi
     <form onSubmit={save} className="grid gap-4 sm:grid-cols-2">
       <fieldset disabled={!editable || pending} className="contents">
         <div className="sm:col-span-2">
-          <FieldLabel htmlFor="house-name">House name</FieldLabel>
+          <FieldLabel htmlFor="house-name">{RULES_COPY.name}</FieldLabel>
           <Input id="house-name" value={v.name} maxLength={60} onChange={(e) => set({ name: e.target.value })} />
         </div>
         <div>
-          <FieldLabel htmlFor="house-tz">Time zone</FieldLabel>
+          <FieldLabel htmlFor="house-tz">{RULES_COPY.timezone}</FieldLabel>
           <NativeSelect id="house-tz" value={v.timezone} onChange={(e) => set({ timezone: e.target.value })}>
             {timeZones(v.timezone).map((z) => (
               <option key={z} value={z}>
@@ -98,7 +100,7 @@ export function SettingsForm({ values, editable }: { values: SettingsValues; edi
           </NativeSelect>
         </div>
         <div>
-          <FieldLabel htmlFor="house-week">Week starts</FieldLabel>
+          <FieldLabel htmlFor="house-week">{RULES_COPY.weekStarts}</FieldLabel>
           <NativeSelect
             id="house-week"
             value={v.weekStarts}
@@ -112,60 +114,60 @@ export function SettingsForm({ values, editable }: { values: SettingsValues; edi
           </NativeSelect>
         </div>
         <div>
-          <FieldLabel htmlFor="house-currency">Currency</FieldLabel>
+          <FieldLabel htmlFor="house-currency">{RULES_COPY.currency}</FieldLabel>
           <NativeSelect id="house-currency" value={v.currency} onChange={(e) => set({ currency: e.target.value as Currency })}>
             {CURRENCIES.map((c) => (
               <option key={c} value={c}>
-                {SYMBOL[c]} {c}
+                {CURRENCY_SYMBOL[c]} {c}
               </option>
             ))}
           </NativeSelect>
         </div>
         <div>
-          <FieldLabel htmlFor="house-stake">Monthly stake ({symbol})</FieldLabel>
+          <FieldLabel htmlFor="house-stake">{RULES_COPY.stake(symbol)}</FieldLabel>
           <Input id="house-stake" inputMode="decimal" value={v.stake} onChange={(e) => set({ stake: e.target.value })} />
         </div>
         <div>
-          <FieldLabel htmlFor="house-late">Late forfeit ({symbol})</FieldLabel>
+          <FieldLabel htmlFor="house-late">{RULES_COPY.late(symbol)}</FieldLabel>
           <Input id="house-late" inputMode="decimal" value={v.late} onChange={(e) => set({ late: e.target.value })} />
         </div>
         <div>
-          <FieldLabel htmlFor="house-missed">Missed forfeit ({symbol})</FieldLabel>
+          <FieldLabel htmlFor="house-missed">{RULES_COPY.missed(symbol)}</FieldLabel>
           <Input id="house-missed" inputMode="decimal" value={v.missed} onChange={(e) => set({ missed: e.target.value })} />
         </div>
         <div className="sm:col-span-2">
-          <FieldLabel htmlFor="house-dispute">Disputes can be raised for</FieldLabel>
+          <FieldLabel htmlFor="house-dispute">{RULES_COPY.disputes}</FieldLabel>
           <NativeSelect
             id="house-dispute"
             value={v.disputeHours}
             onChange={(e) => set({ disputeHours: Number(e.target.value) })}
           >
-            {[0, 6, 12, 24, 48, 72].map((h) => (
+            {DISPUTE_HOURS.map((h) => (
               <option key={h} value={h}>
-                {h === 0 ? "No disputes (honour system)" : `${h} hours after a tick`}
+                {RULES_COPY.disputeHours(h)}
               </option>
             ))}
           </NativeSelect>
         </div>
         <div className="sm:col-span-2">
-          <FieldLabel htmlFor="house-away">Time away is made up</FieldLabel>
+          <FieldLabel htmlFor="house-away">{RULES_COPY.away}</FieldLabel>
           <NativeSelect id="house-away" value={v.awayMakeup} onChange={(e) => set({ awayMakeup: Number(e.target.value) })}>
-            {[100, 50, 0].map((n) => (
+            {AWAY_MAKEUP.map((n) => (
               <option key={n} value={n}>
                 {MAKEUP_LABEL[n]}
               </option>
             ))}
           </NativeSelect>
           <p className="mt-1.5 text-xs text-muted-foreground">
-            Nobody is handed a John due while they&rsquo;re away. {MAKEUP_HINT[v.awayMakeup]}
+            {RULES_COPY.awayNote} {RULES_COPY.makeupHint[v.awayMakeup]}
           </p>
         </div>
         {editable ? (
           <Button type="submit" className="sm:col-span-2 sm:justify-self-start">
-            {pending ? "Saving…" : "Save house rules"}
+            {pending ? RULES_COPY.saving : RULES_COPY.save}
           </Button>
         ) : (
-          <p className="text-sm text-muted-foreground sm:col-span-2">Only admins can change the house rules.</p>
+          <p className="text-sm text-muted-foreground sm:col-span-2">{RULES_COPY.adminsOnly}</p>
         )}
       </fieldset>
     </form>

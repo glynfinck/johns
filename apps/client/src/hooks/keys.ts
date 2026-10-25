@@ -13,3 +13,6 @@ export const tableKey = (houseId: string) => [...houseKey(houseId), 'table'] as 
 
 /** The Stake, under the house. */
 export const stakeKey = (houseId: string) => [...houseKey(houseId), 'stake'] as const;
+
+/** The John list and the groups, under the house. */
+export const listKey = (houseId: string) => [...houseKey(houseId), 'list'] as const;

@@ -1,9 +1,8 @@
-import { isOpen, SIGN_IN_COPY, TODAY_COPY, weekRange } from '@app/core';
-import { FlameIcon, LogOutIcon, RefreshCwIcon, RepeatIcon, ShieldIcon } from 'lucide-react-native';
+import { isOpen, TODAY_COPY, weekRange } from '@app/core';
+import { FlameIcon, RefreshCwIcon, RepeatIcon, ShieldIcon } from 'lucide-react-native';
 import { useState } from 'react';
 import { ActivityIndicator, StyleSheet, Text, View } from 'react-native';
 
-import { signOut } from '@/api/auth';
 import { Alert } from '@/components/alert';
 import { Button } from '@/components/button';
 import { Card } from '@/components/card';
@@ -80,7 +79,7 @@ function Week({ view }: { view: HouseView }) {
 
       {!board.week ? (
         <>
-          <NotDealt notStarted={board.notStarted} isAdmin={me?.role === 'admin'} adminName={admin?.name ?? 'An admin'} />
+          <NotDealt houseId={house.id} notStarted={board.notStarted} isAdmin={me?.role === 'admin'} adminName={admin?.name ?? 'An admin'} />
           <InviteCard code={house.joinCode} houseName={house.name} />
         </>
       ) : (
@@ -168,35 +167,6 @@ function Week({ view }: { view: HouseView }) {
         </>
       )}
 
-      <SignOut name={me?.name} />
-    </View>
-  );
-}
-
-/** Who's signed in, and the way out, until House (Phase 11) has them. */
-function SignOut({ name }: { name?: string }) {
-  const [leaving, setLeaving] = useState(false);
-  async function leave() {
-    setLeaving(true);
-    try {
-      await signOut();
-    } catch (reason) {
-      // The guard moves on once the session is gone; anything else, try again.
-      console.warn('Sign out failed', reason);
-      setLeaving(false);
-    }
-  }
-  return (
-    <View style={styles.footer}>
-      {name ? <Body muted style={styles.perkText}>{`Signed in as ${name}`}</Body> : null}
-      <Button
-        variant="ghost"
-        icon={LogOutIcon}
-        label={SIGN_IN_COPY.signOut}
-        disabled={leaving}
-        onPress={() => void leave()}
-        testID="sign-out"
-      />
     </View>
   );
 }
@@ -225,5 +195,4 @@ const styles = StyleSheet.create({
   streakText: { fontFamily: FONT.black, fontSize: 12, textTransform: 'uppercase', letterSpacing: 0.5 },
   perk: { flexDirection: 'row', alignItems: 'center', gap: SPACE.xs },
   perkText: { fontSize: 12 },
-  footer: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginTop: SPACE.xl },
 });

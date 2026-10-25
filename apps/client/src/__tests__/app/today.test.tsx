@@ -4,7 +4,6 @@ import {
   INVITE_COPY,
   JOHN_COPY,
   NOT_DEALT_COPY,
-  SIGN_IN_COPY,
   STAKE_COPY,
   TABLE_COPY,
   TODAY_COPY,
@@ -13,7 +12,6 @@ import { QueryClientProvider } from '@tanstack/react-query';
 import { Slot } from 'expo-router';
 import { fireEvent, renderRouter, screen, waitFor, within } from 'expo-router/testing-library';
 
-import { signOut } from '@/api/auth';
 import { loadHouse } from '@/api/board';
 import { castVote } from '@/api/disputes';
 import { catchUp } from '@/api/house';
@@ -24,8 +22,8 @@ import Today from '@/app/(house)/today';
 import { assignment, snapshot } from '@/testing/house';
 import { testQueryClient } from '@/testing/query';
 
-jest.mock('@/api/auth', () => ({ signOut: jest.fn() }));
 jest.mock('@/api/board', () => ({ loadHouse: jest.fn() }));
+jest.mock('@/api/settings', () => ({ dealThisWeek: jest.fn() }));
 jest.mock('@/api/house', () => ({ catchUp: jest.fn() }));
 jest.mock('@/api/table', () => ({ loadTable: jest.fn() }));
 jest.mock('@/api/stake', () => ({ loadStake: jest.fn(), confirmPayment: jest.fn() }));
@@ -50,7 +48,6 @@ jest.mock('@/hooks/use-membership', () => ({
 }));
 
 const read = loadHouse as jest.Mock;
-const leave = signOut as jest.Mock;
 
 async function show() {
   const client = testQueryClient();
@@ -96,11 +93,11 @@ beforeEach(() => {
   });
 });
 
-it('says who is signed in', async () => {
+it("reads the house, and leaves signing out to House", async () => {
   await open();
   expect(screen.getByRole('header', { name: TODAY_COPY.title })).toBeOnTheScreen();
-  expect(screen.getByText('Signed in as Priya')).toBeOnTheScreen();
   expect(read).toHaveBeenCalledWith('h1', expect.any(Date));
+  expect(screen.queryByTestId('sign-out')).toBeNull();
 });
 
 it('shows only your Johns, how many are left, and your streak', async () => {
@@ -219,11 +216,3 @@ it("says when it can't read the house, and tries again", async () => {
   expect(await screen.findByText(TODAY_COPY.title)).toBeOnTheScreen();
 });
 
-it('signs out, and lets you try again when that fails', async () => {
-  jest.spyOn(console, 'warn').mockImplementation(() => undefined);
-  leave.mockRejectedValueOnce(new Error('offline'));
-  await open();
-  await fireEvent.press(screen.getByRole('button', { name: SIGN_IN_COPY.signOut }));
-  expect(leave).toHaveBeenCalledTimes(1);
-  expect(screen.getByRole('button', { name: SIGN_IN_COPY.signOut })).toBeEnabled();
-});

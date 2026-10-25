@@ -1,6 +1,6 @@
 import { z } from "zod";
 
-import { CURRENCIES } from "./domain";
+import { CATEGORIES, CURRENCIES } from "./domain";
 
 // Shapes the apps and the API agree on. The API validates requests with
 // these and the native app parses responses with them; the web's server
@@ -43,6 +43,52 @@ export const CreateHouse = z.object({
 });
 export type CreateHouse = z.infer<typeof CreateHouse>;
 
+/** How long a tick can be disputed, in hours: 0 is the honour system. */
+export const DISPUTE_HOURS = [0, 6, 12, 24, 48, 72] as const;
+
+/** How much of a share time away still owes, in percent (houses.away_makeup). */
+export const AWAY_MAKEUP = [100, 50, 0] as const;
+
+/** The most a stake or a forfeit can be, in minor units: 1,000 of the currency. */
+export const MAX_AMOUNT_MINOR = 100_000;
+
+const amount = z.coerce
+  .number()
+  .int()
+  .min(0, "Amounts can't be negative.")
+  .max(MAX_AMOUNT_MINOR, "Amounts are up to 1,000.");
+
+/** The house rules an admin can change: the houses columns granted to them. */
+export const HouseSettings = z.object({
+  name: z.string().trim().min(1, "Give the house a name.").max(60),
+  timezone: z.string().trim().min(1, "Say which time zone the house is in."),
+  currency: z.enum(CURRENCIES),
+  weekStarts: z.coerce.number().int().min(1).max(7),
+  stakeMinor: amount,
+  lateForfeitMinor: amount,
+  missedForfeitMinor: amount,
+  disputeHours: z.coerce.number().int().min(0).max(72),
+  awayMakeup: z.coerce.number().int().refine((n) => (AWAY_MAKEUP as readonly number[]).includes(n)),
+});
+export type HouseSettings = z.infer<typeof HouseSettings>;
+
+/** One John on the house's list, as an admin adds or edits it. `id` is absent for a new one. */
+export const JohnDraft = z.object({
+  id: z.uuid().optional(),
+  name: z.string().trim().min(1, "Name the John.").max(60),
+  category: z.enum(CATEGORIES),
+  points: z.coerce.number().int().min(1).max(10),
+  everyWeeks: z.coerce.number().int().min(1).max(4),
+  dueDow: z.coerce.number().int().min(1).max(7),
+  dueTime: z.string().regex(/^([01]\d|2[0-3]):[0-5]\d$/, "Give a time like 21:00."),
+  needsPhoto: z.boolean(),
+  groupId: z.uuid().nullable(),
+});
+export type JohnDraft = z.infer<typeof JohnDraft>;
+
+/** A name you go by: what renaming yourself writes to profiles.display_name. */
+export const DisplayName = z.string().trim().min(1, "Names are 1 to 60 characters.").max(60, "Names are 1 to 60 characters.");
+
 /** Every API error: `{ "error": "..." }`, a sentence fit to show. */
 export const ApiError = z.object({ error: z.string() });
 export type ApiError = z.infer<typeof ApiError>;
@@ -70,6 +116,10 @@ export function disputeProblem(issues: readonly { path: readonly PropertyKey[]; 
 /** POST /api/disputes/:id/votes: `uphold` true says it wasn't done. */
 export const CastVote = z.object({ uphold: z.boolean() });
 export type CastVote = z.infer<typeof CastVote>;
+
+/** POST /api/deal: hand out this week's Johns, or re-deal a week nobody has ticked in. */
+export const DealRequest = z.object({ houseId: z.uuid() });
+export type DealRequest = z.infer<typeof DealRequest>;
 
 /** What a move answers when the database took it. */
 export const MoveResponse = z.object({ ok: z.literal(true) });

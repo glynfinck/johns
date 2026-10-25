@@ -1,5 +1,6 @@
 "use client";
 
+import { ME_COPY } from "@app/core";
 import { BellIcon, BellOffIcon, LogOutIcon, MonitorIcon, MoonIcon, SunIcon } from "lucide-react";
 import { useTheme } from "next-themes";
 import { useEffect, useState, useSyncExternalStore } from "react";
@@ -160,44 +161,44 @@ export function MeCard({
         className="flex items-end gap-2"
         onSubmit={(e) => {
           e.preventDefault();
-          run(() => renameMe(value), () => toast.success("Name saved"));
+          run(() => renameMe(value), () => toast.success(ME_COPY.saved));
         }}
       >
         <div className="flex-1">
-          <FieldLabel htmlFor="my-name">Your name</FieldLabel>
+          <FieldLabel htmlFor="my-name">{ME_COPY.name}</FieldLabel>
           <Input id="my-name" value={value} maxLength={60} onChange={(e) => setValue(e.target.value)} />
         </div>
         <Button type="submit" variant="outline" disabled={pending || value.trim() === name}>
-          Save
+          {ME_COPY.save}
         </Button>
       </form>
       {vapidKey ? (
         <div>
-          <FieldLabel>Reminders</FieldLabel>
+          <FieldLabel>{ME_COPY.reminders}</FieldLabel>
           <PushToggle vapidKey={vapidKey} />
         </div>
       ) : null}
       <div>
-        <FieldLabel>Look</FieldLabel>
+        <FieldLabel>{ME_COPY.look}</FieldLabel>
         <ThemeChoice />
       </div>
       <div className="flex flex-wrap gap-2 border-t border-border pt-4">
         <Button variant="outline" onClick={() => void signOut()}>
           <LogOutIcon aria-hidden />
-          Sign out
+          {ME_COPY.signOut}
         </Button>
         {leaving ? (
           <>
             <Button variant="destructive" disabled={pending} onClick={() => run(() => removeMember(userId))}>
-              Leave the house for good
+              {ME_COPY.leaveForGood}
             </Button>
             <Button variant="ghost" onClick={() => setLeaving(false)}>
-              Stay
+              {ME_COPY.stay}
             </Button>
           </>
         ) : (
           <Button variant="ghost" className="text-muted-foreground" onClick={() => setLeaving(true)} data-house={houseId}>
-            Leave the house
+            {ME_COPY.leave}
           </Button>
         )}
       </div>

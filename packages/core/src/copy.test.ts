@@ -2,14 +2,18 @@ import { describe, expect, it } from "vitest";
 
 import {
   APP_NAME,
+  DEAL_COPY,
   DISPUTE_COPY,
   FRONT_DOOR,
   INVITE_COPY,
   JOHN_COPY,
+  JOHN_LIST_COPY,
   JOIN_COPY,
+  MEMBERS_COPY,
   NEW_HOUSE_COPY,
   NOT_DEALT_COPY,
   NO_HOUSE_COPY,
+  RULES_COPY,
   SECTION_LABEL,
   SECTIONS,
   SHELL_COPY,
@@ -181,5 +185,46 @@ describe("STAKE_COPY", () => {
 
   it("names every kind of ledger entry", () => {
     for (const kind of ["forfeit", "cap_refund", "share", "payment"]) expect(STAKE_COPY.kind[kind]).toBeTruthy();
+  });
+});
+
+describe("JOHN_LIST_COPY", () => {
+  it("says how often and when, short", () => {
+    expect(JOHN_LIST_COPY.when(1, "Sunday", "21:00")).toBe("Every week · due Sun 21:00");
+    expect(JOHN_LIST_COPY.when(4, "Monday", "09:30")).toBe("Every 4 weeks · due Mon 09:30");
+    expect(JOHN_LIST_COPY.when(6, "Friday", "18:00")).toBe("Every 6 weeks · due Fri 18:00");
+  });
+
+  it("rounds the house's weekly effort", () => {
+    expect(JOHN_LIST_COPY.perWeek(0)).toMatch(/^About 0 points a week/);
+    expect(JOHN_LIST_COPY.perWeek(7.5)).toMatch(/^About 8 points a week/);
+  });
+});
+
+describe("DEAL_COPY", () => {
+  it("keeps the words the web's deal button has always had", () => {
+    expect(DEAL_COPY.first).toBe("Hand out this week's Johns");
+    expect(DEAL_COPY.again).toBe("Re-deal this week");
+  });
+});
+
+describe("RULES_COPY", () => {
+  it("names the amounts in the house's currency", () => {
+    expect(RULES_COPY.stake("£")).toBe("Monthly stake (£)");
+    expect(RULES_COPY.missed("€")).toBe("Missed forfeit (€)");
+  });
+
+  it("says each dispute window and make-up rate", () => {
+    expect(RULES_COPY.disputeHours(0)).toBe("No disputes (honour system)");
+    expect(RULES_COPY.disputeHours(48)).toBe("48 hours after a tick");
+    for (const n of [100, 50, 0]) expect(RULES_COPY.makeupHint[n]).toBeTruthy();
+    expect(RULES_COPY.phoneZone("America/New_York")).toBe("Use this phone’s: America/New York");
+  });
+});
+
+describe("MEMBERS_COPY", () => {
+  it("names who's being removed by their first name", () => {
+    expect(MEMBERS_COPY.removeName("Ben Wall")).toBe("Remove Ben");
+    expect(MEMBERS_COPY.removeName("Cal")).toBe("Remove Cal");
   });
 });

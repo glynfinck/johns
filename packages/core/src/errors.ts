@@ -25,6 +25,7 @@ const MESSAGES: Record<string, string> = {
   not_swappable: "Only two open Johns from the same week can be swapped.",
   more_than_owed: "That's more than is owed.",
   bad_payment: "That payment doesn't add up.",
+  no_johns: "Add at least one John first.",
   week_started: "Someone's already ticked a John this week, so it can't be re-dealt.",
   not_in_house: "That isn't in your house.",
   group_empty: "A group needs at least one housemate in it.",

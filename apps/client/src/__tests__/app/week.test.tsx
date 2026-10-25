@@ -1,4 +1,4 @@
-import { DISPUTE_COPY, JOHN_COPY, NOT_DEALT_COPY, SWAP_COPY, WEEK_COPY } from '@app/core';
+import { DEAL_COPY, DISPUTE_COPY, JOHN_COPY, NOT_DEALT_COPY, SWAP_COPY, WEEK_COPY } from '@app/core';
 import { QueryClientProvider } from '@tanstack/react-query';
 import { Slot } from 'expo-router';
 import { fireEvent, renderRouter, screen, within } from 'expo-router/testing-library';
@@ -8,11 +8,13 @@ import { loadHouse } from '@/api/board';
 import { castVote } from '@/api/disputes';
 import { catchUp } from '@/api/house';
 import { spendSwap } from '@/api/johns';
+import { dealThisWeek } from '@/api/settings';
 import Week from '@/app/(house)/week';
 import { assignment, snapshot } from '@/testing/house';
 import { testQueryClient } from '@/testing/query';
 
 jest.mock('@/api/board', () => ({ loadHouse: jest.fn() }));
+jest.mock('@/api/settings', () => ({ dealThisWeek: jest.fn() }));
 jest.mock('@/api/disputes', () => ({ castVote: jest.fn(), raiseDispute: jest.fn() }));
 jest.mock('@/api/house', () => ({ catchUp: jest.fn() }));
 jest.mock('@/api/johns', () => ({ markDone: jest.fn(), undoDone: jest.fn(), spendImmunity: jest.fn(), spendSwap: jest.fn() }));
@@ -145,4 +147,18 @@ it('says why the board is empty before the first deal', async () => {
   read.mockResolvedValue(snapshot({ week: null, assignments: [], house: { ...snapshot().house, everDealt: false } }));
   await open();
   expect(screen.getByRole('header', { name: NOT_DEALT_COPY.notYet })).toBeOnTheScreen();
+});
+
+describe('re-dealing', () => {
+  it('lets an admin deal again while nobody has ticked anything', async () => {
+    read.mockResolvedValue(snapshot({ assignments: snapshot().assignments.map((a) => ({ ...a, done_at: null, outcome: null })) }));
+    await open();
+    await fireEvent.press(screen.getByRole('button', { name: DEAL_COPY.again }));
+    expect(dealThisWeek).toHaveBeenCalledWith('h1');
+  });
+
+  it('is gone once a John is ticked', async () => {
+    await open();
+    expect(screen.queryByRole('button', { name: DEAL_COPY.again })).toBeNull();
+  });
 });

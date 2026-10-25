@@ -1,5 +1,6 @@
 "use client";
 
+import { DEAL_COPY } from "@app/core";
 import { ShuffleIcon } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
@@ -21,7 +22,7 @@ export function DealButton({ started, className }: { started: boolean; className
       data-testid="deal-week"
     >
       <ShuffleIcon aria-hidden />
-      {pending ? "Dealing…" : started ? "Re-deal this week" : "Hand out this week's Johns"}
+      {pending ? DEAL_COPY.dealing : started ? DEAL_COPY.again : DEAL_COPY.first}
     </Button>
   );
 }

@@ -634,6 +634,32 @@ the link and the code), renaming yourself, signing out, and "Hand out this
 week's Johns" through `POST /api/deal`. After this the phone can run a house
 from nothing.
 
+As built, where it differs from the above:
+- **Two PRs.** The first (11a) is the John list, the deal, the house rules,
+  the invite, who lives here, and you (renaming, signing out, leaving); the
+  second (11b) is groups and time away.
+- **The deal is `lib/moves/deal.ts`**, shared by the web's action and
+  `POST /api/deal`. `deal_week` is the engine's (service role only), so the
+  move checks, through the caller's own session, that they're an admin of
+  that house; db tests prove a stranger and a housemate are refused (403)
+  and a week with a tick in it can't be re-dealt (409).
+- **The forms' rules and words are core's**: `HouseSettings`, `JohnDraft`
+  and `DisplayName` in `schemas.ts` (the web's actions validate with them
+  too), `JohnDef`, `johnDef`, `NEW_JOHN` and `weeklyEffort` in `board.ts`,
+  `moneyInput` in `money.ts`, and `HOUSE_COPY`, `JOHN_LIST_COPY`,
+  `DEAL_COPY`, `RULES_COPY`, `MEMBERS_COPY` and `ME_COPY`, which the web's
+  House now uses unchanged.
+- **The time zone is typed, with "Use this phone's"** beside it when the
+  phone is somewhere else, rather than a picker of every zone; the database
+  refuses one it doesn't know. The web's selects are chips.
+- **House reads the house again each time it comes into view**: the rules,
+  the list and the members aren't on Realtime, and a tab stays mounted.
+- **An admin can deal from Today and re-deal from Week**, as on the web, and
+  Today's not-dealt card points at House instead of at the web.
+- **Signing out moves from Today's foot to House.** Reminders on this
+  device (web push) and the Day/Night/Auto choice stay on the web for now:
+  native push is Phase 12, and the app follows the system's theme.
+
 ### Phase 12: native push
 
 Decision 3. First a db test pins what the tick sends today (no test covers

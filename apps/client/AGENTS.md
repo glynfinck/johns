@@ -78,7 +78,7 @@ permanent once a store has seen them.
     `signInWithIdToken`), `google.web.ts` (the web build: Supabase's PKCE
     redirect back to `/signin`), `apple.ts` (Sign in with Apple, iOS only,
     with the nonce from `nonce.ts`; keeps the name Apple sends once) and
-    `profile.ts` (your display name).
+    `profile.ts` (your display name, and renaming yourself from House).
   - `http.ts`: `apiPost` for calls to `apps/api`, sending the user's access
     token and parsing the answer with its schema from `@app/core`; a refusal
     throws `ApiRequestError` with the API's sentence. One small module per
@@ -90,8 +90,13 @@ permanent once a store has seen them.
     Wall's events with their photos signed for an hour, and your reactions),
     `table.ts` (the month's Table and the fair shares, summed by core as the
     deal sums them), `stake.ts` (the ledger, built by core's `buildStake`,
-    and "Mark received" through `confirm_payment`) and `photos.ts`
-    (receipts: below).
+    and "Mark received" through `confirm_payment`), `settings.ts` (House:
+    the John list and the house rules through the admins' column grants,
+    roles and leaving through RPC, and the deal through `POST /api/deal`)
+    and `photos.ts` (receipts: below). RLS filters a write that isn't an
+    admin's to no rows rather than refusing it, so `settings.ts` asks for
+    the written row back and says "Only the house admins can do that." when
+    there is none.
 - **Writes go through the database, as the web's do.** A move is one named
   SQL function (`supabase.rpc('mark_done', …)`) or one column-granted write;
   the database decides, and the client only translates a refusal with
