@@ -66,9 +66,13 @@ is exactly what local development needs and production must not have.
   local sign-in, and checks the round trip. The secret itself is only proved by a
   real sign-in: Google checks it when it exchanges the code, after the user
   has chosen an account.
-- **The Supabase GitHub integration**, so that later migrations apply on
-  merge: one click in the project's settings, with no API. Until then, run
-  `npm run provision` after merging a migration.
+- **The Supabase GitHub integration**, so that migrations apply on merge:
+  one click in the project's settings, with no API. Its **working
+  directory** is `.` (the folder that contains `supabase/`, not `supabase`
+  itself), the production branch `main`, with "deploy to production" on and
+  automatic branching off. It deploys on every push to `main`, applying any
+  new migrations; Auth and API settings in `config.toml` are ignored, which
+  is what keeps them local.
 - **Brand verification.** Opening the app beyond your own house means
   Google's review; the landing page at `/` carries the name, the purpose and
   the privacy link it checks for.
@@ -77,6 +81,12 @@ Already done (October 2026): the Vercel project `johns` exists, deploys
 `glynfinck/johns`, runs its functions in London next to the database, and
 has `johns.glyn.dev` attached. glyn.dev's DNS is on Vercel, so the domain
 needed no record.
+
+The Supabase project `Johns` (ref `mmnmffdpdzrncvwzgjhq`) was created by hand
+on 25 October 2026 in London (`eu-west-2`) at the smallest size, so
+provision finds it by name and never creates one. Its GitHub integration is
+connected as above. Because provision has no database password for it, it
+never pushes migrations itself: they arrive through the integration.
 
 The project's **Root Directory** is `apps/api` (Settings → Build and
 Deployment), where the Next app moved in Phase 2 of
