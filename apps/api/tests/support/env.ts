@@ -18,7 +18,7 @@ function required(name: string): string {
   if (!value || value === "null" || value === "undefined") {
     throw new Error(
       `${name} is ${value ? `the literal string "${value}"` : "missing"}. ` +
-        "Run `supabase start` and make sure .env.local carries " +
+        "Run `supabase start` and make sure apps/api/.env.local carries " +
         "NEXT_PUBLIC_SUPABASE_URL, NEXT_PUBLIC_SUPABASE_ANON_KEY and " +
         "SUPABASE_SERVICE_ROLE_KEY with real values.",
     );

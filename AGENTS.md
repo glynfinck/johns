@@ -1,5 +1,265 @@
-<!-- BEGIN:nextjs-agent-rules -->
-# This is NOT the Next.js you know
+# AGENTS.md
 
-This version has breaking changes — APIs, conventions, and file structure may all differ from your training data. Read the relevant guide in `node_modules/next/dist/docs/` before writing any code. Heed deprecation notices.
-<!-- END:nextjs-agent-rules -->
+Project-wide rules for any AI coding agent working in this repo. Each app also
+has its own AGENTS.md with its framework's rules: read the one in the folder
+you're working in (`apps/api/AGENTS.md` for the Next.js app).
+
+## About this app
+
+- What it does: **Johns** is shared housework with consequences. "Johns" is
+  what the house calls its assigned chores for the week; one chore is a
+  **John**. Fair shares are dealt for you, housemates check each other's
+  ticks, and late or missed Johns cost a share of a monthly stake. Live at
+  johns.glyn.dev.
+- Platforms: the web today, served by `apps/api`. iOS, Android and web from
+  one Expo app (`apps/client`) as `docs/specs/native-migration.md` lands,
+  phase by phase. Once `apps/client` exists, every feature must work on all
+  three unless its spec says otherwise.
+- Solo project. My main language is Python: when code relies on a TypeScript
+  or React pattern with no obvious Python equivalent, explain it in one line
+  in your summary.
+
+## Repo layout
+
+```
+apps/
+  api/          Next.js: the web app (its pages stay until Expo web reaches
+                parity), server actions, /api routes, the engine, push  → Vercel "johns"
+packages/
+  core/         @app/core: the pure rules, the shared words, the database types
+supabase/       migrations/ and config.toml (local development only)
+docs/specs/     the migration plan; one short spec per feature (copy _template.md)
+scripts/        provision (production's accounts), tick (the clock by hand), vapid
+```
+
+`apps/client` (Expo, iOS, Android and web) arrives in Phase 3 of the plan.
+
+## Commands (from the repo root)
+
+```bash
+npm ci                           # install everything, exactly as the lockfile says
+npm run dev                      # the web app on http://localhost:3205
+npm run typecheck && npm run lint && npm test
+npm run db:start                 # local Supabase on 54340–54344 (needs Docker)
+npm run test:db                  # RLS, the housemate functions and the engine
+npm run build && npm run test:e2e
+npm run db:reset                 # rebuild the local database from the migrations
+npm run types                    # regenerate packages/core/src/db-types.ts
+npm run tick                     # run the clock against the local app
+```
+
+`npm run provision` sets up and checks production. It writes to real
+accounts: never run it without being asked (see "Hosting and deploys").
+
+## Monorepo rules
+
+- npm workspaces with one lockfile at the root. Run `npm install` from the
+  root only, and add a dependency to one workspace with
+  `npm install <pkg> -w apps/api`. `.npmrc` sets `legacy-peer-deps` so that
+  install and CI resolve the same way; keep it.
+- Imports flow one way: apps import packages. Apps never import from each
+  other, and packages never import from apps.
+- `packages/core` is plain TypeScript: no React, React Native or Next.js
+  imports, so it runs in the web app, the native app, the API and tests
+  alike. Internal packages use the `@app/` scope (never rename it), are
+  `private`, are depended on as `"*"`, and export TypeScript source directly
+  (no build step: Turbopack compiles workspace packages itself).
+- Every workspace has `lint`, `typecheck` and `test` scripts. From the root,
+  `npm run typecheck`, `npm run lint` and `npm test` run them all.
+- Propose any new app or package to me before creating it.
+- Project instructions live only in AGENTS.md files. Never create a CLAUDE.md
+  or CLAUDE.local.md anywhere in this repo: Claude Code skips AGENTS.md when
+  one exists.
+- Check current docs before using an Expo, Next.js, Supabase or Vercel API or
+  CLI flag; all of them change faster than your training data. For Next.js,
+  that means `node_modules/next/dist/docs/`.
+
+## Words
+
+A chore is a **John**; the plural is **Johns**. The money is **the Stake**,
+the standings **the Table**, the feed **the Wall**. Handing out a week's
+Johns is **the deal**. Copy never says "chore app", and never "rota" (the
+house doesn't use the word).
+
+## House style: Bin Night
+
+Council signage, on every platform: pavement and tarmac grounds, ink,
+**hi-vis amber** (`--hivis`) for the one thing to do, **hazard** for late and
+missed, and a bin-lid colour per kind of John (`--bin-kitchen`,
+`--bin-bathroom`, `--bin-bins`, `--bin-floors`, `--bin-errands`,
+`--bin-other`, mirroring `CATEGORIES` in `packages/core/src/domain.ts`).
+Never hardcode colours. Headings are uppercase Overpass (Highway Gothic's
+descendant); the wordmark is the name boxed like a road sign. Late and missed
+wear hazard tape. No emoji anywhere in the UI: lucide icons only, reactions
+included. Light and dark both ship; the theme follows the system by default.
+Tap targets are at least 44px. Where the tokens and components live is in
+each app's AGENTS.md.
+
+## Rules live in the lowest layer that can hold them
+
+- **Pure, unit-tested, no clock** (`packages/core/src`, imported as
+  `@app/core`): `week.ts` (week and month edges in the house's zone, DST-safe,
+  cadence, `graceDue`, `localDate`), `deal.ts` (shares, fair shares,
+  balances, catch-up), `away.ts` (away days as local dates), `outcome.ts`
+  (when a tick stands, live status), `points.ts` (the Table), `streak.ts`
+  (streaks, immunity and swap tokens), `stake.ts` (forfeits, month
+  settlement, settle-up), `dispute.ts` (verdicts), `money.ts`, `format.ts`,
+  `domain.ts` (the shared words), `errors.ts`, `auth-paths.ts`. Every
+  function takes `now`.
+- **The engine** (`apps/api/lib/engine/tick.ts`): decides with those rules
+  and applies each decision through one service-role SQL function that is
+  atomic and refuses to apply twice (`deal_week`, `settle_assignments`,
+  `resolve_dispute`, `close_week`, `close_month`). It takes the client and
+  `now` as arguments and imports nothing server-only, so `apps/api/tests/db`
+  drives it directly. Safe to run concurrently: two ticks racing never double
+  a forfeit or a token (tested).
+- **RLS and SECURITY DEFINER functions** (`supabase/migrations`): the only
+  real enforcement. Housemates READ through RLS (`is_member`) and WRITE only
+  through named functions (`mark_done`, `undo_done`, `raise_dispute`,
+  `cast_vote`, `use_immunity`, `use_swap`, `confirm_payment`,
+  `create_house`, `join_house`, `set_member_role`, `remove_member`,
+  `save_group`, `delete_group`, `set_away`, `cancel_away`) or a few column
+  grants (house settings and the John list, its group included, for admins;
+  your own name, reactions, push subscriptions). Refusals raise `42501` (not
+  yours) or `P0001` with a short code that `errors.ts` turns into a sentence.
+  Whatever calls them (server actions now, the native app later) only
+  translates and refreshes: it never decides.
+
+## The clock
+
+pg_cron calls `public.request_tick()` every ten minutes, which POSTs to
+`/api/cron/tick` with a shared secret read from Vault (see DEPLOYMENT.md).
+That tick deals new weeks, settles outcomes and forfeits, decides disputes,
+closes weeks (streaks, perks) and months (the Stake), and sends reminders.
+A page load also catches its own house up (`apps/api/lib/engine/fresh.ts`,
+at most once a minute, no pushes), so a screen never shows last week and
+local dev needs no cron. Nothing is dealt until an admin presses "Hand out
+this week's Johns" (`houses.first_dealt_at`); a week can be re-dealt while
+nothing in it has been ticked. Dealing part-way through a week gives anything
+already due a day's grace (`graceDue`).
+
+## The game
+
+- **Fair shares** (`deal.ts`): each deal stores everyone's share of the week
+  (`week_shares`). A John is split equally among whoever shares it: the whole
+  house, or its **group** (three on the upstairs bathroom owe a third each,
+  two on the downstairs one a half). A **balance** is what you were handed
+  minus your share over the last 12 weeks; each John goes to whoever, of
+  those home on its due day, would be furthest behind. Doing the same John
+  twice running costs a small penalty.
+- **Groups**: named sets of housemates (`groups`, `group_members`); a John
+  belongs to everyone or to one group, and only that group is handed it. If
+  everyone in a group has left, its Johns go to everyone; if everyone in it
+  is away on the due day, that week it is skipped.
+- **Time away** (`away`, booked by `set_away`): the fair mechanism for the
+  housemate who keeps leaving. You are never handed a John due on a day
+  you're away, but away is not a holiday from your share: it keeps counting
+  at the house's make-up rate (`houses.away_makeup`: 100 in full, the
+  default, 50 half, 0 none), so you come back behind. Catching up is
+  gradual: no deal hands anyone more than half as much again as their share
+  while someone else could take the John (`CATCH_UP_PACE`). Time away must
+  start today or later, and Johns you already have that fall due while
+  you're gone are pulled forward to 23:59 the night before you leave
+  (`due_moved_from` keeps the old time, so cancelling puts them back). Book
+  before the week is dealt and you're simply not given those days; book
+  after and you do them first.
+- **Housemate check**: a tick stands after `dispute_hours` (default 24)
+  unless disputed. Raising a dispute counts as a vote to strike; everyone
+  but the ticker votes; a majority decides at once, otherwise the vote closes
+  on time and a tie goes to the tick. Upheld strikes the tick: the John is
+  open again, and missed if the week has ended.
+- **The Table**: on time earns full points, late half, missed nothing.
+- **Streaks and perks**: a clean week is every John on time or excused.
+  Every 4 clean weeks in a row earns an immunity token (cap 2), spent to
+  excuse a John with no forfeit. Topping a week earns a swap token (cap 1),
+  spent to trade one of your open Johns for any housemate's open John that
+  week.
+- **The Stake**: everyone stakes the same each month. Late and missed Johns
+  forfeit fixed amounts, capped at the stake; at month end the forfeits are
+  shared equally among everyone else. Money is integer minor units in an
+  append-only ledger, from each person's side; balances are sums, a month
+  always sums to zero, and only the payee can confirm a payment. The app
+  never moves money.
+- **The Wall**: `events` rows written by the functions and the engine, with
+  reactions and photo receipts.
+
+## Data: Supabase
+
+`profiles` (from auth via `handle_new_user`) → `houses` (rules: timezone,
+currency GBP/CAD/USD/EUR defaulted from Vercel's geo headers, week start,
+stake and forfeits, dispute hours; `join_code` from the CSPRNG) → `members`
+(role admin/member, streak, tokens; one house per person via
+`members_one_house`, dropped when "more than one house" ships) → `groups` +
+`group_members` → `johns` (the list: category, points 1–10, every N weeks
+from `anchor_week`, due day and time, needs photo, optional `group_id`) →
+`weeks` (unique per house and local start date) + `week_shares` (each
+housemate's share of it) → `assignments` (a snapshot of the John as dealt,
+`group_name`, `due_at`, `due_moved_from`, `done_at`, `photo_path`, `outcome`
+stamped once final); `away` (local first and last dates, inclusive) →
+`disputes` + `dispute_votes`; `ledger` + `month_closes`; `events` +
+`reactions`; `push_subscriptions`. Photos live in the private `proofs` bucket
+at `<house>/<assignment>/<file>`.
+
+- Schema changes only through migration files (`supabase migration new
+  <name>`), never by editing the live database. Test with `npm run db:reset`
+  and `npm run test:db`, then regenerate the types with `npm run types`.
+- Migrations must stay additive once anything is deployed, because Vercel
+  and Supabase deploy independently. Applied migrations are never edited.
+- Every table gets Row Level Security policies in the same migration that
+  creates it, and its grants stated for every role, `service_role` included.
+  A new function must revoke EXECUTE from `public, anon, authenticated` and
+  grant back only what is meant: the platform's default privileges hand it
+  to all three.
+- Sign-in is Supabase Auth with Google. If any app offers social sign-in on
+  iOS, it must also offer Sign in with Apple (App Store guideline 4.8).
+- `supabase/config.toml` is for local development only. Never `supabase
+  config push`, which writes local settings over production's.
+
+## Testing
+
+- Vitest in `packages/core` and `apps/api` (and at the root for `scripts/`).
+  Tests sit beside what they test (`<name>.test.ts`) in core. When
+  `apps/client` arrives it uses Jest with `jest-expo`, the one runner that
+  can test React Native.
+- `npm test`: every workspace's pure tests plus provision's decisions. Pure
+  logic only: no stack, no network, no clock. Every function in
+  `packages/core` gets tests, including edge cases: empty input, zero,
+  negatives, rounding, dates and time zones.
+- `npm run test:db` and `npm run test:e2e`: see `apps/api/AGENTS.md`.
+- Never use floating-point maths for money: integer minor units (pence,
+  cents).
+- When a bug is fixed, add a test that would have caught it.
+
+## Hosting and deploys
+
+- Vercel's git integration builds `apps/api` (the project's Root Directory is
+  `apps/api`) and Supabase's GitHub integration applies migrations. `main` is
+  production; CI only proves, and must be green to merge. There is no preview
+  database yet, so preview deployments get no keys.
+- Production's accounts are described in `scripts/provision/config.mjs` and
+  set up by `npm run provision`, which writes, then reads everything back
+  (DEPLOYMENT.md).
+- Always ask first. Never run or change any of these unless I've said to in
+  that message: `npm run provision` (even `--check`), `supabase db push`,
+  `supabase functions deploy`, a Vercel production deploy, the Vercel
+  project's settings, the Vault secrets, the VAPID keys, and once the native
+  app exists `npm run release:ios` / `release:android`, `eas build` with a
+  production profile, `eas submit` and `eas update`.
+
+## Secrets
+
+- Public by design: the Supabase URL and anon key (`NEXT_PUBLIC_*`, and
+  `EXPO_PUBLIC_*` in the native app). Row Level Security protects the data.
+- Server only, in `apps/api`'s Vercel environment and nowhere else: the
+  service role key, `CRON_SECRET`, `VAPID_PRIVATE_KEY`. Never in a client,
+  `app.json` or the repo.
+- Each app has a `.env.example` listing its variables; local values go in
+  that app's `.env.local` (git-ignored). `supabase start` reads the values
+  `config.toml` asks for (the Google client) from `supabase/.env.local`, with
+  `supabase/.env.example` beside it.
+
+## Local ports
+
+Supabase on 54340–54344 (API 54341, DB 54342, Studio 54343): `home` holds the
+54320s and `pub-golf`/`graph-editor` share the 54330s. The web app runs on
+3205.

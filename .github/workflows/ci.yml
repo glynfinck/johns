@@ -53,6 +53,7 @@ jobs:
           supabase start -x studio,edge-runtime,logflare,vector,imgproxy,mailpit,supavisor
           supabase db reset
 
+      # The Next app reads its settings from its own directory.
       - name: Point the app at local Supabase
         run: |
           STATUS=$(supabase status -o json)
@@ -73,7 +74,7 @@ jobs:
             echo "SUPABASE_SERVICE_ROLE_KEY=$SERVICE"
             echo "NEXT_PUBLIC_SITE_URL=http://localhost:3205"
             echo "CRON_SECRET=ci-tick-secret"
-          } > .env.local
+          } > apps/api/.env.local
 
       # RLS is the only real enforcement, so the adversarial suites gate.
       - name: Database tests
@@ -96,6 +97,6 @@ jobs:
         with:
           name: playwright-report
           path: |
-            playwright-report/
-            test-results/
+            apps/api/playwright-report/
+            apps/api/test-results/
           retention-days: 7

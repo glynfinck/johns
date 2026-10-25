@@ -263,7 +263,7 @@ split up by where each rule applies, and then deleted:
 | Goes to | What |
 | --- | --- |
 | root `AGENTS.md` | the template's root file with "About this app" filled in; the words (John, Johns, the Stake, the Table, the Wall, the deal; never "rota", never "chore app"); the game; the data model; "rules live in the lowest layer"; the clock; the test tiers and their rules; ports; deploys (never `supabase config push`, provision); monorepo rules; the ask-first list |
-| `apps/api/AGENTS.md` | Next's maintained block (`next dev` re-adds it, so keep it committed); Next 16 specifics (`proxy.ts`, Promise `params`, `refresh()`); shadcn and the house customisations; Bin Night on the web; the app shell; the engine; thin server actions; e2e rules (`gotoSettled`, counting what reads the same in every layout); the template's route rules for `/api/*`; and a dated exception: **this app keeps its pages until Expo web parity (Phase 13)** |
+| `apps/api/AGENTS.md` | Next's agent-rules block (Next 16.2 doesn't regenerate it; 16.4's `next dev` would); Next 16 specifics (`proxy.ts`, Promise `params`, `refresh()`); shadcn and the house customisations; Bin Night on the web; the app shell; the engine; thin server actions; e2e rules (`gotoSettled`, counting what reads the same in every layout); the template's route rules for `/api/*`; and a dated exception: **this app keeps its pages until Expo web parity (Phase 13)** |
 | `apps/client/AGENTS.md` (Phase 3) | Expo's block and the template's client rules, plus Bin Night in RN, the lucide/JS-tabs override, and "write through rpc; call apps/api only for the four routes above" |
 
 `.claude/skills/verify/SKILL.md` gets the new paths and commands, and
@@ -356,9 +356,11 @@ Production: an ordinary deploy.
   (`"workspaces": ["apps/*", "packages/*"]`) whose scripts delegate: `dev`,
   `build`, `start`, `lint`, `typecheck`, `test`, `test:db`, `test:e2e`,
   `types`, `tick`, `provision`, `vapid`, `db:start|stop|reset`.
-- `.env.local` moves to `apps/api/.env.local`. I check where the pinned
-  Supabase CLI (2.114.0) reads `env(AUTH_GOOGLE_*)` from and keep `supabase
-  start` finding them. CI sets them in the environment, so CI isn't affected.
+- `.env.local` moves to `apps/api/.env.local`. The pinned Supabase CLI
+  (2.114.0) turned out to read `env(AUTH_GOOGLE_*)` from the root's
+  `.env.local` or `supabase/.env.local`, so the Google values move to
+  `supabase/.env.local` (with a `supabase/.env.example`), and provision writes
+  them there. CI sets them in the environment, so CI isn't affected.
 - CI writes `apps/api/.env.local` and uploads `apps/api/playwright-report`.
 - Provision writes the local Google client to `apps/api/.env.local` and gains
   a **read-only** check that the Vercel project's Root Directory is

@@ -13,7 +13,7 @@ export default async function setup() {
     throw new Error(
       "Database tests need NEXT_PUBLIC_SUPABASE_URL, " +
         "NEXT_PUBLIC_SUPABASE_ANON_KEY and SUPABASE_SERVICE_ROLE_KEY in " +
-        ".env.local — run `supabase start`.",
+        "apps/api/.env.local — run `supabase start`.",
     );
   }
 

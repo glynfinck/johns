@@ -14,6 +14,7 @@ import {
   missingMigrations,
   parseEnvFile,
   pickKeys,
+  rootDirectoryProblem,
   setEnvLine,
   summaryMarkdown,
   todoText,
@@ -127,6 +128,19 @@ describe("keys and environment", () => {
   it("leaves existing push keys alone, since new ones orphan every subscribed phone", () => {
     const plan = envPlan(CONFIG, { supabaseUrl: "u", anonKey: "a", serviceKey: "s", cronSecret: "c", vapid: null });
     expect(plan.some((e) => e.key.includes("VAPID_P"))).toBe(false);
+  });
+});
+
+describe("the Vercel project", () => {
+  it("builds the Next app from apps/api, however the path is written", () => {
+    expect(rootDirectoryProblem("apps/api", CONFIG)).toBeNull();
+    expect(rootDirectoryProblem("./apps/api/", CONFIG)).toBeNull();
+  });
+
+  it("names where it builds from instead", () => {
+    expect(rootDirectoryProblem(null, CONFIG)).toBe("johns builds from the repository root, not `apps/api`");
+    expect(rootDirectoryProblem("", CONFIG)).toBe("johns builds from the repository root, not `apps/api`");
+    expect(rootDirectoryProblem("apps/client", CONFIG)).toBe("johns builds from `apps/client`, not `apps/api`");
   });
 });
 
