@@ -453,6 +453,33 @@ Production (ask-first): Supabase's Google Client IDs, skip-nonce and redirect
 URL, through provision. Google Cloud's iOS and Android clients are yours to
 create (no API).
 
+As built, where it differs from the above:
+- **No `johns://**` redirect**, locally or in production. Native sign-in
+  hands Supabase an ID token and never redirects, and an allow-listed custom
+  scheme is one another app could claim. It comes back if a flow ever needs
+  it. Local config gains `http://localhost:8205/**` for the web build.
+- **Skip-nonce waits for iOS.** Supabase's guide now calls it a weakening of
+  replay protection, needed only because Google's iOS sign-in signs a nonce
+  the app can't see. Provision turns it on only once `config.mjs` has an
+  iOS client; Android and the web don't need it. Apple's sign-in does carry
+  a nonce (SHA-256 to Apple, the raw value to Supabase).
+- **Client IDs live in `config.mjs`**, not secrets: they are public. One
+  Android client per signing key, so `androidClientIds` is a list.
+- **The Apple provider stays off locally** with `dev.glyn.johns` as its
+  client ID and no secret (native sign-in needs none): there is nothing to
+  sign the app with the capability until the Apple account exists.
+- **Signed in, the app shows a placeholder Today** (your name and Sign out)
+  until Phases 5 and 6. The front door gains the web's three ways in, all
+  to sign-in, and the sign-in words move into core for both apps.
+- **`app.config.ts`** adds Google's iOS URL scheme from
+  `EXPO_PUBLIC_GOOGLE_IOS_CLIENT_ID`; app.json can't hold it before the iOS
+  client exists.
+- **The e2e serves the export itself** (`e2e/serve-client.mjs`): `expo
+  serve` 404s every path but `/` for single-page output.
+- **Fixed from Phase 3:** a test in `src/app` was bundled into the app as a
+  route. Screen tests now live in `src/__tests__/app`, and a test fails if
+  anything but a screen lands in `src/app`.
+
 ### Phase 5: join and create a house, and the API foundation
 
 - `apps/api`: the template's `requireUser` / `respond` / `cors` helpers,

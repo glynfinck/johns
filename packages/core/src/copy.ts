@@ -9,6 +9,9 @@ export const TAGLINE = "Fair shares of the housework, and a house that keeps sco
 export const FRONT_DOOR = {
   eyebrow: "For houses that share a bin",
   headline: "Johns: who’s on what this week.",
+  signIn: "Sign in",
+  start: "Start your house",
+  join: "I have a join link",
   points: [
     {
       key: "deal",
@@ -29,3 +32,23 @@ export const FRONT_DOOR = {
 } as const;
 
 export type FrontDoorPoint = (typeof FRONT_DOOR.points)[number]["key"];
+
+export type SignInProvider = "Google" | "Apple";
+
+/**
+ * The sign-in screen's words. The reason line under the heading comes from
+ * `signInReason` (auth-paths.ts) where only Google is offered; iOS also
+ * offers Apple, so it says `eitherAccount` instead, and warns that a second
+ * account starts with no house (Hide My Email makes a new person).
+ */
+export const SIGN_IN_COPY = {
+  heading: "Sign in",
+  google: "Continue with Google",
+  googleBusy: "Opening Google…",
+  eitherAccount: "Your house's Johns are kept with the account you sign in with.",
+  sameAccount: "Already in a house? Use the account you joined with.",
+  terms: "By signing in you agree to the house rules your housemates set.",
+  privacy: "Privacy",
+  failed: (provider: SignInProvider) => `${provider} didn’t finish signing you in. Try again.`,
+  signOut: "Sign out",
+} as const;

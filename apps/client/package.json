@@ -16,9 +16,12 @@
   "dependencies": {
     "@app/core": "*",
     "@expo-google-fonts/overpass": "^0.4.2",
+    "@react-native-google-signin/google-signin": "^16.1.5",
     "@supabase/supabase-js": "^2.118.0",
     "expo": "~58.0.19",
+    "expo-apple-authentication": "~58.0.2",
     "expo-constants": "~58.0.13",
+    "expo-crypto": "~58.0.7",
     "expo-font": "~58.0.10",
     "expo-image": "~58.0.17",
     "expo-linking": "~58.0.14",

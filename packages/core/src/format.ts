@@ -72,6 +72,25 @@ export function initials(name: string): string {
   return letters.toUpperCase();
 }
 
+/** The longest name a profile holds: `profiles.display_name`'s check. */
+export const NAME_MAX = 60;
+
+/**
+ * A display name from its parts, as Sign in with Apple hands them over, and
+ * only once: given, middle, family. Blank parts drop out, runs of whitespace
+ * close up, and it stops at NAME_MAX characters (code points, as Postgres
+ * counts them). Null when nothing is left, so the caller keeps the name it has.
+ */
+export function nameFromParts(parts: readonly (string | null | undefined)[]): string | null {
+  const name = parts
+    .map((part) => (part ?? "").trim())
+    .filter(Boolean)
+    .join(" ")
+    .replace(/\s+/g, " ");
+  if (!name) return null;
+  return Array.from(name).slice(0, NAME_MAX).join("").trim();
+}
+
 /** "Priya" from "Priya Shah": housemates use first names. */
 export function firstName(name: string): string {
   return name.trim().split(/\s+/)[0] || name;

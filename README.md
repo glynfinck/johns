@@ -71,23 +71,25 @@ cp supabase/.env.example supabase/.env.local
 supabase start                         # ports 54340–54344
 cp apps/api/.env.example apps/api/.env.local   # then fill in from `supabase status -o env`
 npm run dev                            # http://localhost:3205
-npm run dev:client                     # the Expo app: Metro on 8205 (w for web, or Expo Go)
+npm run dev:client                     # the Expo app: Metro on 8205 (w for web)
 ```
 
-The Expo app reads `apps/client/.env.local` (copy `.env.example`). Its front
-door needs nothing; sign-in arrives in Phase 4.
+The Expo app reads `apps/client/.env.local` (copy `.env.example`). Its web
+build signs in as the web app does; on iOS and Android, sign-in needs a
+development build (`npx expo run:ios` / `run:android` in `apps/client`;
+Expo Go can't) and Google's app clients (DEPLOYMENT.md).
 
-Sign-in is Google-only. To use the app locally without a Google client,
-create a user in Studio (http://127.0.0.1:54343) and sign in with the
-`apps/api/e2e/auth.ts` approach, or configure a Google OAuth client for
-localhost.
+Sign-in is Google, plus Apple in the iOS app. To use the app locally without
+a Google client, create a user in Studio (http://127.0.0.1:54343) and sign
+in with the `apps/api/e2e/auth.ts` approach, or configure a Google OAuth
+client for localhost.
 
 ## Test
 
 ```sh
 npm test            # pure rules (@app/core), the Expo app's Jest, the scripts' decisions; no stack
 npm run test:db     # RLS, the housemate functions and the engine, on the local stack
-npm run test:e2e    # Playwright: Pixel 7, iPhone 15, desktop Firefox, a 1440px laptop
+npm run test:e2e    # Playwright, the web app and the Expo web build: Pixel 7, iPhone 15, desktop Firefox, a 1440px laptop
 ```
 
 ## Deploy

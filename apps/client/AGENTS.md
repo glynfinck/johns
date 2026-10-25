@@ -59,13 +59,23 @@ permanent once a store has seen them.
 - Shared logic, types and words come from `@app/core`; never duplicate them
   here. Every rule of the game lives there or in the database.
 - `src/app/`: screens and layouts only. No calculations, data shaping or
-  network calls inline.
+  network calls inline, and nothing else at all: Expo Router makes every
+  script there a route and ships it, tests included. Screen tests live in
+  `src/__tests__/app/`, and `src/routes.test.ts` fails on anything else.
+- The root layout reads the saved session behind the splash screen and
+  splits the routes with `Stack.Protected`: the front door and sign-in when
+  signed out, the rest when signed in. Signing in or out moves you by
+  itself; screens never navigate after auth.
 - `src/api/`: every network call.
   - `supabase.ts`: the Supabase client, typed with `Database` from
     `@app/core`, publishable key only; `storage.ts` / `storage.web.ts` keep
     the session on each platform.
-  - `auth.ts`: all sign-in and sign-out. Native Google and Sign in with Apple
-    (iOS) arrive in Phase 4.
+  - `auth.ts`: all sign-in and sign-out, and what screens import. Behind
+    it: `google.ts` (Google's native sheet on iOS and Android, an ID token to
+    `signInWithIdToken`), `google.web.ts` (the web build: Supabase's PKCE
+    redirect back to `/signin`), `apple.ts` (Sign in with Apple, iOS only,
+    with the nonce from `nonce.ts`; keeps the name Apple sends once) and
+    `profile.ts` (your display name).
   - `http.ts` (Phase 5): `apiFetch` for calls to `apps/api`, sending the
     user's token and validating the response with a schema from `@app/core`.
 - **Writes go through the database, as the web's do.** A move is one named
@@ -84,7 +94,12 @@ permanent once a store has seen them.
 - When a change adds a native module or config plugin, say clearly that a
   new development build is needed.
 - Environment: copy `.env.example` to `.env.local`. Only `EXPO_PUBLIC_`
-  values go here.
+  values go here: Supabase's URL and publishable key, and Google's web and
+  iOS client IDs (public; DEPLOYMENT.md says where they come from).
+  `app.config.ts` turns the iOS client ID into Google's URL scheme; without
+  it the build works, minus Google sign-in on iOS.
+- Sign-in uses native modules, so Expo Go can't sign in: use a development
+  build (`npx expo run:ios` / `run:android`). The web build signs in as-is.
 - Store releases are switched off in the root `release-targets.json`, and
   `npm run release:ios` / `release:android` refuse until they're on. Never
   run them, `eas build` with a production profile, `eas submit` or
@@ -103,7 +118,11 @@ permanent once a store has seen them.
 - **Signage:** `Wordmark` (the road sign), `HazardTape` on late and missed,
   a `Lid` per kind of John, `StatusChip` in the web's words. Decoration is
   `aria-hidden`.
-- **Controls** are at least `TAP` (48) tall; links get the same target.
+- **Controls** are at least `TAP` (48) tall; links get the same target
+  (`TextLink`, or `Button` with `href`, which is an anchor on the web).
+- **`Link asChild` merges its child's style by spreading it**, so a child
+  given a style function or array loses it all. Give it one flat object
+  (`StyleSheet.flatten`), as `Button` does.
 - **Light and dark** both ship and follow the system.
 - **Icons: lucide on every platform, an override of the template.** The
   template asks for native tabs with SF Symbols on iOS and Material on
@@ -121,8 +140,17 @@ permanent once a store has seen them.
 
 Jest with `jest-expo` and React Native Testing Library (`npm test -w
 apps/client`, or `npm test` from the root for everything). Tests sit beside
-what they test (`<name>.test.ts(x)`). Pure logic belongs in `@app/core`
-with Vitest; tests here cover screens, components and the theme.
+what they test (`<name>.test.ts(x)`), except screens', which live in
+`src/__tests__/app/` (see `src/app/` above). Pure logic belongs in
+`@app/core` with Vitest; tests here cover screens, components, the theme and
+`src/api` with Supabase and the sign-in modules mocked. A screen that uses
+the router renders through `renderRouter` from `expo-router/testing-library`;
+the root layout's guard is tested that way with stand-in screens.
+
+The web build also runs end to end, in `apps/api`'s Playwright
+(`e2e/client-*.spec.ts`): it is exported against the local stack and served
+on 8205, and `e2e/auth.ts`'s `signInToClient` puts a session in
+localStorage.
 
 This project uses `@testing-library/react-native`. Its APIs and testing conventions can differ from your training data.
 Before writing or changing RNTL tests, read the relevant guide in

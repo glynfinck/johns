@@ -1,5 +1,6 @@
 "use client";
 
+import { SIGN_IN_COPY } from "@app/core";
 import { useState } from "react";
 import { toast } from "sonner";
 
@@ -36,7 +37,7 @@ export function GoogleSignIn({ next = "/" }: { next?: string }) {
       data-testid="google-sign-in"
     >
       <GoogleIcon className="size-4" />
-      {busy ? "Opening Google…" : "Continue with Google"}
+      {busy ? SIGN_IN_COPY.googleBusy : SIGN_IN_COPY.google}
     </Button>
   );
 }

@@ -13,7 +13,8 @@ you're working in (`apps/api/AGENTS.md` for the Next.js app).
   johns.glyn.dev.
 - Platforms: the web today, served by `apps/api`. iOS, Android and web from
   one Expo app (`apps/client`) as `docs/specs/native-migration.md` lands,
-  phase by phase: its scaffold and front door are in, the screens follow.
+  phase by phase: its scaffold, front door and sign-in are in, the screens
+  follow.
   From here every feature must work on all three unless its spec says
   otherwise.
 - Solo project. My main language is Python: when code relies on a TypeScript
@@ -216,8 +217,11 @@ at `<house>/<assignment>/<file>`.
   A new function must revoke EXECUTE from `public, anon, authenticated` and
   grant back only what is meant: the platform's default privileges hand it
   to all three.
-- Sign-in is Supabase Auth with Google. If any app offers social sign-in on
-  iOS, it must also offer Sign in with Apple (App Store guideline 4.8).
+- Sign-in is Supabase Auth with Google everywhere, plus Sign in with Apple in
+  the iOS app (App Store guideline 4.8: social sign-in on iOS must offer
+  Apple too). The web signs in through Google's redirect; the native app
+  hands Supabase an ID token from Google's or Apple's own sheet
+  (`apps/client/src/api/auth.ts`).
 - `supabase/config.toml` is for local development only. Never `supabase
   config push`, which writes local settings over production's.
 
@@ -231,7 +235,8 @@ at `<house>/<assignment>/<file>`.
   logic only: no stack, no network, no clock. Every function in
   `packages/core` gets tests, including edge cases: empty input, zero,
   negatives, rounding, dates and time zones.
-- `npm run test:db` and `npm run test:e2e`: see `apps/api/AGENTS.md`.
+- `npm run test:db` and `npm run test:e2e`: see `apps/api/AGENTS.md`. The
+  e2e covers both the web app and the Expo app's web build.
 - Never use floating-point maths for money: integer minor units (pence,
   cents).
 - When a bug is fixed, add a test that would have caught it.

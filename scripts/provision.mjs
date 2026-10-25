@@ -27,6 +27,7 @@ import {
   authSettings,
   authorizeProblems,
   envPlan,
+  googleClientIds,
   googleConsoleValues,
   googleSteps,
   googleVerdict,
@@ -267,6 +268,9 @@ if (!CHECK_ONLY) await supa("PATCH", `/v1/projects/${ref}/config/auth`, authSett
 const auth = await supa("GET", `/v1/projects/${ref}/config/auth`);
 const problems = authProblems(auth, C, google);
 if (problems.length === 0) pass(`site URL ${siteUrl(C)}, email sign-up off${google ? ", Google on" : ""}`);
+if (google && !C.google.iosClientId && C.google.androidClientIds.length === 0) {
+  say("  · Google signs in on the web only: the app's iOS and Android clients aren't in config.mjs yet (DEPLOYMENT.md)");
+}
 for (const p of problems) fail(p);
 if (!google) {
   const v = googleConsoleValues(C, ref);
@@ -281,7 +285,7 @@ if (!google) {
 } else if (!CHECK_ONLY && existsSync(APP_ENV)) {
   // Local sign-in uses the same client, through config.toml's env() names.
   let local = existsSync(SUPABASE_ENV) ? readFileSync(SUPABASE_ENV, "utf8") : "";
-  local = setEnvLine(local, "AUTH_GOOGLE_CLIENT_ID", google.clientId);
+  local = setEnvLine(local, "AUTH_GOOGLE_CLIENT_ID", googleClientIds(C, google));
   local = setEnvLine(local, "AUTH_GOOGLE_SECRET", google.secret);
   writeFileSync(SUPABASE_ENV, local, { mode: 0o600 });
   say("  · supabase/.env.local has the Google client for local sign-in (restart supabase to pick it up)");

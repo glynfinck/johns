@@ -80,8 +80,12 @@ appear only in the laptop board.
   proven by re-reading the row. `42501` is a grant or a function's refusal;
   an RLS filter is silence. Retries are off: a retried RLS test is a lie.
 - `npm run test:e2e`: Playwright on port 3205, once per row of the matrix
-  (Pixel 7, iPhone 15, desktop Firefox, a 1440px laptop). Sessions are minted
-  by `e2e/auth.ts`, since Google's consent screen cannot be driven. A pass on
+  (Pixel 7, iPhone 15, desktop Firefox, a 1440px laptop). It also starts the
+  Expo app's web build on 8205 (exported against the same local stack,
+  served by `e2e/serve-client.mjs` as a single-page app) for the
+  `e2e/client-*.spec.ts` files. Sessions are minted by `e2e/auth.ts`, since
+  Google's consent screen cannot be driven: `signInAs` as cookies for this
+  app, `signInToClient` into localStorage for the Expo one. A pass on
   retry is a failure in CI. Count things by what reads the same in every
   layout (the board is cards on a phone and a table on a laptop), wait on a
   dialog closing rather than a button's label, which changes while pending,

@@ -22,6 +22,8 @@ export const supabase = createClient<Database>(url, publishableKey, {
     autoRefreshToken: true,
     persistSession: true,
     detectSessionInUrl: Platform.OS === 'web',
+    // The web signs in through a redirect; PKCE keeps the tokens out of the URL.
+    flowType: Platform.OS === 'web' ? 'pkce' : 'implicit',
   },
 });
 

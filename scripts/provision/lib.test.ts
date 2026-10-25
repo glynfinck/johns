@@ -7,7 +7,9 @@ import {
   authSettings,
   authorizeProblems,
   envPlan,
+  googleClientIds,
   googleConsoleValues,
+  googleSkipsNonce,
   googleSteps,
   googleVerdict,
   migrationVersion,
@@ -30,6 +32,14 @@ import {
 
 const GOOGLE = { clientId: "123-abc.apps.googleusercontent.com", secret: "shh" };
 const REF = "abcdefghijklmnopqrst";
+const ANDROID_ONLY = { ...CONFIG, google: { iosClientId: null, androidClientIds: ["android-dev.apps.googleusercontent.com"] } };
+const NATIVE = {
+  ...CONFIG,
+  google: {
+    iosClientId: "ios-1.apps.googleusercontent.com",
+    androidClientIds: ["android-dev.apps.googleusercontent.com", "android-store.apps.googleusercontent.com"],
+  },
+};
 
 describe("auth settings", () => {
   it("sends only production's fields, never the local config", () => {
@@ -61,6 +71,39 @@ describe("auth settings", () => {
     expect(authProblems(read, CONFIG, null)).toEqual([
       "site URL is http://localhost:3205, not https://johns.glyn.dev",
       "email sign-up is still on",
+    ]);
+  });
+
+  it("lists the web client first, then the app's iOS and Android clients", () => {
+    expect(googleClientIds(CONFIG, GOOGLE)).toBe(GOOGLE.clientId);
+    expect(googleClientIds(NATIVE, GOOGLE)).toBe(
+      `${GOOGLE.clientId},ios-1.apps.googleusercontent.com,android-dev.apps.googleusercontent.com,android-store.apps.googleusercontent.com`,
+    );
+    expect(googleClientIds(ANDROID_ONLY, GOOGLE)).toBe(`${GOOGLE.clientId},android-dev.apps.googleusercontent.com`);
+  });
+
+  it("skips Google's nonce check only once there is an iOS client", () => {
+    expect(googleSkipsNonce(CONFIG)).toBe(false);
+    expect(authSettings(CONFIG, GOOGLE)).toMatchObject({ external_google_skip_nonce_check: false });
+    expect(googleSkipsNonce(ANDROID_ONLY)).toBe(false);
+    expect(authSettings(NATIVE, GOOGLE)).toMatchObject({
+      external_google_client_id: googleClientIds(NATIVE, GOOGLE),
+      external_google_skip_nonce_check: true,
+    });
+  });
+
+  it("catches a client list or nonce setting that doesn't read back", () => {
+    const written = { ...authSettings(NATIVE, GOOGLE), external_google_secret: undefined };
+    expect(authProblems(written, NATIVE, GOOGLE)).toEqual([]);
+    expect(authProblems({ ...written, external_google_client_id: GOOGLE.clientId }, NATIVE, GOOGLE)).toEqual([
+      "the Google client IDs aren't the ones given",
+    ]);
+    expect(authProblems({ ...written, external_google_skip_nonce_check: false }, NATIVE, GOOGLE)).toEqual([
+      "Google's nonce check is on, not skipped (iOS)",
+    ]);
+    const web = { ...authSettings(CONFIG, GOOGLE), external_google_secret: undefined };
+    expect(authProblems({ ...web, external_google_skip_nonce_check: true }, CONFIG, GOOGLE)).toEqual([
+      "Google's nonce check is skipped, not on",
     ]);
   });
 

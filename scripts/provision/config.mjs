@@ -17,6 +17,16 @@ export const CONFIG = {
     // project's settings (Build and Deployment); provision only checks it.
     rootDirectory: "apps/api",
   },
+  // Google's native clients for the Expo app (public IDs, from Google Cloud;
+  // DEPLOYMENT.md says how to make them). One Android client per signing
+  // key: the development builds' and, later, the store's. The web client's ID
+  // and secret come from the environment. Supabase accepts tokens for any of
+  // them, the web's listed first, and skips its nonce check only once iOS
+  // exists, because Google's iOS sign-in signs a nonce the app never sees.
+  google: {
+    iosClientId: null,
+    androidClientIds: [],
+  },
   // The names supabase/migrations/*_tick_schedule.sql reads.
   vault: { url: "johns_tick_url", secret: "johns_tick_secret" },
   cronJob: "johns-tick",

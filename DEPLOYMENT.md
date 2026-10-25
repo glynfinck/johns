@@ -47,7 +47,7 @@ reset the password if you ever need a direct connection.
 | Supabase project | Creates `Johns` in London at the smallest compute (Micro) if it doesn't exist, saving the database password to `.env.provision.local` first, and waits for it to be healthy | Finds it by name |
 | Migrations | Pushes any `supabase/migrations` the database hasn't recorded (`supabase db push`, with the saved password) | Compares versions both ways |
 | The clock | Writes the two Vault secrets `request_tick()` reads. The tick secret is reused if it exists, so it never drifts from Vercel's `CRON_SECRET` | Reads both back; finds the `johns-tick` pg_cron job |
-| Sign-in | Sets only production's auth fields through the Management API: site URL, redirect URLs, email sign-up off, and Google once its client is given | Reads them back and refuses an unresolved `env(...)` client ID |
+| Sign-in | Sets only production's auth fields through the Management API: site URL, redirect URLs, email sign-up off, and Google once its client is given, with the app's iOS and Android clients from `config.mjs` listed after it (nonce check skipped only once there is an iOS client) | Reads them back and refuses an unresolved `env(...)` client ID, a different client list or nonce setting |
 | Vercel | Upserts the production environment (Supabase URL and keys, site URL, `CRON_SECRET`, VAPID keys, made once and then kept, since new ones would orphan every subscribed phone) and deploys `main` | Reads the variables back; checks the project builds from `apps/api` (its Root Directory, which it never sets: that one is by hand) and that the domain is attached and verified; waits for the deploy |
 | End to end | | `/signin` answers; the deployed app accepts the clock's tick (so Vercel and the Vault share one secret); Supabase sends sign-in to Google with this client and this callback, and Google doesn't refuse it |
 
@@ -66,6 +66,38 @@ is exactly what local development needs and production must not have.
   local sign-in, and checks the round trip. The secret itself is only proved by a
   real sign-in: Google checks it when it exchanges the code, after the user
   has chosen an account.
+- **Google's clients for the app** (iOS and Android). The Expo app signs in
+  with Google's own sheet, which hands Supabase an ID token, so it needs
+  clients of its own beside the web one, in the same Cloud project
+  ([Clients → Create client](https://console.cloud.google.com/auth/clients/create)):
+  1. **iOS**: bundle ID `dev.glyn.johns` (the Team ID once the Apple
+     account exists). Its client ID goes in `scripts/provision/config.mjs`
+     (`google.iosClientId`) and in `apps/client/.env.local` as
+     `EXPO_PUBLIC_GOOGLE_IOS_CLIENT_ID`, which also gives the iOS build its
+     URL scheme (`app.config.ts`).
+  2. **Android**: package `dev.glyn.johns` and the SHA-1 of the key the
+     build is signed with. One client per key: the development builds' now,
+     the store's later. Development builds use React Native's shared debug
+     key, whose SHA-1 is
+     `5E:8F:16:06:2E:A3:CD:2C:4A:0D:54:78:76:BA:A6:F3:8C:AB:F6:25` (read
+     from a prebuild on 25 October 2026; `keytool -list -v -keystore
+     apps/client/android/app/debug.keystore -alias androiddebugkey
+     -storepass android` shows it after `npx expo run:android`). Their IDs go
+     in `google.androidClientIds`.
+  3. The **web** client's ID goes in `apps/client/.env.local` as
+     `EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID`: on Android it is the token's
+     audience.
+
+  None of these IDs is a secret. Provision then lists them all in Supabase
+  (web first), and turns on "Skip nonce check" once the iOS client is
+  there: Google's iOS sign-in signs a nonce the app never sees, and
+  Supabase's guide says to skip the check for it. That weakens replay
+  protection for Google tokens, which is why it waits for iOS.
+- **Sign in with Apple** (iOS only), once there is an Apple Developer
+  account: turn on the capability for the App ID `dev.glyn.johns`, then the
+  Apple provider in Supabase with `dev.glyn.johns` as its client ID. The
+  app's sign-in is native, so it needs no secret key. It can't be tried on a
+  device before then.
 - **The Supabase GitHub integration**, so that migrations apply on merge:
   one click in the project's settings, with no API. Its **working
   directory** is `.` (the folder that contains `supabase/`, not `supabase`
