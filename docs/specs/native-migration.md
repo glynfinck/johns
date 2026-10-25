@@ -19,8 +19,8 @@ What does **not** change, in any phase:
 - The clock: pg_cron, `request_tick()`, the Vault secrets, `/api/cron/tick`
   and its URL, `CRON_SECRET`.
 - Web push: VAPID keys, `/sw.js`, the existing subscriptions.
-- One backend: Supabase, with `apps/api` on Vercel beside it. No Firebase,
-  and no other push service (decision 3).
+- One backend: Supabase, with `apps/api` on Vercel beside it. Google's and
+  Apple's push services only deliver what `apps/api` sends (decision 3).
 - Ports: the app on 3205, Supabase on 54340–54344.
 - Store releases: `release-targets.json` has `ios` and `android` set to
   `false`, and nothing here switches them on.
@@ -104,7 +104,7 @@ where a server is genuinely needed. Going through every server action today:
 | Cast a vote | action: rpc, then a tick (a majority decides at once) | **`POST /api/disputes/:id/votes`** |
 | Catch the house up before showing it | `ensureFresh` on page load | **`POST /api/fresh`** when a screen gains focus, at most once a minute per house, as now |
 | The clock | pg_cron → `/api/cron/tick` | unchanged |
-| Reminders | web push from the tick | scheduled **on the phone** (decision 3); the deal, disputes and votes show in the app |
+| Reminders and alerts | web push from the tick and the dispute action | the same messages, also sent to the phone's own push token (decision 3) |
 
 For the dispute and vote routes, the rpc itself still runs as the caller
 (a client built from their bearer token), so the database decides exactly as
@@ -182,36 +182,43 @@ Sign in with Apple cannot be tried on a device until there is an Apple
 Developer account. It is built and unit-tested in Phase 4 and must be proven
 on a device before `ios` is ever switched on.
 
-### 3. Reminders: scheduled on the phone, no second backend
+### 3. Push: our own sender in `apps/api`, straight to Google and Apple
 
-**Decided 25 October:** no Firebase. Reaching a closed Android phone from a
-server is only possible through Google's Firebase Cloud Messaging (and an
-iPhone only through Apple's push service, which needs the Apple account),
-whichever service sends the message. That would be a second backend, so the
-native app gets no server push.
+**Decided 25 October:** real push on iOS and Android, sent by `apps/api`
+itself. No push service in between, and nothing of Johns stored or run
+anywhere but Supabase and Vercel.
 
-- **Due-time reminders are local notifications.** The app schedules them
-  itself with `expo-notifications`, from the Johns it has loaded: "due
-  tomorrow" 24 hours before and "due soon" 3 hours before, the same two
-  stages the tick uses (that rule moves from the engine into `@app/core`, so
-  both use one function). It reschedules whenever it opens, comes to the
-  foreground, or Realtime reports a change to your Johns (a swap, a re-deal,
-  time away pulling one forward). No accounts on either platform, and it
-  works on the iOS simulator before the Apple account exists.
-- **The deal, a dispute on your tick, a vote** reach the native app when
-  it's open (live through Realtime, plus a badge on the tab) and are waiting
-  on Today when it next opens. They don't reach a closed phone.
-- **Web push is unchanged** for the web app: VAPID, `/sw.js`, every message
-  including disputes and votes.
+- The app gets the phone's own push token with `expo-notifications`
+  (`getDevicePushTokenAsync`: an FCM token on Android, an APNs token on iOS)
+  and stores it in a new table, `push_tokens` (additive migration: `user_id`,
+  `token` unique, `platform`, `created_at`; RLS identical to
+  `push_subscriptions`; grants stated for every role including
+  `service_role`). Signing out deletes the device's token.
+- `apps/api/lib/push.ts`'s `Notify` fans out to three senders: web push with
+  VAPID exactly as now; Firebase Cloud Messaging's HTTP v1 API for Android
+  (an access token signed from a service-account key); and Apple's APNs over
+  HTTP/2 for iOS (a token signed with the `.p8` key). Each deletes tokens the
+  phone has thrown away (FCM `UNREGISTERED`, APNs `410`), as web push deletes
+  on 404 and 410. The message keeps its `url` (`/week`), which Expo Router
+  opens.
+- The payload builders and the token signing are pure functions with unit
+  tests in `apps/api` (server-only, so not core). A platform whose key isn't
+  configured simply gets nothing, as a deployment without VAPID keys does
+  today. A missing `push_tokens` table also reads as "no tokens", because
+  Vercel can deploy before Supabase does.
 
-The cost: if your Johns change while the app stays closed, a reminder can be
-out of date until it next opens (one for a John you swapped away, or none for
-one you were handed). Someone with both the web app's notifications and the
-native app gets the due reminders twice; the native app's notification
-settings say so.
+Google and Apple only deliver for senders they know, so this still needs:
+- **A Firebase project, used only for its Cloud Messaging key.** Nothing of
+  Johns is stored or run there. The Android app carries the project's
+  `google-services.json` (identifiers, not secrets); the service-account key
+  goes only into `apps/api`'s Vercel environment (`FCM_SERVICE_ACCOUNT`).
+- **Apple's push key** (`APNS_KEY`, `APNS_KEY_ID`, `APNS_TEAM_ID`), from the
+  Apple Developer account. Until it exists, iPhones get no notifications on a
+  closed phone; the app shows everything when it's open.
 
-Revisit only if the house misses dispute and vote alerts on Android. Then the
-only route is Firebase Cloud Messaging, and that decision comes back to you.
+No Expo account is needed for this. Expo's push service would have saved
+writing the FCM and APNs senders, at the price of a third service; you chose
+to own them.
 
 ### 4. Photo receipts: camera or library, same bucket, same rules
 
@@ -288,8 +295,8 @@ ships with join.
 
 Admin-only moves (dealing, editing the John list) arrive with House, last.
 Until then a house is set up on the web and played on the phone: both
-clients hit the same database, so that works from Phase 5. Reminders come
-after House (decision 3).
+clients hit the same database, so that works from Phase 5. Push comes after
+House (decision 3).
 
 ### 8. Other choices the plan makes
 
@@ -473,18 +480,22 @@ the link and the code), renaming yourself, signing out, and "Hand out this
 week's Johns" through `POST /api/deal`. After this the phone can run a house
 from nothing.
 
-### Phase 12: reminders on the phone
+### Phase 12: native push
 
 Decision 3. First a db test pins what the tick sends today (no test covers
-reminders yet): which stage, when, and never twice. Then the reminder rule
-(which stage, when, the words) moves from `apps/api/lib/engine/tick.ts` into
-`@app/core` with unit tests, and the tick uses it, so that test proves web
-push unchanged. The app asks for
-notification permission from House (never on first launch), schedules and
-reschedules the local reminders, and badges the tabs for open disputes and
-votes. Jest covers scheduling and rescheduling against a mocked
-`expo-notifications`.
-Production: none. No migration, no accounts, no new environment variables.
+reminders yet): which stage, when, and never twice. It must still pass, with
+web push unchanged, once `Notify` fans out. Then the `push_tokens` migration
+(revoking and granting as the house rules say) with db tests: you see and
+remove only your own tokens; a housemate can't insert a token for you; the
+service role reads them. Unit tests for the FCM and APNs payloads, the token
+signing, and pruning. The app asks for notification permission from House
+(never on first launch), registers its token, and opens the message's `url`
+when tapped. Android is checked on an emulator with Google Play; iOS waits
+for Apple's key.
+Production (ask-first): the migration reaches the database through Supabase's
+GitHub integration if it's on by then, otherwise through provision (`db
+push`); the Firebase project, which you create in Google's console; its key,
+and later Apple's, put into Vercel by provision.
 
 ### Phase 13: web parity and the hosting cutover
 
@@ -521,6 +532,7 @@ e2e suite retires; the Expo web suite carries on.
 | --- | --- | --- |
 | 2 | Vercel Root Directory → `apps/api`; preview redeploy; merge; read-only provision check | you, or me through the Vercel connector on your word |
 | 4 | Supabase Auth: Google client IDs, skip nonce, `johns://**` (via provision) | me on your word; Google Cloud clients are yours |
+| 12 | the `push_tokens` migration; the Firebase project (yours to create); the FCM key, and later Apple's, into Vercel through provision | you, or me on your word |
 | 13 | new Vercel project, domain, Supabase site and redirect URLs; Vault only if you choose the subdomain | you, or me on your word |
 | any | `npm run provision`, `supabase db push`, a production deploy, Vault, VAPID, `release:*`, `eas build --profile production`, `eas submit`, `eas update` | never without your say-so in that message |
 
@@ -535,7 +547,8 @@ e2e suite retires; the Expo web suite carries on.
 - **Apple accounts split from Google ones** (decision 2). The sign-in copy
   covers it for now; identity linking is a later feature.
 - **iOS can only be checked on a simulator** until the Apple account exists,
-  which means a Mac. Sign in with Apple can't be proven before then.
+  which means a Mac. Sign in with Apple and iOS push can't be proven before
+  then.
 - **CI time roughly doubles** once the Expo web e2e runs on the full matrix.
   The client job runs in parallel; the two e2e suites share one Supabase
   start.
@@ -557,8 +570,9 @@ e2e suite retires; the Expo web suite carries on.
 5. **A Mac for the iOS simulator?** **Yes**, so iOS is checked on the
    simulator until the Apple account exists.
 6. **Accounts in Phase 12:** OK to plan on an Expo account and a Firebase
-   project then (neither is a store account)? **Superseded: no Firebase, no
-   second backend.** Reminders are scheduled on the phone (decision 3).
+   project then (neither is a store account)? **Changed:** no Expo account or
+   push service. A Firebase project is used only for Android's delivery key,
+   and `apps/api` sends to Google and Apple itself (decision 3).
 
 ## Done when
 
