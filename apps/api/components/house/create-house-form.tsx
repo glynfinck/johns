@@ -1,6 +1,6 @@
 "use client";
 
-import { CURRENCIES, DOW_LABEL, type Currency, type IsoDow } from "@app/core";
+import { CURRENCIES, CURRENCY_SYMBOL, DOW_LABEL, NEW_HOUSE_COPY, type Currency, type IsoDow } from "@app/core";
 import { useState } from "react";
 
 import { timeZones } from "@/components/house/settings-form";
@@ -9,8 +9,6 @@ import { FieldLabel, Input } from "@/components/ui/input";
 import { NativeSelect } from "@/components/ui/native-select";
 import { useAction } from "@/hooks/use-action";
 import { createHouse } from "@/lib/actions/house";
-
-const SYMBOL: Record<Currency, string> = { GBP: "£", CAD: "$", USD: "$", EUR: "€" };
 
 export function CreateHouseForm({ timezone, currency }: { timezone: string; currency: Currency }) {
   const { pending, run } = useAction();
@@ -28,30 +26,30 @@ export function CreateHouseForm({ timezone, currency }: { timezone: string; curr
       }}
     >
       <div>
-        <FieldLabel htmlFor="new-house-name">What do you call the house?</FieldLabel>
+        <FieldLabel htmlFor="new-house-name">{NEW_HOUSE_COPY.name}</FieldLabel>
         <Input
           id="new-house-name"
           value={name}
           maxLength={60}
           required
           autoFocus
-          placeholder="Flat 3"
+          placeholder={NEW_HOUSE_COPY.namePlaceholder}
           onChange={(e) => setName(e.target.value)}
         />
       </div>
       <div className="grid gap-4 sm:grid-cols-2">
         <div>
-          <FieldLabel htmlFor="new-house-currency">Currency</FieldLabel>
+          <FieldLabel htmlFor="new-house-currency">{NEW_HOUSE_COPY.currency}</FieldLabel>
           <NativeSelect id="new-house-currency" value={cur} onChange={(e) => setCur(e.target.value as Currency)}>
             {CURRENCIES.map((c) => (
               <option key={c} value={c}>
-                {SYMBOL[c]} {c}
+                {CURRENCY_SYMBOL[c]} {c}
               </option>
             ))}
           </NativeSelect>
         </div>
         <div>
-          <FieldLabel htmlFor="new-house-week">The week starts on</FieldLabel>
+          <FieldLabel htmlFor="new-house-week">{NEW_HOUSE_COPY.weekStarts}</FieldLabel>
           <NativeSelect
             id="new-house-week"
             value={weekStarts}
@@ -66,7 +64,7 @@ export function CreateHouseForm({ timezone, currency }: { timezone: string; curr
         </div>
       </div>
       <div>
-        <FieldLabel htmlFor="new-house-tz">Time zone</FieldLabel>
+        <FieldLabel htmlFor="new-house-tz">{NEW_HOUSE_COPY.timezone}</FieldLabel>
         <NativeSelect id="new-house-tz" value={tz} onChange={(e) => setTz(e.target.value)}>
           {timeZones(tz).map((z) => (
             <option key={z} value={z}>
@@ -76,7 +74,7 @@ export function CreateHouseForm({ timezone, currency }: { timezone: string; curr
         </NativeSelect>
       </div>
       <Button type="submit" disabled={pending || !name.trim()} data-testid="create-house">
-        {pending ? "Setting up…" : "Set up the house"}
+        {pending ? NEW_HOUSE_COPY.busy : NEW_HOUSE_COPY.submit}
       </Button>
     </form>
   );

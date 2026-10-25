@@ -491,6 +491,27 @@ As built, where it differs from the above:
 - Core: `CreateHouse` and the join-code shape move into `schemas.ts`; the
   web's actions import them from there.
 
+As built, where it differs from the above:
+- **The API keeps Johns' env names** (`NEXT_PUBLIC_SUPABASE_URL`, the anon
+  key) rather than the template's, since production's Vercel environment
+  already has them; the helpers are otherwise the template's. `ALLOWED_ORIGINS`
+  is local only for now: the Expo web build calls from 8205, and once it
+  serves johns.glyn.dev (Phase 13) it calls from the same origin.
+- **`POST /api/fresh` takes the house's id** and refuses (404) a house the
+  caller's own RLS can't read; `ensureFresh` now says whether it ticked.
+- **The no-house screen offers a code box** beside "Start a house": a link
+  opened on a phone lands on the join screen, but a code read off another
+  screen needs somewhere to go. The join screen signs you in in place, so
+  the code survives sign-in; its route parameter is `joinCode`, because the
+  web's Google redirect brings a `?code=` of its own.
+- **A new house takes the phone's time zone** as it stands, with "change it
+  later from House" (Phase 11), instead of a picker of every zone. Currency
+  and the week's first day are chips.
+- **The words for creating and joining a house move into core** for both
+  apps (`NEW_HOUSE_COPY`, `JOIN_COPY`, `NO_HOUSE_COPY`, `CURRENCY_SYMBOL`).
+- If the house can't be read at launch (offline), the app says so with "Try
+  again", rather than showing "No house yet" to someone who has one.
+
 ### Phase 6: Today
 
 Mark done and undo, photo receipts (decision 4), spending immunity, Realtime

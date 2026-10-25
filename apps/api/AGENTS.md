@@ -61,6 +61,16 @@ appear only in the laptop board.
 
 - `app/`: routes. `app/api/cron/tick` is the clock's endpoint: its path is
   stored in production's Vault, so it never moves.
+- `app/api/*` besides the tick: route handlers for the native app, the
+  template's way. Each is thin: `requireUser` (`lib/auth.ts`: the bearer
+  token, checked with Supabase, and a client that acts as the caller), parse
+  the body with its schema from `@app/core` (a 400 otherwise), read what it
+  needs through the caller's own RLS, then call the engine or an RPC; answer
+  with `json` / `error` from `lib/respond.ts` and export `OPTIONS =
+  preflight`. Errors are `{ "error": "<sentence>" }`, never a stack or a
+  query. CORS only for `ALLOWED_ORIGINS` (`lib/env.ts`): the Expo web build
+  on 8205 locally; phones send no Origin. `proxy.ts` doesn't touch `/api/`.
+  Today: `POST /api/fresh` (catch a house up, at most once a minute).
 - `lib/actions/`: server actions. Thin wrappers around one SQL function or
   column-granted write each: they translate refusals with `humanError` and
   refresh. They never decide.
@@ -73,6 +83,11 @@ appear only in the laptop board.
 
 ## Tests
 
+- Route handlers are tested in the db tier, called directly with a real
+  bearer token (`tests/db/api-fresh.test.ts`): no token, someone else's
+  house, a bad body, and the happy path. `server-only` is stubbed there
+  (`tests/support/server-only.ts`). Their pure helpers are unit-tested
+  (`tests/unit/api.test.ts`).
 - `npm run test:db`: Vitest `db` (`tests/db`) against the local stack, with
   per-role clients (`tests/support/clients.ts`) and scoped teardown, never
   truncate. `adminClient()` seeds and reads back; it is never the subject. An

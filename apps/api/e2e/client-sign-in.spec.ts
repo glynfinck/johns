@@ -1,4 +1,4 @@
-import { FRONT_DOOR, SIGN_IN_COPY } from "@app/core";
+import { FRONT_DOOR, NO_HOUSE_COPY, SIGN_IN_COPY } from "@app/core";
 import { expect, test } from "@playwright/test";
 
 import { CLIENT_URL, cleanUp, signInToClient } from "./auth";
@@ -46,13 +46,14 @@ test("signed out, Today sends you to sign in", async ({ page }) => {
 test("a session survives a reload, and signing out ends it", async ({ context, page }) => {
   made.push(await signInToClient(context, "Priya Client"));
 
+  // Signed in with no house yet: starting or joining one.
   await page.goto("/");
-  await expect(page).toHaveURL(/\/today$/);
-  await expect(page.getByRole("heading", { name: "Priya Client" })).toBeVisible();
+  await expect(page).toHaveURL(/\/welcome$/);
+  await expect(page.getByRole("heading", { name: NO_HOUSE_COPY.heading })).toBeVisible();
 
   await page.reload();
-  await expect(page).toHaveURL(/\/today$/);
-  await expect(page.getByRole("heading", { name: "Priya Client" })).toBeVisible();
+  await expect(page).toHaveURL(/\/welcome$/);
+  await expect(page.getByRole("heading", { name: NO_HOUSE_COPY.heading })).toBeVisible();
 
   await page.getByRole("button", { name: SIGN_IN_COPY.signOut }).click();
   await expect(page).toHaveURL(/\/signin$/);

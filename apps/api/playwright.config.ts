@@ -61,6 +61,8 @@ export default defineConfig({
       env: {
         EXPO_PUBLIC_SUPABASE_URL: process.env.NEXT_PUBLIC_SUPABASE_URL ?? "",
         EXPO_PUBLIC_SUPABASE_PUBLISHABLE_KEY: process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY ?? "",
+        // The Next app beside it answers /api/* (CORS: ALLOWED_ORIGINS in .env.local).
+        EXPO_PUBLIC_API_URL: `http://localhost:${PORT}`,
       },
     },
   ],

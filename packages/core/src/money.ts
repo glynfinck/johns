@@ -41,6 +41,9 @@ const EURO_ZONE = new Set([
   "IT", "LT", "LU", "LV", "MT", "NL", "PT", "SI", "SK",
 ]);
 
+/** How each currency is marked before an amount: "£ GBP" in a picker. */
+export const CURRENCY_SYMBOL: Record<Currency, string> = { GBP: "£", CAD: "$", USD: "$", EUR: "€" };
+
 /**
  * A house's currency defaults to wherever it was set up (Vercel's
  * `x-vercel-ip-country` header). Anywhere else starts in pounds, and the

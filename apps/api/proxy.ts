@@ -10,9 +10,10 @@ export const config = {
   matcher: [
     /*
      * Everything except static assets, the service worker and the manifest:
-     * the session only needs refreshing on paths that can read it. The cron
-     * tick authenticates with its own secret and never reads a session.
+     * the session only needs refreshing on paths that can read it. Nothing
+     * under /api/ reads a cookie session: the cron tick brings its own
+     * secret, and the app's routes a bearer token (lib/auth.ts).
      */
-    "/((?!_next/static|_next/image|favicon.ico|sw.js|manifest.webmanifest|api/cron|.*\\.(?:svg|png|jpg|jpeg|gif|webp|ico|txt|xml)$).*)",
+    "/((?!_next/static|_next/image|favicon.ico|sw.js|manifest.webmanifest|api/|.*\\.(?:svg|png|jpg|jpeg|gif|webp|ico|txt|xml)$).*)",
   ],
 };

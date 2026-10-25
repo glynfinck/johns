@@ -30,7 +30,14 @@ export default defineConfig({
         },
       },
       {
-        resolve: { alias },
+        resolve: {
+          alias: [
+            ...alias,
+            // Route handlers reach `server-only` modules (the engine's
+            // service-role client); see tests/support/server-only.ts.
+            { find: /^server-only$/, replacement: fileURLToPath(new URL("./tests/support/server-only.ts", import.meta.url)) },
+          ],
+        },
         test: {
           name: "db",
           environment: "node",
