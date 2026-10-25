@@ -31,7 +31,8 @@ you're working in (`apps/api/AGENTS.md` for the Next.js app).
 apps/
   api/          Next.js: the web app (its pages stay until Expo web reaches
                 parity), server actions, /api routes, the engine, push  → Vercel "johns"
-  client/       Expo: iOS, Android and web from one codebase (not deployed yet)
+  client/       Expo: iOS, Android and web from one codebase   → Vercel "johns-web",
+                from the cutover (DEPLOYMENT.md)
 packages/
   core/         @app/core: the pure rules, the shared words, the database types
 supabase/       migrations/ and config.toml (local development only)
@@ -252,17 +253,22 @@ at `<house>/<assignment>/<file>`.
 
 ## Hosting and deploys
 
-- Vercel's git integration builds `apps/api` (the project's Root Directory is
-  `apps/api`) and Supabase's GitHub integration applies migrations. `main` is
-  production; CI only proves, and must be green to merge. There is no preview
-  database yet, so preview deployments get no keys.
+- Vercel's git integration builds `apps/api` (the `johns` project, Root
+  Directory `apps/api`) and Supabase's GitHub integration applies migrations.
+  `main` is production; CI only proves, and must be green to merge. There is
+  no preview database yet, so preview deployments get no keys.
+- From the Phase 13 cutover, a second project, `johns-web` (Root Directory
+  `apps/client`, configured by `apps/client/vercel.json`), serves
+  johns.glyn.dev with the Expo web build and passes `/api/*` on to `johns`,
+  which answers on `api.johns.glyn.dev`. The clock's URL and the secrets
+  don't move. DEPLOYMENT.md has the steps and the rollback.
 - Production's accounts are described in `scripts/provision/config.mjs` and
   set up by `npm run provision`, which writes, then reads everything back
   (DEPLOYMENT.md).
 - Always ask first. Never run or change any of these unless I've said to in
   that message: `npm run provision` (even `--check`), `supabase db push`,
-  `supabase functions deploy`, a Vercel production deploy, the Vercel
-  project's settings, the Vault secrets, the VAPID keys, `npm run
+  `supabase functions deploy`, a Vercel production deploy, either Vercel
+  project's settings or domains, the Vault secrets, the VAPID keys, `npm run
   release:ios` / `release:android`, `eas build` with a production profile,
   `eas submit` and `eas update`. Store releases stay switched off in
   `release-targets.json` (both `false`) until the Apple and Google Play

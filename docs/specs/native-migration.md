@@ -735,6 +735,28 @@ As built, the parity half (one PR, before the cutover):
   `client-week` and `client-sign-in`; `groups-away.spec.ts` by
   `client-groups-away`; `client-web.spec.ts` covers the pages above.
 
+As built, the hosting half (prepared in one PR, then each production step
+on its own; DEPLOYMENT.md has the runbook and the rollback):
+- **`apps/api` answers on `api.johns.glyn.dev`**, a name attached to the
+  `johns` project, rather than its generated `.vercel.app` one, so the
+  rewrite's target is written once (`config.mjs`; a test holds
+  `vercel.json` to it) and no deployment-protection setting can stand
+  between the two projects.
+- **`apps/client/vercel.json`**: the export into `dist`, `/api/*` on to that
+  name with rewrite caching off, every other path onto the app, the Next
+  app's security headers, `sw.js` never cached and the hashed bundles kept
+  for good.
+- **The web build calls its own origin**: `EXPO_PUBLIC_API_URL` is unset in
+  production, and `apiBase()` then answers `''` on the web (a phone still
+  needs it). The e2e runs that way too: `serve-client.mjs` follows
+  `vercel.json`'s rewrites, passing `/api/*` to the local Next app.
+- **Provision knows both projects**: it checks `johns-web` (made by hand)
+  builds from `apps/client`, gives it its three public values (the VAPID
+  public key read back from `johns`), checks which project holds which
+  name, and deploys both.
+- **No Supabase change**: its site URL is still johns.glyn.dev and its
+  redirect URLs already allow `/signin`.
+
 ### Phase 14: `apps/api` goes headless
 
 As soon as the cutover checks out in production (decided at the time;
@@ -751,7 +773,7 @@ e2e suite retires; the Expo web suite carries on.
 | 2 | Vercel Root Directory → `apps/api`; preview redeploy; merge; read-only provision check | you, or me through the Vercel connector on your word |
 | 4 | Supabase Auth: Google client IDs, skip nonce, `johns://**` (via provision) | me on your word; Google Cloud clients are yours |
 | 12 | the `push_tokens` migration; the Expo account and EAS project; the Firebase project (yours to create) and its key uploaded to Expo; `EXPO_ACCESS_TOKEN` into Vercel through provision; later Apple's key | you, or me on your word |
-| 13 | new Vercel project, domain, Supabase site and redirect URLs; Vault only if you choose the subdomain | you, or me on your word |
+| 13 | `api.johns.glyn.dev` on `johns`; the `johns-web` project and its public env; checking it before the move (a redirect URL for its own address, taken out after); moving johns.glyn.dev | me on your word, one step at a time |
 | any | `npm run provision`, `supabase db push`, a production deploy, Vault, VAPID, `release:*`, `eas build --profile production`, `eas submit`, `eas update` | never without your say-so in that message |
 
 ## Risks

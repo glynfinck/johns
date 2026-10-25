@@ -1,8 +1,9 @@
 # Deploying Johns
 
-The same arrangement as Pub Golf: Vercel's git integration builds the app
-(the Next.js workspace in `apps/api`), Supabase's GitHub integration applies
-the migrations, and CI only proves.
+The same arrangement as Pub Golf: Vercel's git integration builds the apps
+(the Next.js workspace in `apps/api` as the `johns` project, and from the
+cutover below the Expo app's web build in `apps/client` as `johns-web`),
+Supabase's GitHub integration applies the migrations, and CI only proves.
 `main` is production. There is no preview database yet, so preview
 deployments get no keys (a preview writing to production's data would be
 worse than one that doesn't start); add a persistent `preview` branch project
@@ -48,8 +49,9 @@ reset the password if you ever need a direct connection.
 | Migrations | Pushes any `supabase/migrations` the database hasn't recorded (`supabase db push`, with the saved password) | Compares versions both ways |
 | The clock | Writes the two Vault secrets `request_tick()` reads. The tick secret is reused if it exists, so it never drifts from Vercel's `CRON_SECRET` | Reads both back; finds the `johns-tick` pg_cron job |
 | Sign-in | Sets only production's auth fields through the Management API: site URL, redirect URLs, email sign-up off, and Google once its client is given, with the app's iOS and Android clients from `config.mjs` listed after it (nonce check skipped only once there is an iOS client) | Reads them back and refuses an unresolved `env(...)` client ID, a different client list or nonce setting |
-| Vercel | Upserts the production environment (Supabase URL and keys, site URL, `CRON_SECRET`, VAPID keys, made once and then kept, since new ones would orphan every subscribed phone) and deploys `main` | Reads the variables back; checks the project builds from `apps/api` (its Root Directory, which it never sets: that one is by hand) and that the domain is attached and verified; waits for the deploy |
-| End to end | | `/signin` answers; the deployed app accepts the clock's tick (so Vercel and the Vault share one secret); Supabase sends sign-in to Google with this client and this callback, and Google doesn't refuse it |
+| Vercel | Upserts the production environment (Supabase URL and keys, site URL, `CRON_SECRET`, VAPID keys, made once and then kept, since new ones would orphan every subscribed phone) and deploys `main` | Reads the variables back; checks the project builds from `apps/api` (its Root Directory, which it never sets: that one is by hand) and that its own name, `api.johns.glyn.dev`, is attached and verified; waits for the deploy |
+| The web build | Upserts `johns-web`'s production environment (public values only: Supabase's URL and anon key, and the VAPID public key read back from `johns`) and deploys `main` | Finds the project (made by hand, never by provision); checks it builds from `apps/client`, reads the variables back, and that `johns.glyn.dev` is attached to it and verified; waits for the deploy |
+| End to end | | `/signin` answers; the clock's tick, sent to `johns.glyn.dev` and passed on to `apps/api`, is accepted (so Vercel and the Vault share one secret); Supabase sends sign-in to Google with this client and back to `/signin`, and Google doesn't refuse it |
 
 It never runs `supabase config push`. That would write `config.toml`'s
 localhost over the production site URL and turn email sign-up back on, which
@@ -127,6 +129,61 @@ the repository root and builds that directory. Changing the setting doesn't
 redeploy anything, and a build from the wrong directory fails without
 replacing the live deployment, which keeps serving.
 
+## The web build and the cutover (Phase 13)
+
+From the cutover, johns.glyn.dev is the Expo app's web build, in a second
+Vercel project, `johns-web` (Root Directory `apps/client`, framework
+"Other"). `apps/client/vercel.json` says the rest: it builds with `npm run
+export:web` into `dist`, opens every path that isn't a file on the app
+(which draws its own not-found), sends the Next app's security headers, and
+passes `/api/*` on to `apps/api`, which answers on a name of its own,
+`api.johns.glyn.dev`. So:
+
+- **The clock doesn't move.** The Vault's tick URL stays
+  `https://johns.glyn.dev/api/cron/tick`; the web project passes it on, with
+  its secret, to the same route.
+- **The browser needs no CORS**, and no secret moves: the web build calls
+  `/api/*` on its own origin, and its environment is public (Supabase's URL
+  and the anon key `apps/api` uses, and the VAPID public key `apps/api`
+  signs with, copied from `johns`, never made anew).
+- **Reminders and installs carry over**: `/sw.js`, the manifest and the
+  icons sit at the same paths, and the VAPID key is the same, so phones
+  already subscribed keep getting reminders.
+- **Sign-in needs no change**: Supabase's site URL stays
+  `https://johns.glyn.dev` and its redirect URLs already allow
+  `https://johns.glyn.dev/**`, which covers `/signin`, where the web build
+  comes back to; Google only ever sees Supabase's callback.
+- **Everyone signs in once more** on the web, because the session moves
+  from cookies to the browser's storage.
+
+The steps, each asked for and checked before the next:
+
+1. **Give `apps/api` its own name**: attach `api.johns.glyn.dev` to `johns`
+   (glyn.dev's DNS is on Vercel, so no record). Check that
+   `https://api.johns.glyn.dev/api/cron/tick` refuses a request without the
+   secret (401): it's the same deployment as johns.glyn.dev.
+2. **Make `johns-web`**: import `glynfinck/johns`, Root Directory
+   `apps/client`, framework Other, Node 24, the same team. Its production
+   environment is the three `EXPO_PUBLIC_` values above; previews get
+   nothing, as for `johns`. Deploy `main`.
+3. **Check it on its own `.vercel.app` URL**, before it has the domain: the
+   front door, privacy and a link to nowhere; `/manifest.webmanifest` and
+   `/sw.js`; `POST /api/fresh` with no token answers the API's own 401
+   (the rewrite reaches `apps/api`), and so does the tick without its secret.
+   Signing in there needs that URL in Supabase's redirect URLs for the
+   check, and taken out after (provision writes only johns.glyn.dev's back).
+4. **Move `johns.glyn.dev`** from `johns` to `johns-web`.
+5. **Check production**: sign in with Google on johns.glyn.dev, open the
+   house, tick a John, see it on the Wall, turn reminders on; the clock's
+   next tick shows 200 (`select * from cron.job_run_details order by
+   start_time desc limit 5;`, and `/api/cron/tick` in `johns`'s logs); a
+   reminder arrives.
+
+**Rolling back** is step 4 in reverse: move `johns.glyn.dev` back to
+`johns`, whose pages still answer. Once Phase 14 has removed them, roll back
+by promoting `johns`'s last deployment that still had them (Vercel keeps
+every deployment) and moving the domain back.
+
 ## Day to day
 
 - Work on a branch, open a PR; CI must be green to merge.
@@ -135,5 +192,6 @@ replacing the live deployment, which keeps serving.
   take; split it into an additive step and a later cleanup.
 - `npm run provision -- --check` says whether production still looks right.
 - `TICK_URL=https://johns.glyn.dev/api/cron/tick CRON_SECRET=… npm run tick`
-  runs the clock by hand. Check the cron job with
+  runs the clock by hand (through the web project's rewrite after the
+  cutover; `https://api.johns.glyn.dev/api/cron/tick` goes straight there). Check the cron job with
   `select * from cron.job_run_details order by start_time desc limit 5;`.

@@ -52,8 +52,9 @@ export default defineConfig({
     },
     {
       // Exported against the same local stack (EXPO_PUBLIC_ values are baked
-      // in at export), then served as a host would serve a single-page app.
-      command: `npx expo export -p web && node ../api/e2e/serve-client.mjs dist ${CLIENT_PORT}`,
+      // in at export), then served as Vercel serves it: serve-client.mjs
+      // follows apps/client/vercel.json.
+      command: `npx expo export -p web && node ../api/e2e/serve-client.mjs dist ${CLIENT_PORT} http://localhost:${PORT}`,
       cwd: "../client",
       url: `http://localhost:${CLIENT_PORT}/`,
       reuseExistingServer: !process.env.CI,
@@ -61,8 +62,9 @@ export default defineConfig({
       env: {
         EXPO_PUBLIC_SUPABASE_URL: process.env.NEXT_PUBLIC_SUPABASE_URL ?? "",
         EXPO_PUBLIC_SUPABASE_PUBLISHABLE_KEY: process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY ?? "",
-        // The Next app beside it answers /api/* (CORS: ALLOWED_ORIGINS in .env.local).
-        EXPO_PUBLIC_API_URL: `http://localhost:${PORT}`,
+        // No API named: as in production, the web build calls /api/* on its
+        // own origin, which passes it on to the Next app beside it.
+        EXPO_PUBLIC_API_URL: "",
         // A public key made for these tests, never production's: with one, the
         // web build offers reminders, and e2e/client-web.spec.ts stands in for
         // the browser's push service.
