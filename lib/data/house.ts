@@ -1,14 +1,12 @@
 import "server-only";
 
+import { SIGN_IN, type Database, type HouseRules } from "@app/core";
 import { redirect } from "next/navigation";
 import { cache } from "react";
 
-import { SIGN_IN } from "@/lib/auth-paths";
-import type { HouseRules } from "@/lib/domain";
 import { ensureFresh } from "@/lib/engine/fresh";
 import { rulesOf } from "@/lib/engine/tick";
 import { createClient } from "@/lib/supabase/server";
-import type { Database } from "@/types/database";
 
 export type HouseRow = Database["public"]["Tables"]["houses"]["Row"];
 

@@ -6,8 +6,8 @@ import { gotoSettled } from "./nav";
 /**
  * The two ways a house is not one undivided list: a John only some of you
  * share, and a housemate who is away. The rules behind both are proved in
- * tests/unit/deal.test.ts and tests/db/groups-away.test.ts; this proves the
- * screens reach them.
+ * packages/core/src/deal.test.ts and tests/db/groups-away.test.ts; this
+ * proves the screens reach them.
  */
 
 const users: string[] = [];

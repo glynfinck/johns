@@ -1,5 +1,5 @@
 // The decisions `npm run provision` makes, as pure functions so a unit test
-// can hold them (tests/unit/provision.test.ts). Everything that talks to an
+// can hold them (lib.test.ts, beside this file). Everything that talks to an
 // API lives in scripts/provision.mjs.
 
 export const siteUrl = (c) => `https://${c.domain}`;

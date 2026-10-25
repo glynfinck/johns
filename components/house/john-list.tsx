@@ -1,5 +1,6 @@
 "use client";
 
+import { CATEGORIES, CATEGORY_LABEL, DOW_LABEL, pointsLabel, type Category, type IsoDow } from "@app/core";
 import { CameraIcon, PencilIcon, PlusIcon } from "lucide-react";
 import { useState } from "react";
 
@@ -11,8 +12,6 @@ import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle } from "
 import { Switch } from "@/components/ui/switch";
 import { useAction } from "@/hooks/use-action";
 import { archiveJohn, saveJohn } from "@/lib/actions/house";
-import { CATEGORIES, CATEGORY_LABEL, DOW_LABEL, type Category, type IsoDow } from "@/lib/domain";
-import { pointsLabel } from "@/lib/format";
 
 export interface JohnDef {
   id: string;

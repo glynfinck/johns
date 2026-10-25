@@ -1,3 +1,4 @@
+import { addDaysTo, awayDays, dateRange, dueLabel, firstName, pointsEarned, relative, weekRange } from "@app/core";
 import type { Metadata } from "next";
 
 import { DealButton } from "@/components/house/deal-button";
@@ -9,13 +10,9 @@ import { StatusChip } from "@/components/johns/status-chip";
 import { PageHeader } from "@/components/shell/app-shell";
 import { Standings } from "@/components/table/standings";
 import { Avatar } from "@/components/ui/avatar";
-import { awayDays } from "@/lib/away";
 import { getAway } from "@/lib/data/away";
 import { requireHouse } from "@/lib/data/house";
 import { getWeekBoard } from "@/lib/data/week";
-import { dateRange, dueLabel, firstName, relative, weekRange } from "@/lib/format";
-import { pointsEarned } from "@/lib/points";
-import { addDaysTo } from "@/lib/week";
 
 export const metadata: Metadata = { title: "This week" };
 

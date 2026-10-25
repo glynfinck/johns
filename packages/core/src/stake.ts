@@ -1,4 +1,4 @@
-import type { HouseRules, Outcome } from "@/lib/domain";
+import type { HouseRules, Outcome } from "./domain";
 
 /**
  * The Stake.

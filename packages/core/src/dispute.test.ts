@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { verdict } from "@/lib/dispute";
+import { verdict } from "./dispute";
 
 const closesAt = new Date("2026-10-09T12:00:00Z");
 const before = new Date("2026-10-09T08:00:00Z");

@@ -1,7 +1,7 @@
 import { tz, TZDate } from "@date-fns/tz";
 import { addDays, addMonths, addWeeks, format, set, startOfMonth, startOfWeek } from "date-fns";
 
-import type { IsoDow } from "@/lib/domain";
+import type { IsoDow } from "./domain";
 
 /**
  * Week and month edges in a house's own time zone.

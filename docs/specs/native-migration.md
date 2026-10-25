@@ -1,7 +1,7 @@
 # Johns on iOS and Android: migration plan
 
-Status: **draft, waiting for approval.** Nothing outside this file changes
-until it is approved. Written 25 October 2026 against `johns@e17afac` and
+Status: **approved 25 October 2026**, with the recommended answer to each
+question at the end. Written against `johns@e17afac` and
 `app-template@f08512d`.
 
 ## What this does
@@ -536,20 +536,21 @@ e2e suite retires; the Expo web suite carries on.
   AGENTS.md when there's no CLAUDE.md. Checked in a fresh session in
   Phase 2.
 
-## Open questions
+## Questions, answered
 
 1. **The restructure as two PRs** (Phases 1 and 2), so the Root Directory
-   change lands alone? You asked for Phase 1 to be the whole restructure.
+   change lands alone? **Yes.**
 2. **Identifiers:** `dev.glyn.johns` for the iOS bundle ID and Android
-   package, `johns` as the URL scheme?
-3. **Tabs:** JS tabs with lucide everywhere (recommended), or native tabs
-   with SF Symbols and Material icons, which breaks "lucide only"?
+   package, `johns` as the URL scheme? **Yes.**
+3. **Tabs:** JS tabs with lucide everywhere, or native tabs with SF Symbols
+   and Material icons? **JS tabs with lucide.**
 4. **Phase 2's switch:** will you flip Root Directory in the dashboard, or
-   should I do it through the Vercel connector when you say so?
-5. **A Mac for the iOS simulator?** If not, iOS waits for EAS development
-   builds on a device, which waits for the Apple account.
+   should I do it through the Vercel connector when you say so? **Asked
+   again when Phase 2's PR is green.**
+5. **A Mac for the iOS simulator?** **Yes**, so iOS is checked on the
+   simulator until the Apple account exists.
 6. **Accounts in Phase 12:** OK to plan on an Expo account and a Firebase
-   project then (neither is a store account)?
+   project then (neither is a store account)? **Yes.**
 
 ## Done when
 

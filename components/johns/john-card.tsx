@@ -1,3 +1,4 @@
+import { CATEGORY_LABEL, dueLabel, pointsLabel, relative, type Category } from "@app/core";
 import { CameraIcon, PlaneIcon } from "lucide-react";
 
 import { DisputeButton, MarkDone, UndoDone, UseImmunity, VoteButtons } from "@/components/johns/john-actions";
@@ -5,8 +6,6 @@ import { lidStyle } from "@/components/johns/lid";
 import { StatusChip } from "@/components/johns/status-chip";
 import { Avatar } from "@/components/ui/avatar";
 import type { BoardItem } from "@/lib/data/week";
-import { CATEGORY_LABEL, type Category } from "@/lib/domain";
-import { dueLabel, pointsLabel, relative } from "@/lib/format";
 import { cn } from "@/lib/utils";
 
 const OPEN = new Set(["upcoming", "due-soon", "overdue"]);

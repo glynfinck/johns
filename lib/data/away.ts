@@ -1,7 +1,6 @@
 import "server-only";
 
-import type { AwayPeriod } from "@/lib/away";
-import { addDaysTo, localDate } from "@/lib/week";
+import { addDaysTo, localDate, type AwayPeriod } from "@app/core";
 
 import type { HouseContext } from "./house";
 

@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 
-import { pointsEarned, standings, weekWinners } from "@/lib/points";
-import { earnsImmunity, grantToken, isCleanWeek, streakLength } from "@/lib/streak";
+import { pointsEarned, standings, weekWinners } from "./points";
+import { earnsImmunity, grantToken, isCleanWeek, streakLength } from "./streak";
 
 describe("pointsEarned", () => {
   it("pays full for on time, half for late, nothing otherwise", () => {

@@ -1,9 +1,9 @@
 "use server";
 
+import { humanError } from "@app/core";
 import { refresh } from "next/cache";
 import { z } from "zod";
 
-import { humanError } from "@/lib/errors";
 import { createClient } from "@/lib/supabase/server";
 
 /**

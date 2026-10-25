@@ -1,7 +1,7 @@
 import { tz } from "@date-fns/tz";
 import { differenceInCalendarDays, format } from "date-fns";
 
-import type { LiveStatus } from "@/lib/outcome";
+import type { LiveStatus } from "./outcome";
 
 /**
  * How times read on screen, in the house's own time zone. Pure: the caller

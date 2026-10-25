@@ -1,4 +1,4 @@
-import type { Outcome } from "@/lib/domain";
+import type { Outcome } from "./domain";
 
 /**
  * Streaks and perks.
@@ -10,7 +10,7 @@ import type { Outcome } from "@/lib/domain";
  * Two perks come out of this:
  *   - an immunity token every IMMUNITY_EVERY clean weeks in a row, held up to
  *     IMMUNITY_CAP, spent to excuse one John with no forfeit;
- *   - a swap token for topping a week's table (lib/points.ts weekWinners),
+ *   - a swap token for topping a week's table (points.ts weekWinners),
  *     held up to SWAP_CAP, spent to trade one of your open Johns for a
  *     housemate's. That is "first pick", for a house on fair shares.
  */

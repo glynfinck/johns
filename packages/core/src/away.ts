@@ -1,11 +1,11 @@
-import { addDaysTo } from "@/lib/week";
+import { addDaysTo } from "./week";
 
 /**
  * Time away, as the house's local calendar dates. A period runs from its
  * first away day to its last, inclusive; dates are `yyyy-MM-dd`, which
  * compare correctly as strings. Pure, and every function takes "today".
  *
- * The rules that make time away fair live elsewhere: lib/deal.ts never hands
+ * The rules that make time away fair live elsewhere: deal.ts never hands
  * someone a John due on an away day but keeps counting their share, and
  * set_away (supabase/migrations) makes the Johns they already have due
  * before they go.

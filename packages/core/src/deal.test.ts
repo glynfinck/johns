@@ -10,7 +10,7 @@ import {
   type DealAssignment,
   type DealJohn,
   type DealMember,
-} from "@/lib/deal";
+} from "./deal";
 
 const EVERYONE = ["a", "b", "c", "d"];
 

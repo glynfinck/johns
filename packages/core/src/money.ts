@@ -1,4 +1,4 @@
-import type { Currency } from "@/lib/domain";
+import type { Currency } from "./domain";
 
 /**
  * Money is whole minor units everywhere (pence, cents). It becomes a

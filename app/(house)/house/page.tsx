@@ -1,3 +1,4 @@
+import type { Category, IsoDow } from "@app/core";
 import type { Metadata } from "next";
 
 import { AwayCalendar } from "@/components/house/away-calendar";
@@ -14,7 +15,6 @@ import { SITE_URL, VAPID_PUBLIC_KEY } from "@/lib/config";
 import { getAway } from "@/lib/data/away";
 import { getGroups } from "@/lib/data/groups";
 import { requireHouse } from "@/lib/data/house";
-import type { Category, IsoDow } from "@/lib/domain";
 
 export const metadata: Metadata = { title: "House" };
 

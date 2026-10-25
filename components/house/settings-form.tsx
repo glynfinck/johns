@@ -1,5 +1,6 @@
 "use client";
 
+import { CURRENCIES, DOW_LABEL, MAKEUP_LABEL, parseMoney, type Currency, type IsoDow } from "@app/core";
 import { useState } from "react";
 import { toast } from "sonner";
 
@@ -8,9 +9,6 @@ import { FieldLabel, Input } from "@/components/ui/input";
 import { NativeSelect } from "@/components/ui/native-select";
 import { useAction } from "@/hooks/use-action";
 import { updateHouse } from "@/lib/actions/house";
-import { MAKEUP_LABEL } from "@/lib/deal";
-import { CURRENCIES, DOW_LABEL, type Currency, type IsoDow } from "@/lib/domain";
-import { parseMoney } from "@/lib/money";
 
 export interface SettingsValues {
   name: string;

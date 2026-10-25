@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 
-import { currencyForCountry, formatMoney, formatSigned, parseMoney } from "@/lib/money";
-import { balances, forfeitFor, settleMonth, settleUp, type LedgerEntry } from "@/lib/stake";
+import { currencyForCountry, formatMoney, formatSigned, parseMoney } from "./money";
+import { balances, forfeitFor, settleMonth, settleUp, type LedgerEntry } from "./stake";
 
 const RULES = { lateForfeitMinor: 100, missedForfeitMinor: 300 };
 

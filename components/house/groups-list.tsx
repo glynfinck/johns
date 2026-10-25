@@ -1,5 +1,6 @@
 "use client";
 
+import { firstName } from "@app/core";
 import { PencilIcon, PlusIcon, UsersIcon } from "lucide-react";
 import { useState } from "react";
 
@@ -9,7 +10,6 @@ import { FieldLabel, Input } from "@/components/ui/input";
 import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { useAction } from "@/hooks/use-action";
 import { deleteGroup, saveGroup } from "@/lib/actions/house";
-import { firstName } from "@/lib/format";
 
 export interface GroupDef {
   id: string;

@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 
-import { awayDays, awayOn, currentOrNext, datesBetween, remaining, type AwayPeriod } from "@/lib/away";
-import { addDaysTo, localDate } from "@/lib/week";
+import { awayDays, awayOn, currentOrNext, datesBetween, remaining, type AwayPeriod } from "./away";
+import { addDaysTo, localDate } from "./week";
 
 const ben = (startsOn: string, endsOn: string, id = "p1"): AwayPeriod => ({
   id,

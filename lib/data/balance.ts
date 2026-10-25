@@ -1,8 +1,8 @@
 import "server-only";
 
-import { catchUpWeeks } from "@/lib/deal";
+import { catchUpWeeks, weekWindow } from "@app/core";
+
 import { loadBalances } from "@/lib/engine/tick";
-import { weekWindow } from "@/lib/week";
 
 import type { HouseContext } from "./house";
 

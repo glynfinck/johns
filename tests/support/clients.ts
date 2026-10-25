@@ -1,8 +1,7 @@
+import type { Database } from "@app/core";
 import { randomUUID } from "node:crypto";
 
 import { createClient, type SupabaseClient } from "@supabase/supabase-js";
-
-import type { Database } from "@/types/database";
 
 import { ANON_KEY, SERVICE_ROLE_KEY, SUPABASE_URL } from "./env";
 import { track } from "./scope";

@@ -1,7 +1,6 @@
+import type { Database } from "@app/core";
 import { createServerClient } from "@supabase/ssr";
 import { cookies } from "next/headers";
-
-import type { Database } from "@/types/database";
 
 /**
  * Cookie-bound Supabase client for Server Components, Server Actions and

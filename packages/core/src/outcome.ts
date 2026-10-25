@@ -1,4 +1,4 @@
-import type { Outcome } from "@/lib/domain";
+import type { Outcome } from "./domain";
 
 /**
  * When a John's result becomes final, and what it is.

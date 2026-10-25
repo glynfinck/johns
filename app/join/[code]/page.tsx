@@ -1,3 +1,4 @@
+import { signInPath } from "@app/core";
 import type { Metadata } from "next";
 import Link from "next/link";
 import { redirect } from "next/navigation";
@@ -5,7 +6,6 @@ import { redirect } from "next/navigation";
 import { Wordmark } from "@/components/brand/wordmark";
 import { JoinButton } from "@/components/house/join-button";
 import { Button } from "@/components/ui/button";
-import { signInPath } from "@/lib/auth-paths";
 import { getMembership } from "@/lib/data/house";
 
 export const metadata: Metadata = { title: "Join a house", robots: { index: false } };

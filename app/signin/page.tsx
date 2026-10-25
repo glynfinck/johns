@@ -1,10 +1,10 @@
+import { safeNext, signInReason } from "@app/core";
 import type { Metadata } from "next";
 import Link from "next/link";
 import { redirect } from "next/navigation";
 
 import { GoogleSignIn } from "@/components/auth/google-sign-in";
 import { Wordmark } from "@/components/brand/wordmark";
-import { safeNext, signInReason } from "@/lib/auth-paths";
 import { getUser } from "@/lib/data/house";
 
 export const metadata: Metadata = { title: "Sign in" };

@@ -1,8 +1,7 @@
+import { weekIndex, weekWindow, type Category, type IsoDow, type WeekWindow } from "@app/core";
 import { expect } from "vitest";
 
-import type { Category, IsoDow } from "@/lib/domain";
 import { dealWeek, loadHouse } from "@/lib/engine/tick";
-import { weekIndex, weekWindow, type WeekWindow } from "@/lib/week";
 
 import { adminClient, signedInUser, type Actor } from "./clients";
 import { track } from "./scope";

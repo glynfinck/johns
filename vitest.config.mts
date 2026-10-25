@@ -17,12 +17,13 @@ const alias = [
 export default defineConfig({
   test: {
     projects: [
+      // The pure rules are tested in packages/core with its own config. Here
+      // are only the repo's scripts: the decisions `npm run provision` makes.
       {
-        resolve: { alias },
         test: {
-          name: "unit",
+          name: "scripts",
           environment: "node",
-          include: ["tests/unit/**/*.test.ts"],
+          include: ["scripts/**/*.test.ts"],
           // Pure functions only: no stack, no network, no clock.
           testTimeout: 5_000,
         },

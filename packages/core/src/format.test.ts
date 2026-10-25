@@ -10,8 +10,8 @@ import {
   pointsLabel,
   relative,
   weekRange,
-} from "@/lib/format";
-import { weekWindow } from "@/lib/week";
+} from "./format";
+import { weekWindow } from "./week";
 
 const LONDON = "Europe/London";
 // Wednesday 8 Oct 2026, 10:00 BST.
