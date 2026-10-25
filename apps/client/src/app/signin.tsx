@@ -1,7 +1,9 @@
+import { PAGE_TITLE } from '@app/core';
 import { useLocalSearchParams } from 'expo-router';
 import { ScrollView, StyleSheet } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
+import { PageTitle } from '@/components/page-title';
 import { SignInPanel } from '@/components/sign-in-panel';
 import { SPACE, useTheme } from '@/theme';
 
@@ -15,6 +17,7 @@ export default function SignIn() {
   const { error } = useLocalSearchParams<{ error?: string }>();
   return (
     <SafeAreaView style={[styles.screen, { backgroundColor: colors.background }]}>
+      <PageTitle page={PAGE_TITLE.signIn} />
       <ScrollView contentContainerStyle={styles.page}>
         <SignInPanel failed={Boolean(error)} />
       </ScrollView>

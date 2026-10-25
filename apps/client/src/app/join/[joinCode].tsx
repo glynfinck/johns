@@ -1,4 +1,4 @@
-import { JOIN_COPY } from '@app/core';
+import { JOIN_COPY, PAGE_TITLE } from '@app/core';
 import { router, useLocalSearchParams } from 'expo-router';
 import { useEffect, useState } from 'react';
 import { ActivityIndicator, ScrollView, StyleSheet, View } from 'react-native';
@@ -7,6 +7,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { houseByCode, joinHouse, type Invite } from '@/api/house';
 import { Alert } from '@/components/alert';
 import { Button } from '@/components/button';
+import { PageTitle } from '@/components/page-title';
 import { SignInPanel } from '@/components/sign-in-panel';
 import { Body, Eyebrow, Heading } from '@/components/text';
 import { Wordmark } from '@/components/wordmark';
@@ -58,6 +59,7 @@ export default function Join() {
 
   return (
     <SafeAreaView style={[styles.screen, { backgroundColor: colors.background }]}>
+      <PageTitle page={PAGE_TITLE.join} />
       <ScrollView contentContainerStyle={styles.page}>
         {!session ? (
           <SignInPanel returnTo={`/join/${joinCode}`} />

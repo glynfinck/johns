@@ -161,7 +161,7 @@ function GroupForm({
               key={p.userId}
               accessibilityRole="checkbox"
               accessibilityLabel={p.userId === me ? 'You' : p.name}
-              accessibilityState={{ checked: on }}
+              aria-checked={on}
               onPress={() => toggle(p.userId)}
               style={[styles.pick, { borderColor: on ? colors.foreground : colors.border }]}
             >

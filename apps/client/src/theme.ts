@@ -1,4 +1,4 @@
-import { BIN_NIGHT, type BinNightScheme } from '@app/core';
+import { BIN_NIGHT, type BinNightScheme, type Look } from '@app/core';
 // Each weight from its own path: the package's index pulls in all eighteen
 // weights and italics, and the bundle would carry every one.
 import { Overpass_400Regular } from '@expo-google-fonts/overpass/400Regular';
@@ -7,6 +7,7 @@ import { Overpass_600SemiBold } from '@expo-google-fonts/overpass/600SemiBold';
 import { Overpass_700Bold } from '@expo-google-fonts/overpass/700Bold';
 import { Overpass_800ExtraBold } from '@expo-google-fonts/overpass/800ExtraBold';
 import { Overpass_900Black } from '@expo-google-fonts/overpass/900Black';
+import { createContext, useContext } from 'react';
 import { useColorScheme, type TextStyle } from 'react-native';
 
 // Bin Night for React Native: the one theme file. Colours come from @app/core
@@ -95,7 +96,16 @@ export function themeFor(scheme: string | null | undefined): Theme {
   };
 }
 
-/** The theme for the system's colour scheme, as the web follows the system by default. */
+/**
+ * The look this device chose: day, night, or the system's (the default, as
+ * on the web). LookProvider (hooks/look.tsx) holds it; without one, the
+ * system decides.
+ */
+export const LookContext = createContext<Look>('system');
+
+/** The theme for the look this device chose, the system's colour scheme by default. */
 export function useTheme(): Theme {
-  return themeFor(useColorScheme());
+  const system = useColorScheme();
+  const look = useContext(LookContext);
+  return themeFor(look === 'system' ? system : look);
 }

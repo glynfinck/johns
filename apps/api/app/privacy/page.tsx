@@ -1,9 +1,10 @@
+import { PAGE_TITLE, PRIVACY_COPY } from "@app/core";
 import type { Metadata } from "next";
 import Link from "next/link";
 
 import { Wordmark } from "@/components/brand/wordmark";
 
-export const metadata: Metadata = { title: "Privacy" };
+export const metadata: Metadata = { title: PAGE_TITLE.privacy };
 
 export default function PrivacyPage() {
   return (
@@ -11,25 +12,11 @@ export default function PrivacyPage() {
       <Link href="/">
         <Wordmark className="text-2xl" />
       </Link>
-      <h1 className="mt-8 text-3xl font-black tracking-tight uppercase">Privacy</h1>
+      <h1 className="mt-8 text-3xl font-black tracking-tight uppercase">{PRIVACY_COPY.title}</h1>
       <div className="mt-4 flex flex-col gap-4 text-[15px] leading-relaxed">
-        <p>
-          Johns keeps what it needs to share out your house&rsquo;s Johns and nothing more: your name from Google, the house
-          you belong to, the Johns you were given and when you ticked them, any photos you add, disputes and votes,
-          and the Stake ledger.
-        </p>
-        <p>
-          Only people in your house can see any of it. Photos are stored privately and shown to your housemates
-          through links that expire after an hour.
-        </p>
-        <p>
-          Johns never moves money. The ledger records what housemates owe each other; you settle up however you
-          like, outside the app.
-        </p>
-        <p>
-          If you turn on reminders, your browser gives us an address to send notifications to. Turning reminders off
-          deletes it. Leaving a house removes you from it; your past Johns stay in its history.
-        </p>
+        {PRIVACY_COPY.paragraphs.map((p) => (
+          <p key={p}>{p}</p>
+        ))}
       </div>
     </main>
   );

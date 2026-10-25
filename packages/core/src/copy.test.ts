@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 
 import {
   APP_NAME,
+  ERROR_COPY,
   AWAY_COPY,
   DEAL_COPY,
   DISPUTE_COPY,
@@ -11,10 +12,18 @@ import {
   JOHN_COPY,
   JOHN_LIST_COPY,
   JOIN_COPY,
+  LOOK_LABEL,
+  LOOKS,
+  lookOf,
   MEMBERS_COPY,
   NEW_HOUSE_COPY,
+  NOT_FOUND_COPY,
   NOT_DEALT_COPY,
   NO_HOUSE_COPY,
+  PAGE_TITLE,
+  pageTitle,
+  PRIVACY_COPY,
+  REMINDERS_COPY,
   RULES_COPY,
   SECTION_LABEL,
   SECTIONS,
@@ -249,5 +258,44 @@ describe("AWAY_COPY", () => {
     expect(AWAY_COPY.bannerBody(100)).toMatch(/, but your share still counts/);
     expect(AWAY_COPY.bannerBody(50)).toMatch(/, but half your share still counts/);
     expect(AWAY_COPY.bannerBody(0)).toBe("Nobody hands you a John due while you’re gone.");
+  });
+});
+
+describe("pageTitle", () => {
+  it("names the page, then the app, as the web's tab does", () => {
+    expect(pageTitle(PAGE_TITLE.today)).toBe("Today · Johns");
+    expect(pageTitle(PAGE_TITLE.week)).toBe("This week · Johns");
+    expect(pageTitle()).toBe("Johns");
+    expect(pageTitle("")).toBe("Johns");
+  });
+});
+
+describe("the pages around the house", () => {
+  it("has privacy, not-found and error words", () => {
+    expect(PRIVACY_COPY.paragraphs).toHaveLength(4);
+    expect(PRIVACY_COPY.paragraphs.join(" ")).toMatch(/never moves money/);
+    expect(NOT_FOUND_COPY.back).toBe("Back to your Johns");
+    expect(ERROR_COPY.retry).toBe("Try again");
+  });
+});
+
+describe("looks", () => {
+  it("names day, night and auto", () => {
+    expect(LOOKS.map((l) => LOOK_LABEL[l])).toEqual(["Day", "Night", "Auto"]);
+  });
+
+  it("reads a saved look, and anything else as following the device", () => {
+    expect(lookOf("dark")).toBe("dark");
+    expect(lookOf("light")).toBe("light");
+    expect(lookOf("system")).toBe("system");
+    expect(lookOf(null)).toBe("system");
+    expect(lookOf(undefined)).toBe("system");
+    expect(lookOf("sepia")).toBe("system");
+  });
+});
+
+describe("REMINDERS_COPY", () => {
+  it("tells an iPhone to install first", () => {
+    expect(REMINDERS_COPY.unsupported).toMatch(/home screen/);
   });
 });

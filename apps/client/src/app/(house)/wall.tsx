@@ -1,4 +1,4 @@
-import { describeEvent, WALL_COPY } from '@app/core';
+import { describeEvent, PAGE_TITLE, WALL_COPY } from '@app/core';
 import { RefreshCwIcon } from 'lucide-react-native';
 import { useState } from 'react';
 import { ActivityIndicator, StyleSheet, View } from 'react-native';
@@ -6,6 +6,7 @@ import { ActivityIndicator, StyleSheet, View } from 'react-native';
 import { Alert } from '@/components/alert';
 import { Button } from '@/components/button';
 import { Card } from '@/components/card';
+import { PageTitle } from '@/components/page-title';
 import { Screen } from '@/components/screen';
 import { Body, Eyebrow, Heading } from '@/components/text';
 import { WallEventCard } from '@/components/wall-event';
@@ -46,6 +47,7 @@ function WallFor({ houseId, userId }: { houseId: string; userId: string }) {
 
   return (
     <Screen refreshing={refreshing} onRefresh={() => void pull()}>
+      <PageTitle page={PAGE_TITLE.wall} />
       <View style={styles.stack}>
         <View>
           <Eyebrow>{view?.snapshot.house.name ?? ''}</Eyebrow>

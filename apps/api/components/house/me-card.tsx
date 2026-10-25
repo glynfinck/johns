@@ -1,6 +1,6 @@
 "use client";
 
-import { ME_COPY } from "@app/core";
+import { LOOK_LABEL, ME_COPY, REMINDERS_COPY } from "@app/core";
 import { BellIcon, BellOffIcon, LogOutIcon, MonitorIcon, MoonIcon, SunIcon } from "lucide-react";
 import { useTheme } from "next-themes";
 import { useEffect, useState, useSyncExternalStore } from "react";
@@ -51,7 +51,7 @@ function PushToggle({ vapidKey }: { vapidKey: string }) {
   if (!supported) {
     return (
       <p className="text-sm text-muted-foreground">
-        Reminders need a browser that supports notifications. On iPhone, add Johns to your home screen first.
+        {REMINDERS_COPY.unsupported}
       </p>
     );
   }
@@ -61,7 +61,7 @@ function PushToggle({ vapidKey }: { vapidKey: string }) {
     try {
       const permission = await Notification.requestPermission();
       if (permission !== "granted") {
-        toast.error("Notifications are blocked for this site in your browser settings.");
+        toast.error(REMINDERS_COPY.blocked);
         return;
       }
       const reg = await navigator.serviceWorker.register("/sw.js");
@@ -75,9 +75,9 @@ function PushToggle({ vapidKey }: { vapidKey: string }) {
       });
       if (result?.error) throw new Error(result.error);
       setOn(true);
-      toast.success("Reminders on for this device");
+      toast.success(REMINDERS_COPY.turnedOn);
     } catch {
-      toast.error("Couldn't turn reminders on. Try again.");
+      toast.error(REMINDERS_COPY.failed);
     } finally {
       setBusy(false);
     }
@@ -97,12 +97,12 @@ function PushToggle({ vapidKey }: { vapidKey: string }) {
   return on ? (
     <Button variant="outline" disabled={busy} onClick={() => void disable()}>
       <BellOffIcon aria-hidden />
-      Turn reminders off on this device
+      {REMINDERS_COPY.off}
     </Button>
   ) : (
     <Button disabled={busy} onClick={() => void enable()} data-testid="enable-push">
       <BellIcon aria-hidden />
-      Remind me on this device
+      {REMINDERS_COPY.on}
     </Button>
   );
 }
@@ -111,9 +111,9 @@ function ThemeChoice() {
   const { theme, setTheme } = useTheme();
   const mounted = useMounted();
   const options = [
-    { value: "light", label: "Day", Icon: SunIcon },
-    { value: "dark", label: "Night", Icon: MoonIcon },
-    { value: "system", label: "Auto", Icon: MonitorIcon },
+    { value: "light", label: LOOK_LABEL.light, Icon: SunIcon },
+    { value: "dark", label: LOOK_LABEL.dark, Icon: MoonIcon },
+    { value: "system", label: LOOK_LABEL.system, Icon: MonitorIcon },
   ];
   return (
     <div className="grid grid-cols-3 gap-1.5" role="radiogroup" aria-label="Theme">

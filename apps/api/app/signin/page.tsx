@@ -1,4 +1,4 @@
-import { safeNext, SIGN_IN_COPY, signInReason } from "@app/core";
+import { PAGE_TITLE, safeNext, SIGN_IN_COPY, signInReason } from "@app/core";
 import type { Metadata } from "next";
 import Link from "next/link";
 import { redirect } from "next/navigation";
@@ -7,7 +7,7 @@ import { GoogleSignIn } from "@/components/auth/google-sign-in";
 import { Wordmark } from "@/components/brand/wordmark";
 import { getUser } from "@/lib/data/house";
 
-export const metadata: Metadata = { title: "Sign in" };
+export const metadata: Metadata = { title: PAGE_TITLE.signIn };
 
 export default async function SignInPage({ searchParams }: PageProps<"/signin">) {
   const params = await searchParams;

@@ -1,4 +1,4 @@
-import { isOpen, TODAY_COPY, weekRange } from '@app/core';
+import { isOpen, PAGE_TITLE, TODAY_COPY, weekRange } from '@app/core';
 import { FlameIcon, RefreshCwIcon, RepeatIcon, ShieldIcon } from 'lucide-react-native';
 import { useState } from 'react';
 import { ActivityIndicator, StyleSheet, Text, View } from 'react-native';
@@ -10,6 +10,7 @@ import { Card } from '@/components/card';
 import { InviteCard } from '@/components/invite-card';
 import { JohnCard } from '@/components/john-card';
 import { NotDealt } from '@/components/not-dealt';
+import { PageTitle } from '@/components/page-title';
 import { Screen } from '@/components/screen';
 import { StakeCard } from '@/components/stake-parts';
 import { ShareCard, TableBeside } from '@/components/table-parts';
@@ -42,6 +43,7 @@ function TodayFor({ houseId, userId }: { houseId: string; userId: string }) {
 
   return (
     <Screen refreshing={refreshing} onRefresh={() => void pull()}>
+      <PageTitle page={PAGE_TITLE.today} />
       {!view ? (
         query.isError ? (
           <View style={styles.stack}>

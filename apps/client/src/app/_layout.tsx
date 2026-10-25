@@ -1,6 +1,6 @@
-import { SIGN_IN } from '@app/core';
+import { ERROR_COPY, SIGN_IN } from '@app/core';
 import { useFonts } from 'expo-font';
-import { Stack } from 'expo-router';
+import { Stack, type ErrorBoundaryProps } from 'expo-router';
 import * as SplashScreen from 'expo-splash-screen';
 import { StatusBar } from 'expo-status-bar';
 import * as SystemUI from 'expo-system-ui';
@@ -10,6 +10,7 @@ import { StyleSheet, View } from 'react-native';
 
 import { Button } from '@/components/button';
 import { Body, Heading } from '@/components/text';
+import { LookProvider } from '@/hooks/look';
 import { QueryProvider } from '@/hooks/query';
 import { MembershipProvider, useMembership } from '@/hooks/use-membership';
 import { FONT_FILES, SPACE, useTheme } from '@/theme';
@@ -22,9 +23,11 @@ void SplashScreen.preventAutoHideAsync();
 export default function RootLayout() {
   return (
     <QueryProvider>
-      <MembershipProvider>
-        <Routes />
-      </MembershipProvider>
+      <LookProvider>
+        <MembershipProvider>
+          <Routes />
+        </MembershipProvider>
+      </LookProvider>
     </QueryProvider>
   );
 }
@@ -72,8 +75,28 @@ function Routes() {
         </Stack.Protected>
         {/* A join link opens for anyone, and signs you in in place. */}
         <Stack.Screen name="join/[joinCode]" />
+        {/* So does what Johns keeps about you, and a link to nowhere. */}
+        <Stack.Screen name="privacy" />
+        <Stack.Screen name="+not-found" />
       </Stack>
     </>
+  );
+}
+
+/**
+ * Anything that throws while drawing a screen, as the web's error page: say
+ * so, and try the screen again.
+ */
+export function ErrorBoundary({ retry }: ErrorBoundaryProps) {
+  const { colors } = useTheme();
+  return (
+    <View style={[styles.unreachable, { backgroundColor: colors.background }]}>
+      <Heading level={2}>{ERROR_COPY.title}</Heading>
+      <Body muted>{ERROR_COPY.body}</Body>
+      <View style={styles.start}>
+        <Button label={ERROR_COPY.retry} icon={RefreshCwIcon} onPress={() => void retry()} />
+      </View>
+    </View>
   );
 }
 
@@ -91,4 +114,5 @@ function Unreachable({ onRetry }: { onRetry: () => Promise<void> }) {
 
 const styles = StyleSheet.create({
   unreachable: { flex: 1, justifyContent: 'center', padding: SPACE.xl, gap: SPACE.lg },
+  start: { alignItems: 'flex-start' },
 });

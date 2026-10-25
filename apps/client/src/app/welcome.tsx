@@ -9,6 +9,7 @@ import { signOut } from '@/api/auth';
 import { Button } from '@/components/button';
 import { Card } from '@/components/card';
 import { Field } from '@/components/field';
+import { PageTitle } from '@/components/page-title';
 import { Body, Heading } from '@/components/text';
 import { Wordmark } from '@/components/wordmark';
 import { SPACE, useTheme } from '@/theme';
@@ -35,6 +36,7 @@ export default function Welcome() {
 
   return (
     <SafeAreaView style={[styles.screen, { backgroundColor: colors.background }]}>
+      <PageTitle />
       <ScrollView contentContainerStyle={styles.page} keyboardShouldPersistTaps="handled">
         <Wordmark />
         <View>

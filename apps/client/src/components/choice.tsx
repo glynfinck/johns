@@ -34,7 +34,8 @@ export function Choice<T extends string | number>({
               key={String(option.value)}
               accessibilityRole="radio"
               accessibilityLabel={option.spoken ?? option.label}
-              accessibilityState={{ checked: chosen, disabled }}
+              aria-checked={chosen}
+              aria-disabled={disabled}
               disabled={disabled}
               onPress={() => onChange(option.value)}
               style={[

@@ -17,7 +17,7 @@ import {
   XIcon,
   type LucideIcon,
 } from 'lucide-react-native';
-import { Image, Pressable, StyleSheet, Text, View } from 'react-native';
+import { Image, Platform, Pressable, StyleSheet, Text, View } from 'react-native';
 
 import { Avatar } from '@/components/avatar';
 import { HazardTape } from '@/components/hazard-tape';
@@ -131,10 +131,12 @@ export function ReactionBar({
         return (
           <Pressable
             key={kind}
-            // A toggle, as a button that says whether it's yours ("selected").
+            // A toggle: a button that says whether it's yours. A browser calls
+            // that "pressed", as the web's reactions do; a phone has no pressed
+            // state, so there it is "selected".
             accessibilityRole="button"
             accessibilityLabel={REACTION_LABEL[kind]}
-            accessibilityState={{ selected: r.mine }}
+            {...(Platform.OS === 'web' ? ({ 'aria-pressed': r.mine } as object) : { 'aria-selected': r.mine })}
             onPress={() => onReact(kind, !r.mine)}
             style={[
               styles.reaction,

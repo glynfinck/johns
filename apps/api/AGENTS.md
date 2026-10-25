@@ -16,9 +16,12 @@ the few `/api` routes the native app needs a server for.
 
 **An exception to the template, with an end date.** The app template's API is
 route handlers only, with no pages. This one keeps its pages, components and
-server actions until the Expo web build reaches parity (Phase 13 of
-`docs/specs/native-migration.md`); Phase 14 then removes them. Until then,
-fix and extend the web UI here as normal.
+server actions until the Expo web build takes over johns.glyn.dev (Phase 13
+of `docs/specs/native-migration.md`); Phase 14 then removes them. Until then,
+fix and extend the web UI here as normal, and make the same change in
+`apps/client`: the Expo web build has every page this app serves.
+`public/`'s manifest, icons and `sw.js` have copies in `apps/client/public`;
+change both.
 
 ## Next.js 16 here
 

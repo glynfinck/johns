@@ -48,6 +48,8 @@ test("ticks land on the Wall with their photos, and take reactions", async ({ br
   // She reacts; it shows at once and stays after a reload.
   await hobTick.getByRole("button", { name: REACTION_LABEL.nice }).click();
   await expect(hobTick.getByRole("button", { name: REACTION_LABEL.nice })).toHaveText("1");
+  // A browser hears that it's hers: pressed, as the web's reactions say.
+  await expect(hobTick.getByRole("button", { name: REACTION_LABEL.nice, pressed: true })).toBeVisible();
   await wall.reload();
   await expect(hobTick.getByRole("button", { name: REACTION_LABEL.nice })).toHaveText("1");
 

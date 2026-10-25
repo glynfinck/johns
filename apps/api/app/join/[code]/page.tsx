@@ -1,4 +1,4 @@
-import { JOIN_COPY, signInPath } from "@app/core";
+import { JOIN_COPY, PAGE_TITLE, signInPath } from "@app/core";
 import type { Metadata } from "next";
 import Link from "next/link";
 import { redirect } from "next/navigation";
@@ -8,7 +8,7 @@ import { JoinButton } from "@/components/house/join-button";
 import { Button } from "@/components/ui/button";
 import { getMembership } from "@/lib/data/house";
 
-export const metadata: Metadata = { title: "Join a house", robots: { index: false } };
+export const metadata: Metadata = { title: PAGE_TITLE.join, robots: { index: false } };
 
 /**
  * A join link. It shows the house's name only to someone signed in, so a

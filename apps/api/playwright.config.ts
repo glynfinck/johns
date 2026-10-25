@@ -63,6 +63,11 @@ export default defineConfig({
         EXPO_PUBLIC_SUPABASE_PUBLISHABLE_KEY: process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY ?? "",
         // The Next app beside it answers /api/* (CORS: ALLOWED_ORIGINS in .env.local).
         EXPO_PUBLIC_API_URL: `http://localhost:${PORT}`,
+        // A public key made for these tests, never production's: with one, the
+        // web build offers reminders, and e2e/client-web.spec.ts stands in for
+        // the browser's push service.
+        EXPO_PUBLIC_VAPID_PUBLIC_KEY:
+          "BMFrHZeXrUELJffkpZLovnnxJr37LO27VJKlwux_3LYPhOrPPVt8Vl7h7mFLbCnxl-meHGcFuPlBOC9xwG8Ce0Q",
       },
     },
   ],

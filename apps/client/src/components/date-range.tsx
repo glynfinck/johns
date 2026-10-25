@@ -84,7 +84,8 @@ export function DateRangePicker({
                 key={date}
                 accessibilityRole="button"
                 accessibilityLabel={spoken(date)}
-                accessibilityState={{ selected: end || inside, disabled: past }}
+                aria-selected={end || inside}
+                aria-disabled={past}
                 disabled={past}
                 onPress={() => tap(date)}
                 style={[

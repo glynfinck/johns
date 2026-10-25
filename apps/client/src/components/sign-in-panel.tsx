@@ -11,7 +11,6 @@ import { GoogleIcon } from '@/components/google-icon';
 import { Body, Heading } from '@/components/text';
 import { TextLink } from '@/components/text-link';
 import { Wordmark } from '@/components/wordmark';
-import { PRIVACY_URL } from '@/links';
 import { RADIUS, SPACE, TAP, useTheme } from '@/theme';
 
 /**
@@ -99,7 +98,7 @@ export function SignInPanel({ returnTo, failed: failedBefore = false }: { return
         <Body muted style={styles.small}>
           {SIGN_IN_COPY.terms}
         </Body>
-        <TextLink href={PRIVACY_URL} label={SIGN_IN_COPY.privacy} muted style={styles.small} />
+        <TextLink href="/privacy" label={SIGN_IN_COPY.privacy} muted style={styles.small} />
       </View>
     </View>
   );

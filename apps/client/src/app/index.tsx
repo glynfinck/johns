@@ -6,10 +6,10 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { Button } from '@/components/button';
 import { Card } from '@/components/card';
 import { HazardTape } from '@/components/hazard-tape';
+import { PageTitle } from '@/components/page-title';
 import { Body, Eyebrow, Heading } from '@/components/text';
 import { TextLink } from '@/components/text-link';
 import { Wordmark } from '@/components/wordmark';
-import { PRIVACY_URL } from '@/links';
 import { FONT, SPACE, useTheme } from '@/theme';
 
 const ICON: Record<FrontDoorPoint, LucideIcon> = {
@@ -27,6 +27,7 @@ export default function FrontDoor() {
 
   return (
     <SafeAreaView style={[styles.screen, { backgroundColor: colors.background }]}>
+      <PageTitle />
       <ScrollView contentContainerStyle={styles.page}>
         <View style={styles.header}>
           <Wordmark />
@@ -65,7 +66,7 @@ export default function FrontDoor() {
 
         <View style={styles.footer}>
           <Body muted>{APP_NAME}</Body>
-          <TextLink href={PRIVACY_URL} label="Privacy" muted testID="privacy" />
+          <TextLink href="/privacy" label="Privacy" muted testID="privacy" />
         </View>
       </ScrollView>
     </SafeAreaView>

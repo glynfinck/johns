@@ -1,9 +1,10 @@
-import { formatMoney, monthLabel, STAKE_COPY } from '@app/core';
+import { formatMoney, monthLabel, PAGE_TITLE, STAKE_COPY } from '@app/core';
 import { useState } from 'react';
 import { ActivityIndicator, StyleSheet, View, useWindowDimensions } from 'react-native';
 
 import { Alert } from '@/components/alert';
 import { Card } from '@/components/card';
+import { PageTitle } from '@/components/page-title';
 import { Screen } from '@/components/screen';
 import { Ledger, MonthSoFar, SettleUp, type Payers } from '@/components/stake-parts';
 import { Body, Eyebrow, Heading } from '@/components/text';
@@ -40,6 +41,7 @@ function StakeFor({ houseId, userId }: { houseId: string; userId: string }) {
 
   return (
     <Screen maxWidth={wide ? 1152 : 720} refreshing={refreshing} onRefresh={() => void pull()} testID="stake-screen">
+      <PageTitle page={PAGE_TITLE.stake} />
       <View style={styles.stack}>
         <View>
           <Eyebrow>{rules ? STAKE_COPY.eyebrow(formatMoney(rules.stakeMinor, rules.currency)) : ''}</Eyebrow>

@@ -1,4 +1,12 @@
-import { CURRENCIES, CURRENCY_SYMBOL, DOW_LABEL, NEW_HOUSE_COPY, type Currency, type IsoDow } from '@app/core';
+import {
+  CURRENCIES,
+  type Currency,
+  CURRENCY_SYMBOL,
+  DOW_LABEL,
+  type IsoDow,
+  NEW_HOUSE_COPY,
+  PAGE_TITLE,
+} from '@app/core';
 import { useState } from 'react';
 import { ScrollView, StyleSheet, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -9,6 +17,7 @@ import { Button } from '@/components/button';
 import { Card } from '@/components/card';
 import { Choice } from '@/components/choice';
 import { Field } from '@/components/field';
+import { PageTitle } from '@/components/page-title';
 import { Body, Eyebrow, Heading } from '@/components/text';
 import { Wordmark } from '@/components/wordmark';
 import { useMembership } from '@/hooks/use-membership';
@@ -55,6 +64,7 @@ export default function NewHouse() {
 
   return (
     <SafeAreaView style={[styles.screen, { backgroundColor: colors.background }]}>
+      <PageTitle page={PAGE_TITLE.newHouse} />
       <ScrollView contentContainerStyle={styles.page} keyboardShouldPersistTaps="handled">
         <Wordmark />
         <View>
