@@ -1,4 +1,12 @@
-import { JOIN_COPY, NEW_HOUSE_COPY, NO_HOUSE_COPY, PAGE_TITLE, SECTION_LABEL, signInReason, SIGN_IN_COPY } from "@app/core";
+import {
+  FRONT_DOOR_COPY,
+  JOIN_COPY,
+  NEW_HOUSE_COPY,
+  PAGE_TITLE,
+  SECTION_LABEL,
+  signInReason,
+  SIGN_IN_COPY,
+} from "@app/core";
 import { expect, test, type Page } from "@playwright/test";
 
 import { CLIENT_URL, cleanUp, houseOf, signInToClient } from "./auth";
@@ -31,11 +39,13 @@ test("start a house, and land on it caught up", async ({ context, page }) => {
 
   await page.goto("/");
   await expect(page).toHaveURL(/\/welcome$/);
-  await page.getByRole("link", { name: NO_HOUSE_COPY.start }).click();
+  await page.getByRole("link", { name: FRONT_DOOR_COPY.startInstead }).click();
   await expect(page).toHaveURL(/\/house\/new$/);
   await expect(page.getByRole("heading", { name: NEW_HOUSE_COPY.heading })).toBeVisible();
 
-  await page.getByLabel(NEW_HOUSE_COPY.name).fill(name);
+  // One field, the name; the defaults are a line under it, and Change opens them.
+  await page.getByLabel(FRONT_DOOR_COPY.name).fill(name);
+  await page.getByTestId("change-defaults").click();
   await page.getByRole("radio", { name: "Sunday" }).click();
   const fresh = caughtUp(page);
   await page.getByTestId("create-house").click();
@@ -68,7 +78,7 @@ test("a join link signs you in on the spot, then joins", async ({ context, page 
   await expect(joiner.getByRole("heading", { name: "Number 9" })).toBeVisible();
   await expect(joiner.getByText(JOIN_COPY.livesHere(1))).toBeVisible();
   const catching = caughtUp(joiner);
-  await joiner.getByRole("button", { name: JOIN_COPY.join("Number 9") }).click();
+  await joiner.getByRole("button", { name: FRONT_DOOR_COPY.join }).click();
   await expect(joiner).toHaveURL(/\/today$/);
   await expect(joiner.getByRole("heading", { name: PAGE_TITLE.today })).toBeVisible();
   expect((await catching).status()).toBe(200);
@@ -80,12 +90,12 @@ test("a code typed in joins too, however it's spelt", async ({ context, page }) 
   made.push(ownerId, await signInToClient(context, "Eli Client"));
 
   await page.goto("/welcome");
-  await page.getByLabel(NO_HOUSE_COPY.code).fill("NOPE");
-  await page.getByRole("button", { name: NO_HOUSE_COPY.join }).click();
-  await expect(page.getByText(NO_HOUSE_COPY.badCode)).toBeVisible();
+  await page.getByLabel(FRONT_DOOR_COPY.paste).fill("NOPE");
+  await page.getByRole("button", { name: FRONT_DOOR_COPY.open }).click();
+  await expect(page.getByText(FRONT_DOOR_COPY.badInvite)).toBeVisible();
 
-  await page.getByLabel(NO_HOUSE_COPY.code).fill(`${code.slice(0, 4).toLowerCase()}-${code.slice(4)}`);
-  await page.getByRole("button", { name: NO_HOUSE_COPY.join }).click();
+  await page.getByLabel(FRONT_DOOR_COPY.paste).fill(`${code.slice(0, 4).toLowerCase()}-${code.slice(4)}`);
+  await page.getByRole("button", { name: FRONT_DOOR_COPY.open }).click();
   await expect(page).toHaveURL(new RegExp(`/join/${code}$`));
   await expect(page.getByRole("heading", { name: "The Loft" })).toBeVisible();
 });

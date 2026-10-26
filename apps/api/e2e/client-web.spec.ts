@@ -1,4 +1,4 @@
-import { LOOK_LABEL, NOT_FOUND_COPY, PRIVACY_COPY, REMINDERS_COPY, SECTION_LABEL, SIGN_IN_COPY } from "@app/core";
+import { HOUSE_LOWER_COPY, LOOK_LABEL, NOT_FOUND_COPY, PRIVACY_COPY, REMINDERS_COPY, SECTION_LABEL, SIGN_IN_COPY } from "@app/core";
 import { expect, test } from "@playwright/test";
 
 import { admin, CLIENT_URL, cleanUp, dealtHouseInClient } from "./auth";
@@ -89,16 +89,25 @@ test("tab titles, the look, and reminders on this device", async ({ browser }) =
   await house.getByRole("radio", { name: LOOK_LABEL.system }).click();
   await expect.poll(ground).toBe(day);
 
-  // Reminders: on, saved as Ava's, then off again.
+  // Reminders, from their row under You: on, saved as Ava's, then off again.
   const db = admin();
   const rows = async () => (await db.from("push_subscriptions").select("user_id, endpoint, p256dh, auth").eq("user_id", userId)).data;
-  await house.getByTestId("enable-push").click();
-  await expect(house.getByText(REMINDERS_COPY.turnedOn)).toBeVisible();
+  const remindersRow = house.getByTestId("to-reminders");
+  await expect(remindersRow).toContainText(HOUSE_LOWER_COPY.off);
+  await remindersRow.click();
+  // The sheet is a modal, outside House's screen.
+  const reminders = page.getByTestId("reminders-sheet");
+  await reminders.getByTestId("enable-push").click();
+  await expect(reminders.getByText(REMINDERS_COPY.turnedOn)).toBeVisible();
   expect(await rows()).toEqual([
     { user_id: userId, endpoint: "https://push.example/e2e-device", p256dh: "e2e-p256dh", auth: "e2e-auth" },
   ]);
-  await house.getByRole("button", { name: REMINDERS_COPY.off }).click();
-  await expect(house.getByTestId("enable-push")).toBeVisible();
+  await reminders.getByTestId("sheet-close").click();
+  await expect(reminders).toBeHidden();
+  await expect(remindersRow).toContainText(HOUSE_LOWER_COPY.on);
+  await remindersRow.click();
+  await reminders.getByRole("button", { name: REMINDERS_COPY.off }).click();
+  await expect(reminders.getByTestId("enable-push")).toBeVisible();
   expect(await rows()).toEqual([]);
 
   await context.close();

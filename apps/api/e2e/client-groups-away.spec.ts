@@ -1,4 +1,14 @@
-import { addDaysTo, AWAY_COPY, DOW_LABEL, GROUPS_COPY, isoDayOf, JOHN_LIST_COPY, localDate, monthLabel, SECTION_LABEL } from "@app/core";
+import {
+  addDaysTo,
+  AWAY_COPY,
+  dateRange,
+  dayName,
+  GROUPS_COPY,
+  JOHN_LIST_COPY,
+  localDate,
+  NEXT_UP_COPY,
+  SECTION_LABEL,
+} from "@app/core";
 import { expect, test, type Page } from "@playwright/test";
 
 import { admin, CLIENT_URL, cleanUp, dealtHouseInClient } from "./auth";
@@ -12,17 +22,13 @@ test.use({ baseURL: CLIENT_URL });
 const made: string[] = [];
 test.afterAll(async () => cleanUp(made));
 
-/** How the calendar names a day to a screen reader: "Monday 26 October". */
-const dayName = (date: string) =>
-  `${DOW_LABEL[isoDayOf(date)]} ${Number(date.slice(8))} ${monthLabel(date.slice(0, 7)).split(" ")[0]}`;
-
-/** Tap a day in the booking calendar, turning the month on first if it's in the next one. */
+/**
+ * Tap a day in the booking calendar, by the name a screen reader hears
+ * ("Wednesday 28 October"). It opens on this week and runs on for five, across
+ * months, so the next few days are always on it.
+ */
 async function tapDay(page: Page, date: string) {
-  const form = page.getByTestId("away-form");
-  const month = monthLabel(date.slice(0, 7));
-  if (!(await form.getByText(month).isVisible())) await form.getByRole("button", { name: AWAY_COPY.nextMonth }).click();
-  await expect(form.getByText(month)).toBeVisible();
-  await form.getByRole("button", { name: dayName(date), exact: true }).click();
+  await page.getByTestId("away-form").getByRole("button", { name: dayName(date), exact: true }).click();
 }
 
 test("make a group, give it a John, and book time away", async ({ browser }) => {
@@ -58,6 +64,7 @@ test("make a group, give it a John, and book time away", async ({ browser }) => 
   await list.getByTestId("add-john").click();
   const johnForm = page.getByTestId("john-form");
   await johnForm.getByLabel(JOHN_LIST_COPY.name).fill("Bathroom clean");
+  await johnForm.getByRole("button", { name: new RegExp(`^${JOHN_LIST_COPY.sharedBy}, `) }).click();
   await johnForm.getByRole("radio", { name: "Upstairs bathroom" }).click();
   await johnForm.getByTestId("save-john").click();
   await expect(johnForm).toBeHidden();
@@ -79,17 +86,21 @@ test("make a group, give it a John, and book time away", async ({ browser }) => 
   await expect(away.getByTestId("away-picked")).toContainText("Away");
   await away.getByLabel(AWAY_COPY.note).fill("Lisbon");
   await away.getByTestId("book-away").click();
-  await expect(awayPage.getByTestId("away-period").filter({ hasText: "Lisbon" })).toContainText("You");
-  await expect(awayPage.getByTestId("my-trip")).toBeVisible();
+  // Yours, to cancel; nobody else's yet.
+  await expect(awayPage.getByTestId("my-trip")).toContainText(dateRange(from, to));
+  await expect(awayPage.getByTestId("my-trip")).toContainText("Lisbon");
+  await expect(awayPage.getByTestId("away-period")).toHaveCount(0);
   const { data: booked } = await db.from("away").select("starts_on, ends_on, note").eq("house_id", houseId);
   expect(booked).toEqual([{ starts_on: from, ends_on: to, note: "Lisbon" }]);
 
-  // Today says so; Ben sees it on Time away, and can't change the groups.
+  // Today says so, under the week; Ben sees it on Time away, and can't change the groups.
   await page.getByRole("tab", { name: SECTION_LABEL.today }).click();
-  await expect(page.getByTestId("away-banner")).toContainText("You're away");
+  await expect(page.getByTestId("today-screen").getByTestId("away-line")).toContainText(NEXT_UP_COPY.awaySoon(dateRange(from, to)));
   const benPage = await benContext.newPage();
   await benPage.goto("/house/away");
-  await expect(benPage.getByTestId("away-screen").getByTestId("away-period")).toContainText("Ava Away");
+  const avasTrip = benPage.getByTestId("away-screen").getByTestId("away-period");
+  await expect(avasTrip).toContainText("Ava");
+  await expect(avasTrip).toContainText("Lisbon");
   await benPage.goto("/house/groups");
   await expect(benPage.getByTestId("groups-screen").getByTestId("group")).toBeVisible();
   await expect(benPage.getByTestId("groups-screen").getByTestId("add-group")).toHaveCount(0);

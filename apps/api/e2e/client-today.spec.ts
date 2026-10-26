@@ -1,23 +1,21 @@
-import { JOHN_COPY, PAGE_TITLE } from "@app/core";
-import { expect, test, type Page } from "@playwright/test";
+import { JOHN_COPY, NEXT_UP_COPY, PAGE_TITLE } from "@app/core";
+import { expect, test } from "@playwright/test";
 
 import { admin, CLIENT_URL, cleanUp, dealtHouseInClient } from "./auth";
 import { photo } from "./photo";
 
-// Today in the Expo app's web build: your Johns this week, ticked, taken
-// back, and ticked with a photo receipt from the file chooser.
+// Today in the Expo app's web build: your next John in the Next up card and
+// the rest of your week as rows, ticked, taken back, and ticked with a photo
+// receipt from the file chooser.
 test.use({ baseURL: CLIENT_URL });
 
 const made: string[] = [];
 test.afterAll(async () => cleanUp(made));
 
-function card(page: Page, name: string) {
-  return page.getByTestId("john-card").filter({ hasText: name });
-}
-
 test("tick a John, take it back, and tick one with a photo", async ({ context, page }) => {
   const { userId, houseId } = await dealtHouseInClient(context, "Fay Client", "Flat 12", [
-    { name: "Bins out", category: "bins" },
+    // Due an hour before the bath, so the bins are Next up.
+    { name: "Bins out", category: "bins", dueTime: "20:00" },
     { name: "Clean the bath", category: "bathroom", needsPhoto: true },
   ]);
   made.push(userId);
@@ -25,28 +23,38 @@ test("tick a John, take it back, and tick one with a photo", async ({ context, p
   await page.goto("/");
   await expect(page).toHaveURL(/\/today$/);
   await expect(page.getByRole("heading", { name: PAGE_TITLE.today })).toBeVisible();
-  await expect(page.getByTestId("john-card")).toHaveCount(2);
-  await expect(page.getByTestId("johns-left")).toHaveText("2");
+  // (Tabs keep the other screens laid out underneath: look on Today's.)
+  const today = page.getByTestId("today-screen");
+  const nextUp = today.getByTestId("next-up");
+  const rest = today.getByTestId("rest-of-week").getByTestId("my-john");
+  const row = (name: string) => rest.filter({ hasText: name });
+  await expect(nextUp.getByTestId("next-up-name")).toHaveText("Bins out");
+  await expect(rest).toHaveCount(1);
+  await expect(row("Clean the bath")).toBeVisible();
 
-  // A tick: it counts at once, while the house can still check it.
-  const bins = card(page, "Bins out");
-  await bins.getByRole("button", { name: JOHN_COPY.markDone, exact: true }).click();
-  await expect(bins.getByText("Done, being checked")).toBeVisible();
-  await expect(page.getByTestId("johns-left")).toHaveText("1");
+  // A tick: it counts at once, while the house can still check it. The bins
+  // join the rest of the week and the bath is next.
+  await nextUp.getByRole("button", { name: JOHN_COPY.markDone, exact: true }).click();
+  const bins = row("Bins out");
+  await expect(bins.getByRole("img", { name: NEXT_UP_COPY.stateLabel.checking })).toBeVisible();
+  await expect(nextUp.getByTestId("next-up-name")).toHaveText("Clean the bath");
+  // A photo John wants the photo first: no plain Mark done.
+  await expect(nextUp.getByRole("button", { name: NEXT_UP_COPY.takePhoto })).toBeVisible();
+  await expect(nextUp.getByRole("button", { name: JOHN_COPY.markDone, exact: true })).toHaveCount(0);
 
-  // Taken back while it's being checked.
-  await bins.getByRole("button", { name: JOHN_COPY.undo, exact: true }).click();
-  await expect(bins.getByRole("button", { name: JOHN_COPY.markDone, exact: true })).toBeVisible();
-  await expect(page.getByTestId("johns-left")).toHaveText("2");
+  // Taken back while it's being checked: the bins are Next up again.
+  await bins.getByRole("button", { name: NEXT_UP_COPY.undo("Bins out") }).click();
+  await expect(nextUp.getByTestId("next-up-name")).toHaveText("Bins out");
+  await expect(rest).toHaveCount(1);
 
-  // A photo John wants the photo first: the browser's file chooser, here.
-  const bath = card(page, "Clean the bath");
-  await expect(bath.getByRole("button", { name: JOHN_COPY.markDone, exact: true })).toHaveCount(0);
+  // The bath from its row: its circle asks for the photo, from the browser's file chooser here.
+  const bath = row("Clean the bath");
+  await expect(bath.getByRole("checkbox", { name: NEXT_UP_COPY.tick("Clean the bath") })).toHaveCount(0);
   const chooser = page.waitForEvent("filechooser");
-  await bath.getByRole("button", { name: JOHN_COPY.photoAndDone, exact: true }).click();
+  await bath.getByRole("checkbox", { name: NEXT_UP_COPY.tickWithPhoto("Clean the bath") }).click();
   await (await chooser).setFiles({ name: "bath.png", mimeType: "image/png", buffer: photo() });
-  await expect(bath.getByText("Done, being checked")).toBeVisible();
-  await expect(page.getByTestId("johns-left")).toHaveText("1");
+  await expect(bath.getByRole("img", { name: NEXT_UP_COPY.stateLabel.checking })).toBeVisible();
+  await expect(nextUp.getByTestId("next-up-name")).toHaveText("Bins out");
 
   // The receipt is in the private bucket, under the house and the John.
   const { data: ticked } = await admin()
