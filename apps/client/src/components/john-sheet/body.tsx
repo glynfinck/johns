@@ -1,27 +1,38 @@
 import {
-  CATEGORY_LABEL,
-  dueLabel,
-  isOpen,
-  pointsLabel,
-  STATUS_MARK,
+  forfeitRoom,
+  johnSheetMode,
+  monthOf,
+  sheetCadence,
+  sheetKind,
+  sheetWhen,
   type BoardItem,
-  type Category,
   type HouseRules,
+  type StakeView,
   type WeekBoard,
 } from '@app/core';
-import { StyleSheet, View } from 'react-native';
+import { FlagIcon, TriangleAlertIcon } from 'lucide-react-native';
+import { StyleSheet, Text, View } from 'react-native';
 
 import type { Housemate } from '@/api/board';
-import { DisputeNote, DueBeforeYouGo, StandsActions, TickActions } from '@/components/john-card';
+import type { JohnList } from '@/api/settings';
 import { LidDot } from '@/components/lid';
 import { Lead, Meta } from '@/components/text';
-import { INSET, SPACE } from '@/theme';
+import { listKey } from '@/hooks/keys';
+import { INSET, SPACE, useTheme } from '@/theme';
+
+import { useCached } from './cached';
+import { TheirsChecking, YoursChecking } from './checking';
+import { TheirsOpen, YoursOpen } from './open';
+import { Settled } from './settled';
+import { Disputed } from './vote';
 
 /**
- * What the John sheet was opened to do first, when it was opened for
- * something in particular: the vote (Today's "Needs you"), a dispute (a
- * housemate's fresh tick on Week), "If you can't" (Today's "Skip with
- * immunity or swap ›"), or the swap itself.
+ * What the John sheet was opened for, when it was opened for something in
+ * particular: the vote (Today's "Needs you"), a dispute (a housemate's
+ * fresh tick on Week: the sheet shows its outline Dispute, and never opens
+ * the form, keyboard and all, by itself), "If you can't" (Today's "Skip
+ * with immunity ›" opens on the skip's sentence, ready to confirm), or the
+ * swap itself.
  */
 export type JohnSheetFocus = 'vote' | 'dispute' | 'cant' | 'swap';
 
@@ -37,10 +48,14 @@ export interface JohnSheetContext {
   now: Date;
   /** Anyone's name by id; "A former housemate" for someone who has left. */
   nameOf: (userId: string) => string;
+  /** Who lives here, for the sentences that name them. */
+  members: Housemate[];
   /** You in this house: your role and your tokens. */
   me: Housemate | null;
   /** This week's board, live: the other side of a swap, the house's open Johns. */
   board: WeekBoard;
+  /** The Stake, when a screen has read it: it caps what lateness costs. */
+  stake: StakeView | null;
   /** What it was opened for (Today's "Needs you" opens it on the vote). */
   focus: JohnSheetFocus | null;
   /** Put the sheet away (after a vote, say). */
@@ -48,61 +63,91 @@ export interface JohnSheetContext {
 }
 
 /**
- * The John sheet's content for one John, live: its header, then what can be
- * done with it from here. The Today track builds the final states here
- * (yours open, being checked, a housemate's tick, a dispute, settled); for
- * now it holds the actions JohnCard has.
+ * The John sheet's content for one John, live: its header, then what can
+ * be done with it from here, by whose it is and where it has got to (core's
+ * johnSheetMode). Yours and open: the tick, and "If you can't" while you
+ * hold a token. Being checked: when it stands, and Undo for yours or
+ * Dispute for a housemate's. Disputed: the reason, the tally and the vote.
+ * Settled: what happened, and the photo.
  */
 export function JohnSheetBody({ item, context }: { item: BoardItem; context: JohnSheetContext }) {
-  const { houseId, userId, zone, now, nameOf, me } = context;
-  const mine = item.userId === userId;
-  const ownerName = nameOf(item.userId);
+  const everyWeeks = useCadence(context.houseId, item);
   return (
-    <View style={styles.body} testID="john-sheet-body">
-      <JohnSheetHeader item={item} zone={zone} now={now} />
-      <DueBeforeYouGo item={item} zone={zone} now={now} mine={mine} ownerName={ownerName} />
-      <DisputeNote item={item} houseId={houseId} now={now} mine={mine} />
-      {mine && isOpen(item.status) ? (
-        <TickActions item={item} houseId={houseId} immunityTokens={me?.immunityTokens ?? 0} />
-      ) : null}
-      {item.status === 'checking' ? (
-        <StandsActions item={item} houseId={houseId} now={now} mine={mine} ownerName={ownerName} inline />
-      ) : null}
+    <View testID="john-sheet-body">
+      <JohnSheetHeader item={item} context={context} everyWeeks={everyWeeks} />
+      <ModeContent item={item} context={context} />
     </View>
   );
 }
 
+function ModeContent({ item, context }: { item: BoardItem; context: JohnSheetContext }) {
+  switch (johnSheetMode(item, context.userId)) {
+    case 'yours-open':
+      return <YoursOpen item={item} context={context} />;
+    case 'theirs-open':
+      return <TheirsOpen item={item} context={context} />;
+    case 'yours-checking':
+      return <YoursChecking item={item} context={context} />;
+    case 'theirs-checking':
+      return <TheirsChecking item={item} context={context} />;
+    case 'yours-disputed':
+    case 'theirs-disputed':
+      return <Disputed item={item} context={context} />;
+    case 'settled':
+      return <Settled item={item} context={context} />;
+  }
+}
+
+/** How often the John comes round, from the house's list when a screen has read it (Today does). */
+function useCadence(houseId: string, item: BoardItem): number | null {
+  const list = useCached<JohnList>(listKey(houseId));
+  return list ? sheetCadence(item, list.johns) : null;
+}
+
 /**
- * The sheet's head: the lid dot before the category (then the group, if it
- * has one) and the points; the John's name in full as the Lead; when it's
- * due and where it has got to, in words. The sheet sits on the pavement, so
- * no hazard words or chips here: those go in a group below.
+ * The sheet's head: the lid dot before the kind, then the group, the
+ * points and how often; the John's name in full as the Lead; when it's due
+ * and what lateness costs its owner (capped at what's left of their stake,
+ * once the Stake is read). The sheet sits on the pavement, so overdue and
+ * disputed are said in ink after a hazard sign, never in hazard words.
  */
-export function JohnSheetHeader({ item, zone, now }: { item: BoardItem; zone: string; now: Date }) {
-  const category = CATEGORY_LABEL[item.category as Category] ?? CATEGORY_LABEL.other;
-  const kind = [category, item.groupName, pointsLabel(item.points)].filter(Boolean).join(' · ');
-  const mark = STATUS_MARK[item.status];
-  const when = [dueLabel(item.dueAt, now, zone), mark.tone === 'none' ? null : mark.label].filter(Boolean).join(' · ');
+export function JohnSheetHeader({
+  item,
+  context,
+  everyWeeks = null,
+}: {
+  item: BoardItem;
+  context: JohnSheetContext;
+  everyWeeks?: number | null;
+}) {
+  const { colors, type } = useTheme();
+  const room = forfeitRoom(context.stake, item.userId, monthOf(item.dueAt, context.zone));
+  const when = sheetWhen(item, context.members, context.rules, context.now, room);
+  const Sign = when.sign === 'overdue' ? TriangleAlertIcon : when.sign === 'disputed' ? FlagIcon : null;
   return (
     <View style={styles.header}>
-      <View style={styles.metaLine}>
+      <View style={styles.line}>
         <LidDot category={item.category} />
         <Meta numberOfLines={1} style={styles.shrink}>
-          {kind}
+          {sheetKind(item, everyWeeks)}
         </Meta>
       </View>
       <Lead header testID="john-sheet-name">
         {item.name}
       </Lead>
-      <Meta testID="john-sheet-when">{when}</Meta>
+      <View style={styles.line}>
+        {Sign ? <Sign size={16} color={colors.hazard} aria-hidden /> : null}
+        <Text style={[type.meta, styles.shrink, Sign ? { color: colors.foreground } : null]} testID="john-sheet-when">
+          {when.text}
+        </Text>
+      </View>
     </View>
   );
 }
 
 const styles = StyleSheet.create({
-  // The flush sheet sets content at the gutter; the John's words and buttons sit on the leading edge.
-  body: { paddingHorizontal: INSET, gap: SPACE.lg },
-  header: { gap: SPACE.xs },
-  metaLine: { flexDirection: 'row', alignItems: 'center', gap: 6 },
+  // The flush sheet sets content at the gutter; the John's words sit on the leading edge.
+  header: { paddingHorizontal: INSET, gap: SPACE.xs },
+  line: { flexDirection: 'row', alignItems: 'center', gap: 6 },
   shrink: { flexShrink: 1 },
 });

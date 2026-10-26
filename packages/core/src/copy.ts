@@ -556,10 +556,124 @@ export const AWAY_COPY = {
 
 /** Today track: Next up, Needs you, the rest of your week and the standing line. */
 export const NEXT_UP_COPY = {
+  label: "Next up",
+  photo: "Photo",
+  takePhoto: "Take a photo",
+  library: "Library",
+  /** The card's way into the John sheet's "If you can't", by what you hold. */
+  cant: (immunity: boolean, swap: boolean) =>
+    immunity && swap ? "Skip with immunity or swap" : immunity ? "Skip with immunity" : "Swap this John",
+  due: (when: string) => `due ${when}`,
+  beforeYouGo: "before you go",
+  ifLate: (amount: string) => `${amount} if late`,
+  ifMissed: (amount: string) => `${amount} if missed`,
+  /** An overdue John's cost: what doing it now costs. */
+  now: (late: string) => `${late} now`,
+  nowOrMissed: (late: string, missed: string) => `${late} now, ${missed} if missed`,
+  overdueSince: (when: string) => `Overdue since ${when}`,
+  wasDue: (when: string) => `was due ${when}`,
+  /** How long a vote has left, short enough for a row: "17h left". */
+  left: (time: string) => `${time} left`,
+  done: (when: string) => `done ${when}`,
+  excused: "skipped with immunity",
+  clear: (day: string) => `You’re clear until ${day}`,
+  clearBody: "New Johns are dealt then.",
+  nothingYours: "Nothing on your list this week.",
+  away: (day: string) => `You’re away until ${day}`,
+  /** A trip of yours starting within a fortnight: "You’re away 28–31 Oct". */
+  awaySoon: (range: string) => `You’re away ${range}`,
+  /** How your share catches up after time away, by houses.away_makeup. */
+  awayBody: (makeup: number) =>
+    makeup >= 100
+      ? "Your share catches up a little each week when you’re back."
+      : makeup > 0
+        ? "Half your share catches up a little each week when you’re back."
+        : "Your share goes to whoever’s home, so there’s nothing to catch up.",
+  changeDates: "Change dates",
+  setUp: (house: string) => `Set up ${house}`,
+  addJohns: "Add your Johns",
+  onTheList: (count: number) => (count === 0 ? "Nothing on the list yet" : `${count} on the list`),
+  invite: "Invite housemates",
+  housemates: (count: number) => (count <= 1 ? "Just you so far" : `${count} in the house so far`),
+  dealWeek1: "Deal week 1",
+  waiting: (admin: string) => `${admin} will deal it soon.`,
+  anAdmin: "An admin",
+  /** Someone who has left, named mid-sentence. */
+  someoneGone: "a former housemate",
+  /** A row's kind, short, beside its trailing item. */
+  kinds: {
+    kitchen: "Kitchen",
+    bathroom: "Bathroom",
+    bins: "Bins",
+    floors: "Floors",
+    errands: "Errands",
+    other: "Other",
+  } as Record<string, string>,
+  /** A row's leading picture, spoken. */
+  stateLabel: {
+    open: "Not done",
+    checking: "Ticked, being checked",
+    done: "Done",
+    disputed: "Disputed",
+    missed: "Missed",
+    excused: "Skipped with immunity",
+  },
+  needsYou: "Needs you",
+  saysNotDone: (name: string) => `${name} says it’s not done`,
+  closes: (when: string) => `closes ${when}`,
+  closingNow: "closing now",
+  /** A Needs you row's title: whose John the vote is on, and which. */
+  voteOn: (owner: string | null, john: string) => (owner ? `Vote on ${owner}’s ${john}` : `Vote on ${john}`),
+  rest: "The rest of your week",
+  tick: (john: string) => `Mark ${john} done`,
+  tickWithPhoto: (john: string) => `Take a photo of ${john} and mark it done`,
+  undo: (john: string) => `Undo ${john}`,
+  joint: (place: string) => `Joint ${place}`,
+  thisWeek: (place: string) => `${place} this week`,
+  up: (amount: string, month: string) => `up ${amount} in ${month}`,
+  down: (amount: string, month: string) => `down ${amount} in ${month}`,
+  square: (month: string) => `square in ${month}`,
 } as const;
 
 /** Today track: the John sheet's states, from yours to settled. */
 export const JOHN_SHEET_COPY = {
+  every: (weeks: number) => (weeks === 1 ? "every week" : `every ${weeks} weeks`),
+  due: (when: string) => `Due ${when}`,
+  costs: (late: string, missed: string) => `late costs ${late}, missed ${missed}`,
+  lateCosts: (late: string) => `late costs ${late}`,
+  missedCosts: (missed: string) => `missed costs ${missed}`,
+  addPhoto: "Add a photo and mark done",
+  fromLibrary: "From your library",
+  cant: "If you can’t",
+  skip: "Skip with immunity",
+  skipMeta: (tokens: number) => `No forfeit · you have ${tokens}`,
+  /** What spending immunity means, before it's spent. */
+  skipSentence: (john: string, left: number) =>
+    `Skip ${john} this week? No forfeit, and ${left <= 0 ? "your immunity is used up" : `you’ll have ${left} left`}.`,
+  skipIt: "Skip it",
+  swap: "Swap this John",
+  swapMeta: "You topped a week · trade it once",
+  swapFor: "Their open Johns",
+  swapBody: (john: string) => `Pick one to take instead. They get ${john}.`,
+  you: "You",
+  at: (time: string) => `at ${time}`,
+  yesterdayAt: (time: string) => `yesterday at ${time}`,
+  onAt: (day: string, time: string) => `on ${day} at ${time}`,
+  ticked: (who: string, when: string) => `${who} ticked this ${when}`,
+  standsIn: (when: string) => `stands ${when}`,
+  standsSoon: "stands any minute",
+  disputedBy: (name: string) => `Disputed by ${name}`,
+  /** The vote so far, in the buttons' order: fine, then not done. */
+  tally: (fine: number, notDone: number, closes: string) => `${fine} fine · ${notDone} not done · ${closes}`,
+  yourTick: "The house is voting on your tick.",
+  voted: "Vote counted. You can change it on Week.",
+  theirs: (owner: string) => `It’s ${owner}’s this week.`,
+  doneOnTime: (who: string, when: string | null) => `${who} did it on time${when ? `, ${when}` : ""}.`,
+  doneLate: (who: string, when: string | null, cost: string | null) =>
+    `${who} did it late${when ? `, ${when}` : ""}.${cost ? ` Late costs ${cost}.` : ""}`,
+  excused: (who: string) => `${who} skipped it with immunity, so there’s no forfeit.`,
+  missed: (cost: string | null) => `It was missed.${cost ? ` Missed costs ${cost}.` : ""}`,
+  photo: "The photo receipt",
 } as const;
 
 /** Week track: the summary bar, the person groups, the fair-share footer and the menu. */

@@ -1,10 +1,12 @@
-import { FOCUS_SHELL_COPY } from '@app/core';
+import { FOCUS_SHELL_COPY, type StakeView } from '@app/core';
 import { createContext, useCallback, useContext, useMemo, useState, type ReactNode } from 'react';
 
 import { Sheet } from '@/components/sheet';
+import { stakeKey } from '@/hooks/keys';
 import { useHouse } from '@/hooks/use-house';
 
 import { JohnSheetBody, type JohnSheetContext, type JohnSheetFocus } from './body';
+import { useCached } from './cached';
 
 export { JohnSheetBody, JohnSheetHeader, type JohnSheetContext, type JohnSheetFocus } from './body';
 
@@ -31,6 +33,8 @@ export function useJohnSheet(): JohnSheetApi {
  */
 export function JohnSheetProvider({ houseId, userId, children }: { houseId: string; userId: string; children: ReactNode }) {
   const { view } = useHouse(houseId, userId);
+  // What lateness costs is capped at the stake: the sheet knows how near once a screen has read the Stake.
+  const stake = useCached<StakeView>(stakeKey(houseId)) ?? null;
   const [shown, setShown] = useState<{ id: string; focus: JohnSheetFocus | null } | null>(null);
 
   const open = useCallback((id: string, focus?: JohnSheetFocus) => setShown({ id, focus: focus ?? null }), []);
@@ -53,8 +57,10 @@ export function JohnSheetProvider({ houseId, userId, children }: { houseId: stri
       rules: view.snapshot.rules,
       now: view.now,
       nameOf: (id) => members.find((m) => m.userId === id)?.name ?? FOCUS_SHELL_COPY.formerHousemate,
+      members,
       me: view.me,
       board: view.board,
+      stake,
       focus: shown.focus,
       close,
     };
