@@ -1,18 +1,26 @@
-import { FOCUS_SHELL_COPY, PAGE_TITLE } from '@app/core';
+import { FOCUS_SHELL_COPY, PAGE_TITLE, PERSON_COPY, SECTION_LABEL } from '@app/core';
 import { useLocalSearchParams } from 'expo-router';
+import { UserRoundXIcon } from 'lucide-react-native';
 
-import { Group, GroupItem } from '@/components/group';
-import { HousePage } from '@/components/house/house-page';
-import { MemberRow } from '@/components/house/members-list';
-import { Body } from '@/components/text';
+import { EmptyState } from '@/components/empty-state';
+import { PageTitle } from '@/components/page-title';
+import { PersonAdmin } from '@/components/person/person-admin';
+import { PersonSections } from '@/components/person/person-sections';
+import { Reading, ReadFailed } from '@/components/read-state';
+import { Screen } from '@/components/screen';
+import { TitleBar } from '@/components/title-bar';
+import { useAway } from '@/hooks/use-away';
 import { useHouse } from '@/hooks/use-house';
 import { useMembership } from '@/hooks/use-membership';
 import { usePull, useReadOnFocus } from '@/hooks/use-refresh';
+import { useStake } from '@/hooks/use-stake';
+import { useTable } from '@/hooks/use-table';
 
 /**
- * A housemate's page, pushed from House's list of who lives here: for now
- * their name and their row (Make admin and Remove, for an admin). The House
- * track builds it out: their week, their standing, their stake.
+ * A housemate's page, pushed from a row of House's Table: their record,
+ * fair share, streak and tokens, the month's money and their time away; and
+ * for an admin looking at someone else, Make admin and Remove. Your own
+ * page works too, without those.
  */
 export default function PersonScreen() {
   const { session, house } = useMembership();
@@ -23,32 +31,46 @@ export default function PersonScreen() {
 
 function PersonFor({ houseId, userId, personId }: { houseId: string; userId: string; personId: string }) {
   const { query, view } = useHouse(houseId, userId);
-  // Who lives here doesn't come over Realtime: read it again on the way back here.
+  const table = useTable(houseId, query.data);
+  const stake = useStake(houseId, query.data);
+  const away = useAway(houseId, query.data);
+  // Who lives here and their roles don't come over Realtime: read them again on the way back here.
   useReadOnFocus(query.refetch);
-  const { refreshing, pull } = usePull(houseId, query.refetch);
+  const { refreshing, pull } = usePull(houseId, () =>
+    Promise.all([query.refetch(), table.refetch(), stake.refetch(), away.refetch()]),
+  );
   const person = view?.snapshot.members.find((m) => m.userId === personId) ?? null;
+  const title = person?.name ?? PAGE_TITLE.house;
 
   return (
-    <HousePage
-      title={person?.name ?? PAGE_TITLE.house}
-      testID="person-screen"
-      ready={view !== null}
-      failed={query.isError}
-      onRetry={() => void query.refetch()}
+    <Screen
+      bar={
+        <TitleBar
+          title={title}
+          sub={person ? PERSON_COPY.sub(person.role === 'admin', person.userId === userId) : undefined}
+          back="/house"
+          backLabel={SECTION_LABEL.house}
+        />
+      }
       refreshing={refreshing}
       onRefresh={pull}
+      testID="person-screen"
     >
-      {() => (
-        <Group>
-          <GroupItem>
-            {person ? (
-              <MemberRow houseId={houseId} member={person} me={userId} isAdmin={view!.me?.role === 'admin'} />
-            ) : (
-              <Body muted>{FOCUS_SHELL_COPY.gone}</Body>
-            )}
-          </GroupItem>
-        </Group>
+      <PageTitle page={title} />
+      {!view ? (
+        query.isError ? (
+          <ReadFailed onRetry={() => void query.refetch()} />
+        ) : (
+          <Reading />
+        )
+      ) : !person ? (
+        <EmptyState icon={UserRoundXIcon} title={FOCUS_SHELL_COPY.gone} />
+      ) : (
+        <>
+          <PersonSections userId={userId} person={person} view={view} table={table} stake={stake} away={away} />
+          {view.me?.role === 'admin' && person.userId !== userId ? <PersonAdmin houseId={houseId} person={person} /> : null}
+        </>
       )}
-    </HousePage>
+    </Screen>
   );
 }

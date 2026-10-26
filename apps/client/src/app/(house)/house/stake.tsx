@@ -1,24 +1,25 @@
-import { FOCUS_SHELL_COPY, formatMoney, monthLabel, PAGE_TITLE, SECTION_LABEL, STAKE_COPY } from '@app/core';
+import { formatMoney, HOUSE_PAGE_COPY, SECTION_LABEL, STAKE_COPY, STAKE_HISTORY_COPY, stakeHistory } from '@app/core';
+import { CoinsIcon } from 'lucide-react-native';
+import { useState } from 'react';
 import { StyleSheet, View } from 'react-native';
 
-import { Alert } from '@/components/alert';
-import { Card } from '@/components/card';
+import { EmptyState } from '@/components/empty-state';
+import { StakeHistory } from '@/components/house-page/stake-history';
 import { PageTitle } from '@/components/page-title';
-import { Reading } from '@/components/read-state';
+import { Reading, ReadFailed } from '@/components/read-state';
 import { Screen } from '@/components/screen';
-import { Ledger, MonthSoFar, SettleUp, type Payers } from '@/components/stake-parts';
-import { Body, Eyebrow } from '@/components/text';
+import { Segmented } from '@/components/segmented';
 import { TitleBar } from '@/components/title-bar';
 import { useHouse } from '@/hooks/use-house';
 import { useMembership } from '@/hooks/use-membership';
 import { usePull } from '@/hooks/use-refresh';
 import { useStake } from '@/hooks/use-stake';
-import { SPACE } from '@/theme';
+import { INSET } from '@/theme';
 
 /**
- * The Stake: this month so far, settling up, and the ledger, pushed from
- * House. For now the old Stake's content; the House track turns it into
- * Stake history.
+ * Stake history, pushed from House's month card: the ledger by month, every
+ * forfeit naming its John, payments and shares in words, yours or the whole
+ * house's. The month so far and settling up live on House.
  */
 export default function StakeScreen() {
   const { session, house } = useMembership();
@@ -30,56 +31,75 @@ function StakeFor({ houseId, userId }: { houseId: string; userId: string }) {
   const { query, view } = useHouse(houseId, userId);
   const stake = useStake(houseId, query.data);
   const { refreshing, pull } = usePull(houseId, () => Promise.all([query.refetch(), stake.refetch()]));
+  const [whole, setWhole] = useState(false);
 
-  const members = view?.snapshot.members ?? [];
-  const realName = (id: string) => members.find((m) => m.userId === id)?.name ?? FOCUS_SHELL_COPY.formerHousemate;
-  const people: Payers = { me: userId, realName, nameOf: (id) => (id === userId ? 'You' : realName(id)) };
   const rules = view?.snapshot.rules;
+  const months =
+    view && rules && stake.data
+      ? stakeHistory({
+          ledger: stake.data.ledger,
+          me: userId,
+          whole,
+          members: view.snapshot.members,
+          currency: rules.currency,
+          zone: rules.timezone,
+        })
+      : null;
+  const empty = months?.length === 0;
+  const nothingAtAll = stake.data?.ledger.length === 0;
 
   return (
     <Screen
-      bar={<TitleBar title={STAKE_COPY.title} back="/house" backLabel={SECTION_LABEL.house} />}
+      bar={
+        <TitleBar
+          title={STAKE_HISTORY_COPY.title}
+          sub={rules ? STAKE_COPY.eyebrow(formatMoney(rules.stakeMinor, rules.currency)) : undefined}
+          back="/house"
+          backLabel={SECTION_LABEL.house}
+        />
+      }
       refreshing={refreshing}
       onRefresh={pull}
       testID="stake-screen"
     >
-      <PageTitle page={PAGE_TITLE.stake} />
-      <View style={styles.stack}>
-        <Eyebrow>{rules ? STAKE_COPY.eyebrow(formatMoney(rules.stakeMinor, rules.currency)) : ''}</Eyebrow>
-
-        {query.isError || stake.isError ? <Alert message="Couldn't read the Stake. Check the connection." /> : null}
-
-        {!view || !rules || !stake.data ? (
-          <Reading label="Reading the Stake" />
+      <PageTitle page={STAKE_HISTORY_COPY.title} />
+      {!months ? (
+        query.isError || stake.isError ? (
+          <ReadFailed
+            message={query.isError ? undefined : HOUSE_PAGE_COPY.stakeUnreadable}
+            onRetry={() => void Promise.all([query.refetch(), stake.refetch()])}
+          />
         ) : (
-          <>
-            <Card style={styles.card}>
-              <Eyebrow>{STAKE_COPY.soFar(monthLabel(stake.data.month))}</Eyebrow>
-              <Body muted style={styles.body}>
-                {STAKE_COPY.soFarBody(formatMoney(rules.lateForfeitMinor, rules.currency), formatMoney(rules.missedForfeitMinor, rules.currency))}
-              </Body>
-              <MonthSoFar stake={stake.data} people={people} currency={rules.currency} />
-            </Card>
-            <Card style={styles.card}>
-              <Eyebrow>{STAKE_COPY.settleUp}</Eyebrow>
-              <Body muted style={styles.body}>
-                {STAKE_COPY.settleBody}
-              </Body>
-              <SettleUp houseId={houseId} transfers={stake.data.transfers} people={people} currency={rules.currency} />
-            </Card>
-            <Card style={styles.card}>
-              <Eyebrow>{STAKE_COPY.ledger}</Eyebrow>
-              <Ledger stake={stake.data} people={people} currency={rules.currency} />
-            </Card>
-          </>
-        )}
-      </View>
+          <Reading label={HOUSE_PAGE_COPY.readingStake} />
+        )
+      ) : nothingAtAll ? (
+        <EmptyState icon={CoinsIcon} title={STAKE_HISTORY_COPY.empty} body={STAKE_HISTORY_COPY.emptyBody} />
+      ) : (
+        <>
+          <View style={styles.switch}>
+            <Segmented
+              options={[
+                { value: 'mine', label: STAKE_HISTORY_COPY.mine },
+                { value: 'whole', label: STAKE_HISTORY_COPY.whole },
+              ]}
+              value={whole ? 'whole' : 'mine'}
+              onChange={(value) => setWhole(value === 'whole')}
+              label={STAKE_HISTORY_COPY.show}
+              testID="stake-span"
+            />
+          </View>
+          {empty ? (
+            <EmptyState icon={CoinsIcon} title={STAKE_HISTORY_COPY.empty} body={STAKE_HISTORY_COPY.emptyMine} />
+          ) : (
+            <StakeHistory months={months} />
+          )}
+        </>
+      )}
     </Screen>
   );
 }
 
 const styles = StyleSheet.create({
-  stack: { gap: SPACE.lg },
-  card: { gap: SPACE.md },
-  body: { fontSize: 14, lineHeight: 20 },
+  // On the leading edge, where the sections' labels start.
+  switch: { paddingHorizontal: INSET },
 });

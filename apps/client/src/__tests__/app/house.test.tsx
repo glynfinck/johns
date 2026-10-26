@@ -1,36 +1,70 @@
-import { FOCUS_SHELL_COPY, HOUSE_COPY, MAKEUP_LABEL, ME_COPY, PAGE_TITLE, STAKE_COPY, TABLE_COPY, WALL_COPY } from '@app/core';
+import { BIN_NIGHT, buildStake, FOCUS_SHELL_COPY, HOUSE_PAGE_COPY, type HistoryRow, INVITE_COPY, stakeRules } from '@app/core';
 import { router } from 'expo-router';
 import { Tabs } from 'expo-router/js-tabs';
 import { act, fireEvent, screen, waitFor, within } from 'expo-router/testing-library';
-import { Text } from 'react-native';
+import { Platform, Share, Text, useWindowDimensions } from 'react-native';
 
-import { signOut } from '@/api/auth';
+import { loadAway } from '@/api/away';
 import { loadHouse } from '@/api/board';
 import { catchUp } from '@/api/house';
-import { renameMe } from '@/api/profile';
-import { removeMember } from '@/api/settings';
-import { authStorage } from '@/api/storage';
+import { confirmPayment, loadStake, type StakeRead } from '@/api/stake';
 import { loadTable } from '@/api/table';
 import HouseScreen from '@/app/(house)/house';
 import { assignment, snapshot } from '@/testing/house';
 import { renderPages, untilRead } from '@/testing/pages';
 
-jest.mock('@/api/auth', () => ({ signOut: jest.fn() }));
+jest.mock('@/api/away', () => ({ loadAway: jest.fn() }));
 jest.mock('@/api/board', () => ({ loadHouse: jest.fn() }));
 jest.mock('@/api/house', () => ({ catchUp: jest.fn() }));
-jest.mock('@/api/profile', () => ({ renameMe: jest.fn() }));
-jest.mock('@/api/settings', () => ({ removeMember: jest.fn(), setRole: jest.fn() }));
+jest.mock('@/api/stake', () => ({ loadStake: jest.fn(), confirmPayment: jest.fn() }));
 jest.mock('@/api/table', () => ({ loadTable: jest.fn() }));
 jest.mock('@/api/supabase', () => ({ supabase: {} }));
 
-const mockMembership = { refresh: jest.fn() };
+// The lower half of the page is the lower House track's, with its own tests:
+// here it only has to be mounted, in its order, under the money and the Table.
+const standIn = (name: string) => {
+  const { Text: RNText } = jest.requireActual<typeof import('react-native')>('react-native');
+  function StandIn() {
+    return <RNText testID="lower">{name}</RNText>;
+  }
+  return StandIn;
+};
+jest.mock('@/components/house-page/wall-section', () => ({ WallSection: standIn('the Wall') }));
+jest.mock('@/components/house-page/setup-section', () => ({ SetupSection: standIn('House setup') }));
+jest.mock('@/components/house-page/you-section', () => ({ YouSection: standIn('You') }));
+jest.mock('@/components/house-page/leave-section', () => ({ LeaveSection: standIn('Leaving') }));
+
+jest.mock('react-native/Libraries/Utilities/useWindowDimensions', () => ({ __esModule: true, default: jest.fn() }));
 jest.mock('@/hooks/use-membership', () => ({
-  useMembership: () => ({
-    session: { user: { id: 'priya' } },
-    house: { id: 'h1', name: 'Flat 3' },
-    refresh: mockMembership.refresh,
-  }),
+  useMembership: () => ({ session: { user: { id: 'priya' } }, house: { id: 'h1', name: 'Flat 3' }, refresh: jest.fn() }),
 }));
+
+const entry = (id: number, userId: string, kind: string, amountMinor: number, month: string): HistoryRow => ({
+  id,
+  user_id: userId,
+  kind,
+  amount_minor: amountMinor,
+  month,
+  counterparty: null,
+  created_at: '2026-10-10T12:00:00Z',
+  john: null,
+});
+
+/** The Stake as House reads it: what buildStake makes of the ledger, and the ledger itself. */
+function stakeRead(ledger: HistoryRow[], closedMonths: string[] = []): StakeRead {
+  const built = buildStake({ ledger, closedMonths, memberIds: ['priya', 'sam'], stakeMinor: 2000, month: '2026-10' });
+  return { ...built, ledger, closedMonths };
+}
+
+/** September closed with Sam £4 down, so Sam owes you £4; this month Sam is £3 down too. */
+const OWED_TO_YOU = stakeRead(
+  [
+    entry(3, 'sam', 'forfeit', -300, '2026-10'),
+    entry(2, 'sam', 'forfeit', -400, '2026-09'),
+    entry(1, 'priya', 'share', 400, '2026-09'),
+  ],
+  ['2026-09'],
+);
 
 /** House, with the pages it pushes standing in as their names. */
 async function open() {
@@ -39,17 +73,20 @@ async function open() {
       'house/index': HouseScreen,
       'house/stake': () => <Text>Stake page</Text>,
       'house/wall': () => <Text>Wall page</Text>,
-      'house/johns': () => <Text>John list page</Text>,
       'house/people/[userId]': () => <Text>Person page</Text>,
     },
     '/house',
   );
   await untilRead();
+  // The Stake, the Table and time away are read after the house itself.
+  await waitFor(() => expect(screen.queryByLabelText(HOUSE_PAGE_COPY.readingStake)).toBeNull());
+  await waitFor(() => expect(screen.queryByLabelText(HOUSE_PAGE_COPY.readingTable)).toBeNull());
 }
 
 beforeEach(() => {
   jest.clearAllMocks();
-  authStorage!.clear();
+  // The narrowest phone unless a test says otherwise.
+  (useWindowDimensions as jest.Mock).mockReturnValue({ width: 360, height: 780, scale: 2, fontScale: 1 });
   const members = snapshot().members.map((m) => (m.userId === 'sam' ? { ...m, streak: 5, swapTokens: 1 } : m));
   (loadHouse as jest.Mock).mockResolvedValue(
     snapshot({
@@ -65,49 +102,242 @@ beforeEach(() => {
     month: '2026-10',
     monthTable: [
       { userId: 'sam', points: 12, done: 4, late: 1, missed: 0, rank: 1 },
-      { userId: 'priya', points: 9, done: 3, late: 0, missed: 1, rank: 2 },
+      { userId: 'priya', points: 9, done: 3, late: 0, missed: 0, rank: 2 },
     ],
     balances: [
       { userId: 'priya', balance: -3, weeksToEven: 2 },
       { userId: 'sam', balance: 3, weeksToEven: 0 },
     ],
   });
-  for (const move of [renameMe, signOut, removeMember]) (move as jest.Mock).mockResolvedValue(undefined);
+  (loadStake as jest.Mock).mockResolvedValue(OWED_TO_YOU);
+  (loadAway as jest.Mock).mockResolvedValue({ today: '2026-10-26', periods: [] });
+  (confirmPayment as jest.Mock).mockResolvedValue(undefined);
 });
 
-it('names the house in the title bar, and how many live there', async () => {
+// Undoes the web's Platform.OS and Share's stand-in.
+afterEach(() => jest.restoreAllMocks());
+
+it('names the house in the title bar, with how many live there and the stake', async () => {
   await open();
   const bar = within(screen.getByTestId('title-bar'));
   expect(bar.getByRole('header', { name: 'Flat 3' })).toBeOnTheScreen();
-  expect(bar.getByText('2 housemates')).toBeOnTheScreen();
+  expect(bar.getByText(HOUSE_PAGE_COPY.sub(2, '£20'))).toBeOnTheScreen();
   // House is a tab's top: there's no way back from it.
   expect(bar.queryByRole('button', { name: FOCUS_SHELL_COPY.back })).toBeNull();
 });
 
-it('leads to the Stake and the Wall', async () => {
+it('keeps the lower sections under the money and the Table, in their order', async () => {
   await open();
-  expect(screen.getByTestId('to-stake')).toHaveTextContent(new RegExp(`${STAKE_COPY.title}.*${STAKE_COPY.eyebrow('£20')}`));
-  await fireEvent.press(screen.getByRole('link', { name: new RegExp(WALL_COPY.title) }));
-  expect(screen).toHavePathname('/house/wall');
-  expect(screen.getByText('Wall page')).toBeOnTheScreen();
+  expect(screen.getAllByTestId('lower').map((node) => node.props.children)).toEqual([
+    'the Wall',
+    'House setup',
+    'You',
+    'Leaving',
+  ]);
 });
 
-it("leads to the house's setup pages", async () => {
-  await open();
-  for (const page of [PAGE_TITLE.johnList, PAGE_TITLE.rules, PAGE_TITLE.away, PAGE_TITLE.groups]) {
-    expect(screen.getByRole('link', { name: page })).toBeOnTheScreen();
-  }
-  await fireEvent.press(screen.getByRole('link', { name: PAGE_TITLE.johnList }));
-  expect(screen).toHavePathname('/house/johns');
+describe('the month card', () => {
+  it('leads with your month so far, the figure green while you are up', async () => {
+    await open();
+    const lead = screen.getByTestId('month-lead');
+    expect(lead).toHaveTextContent(`${HOUSE_PAGE_COPY.up} £3`);
+    expect(within(lead).getByText('£3')).toHaveStyle({ color: BIN_NIGHT.light.good });
+    expect(screen.getByText(`${HOUSE_PAGE_COPY.nothingForfeited} · ${HOUSE_PAGE_COPY.sharedOut('1 Nov')}`)).toBeOnTheScreen();
+  });
+
+  it('says what you are down in plain ink, with what it cost you', async () => {
+    (loadStake as jest.Mock).mockResolvedValue(stakeRead([entry(1, 'priya', 'forfeit', -300, '2026-10')]));
+    await open();
+    const lead = screen.getByTestId('month-lead');
+    expect(lead).toHaveTextContent(`${HOUSE_PAGE_COPY.down} £3`);
+    // Green is for what you're up only: money lost is said in words, not in colour.
+    expect(within(lead).getByText('£3')).not.toHaveStyle({ color: BIN_NIGHT.light.good });
+    expect(screen.getByText(`${HOUSE_PAGE_COPY.forfeited('£3')} · ${HOUSE_PAGE_COPY.sharedOut('1 Nov')}`)).toBeOnTheScreen();
+  });
+
+  it('says when nothing has been forfeited at all', async () => {
+    (loadStake as jest.Mock).mockResolvedValue(stakeRead([]));
+    await open();
+    expect(screen.getByTestId('month-lead')).toHaveTextContent(HOUSE_PAGE_COPY.nothingYet);
+    expect(screen.getByText(HOUSE_PAGE_COPY.sharedOutAlone('1 Nov'))).toBeOnTheScreen();
+  });
+
+  it('marks what is owed to you received, from the month it is from', async () => {
+    await open();
+    const transfer = screen.getByTestId('transfer');
+    expect(transfer).toHaveTextContent(
+      new RegExp(`${HOUSE_PAGE_COPY.owesYou('Sam', '£4')}${HOUSE_PAGE_COPY.from('September')} · ${HOUSE_PAGE_COPY.howYouLike}`),
+    );
+    await fireEvent.press(within(transfer).getByRole('button', { name: HOUSE_PAGE_COPY.markReceived('£4') }));
+    expect(confirmPayment).toHaveBeenCalledWith('h1', 'sam', 400);
+  });
+
+  it('says why marking it received was refused', async () => {
+    (confirmPayment as jest.Mock).mockRejectedValue(new Error('Only the one who was paid can mark it received.'));
+    await open();
+    await fireEvent.press(screen.getByRole('button', { name: HOUSE_PAGE_COPY.markReceived('£4') }));
+    expect(await screen.findByRole('alert')).toHaveTextContent('Only the one who was paid can mark it received.');
+  });
+
+  it('what you owe waits on them, with nothing to press', async () => {
+    (loadStake as jest.Mock).mockResolvedValue(
+      stakeRead([entry(2, 'priya', 'forfeit', -400, '2026-09'), entry(1, 'sam', 'share', 400, '2026-09')], ['2026-09']),
+    );
+    await open();
+    const transfer = screen.getByTestId('transfer');
+    expect(transfer).toHaveTextContent(
+      new RegExp(`${HOUSE_PAGE_COPY.youOwe('Sam', '£4')}${HOUSE_PAGE_COPY.from('September')} · ${HOUSE_PAGE_COPY.waiting('Sam')}`),
+    );
+    expect(within(transfer).queryByRole('button')).toBeNull();
+  });
+
+  it('offers no button for what someone who has left owes, and makes the next one amber', async () => {
+    (loadStake as jest.Mock).mockResolvedValue(
+      stakeRead(
+        [
+          entry(3, 'ben', 'forfeit', -200, '2026-09'),
+          entry(2, 'sam', 'forfeit', -400, '2026-09'),
+          entry(1, 'priya', 'share', 600, '2026-09'),
+        ],
+        ['2026-09'],
+      ),
+    );
+    await open();
+    const transfers = screen.getAllByTestId('transfer');
+    const gone = transfers.find((t) => within(t).queryByText(HOUSE_PAGE_COPY.gone))!;
+    expect(gone).toHaveTextContent(new RegExp(HOUSE_PAGE_COPY.owesYou(FOCUS_SHELL_COPY.formerHousemate, '£2')));
+    expect(within(gone).queryByRole('button')).toBeNull();
+    // The one amber button is Sam's, the only one the database would take.
+    expect(screen.getAllByRole('button', { name: /^Mark/ })).toHaveLength(1);
+    expect(screen.getByRole('button', { name: HOUSE_PAGE_COPY.markReceived('£4') })).toHaveStyle({
+      backgroundColor: BIN_NIGHT.light.hivis,
+    });
+  });
+
+  it('leads to Stake history', async () => {
+    await open();
+    await fireEvent.press(within(screen.getByTestId('to-stake')).getByRole('link'));
+    expect(screen).toHavePathname('/house/stake');
+    expect(screen.getByText('Stake page')).toBeOnTheScreen();
+  });
+
+  it("says when it can't read the Stake, and tries again", async () => {
+    (loadStake as jest.Mock).mockRejectedValueOnce(new Error('offline'));
+    await open();
+    expect(await screen.findByRole('alert')).toHaveTextContent(HOUSE_PAGE_COPY.stakeUnreadable);
+    await fireEvent.press(screen.getByRole('button', { name: FOCUS_SHELL_COPY.retry }));
+    expect(await screen.findByTestId('month-lead')).toHaveTextContent(new RegExp(HOUSE_PAGE_COPY.up));
+  });
 });
 
-it('names everyone and their role, you included, each a way to their page', async () => {
-  await open();
-  const [priya, sam] = screen.getAllByTestId('member');
-  expect(priya).toHaveTextContent(/Priya \(you\).*Admin/);
-  expect(sam).toHaveTextContent(/Sam.*Housemate/);
-  await fireEvent.press(within(sam).getByRole('link'));
-  expect(screen).toHavePathname('/house/people/sam');
+describe('the Table', () => {
+  it('ranks the week, you first with what you hold and the month money', async () => {
+    await open();
+    const standings = screen.getAllByTestId('standing');
+    expect(standings).toHaveLength(2);
+    expect(standings[0]).toHaveTextContent(new RegExp(`${HOUSE_PAGE_COPY.you}3 pts · ${HOUSE_PAGE_COPY.streak(3)}\\+£3`));
+    // Sam's late John in the month comes before his streak, and leaves no room for it.
+    expect(standings[1]).toHaveTextContent(new RegExp(`Sam0 pts ·${HOUSE_PAGE_COPY.lateMissed(1, 0)} in Oct−£3`));
+    expect(within(standings[1]).getByText(HOUSE_PAGE_COPY.lateMissed(1, 0))).toHaveStyle({ color: BIN_NIGHT.light.hazard });
+  });
+
+  it('sets your own late and missed and money lost in ink on your tinted row', async () => {
+    (loadStake as jest.Mock).mockResolvedValue(stakeRead([entry(1, 'priya', 'forfeit', -100, '2026-10')]));
+    (loadTable as jest.Mock).mockResolvedValue({
+      month: '2026-10',
+      monthTable: [
+        { userId: 'priya', points: 9, done: 3, late: 1, missed: 0, rank: 1 },
+        { userId: 'sam', points: 2, done: 1, late: 0, missed: 0, rank: 2 },
+      ],
+      balances: [],
+    });
+    await open();
+    const you = screen.getAllByTestId('standing')[0];
+    expect(you).toHaveStyle({ backgroundColor: BIN_NIGHT.light.secondary });
+    // Hazard words need the card colour behind them: on the tint they're ink, beside their mark.
+    expect(within(you).getByText(HOUSE_PAGE_COPY.lateMissed(1, 0))).not.toHaveStyle({ color: BIN_NIGHT.light.hazard });
+    expect(within(you).getByText('−£1')).toHaveStyle({ color: BIN_NIGHT.light.foreground });
+    expect(within(you).getByLabelText(HOUSE_PAGE_COPY.losing('−£1'))).toBeOnTheScreen();
+  });
+
+  it('says more about each housemate where the row is wider', async () => {
+    (useWindowDimensions as jest.Mock).mockReturnValue({ width: 1440, height: 900, scale: 1, fontScale: 1 });
+    await open();
+    expect(screen.getAllByTestId('standing')[1]).toHaveTextContent(
+      new RegExp(`Sam0 pts ·${HOUSE_PAGE_COPY.lateMissed(1, 0)} in Oct · ${HOUSE_PAGE_COPY.streak(5)}−£3`),
+    );
+  });
+
+  it('switches to the month, and back', async () => {
+    await open();
+    await fireEvent.press(screen.getByRole('radio', { name: 'Oct' }));
+    const month = screen.getAllByTestId('standing');
+    expect(month[0]).toHaveTextContent(new RegExp(`Sam12 pts ·${HOUSE_PAGE_COPY.lateMissed(1, 0)} in Oct−£3`));
+    expect(month[1]).toHaveTextContent(new RegExp(`${HOUSE_PAGE_COPY.you}9 pts`));
+    await fireEvent.press(screen.getByRole('radio', { name: HOUSE_PAGE_COPY.week }));
+    expect(screen.getAllByTestId('standing')[0]).toHaveTextContent(/3 pts/);
+  });
+
+  it("opens a housemate's page", async () => {
+    await open();
+    await fireEvent.press(within(screen.getAllByTestId('standing')[1]).getByRole('link'));
+    expect(screen).toHavePathname('/house/people/sam');
+    expect(screen.getByText('Person page')).toBeOnTheScreen();
+  });
+
+  it("says when it can't read the month's Table", async () => {
+    (loadTable as jest.Mock).mockRejectedValue(new Error('offline'));
+    await open();
+    await fireEvent.press(screen.getByRole('radio', { name: 'Oct' }));
+    expect(screen.getByRole('alert')).toHaveTextContent(HOUSE_PAGE_COPY.tableUnreadable);
+  });
+
+  it('shares the join code and the link to it', async () => {
+    const share = jest.spyOn(Share, 'share').mockResolvedValue({ action: Share.sharedAction, activityType: undefined });
+    await open();
+    await fireEvent.press(screen.getByTestId('invite'));
+    expect(screen.getByTestId('invite-code')).toHaveTextContent('AB3DEF7H');
+    expect(screen.getByTestId('invite-url')).toHaveTextContent(/\/join\/AB3DEF7H$/);
+    await fireEvent.press(screen.getByTestId('share-invite'));
+    expect(share).toHaveBeenCalledWith(expect.objectContaining({ title: INVITE_COPY.shareTitle('Flat 3') }));
+  });
+
+  it('leaves copying to the share sheet on a phone, which has no clipboard of its own here', async () => {
+    await open();
+    await fireEvent.press(screen.getByTestId('invite'));
+    expect(screen.getByTestId('share-invite')).toBeOnTheScreen();
+    expect(screen.queryByTestId('copy-link')).toBeNull();
+  });
+
+  it('copies the link on the web', async () => {
+    jest.replaceProperty(Platform, 'OS', 'web');
+    const writeText = jest.fn().mockResolvedValue(undefined);
+    Object.assign(navigator, { clipboard: { writeText } });
+    await open();
+    await fireEvent.press(screen.getByTestId('invite'));
+    await fireEvent.press(screen.getByTestId('copy-link'));
+    expect(writeText).toHaveBeenCalledWith(expect.stringContaining('/join/AB3DEF7H'));
+    expect(await screen.findByText(INVITE_COPY.copied)).toBeOnTheScreen();
+  });
+
+  it('copies the link from Share invite in a browser with no share sheet', async () => {
+    jest.replaceProperty(Platform, 'OS', 'web');
+    const share = jest.spyOn(Share, 'share');
+    const writeText = jest.fn().mockResolvedValue(undefined);
+    Object.assign(navigator, { clipboard: { writeText }, share: undefined });
+    await open();
+    await fireEvent.press(screen.getByTestId('invite'));
+    await fireEvent.press(screen.getByTestId('share-invite'));
+    expect(share).not.toHaveBeenCalled();
+    expect(writeText).toHaveBeenCalledWith(expect.stringContaining('/join/AB3DEF7H'));
+    expect(await screen.findByText(INVITE_COPY.copied)).toBeOnTheScreen();
+  });
+
+  it('says how points and the stake work, in the house’s own numbers', async () => {
+    await open();
+    await fireEvent.press(screen.getByTestId('how-it-works'));
+    for (const rule of stakeRules(snapshot().rules, 100)) expect(screen.getByText(rule.body)).toBeOnTheScreen();
+  });
 });
 
 it('reads the house again each time House comes into view', async () => {
@@ -125,12 +355,12 @@ it('reads the house again each time House comes into view', async () => {
     '/house',
   );
   await untilRead();
-  expect(screen.getByTestId('to-stake')).toHaveTextContent(new RegExp(STAKE_COPY.eyebrow('£20')));
+  expect(screen.getByText(HOUSE_PAGE_COPY.sub(2, '£20'))).toBeOnTheScreen();
   // Someone else changes the stake while you're on another tab.
   (loadHouse as jest.Mock).mockResolvedValue(snapshot({ rules: { ...snapshot().rules, stakeMinor: 2500 } }));
   await act(() => router.navigate('/week'));
   await act(() => router.navigate('/house'));
-  await waitFor(() => expect(screen.getByTestId('to-stake')).toHaveTextContent(new RegExp(STAKE_COPY.eyebrow('£25'))));
+  await waitFor(() => expect(screen.getByText(HOUSE_PAGE_COPY.sub(2, '£25'))).toBeOnTheScreen());
 });
 
 it("says when it can't read the house, and tries again", async () => {
@@ -139,98 +369,4 @@ it("says when it can't read the house, and tries again", async () => {
   expect(await screen.findByRole('alert')).toHaveTextContent(FOCUS_SHELL_COPY.unreadable);
   await fireEvent.press(screen.getByRole('button', { name: FOCUS_SHELL_COPY.retry }));
   expect(await screen.findByRole('header', { name: 'Flat 3' })).toBeOnTheScreen();
-});
-
-describe('you', () => {
-  it('renames you', async () => {
-    await open();
-    expect(screen.getByRole('header', { name: HOUSE_COPY.you })).toBeOnTheScreen();
-    expect(screen.getByTestId('save-name')).toBeDisabled();
-    await fireEvent.changeText(screen.getByTestId('my-name'), 'Priya P');
-    await fireEvent.press(screen.getByTestId('save-name'));
-    expect(renameMe).toHaveBeenCalledWith('priya', 'Priya P');
-    expect(await screen.findByText(ME_COPY.saved)).toBeOnTheScreen();
-  });
-
-  it('still says your name saved once the house is read again with it', async () => {
-    await open();
-    const renamed = snapshot().members.map((m) => (m.userId === 'priya' ? { ...m, name: 'Priya P' } : m));
-    (loadHouse as jest.Mock).mockResolvedValue(snapshot({ members: renamed }));
-    await fireEvent.changeText(screen.getByTestId('my-name'), 'Priya P');
-    await fireEvent.press(screen.getByTestId('save-name'));
-    await waitFor(() => expect(screen.getAllByTestId('member')[0]).toHaveTextContent(/Priya P/));
-    expect(screen.getByText(ME_COPY.saved)).toBeOnTheScreen();
-    expect(screen.getByTestId('save-name')).toBeDisabled();
-  });
-
-  it('chooses the look for this device', async () => {
-    await open();
-    expect(screen.getByRole('radio', { name: 'Auto' })).toBeChecked();
-    await fireEvent.press(screen.getByRole('radio', { name: 'Night' }));
-    expect(screen.getByRole('radio', { name: 'Night' })).toBeChecked();
-    expect(authStorage!.getItem('theme')).toBe('dark');
-  });
-
-  it('signs you out, and lets you try again when that fails', async () => {
-    jest.spyOn(console, 'warn').mockImplementation(() => undefined);
-    (signOut as jest.Mock).mockRejectedValueOnce(new Error('offline'));
-    await open();
-    await fireEvent.press(screen.getByTestId('sign-out'));
-    expect(signOut).toHaveBeenCalledTimes(1);
-    expect(screen.getByTestId('sign-out')).toBeEnabled();
-  });
-
-  it('asks twice before you leave, then lets the guard move you on', async () => {
-    await open();
-    await fireEvent.press(screen.getByRole('button', { name: ME_COPY.leave }));
-    await fireEvent.press(screen.getByRole('button', { name: ME_COPY.stay }));
-    expect(removeMember).not.toHaveBeenCalled();
-    await fireEvent.press(screen.getByRole('button', { name: ME_COPY.leave }));
-    await fireEvent.press(screen.getByTestId('leave-house'));
-    expect(removeMember).toHaveBeenCalledWith('h1', 'priya');
-    expect(mockMembership.refresh).toHaveBeenCalled();
-  });
-
-  it("says why you can't leave", async () => {
-    (removeMember as jest.Mock).mockRejectedValue(new Error('Make someone else an admin first. A house needs at least one.'));
-    await open();
-    await fireEvent.press(screen.getByRole('button', { name: ME_COPY.leave }));
-    await fireEvent.press(screen.getByTestId('leave-house'));
-    expect(await screen.findByRole('alert')).toHaveTextContent(/Make someone else an admin first/);
-    expect(mockMembership.refresh).not.toHaveBeenCalled();
-  });
-});
-
-// The old Table, parked at the foot of House until the House track rebuilds it.
-describe('the Table, for now', () => {
-  it("ranks the week and the month, with each person's record", async () => {
-    await open();
-    const table = within(screen.getByTestId('house-table'));
-    expect(await table.findByText('October 2026')).toBeOnTheScreen();
-    const standings = table.getAllByTestId('standing');
-    expect(standings).toHaveLength(4);
-    // This week: Priya's tick being checked counts; Sam's open John doesn't yet.
-    expect(standings[0]).toHaveTextContent(/^1.*You.*1 done.*3$/);
-    expect(standings[2]).toHaveTextContent(/^1.*Sam.*4 done · 1 late.*12$/);
-    expect(standings[3]).toHaveTextContent(/You.*3 done · 1 missed.*9$/);
-  });
-
-  it('shows fair shares either side of zero, with how time away is made up', async () => {
-    await open();
-    const shares = await screen.findAllByTestId('fair-share');
-    expect(shares[0]).toHaveTextContent(/You.*−3/);
-    expect(shares[1]).toHaveTextContent(/Sam.*\+3/);
-    expect(screen.getByText(TABLE_COPY.sharesBody)).toBeOnTheScreen();
-    expect(screen.getByText(MAKEUP_LABEL[100].toLowerCase())).toBeOnTheScreen();
-  });
-
-  it('lists streaks and perks, longest streak first, and how they work', async () => {
-    await open();
-    const [sam, you] = await screen.findAllByTestId('streak');
-    expect(within(sam).getByText('Sam')).toBeOnTheScreen();
-    expect(within(sam).getByText(TABLE_COPY.weeks(5))).toBeOnTheScreen();
-    expect(within(sam).getByText(TABLE_COPY.swap)).toBeOnTheScreen();
-    expect(within(you).getByText('You')).toBeOnTheScreen();
-    for (const rule of TABLE_COPY.rules) expect(screen.getByText(rule.body)).toBeOnTheScreen();
-  });
 });

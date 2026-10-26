@@ -1,14 +1,12 @@
-import { buildStake, STAKE_COPY } from '@app/core';
-import { QueryClientProvider } from '@tanstack/react-query';
-import { Slot } from 'expo-router';
-import { fireEvent, renderRouter, screen, within } from 'expo-router/testing-library';
+import { buildStake, FOCUS_SHELL_COPY, type HistoryRow, HOUSE_PAGE_COPY, SECTION_LABEL, STAKE_COPY, STAKE_HISTORY_COPY } from '@app/core';
+import { fireEvent, screen, waitFor, within } from 'expo-router/testing-library';
 
 import { loadHouse } from '@/api/board';
 import { catchUp } from '@/api/house';
-import { confirmPayment, loadStake } from '@/api/stake';
+import { loadStake, type StakeRead } from '@/api/stake';
 import StakeScreen from '@/app/(house)/house/stake';
 import { snapshot } from '@/testing/house';
-import { testQueryClient } from '@/testing/query';
+import { renderPages, untilRead } from '@/testing/pages';
 
 jest.mock('@/api/board', () => ({ loadHouse: jest.fn() }));
 jest.mock('@/api/house', () => ({ catchUp: jest.fn() }));
@@ -18,87 +16,130 @@ jest.mock('@/hooks/use-membership', () => ({
   useMembership: () => ({ session: { user: { id: 'priya' } }, house: { id: 'h1', name: 'Flat 3' } }),
 }));
 
-const entry = (id: number, user_id: string, kind: string, amount_minor: number, month: string, counterparty: string | null = null) => ({
-  id,
-  user_id,
-  kind,
-  amount_minor,
-  month,
-  counterparty,
-  created_at: '2026-10-10T12:00:00Z',
-});
-
-function stake(ledger: ReturnType<typeof entry>[], closedMonths: string[] = []) {
-  return buildStake({ ledger, closedMonths, memberIds: ['priya', 'sam'], stakeMinor: 2000, month: '2026-10' });
+function entry(
+  id: number,
+  userId: string,
+  kind: string,
+  amountMinor: number,
+  month: string,
+  rest: Partial<HistoryRow> = {},
+): HistoryRow {
+  return {
+    id,
+    user_id: userId,
+    kind,
+    amount_minor: amountMinor,
+    month,
+    counterparty: null,
+    created_at: '2026-10-01T09:00:00Z',
+    john: null,
+    ...rest,
+  };
 }
 
+/** The Stake as the page reads it: whatever buildStake makes of the ledger, and the ledger itself. */
+function stakeRead(ledger: HistoryRow[], closedMonths: string[] = []): StakeRead {
+  const built = buildStake({ ledger, closedMonths, memberIds: ['priya', 'sam'], stakeMinor: 2000, month: '2026-10' });
+  return { ...built, ledger, closedMonths };
+}
+
+/** September closed and was shared out; this month Sam has been late and missed one. */
+const LEDGER = [
+  entry(5, 'sam', 'forfeit', -100, '2026-10', {
+    created_at: '2026-10-21T08:00:00Z',
+    john: { name: 'Bins out', outcome: 'late', due_at: '2026-10-20T19:00:00Z' },
+  }),
+  entry(4, 'priya', 'forfeit', -300, '2026-10', {
+    created_at: '2026-10-19T08:00:00Z',
+    john: { name: 'Wipe the hob', outcome: 'missed', due_at: '2026-10-18T19:00:00Z' },
+  }),
+  entry(3, 'sam', 'payment', 400, '2026-10', { counterparty: 'priya', created_at: '2026-10-12T10:00:00Z' }),
+  entry(2, 'priya', 'payment', -400, '2026-10', { counterparty: 'sam', created_at: '2026-10-12T10:00:00Z' }),
+  entry(1, 'priya', 'share', 400, '2026-09'),
+];
+
 async function open() {
-  const client = testQueryClient();
-  await renderRouter(
-    {
-      _layout: () => (
-        <QueryClientProvider client={client}>
-          <Slot />
-        </QueryClientProvider>
-      ),
-      'house/stake': StakeScreen,
-    },
-    { initialUrl: '/house/stake' },
-  );
-  await screen.findByText(STAKE_COPY.title);
+  await renderPages({ 'house/stake': StakeScreen, 'house/index': () => null }, '/house/stake');
+  await untilRead();
+  await waitFor(() => expect(screen.queryByLabelText(HOUSE_PAGE_COPY.readingStake)).toBeNull());
 }
 
 beforeEach(() => {
   jest.clearAllMocks();
   (loadHouse as jest.Mock).mockResolvedValue(snapshot());
   (catchUp as jest.Mock).mockResolvedValue(false);
-  (confirmPayment as jest.Mock).mockResolvedValue(undefined);
+  (loadStake as jest.Mock).mockResolvedValue(stakeRead(LEDGER, ['2026-09']));
 });
 
-it('shows the month so far, with what each would gain or lose', async () => {
-  (loadStake as jest.Mock).mockResolvedValue(stake([entry(1, 'sam', 'forfeit', -300, '2026-10')]));
+it('names the page and the stake, with the way back to House', async () => {
   await open();
-  expect(await screen.findByText(STAKE_COPY.eyebrow('£20'))).toBeOnTheScreen();
-  const [you, sam] = await screen.findAllByTestId('projection');
-  expect(you).toHaveTextContent(/You.*–.*£3.*\+£3/);
-  expect(sam).toHaveTextContent(/Sam.*£3.*–.*−£3/);
-  expect(screen.getByText(STAKE_COPY.soFarBody('£1', '£3'))).toBeOnTheScreen();
+  const bar = within(screen.getByTestId('title-bar'));
+  expect(bar.getByRole('header', { name: STAKE_HISTORY_COPY.title })).toBeOnTheScreen();
+  expect(bar.getByText(STAKE_COPY.eyebrow('£20'))).toBeOnTheScreen();
+  expect(bar.getByRole('button', { name: FOCUS_SHELL_COPY.backTo(SECTION_LABEL.house) })).toBeOnTheScreen();
 });
 
-it("is square with nothing owed, and says the ledger's empty", async () => {
-  (loadStake as jest.Mock).mockResolvedValue(stake([]));
+it('starts on yours: your entries by month, each said in words', async () => {
   await open();
-  expect(await screen.findByText(STAKE_COPY.square)).toBeOnTheScreen();
-  expect(screen.getByText(STAKE_COPY.ledgerEmpty)).toBeOnTheScreen();
+  expect(screen.getAllByTestId('ledger-month').map((month) => within(month).getByRole('header').props.children)).toEqual([
+    'October 2026',
+    'September 2026',
+  ]);
+  const [missed, payment, share] = screen.getAllByTestId('ledger-entry');
+  expect(missed).toHaveTextContent(new RegExp(`Wipe the hob${STAKE_HISTORY_COPY.missed} · Sun 18 Oct−£3`));
+  // Being paid what you were owed takes it off your side, signed as the Stake sums it.
+  expect(payment).toHaveTextContent(
+    new RegExp(`${STAKE_HISTORY_COPY.paid('Sam', STAKE_HISTORY_COPY.yourself)}${STAKE_HISTORY_COPY.received('Mon 12 Oct')}−£4$`),
+  );
+  expect(share).toHaveTextContent(new RegExp(`${STAKE_HISTORY_COPY.share}Thu 1 Oct\\+£4`));
 });
 
-it('lets the person paid mark it received, and nobody else', async () => {
+it("shows the whole house's, each entry naming whose it is and a payment once", async () => {
+  await open();
+  await fireEvent.press(screen.getByRole('radio', { name: STAKE_HISTORY_COPY.whole }));
+  const entries = screen.getAllByTestId('ledger-entry');
+  expect(entries[0]).toHaveTextContent(new RegExp(`Bins outSam · ${STAKE_HISTORY_COPY.late.toLowerCase()} · Tue 20 Oct−£1`));
+  expect(entries[1]).toHaveTextContent(/Wipe the hobYou · missed · Sun 18 Oct−£3/);
+  // A payment you're in, from your side.
+  expect(entries[2]).toHaveTextContent(new RegExp(`${STAKE_HISTORY_COPY.paid('Sam', STAKE_HISTORY_COPY.yourself)}.*−£4$`));
+  // The payment's other side isn't a second entry.
+  expect(entries).toHaveLength(4);
+});
+
+it("keeps the amount of a payment between two others to them", async () => {
   (loadStake as jest.Mock).mockResolvedValue(
-    stake([entry(2, 'sam', 'forfeit', -400, '2026-09'), entry(1, 'priya', 'share', 400, '2026-09')], ['2026-09']),
+    stakeRead([
+      entry(2, 'sam', 'payment', 250, '2026-10', { counterparty: 'ben', created_at: '2026-10-12T10:00:00Z' }),
+      entry(1, 'ben', 'payment', -250, '2026-10', { counterparty: 'sam', created_at: '2026-10-12T10:00:00Z' }),
+    ]),
   );
   await open();
-  const transfer = await screen.findByTestId('transfer');
-  expect(transfer).toHaveTextContent(/Sam.*You.*£4/);
-  await fireEvent.press(within(transfer).getByRole('button', { name: STAKE_COPY.markReceived }));
-  expect(confirmPayment).toHaveBeenCalledWith('h1', 'sam', 400);
+  await fireEvent.press(screen.getByRole('radio', { name: STAKE_HISTORY_COPY.whole }));
+  const payment = screen.getByTestId('ledger-entry');
+  expect(payment).toHaveTextContent(new RegExp(`^${STAKE_HISTORY_COPY.paid('Sam', HOUSE_PAGE_COPY.formerHousemate)}`));
+  expect(payment).not.toHaveTextContent(/£/);
 });
 
-it("doesn't offer it to the one paying", async () => {
-  (loadStake as jest.Mock).mockResolvedValue(
-    stake([entry(2, 'priya', 'forfeit', -400, '2026-09'), entry(1, 'sam', 'share', 400, '2026-09')], ['2026-09']),
-  );
+it('says when nothing of yours is in the ledger, and the whole house still is', async () => {
+  (loadStake as jest.Mock).mockResolvedValue(stakeRead([LEDGER[0]]));
   await open();
-  const transfer = await screen.findByTestId('transfer');
-  expect(transfer).toHaveTextContent(/You.*Sam.*£4/);
-  expect(within(transfer).queryByRole('button', { name: STAKE_COPY.markReceived })).toBeNull();
+  expect(screen.getByText(STAKE_HISTORY_COPY.emptyMine)).toBeOnTheScreen();
+  await fireEvent.press(screen.getByRole('radio', { name: STAKE_HISTORY_COPY.whole }));
+  expect(screen.getByTestId('ledger-entry')).toHaveTextContent(/Bins out/);
 });
 
-it('lists the ledger, with each payment\'s other side', async () => {
-  (loadStake as jest.Mock).mockResolvedValue(
-    stake([entry(3, 'sam', 'payment', 400, '2026-10', 'priya'), entry(2, 'sam', 'forfeit', -400, '2026-09')], ['2026-09']),
-  );
+it('says when the ledger is empty, with nothing to switch', async () => {
+  (loadStake as jest.Mock).mockResolvedValue(stakeRead([]));
   await open();
-  const [payment, forfeit] = await screen.findAllByTestId('ledger-entry');
-  expect(payment).toHaveTextContent(/Payment to You.*Sam · 2026-10.*\+£4/);
-  expect(forfeit).toHaveTextContent(/Forfeit.*Sam · 2026-09.*−£4/);
+  expect(screen.getByText(STAKE_HISTORY_COPY.empty)).toBeOnTheScreen();
+  expect(screen.getByText(STAKE_HISTORY_COPY.emptyBody)).toBeOnTheScreen();
+  expect(screen.queryByTestId('stake-span')).toBeNull();
+});
+
+it("says when it can't read the Stake, and tries again", async () => {
+  (loadStake as jest.Mock).mockRejectedValueOnce(new Error('offline'));
+  await renderPages({ 'house/stake': StakeScreen }, '/house/stake');
+  expect(await screen.findByRole('alert')).toHaveTextContent(HOUSE_PAGE_COPY.stakeUnreadable);
+  await fireEvent.press(screen.getByRole('button', { name: FOCUS_SHELL_COPY.retry }));
+  expect(await screen.findAllByTestId('ledger-entry')).not.toHaveLength(0);
 });
