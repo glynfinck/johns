@@ -1,4 +1,4 @@
-import { REMINDERS_COPY } from '@app/core';
+import { ME_COPY, REMINDERS_COPY } from '@app/core';
 import { fireEvent, render, screen } from '@testing-library/react-native';
 
 import { reminderSupport, remindersOn, turnRemindersOff, turnRemindersOn } from '@/api/push';
@@ -27,6 +27,14 @@ it('shows nothing where there is nothing to offer yet (a phone, or no key)', asy
   support.mockReturnValue('none');
   await render(<Reminders userId="ava" />);
   expect(screen.queryByTestId('reminders')).toBeNull();
+});
+
+it('heads itself, unless something round it already says Reminders', async () => {
+  const { rerender } = await render(<Reminders userId="ava" />);
+  expect(screen.getByText(ME_COPY.reminders)).toBeOnTheScreen();
+  await rerender(<Reminders userId="ava" labelled={false} />);
+  expect(screen.queryByText(ME_COPY.reminders)).toBeNull();
+  expect(await screen.findByRole('button', { name: REMINDERS_COPY.on })).toBeOnTheScreen();
 });
 
 it('says what an iPhone needs first, in a browser without notifications', async () => {

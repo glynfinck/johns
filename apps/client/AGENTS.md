@@ -66,7 +66,10 @@ permanent once a store has seen them.
   screen and splits the routes with `Stack.Protected` three ways: signed
   out (front door, sign-in), signed in with no house (`welcome`,
   `house/new`), and in a house (the `(house)` group). Signing in or out, or creating a
-  house, moves you by itself; screens never navigate after auth. A join link
+  house, moves you by itself; screens never navigate after auth. Signing in
+  with no house goes where sign-in's `?next=` was carrying you, when
+  `afterSignIn` (core) allows it: `/house/new`, `/welcome` or a join link,
+  on every platform. A join link
   (`join/[joinCode]`, which is `johns://join/CODE` on a phone) sits outside
   the guards and signs you in in place, so the code survives. So do
   `privacy` and `+not-found` (anything not a route, `/_sitemap` included:

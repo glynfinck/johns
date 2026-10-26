@@ -12,9 +12,11 @@ import { SPACE } from '@/theme';
 /**
  * Reminders on this device, as the web's You card has them: a browser's push
  * notifications, on or off. Nothing shows where there's nothing to offer yet
- * (a phone, until native push; a build without the VAPID key).
+ * (a phone, until native push; a build without the VAPID key). It heads
+ * itself with a section label, unless `labelled` is false because something
+ * round it already says Reminders (the You section's sheet, in its title).
  */
-export function Reminders({ userId }: { userId: string }) {
+export function Reminders({ userId, labelled = true }: { userId: string; labelled?: boolean }) {
   const support = reminderSupport();
   const [on, setOn] = useState<boolean | null>(null);
   const [busy, setBusy] = useState(false);
@@ -66,7 +68,7 @@ export function Reminders({ userId }: { userId: string }) {
 
   return (
     <View style={styles.stack} testID="reminders">
-      <SectionLabel>{ME_COPY.reminders}</SectionLabel>
+      {labelled ? <SectionLabel>{ME_COPY.reminders}</SectionLabel> : null}
       {support === 'unsupported' ? (
         <Meta>{REMINDERS_COPY.unsupported}</Meta>
       ) : on === null ? null : (

@@ -12,7 +12,7 @@ import {
 } from '@app/core';
 import { CameraIcon, CheckIcon, ImagesIcon, RepeatIcon, ShieldIcon } from 'lucide-react-native';
 import { useState } from 'react';
-import { Pressable, StyleSheet, View } from 'react-native';
+import { StyleSheet, View } from 'react-native';
 
 import { spendImmunity, spendSwap } from '@/api/johns';
 import { Alert } from '@/components/alert';
@@ -21,13 +21,14 @@ import { Button } from '@/components/button';
 import { GroupItem } from '@/components/group';
 import { Row, RowIcon } from '@/components/row';
 import { Section } from '@/components/section';
+import { SheetAnchor } from '@/components/sheet';
 import { StatusMark } from '@/components/status-mark';
 import { Body } from '@/components/text';
 import { useMove } from '@/hooks/use-move';
 import { useTick } from '@/hooks/use-tick';
 import { SPACE, useTheme } from '@/theme';
 
-import type { JohnSheetContext } from './body';
+import type { JohnSheetContext, JohnSheetFocus } from './body';
 import { SheetLines, SheetSection } from './parts';
 
 /**
@@ -124,52 +125,56 @@ function IfYouCant({
 }) {
   const move = useMove(context.houseId);
   const [skipping, setSkipping] = useState(skipFirst);
+  // Opened at "If you can't" with more above it than fits, the sheet starts scrolled here.
+  const anchor: JohnSheetFocus = 'cant';
   return (
     <SheetSection>
-      <Section label={JOHN_SHEET_COPY.cant} testID="if-you-cant">
-        {cant.immunity > 0 ? (
-          skipping ? (
-            <GroupItem testID="skip-confirm">
-              <Body>{JOHN_SHEET_COPY.skipSentence(item.name, cant.immunity - 1)}</Body>
-              <View style={styles.pair}>
-                <View style={styles.half}>
-                  <Button
-                    variant="outline"
-                    icon={ShieldIcon}
-                    label={JOHN_SHEET_COPY.skipIt}
-                    disabled={move.pending}
-                    onPress={() => void move.run(() => spendImmunity(item.id))}
-                    testID="skip-it"
-                  />
+      <SheetAnchor name={anchor}>
+        <Section label={JOHN_SHEET_COPY.cant} testID="if-you-cant">
+          {cant.immunity > 0 ? (
+            skipping ? (
+              <GroupItem testID="skip-confirm">
+                <Body>{JOHN_SHEET_COPY.skipSentence(item.name, cant.immunity - 1)}</Body>
+                <View style={styles.pair}>
+                  <View style={styles.half}>
+                    <Button
+                      variant="outline"
+                      icon={ShieldIcon}
+                      label={JOHN_SHEET_COPY.skipIt}
+                      disabled={move.pending}
+                      onPress={() => void move.run(() => spendImmunity(item.id))}
+                      testID="skip-it"
+                    />
+                  </View>
+                  <View style={styles.half}>
+                    <Button variant="ghost" label={FOCUS_SHELL_COPY.cancel} onPress={() => setSkipping(false)} />
+                  </View>
                 </View>
-                <View style={styles.half}>
-                  <Button variant="ghost" label={FOCUS_SHELL_COPY.cancel} onPress={() => setSkipping(false)} />
-                </View>
-              </View>
-              {move.problem ? <Alert message={move.problem} /> : null}
-            </GroupItem>
-          ) : (
+                {move.problem ? <Alert message={move.problem} /> : null}
+              </GroupItem>
+            ) : (
+              <Row
+                leading={<RowIcon icon={ShieldIcon} />}
+                title={JOHN_SHEET_COPY.skip}
+                meta={JOHN_SHEET_COPY.skipMeta(cant.immunity)}
+                chevron
+                onPress={() => setSkipping(true)}
+                testID="skip-row"
+              />
+            )
+          ) : null}
+          {cant.swapFor.length > 0 ? (
             <Row
-              leading={<RowIcon icon={ShieldIcon} />}
-              title={JOHN_SHEET_COPY.skip}
-              meta={JOHN_SHEET_COPY.skipMeta(cant.immunity)}
+              leading={<RowIcon icon={RepeatIcon} />}
+              title={JOHN_SHEET_COPY.swap}
+              meta={JOHN_SHEET_COPY.swapMeta}
               chevron
-              onPress={() => setSkipping(true)}
-              testID="skip-row"
+              onPress={onSwap}
+              testID="swap-row"
             />
-          )
-        ) : null}
-        {cant.swapFor.length > 0 ? (
-          <Row
-            leading={<RowIcon icon={RepeatIcon} />}
-            title={JOHN_SHEET_COPY.swap}
-            meta={JOHN_SHEET_COPY.swapMeta}
-            chevron
-            onPress={onSwap}
-            testID="swap-row"
-          />
-        ) : null}
-      </Section>
+          ) : null}
+        </Section>
+      </SheetAnchor>
     </SheetSection>
   );
 }
@@ -237,7 +242,7 @@ function SwapPicker({
   );
 }
 
-/** One of the swap's choices: a radio, the row inside it; the owner leads, and the trailing item is the tick once chosen. */
+/** One of the swap's choices: a row to pick, the owner leading, and the tick as its trailing item once chosen. */
 function SwapChoice({
   item,
   context,
@@ -251,34 +256,26 @@ function SwapChoice({
 }) {
   const { colors } = useTheme();
   const meta = swapMeta(item, context.members, context.rules, context.now);
-  const [pressed, setPressed] = useState(false);
   return (
-    <Pressable
-      accessibilityRole="radio"
-      aria-checked={chosen}
-      accessibilityLabel={`${item.name}, ${meta}`}
+    <Row
+      leading={<Avatar name={context.nameOf(item.userId)} />}
+      title={item.name}
+      meta={meta}
+      trailing={
+        chosen ? (
+          <View style={[styles.chosen, { backgroundColor: colors.foreground }]} testID="swap-chosen">
+            <CheckIcon size={16} strokeWidth={3} color={colors.card} aria-hidden />
+          </View>
+        ) : (
+          <StatusMark status={item.status} />
+        )
+      }
+      hazardEdge={item.status === 'overdue'}
+      selected={chosen}
       onPress={onChoose}
-      onPressIn={() => setPressed(true)}
-      onPressOut={() => setPressed(false)}
-      style={pressed ? styles.pressed : undefined}
+      accessibilityLabel={`${item.name}, ${meta}`}
       testID="swap-choice"
-    >
-      <Row
-        leading={<Avatar name={context.nameOf(item.userId)} />}
-        title={item.name}
-        meta={meta}
-        trailing={
-          chosen ? (
-            <View style={[styles.chosen, { backgroundColor: colors.foreground }]} testID="swap-chosen">
-              <CheckIcon size={16} strokeWidth={3} color={colors.card} aria-hidden />
-            </View>
-          ) : (
-            <StatusMark status={item.status} />
-          )
-        }
-        hazardEdge={item.status === 'overdue'}
-      />
-    </Pressable>
+    />
   );
 }
 
@@ -297,8 +294,7 @@ export function TheirsOpen({ item, context }: { item: BoardItem; context: JohnSh
 
 const styles = StyleSheet.create({
   pair: { flexDirection: 'row', gap: SPACE.sm },
-  pressed: { opacity: 0.6 },
-  // The pick: an ink disc with a tick, where the row's mark was (never the tint the avatars wear).
+  // The pick: an ink disc with a tick, where the row's mark was.
   chosen: { width: 24, height: 24, borderRadius: 12, alignItems: 'center', justifyContent: 'center' },
   half: { flex: 1 },
   owner: { flexDirection: 'row', alignItems: 'center', gap: SPACE.md },

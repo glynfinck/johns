@@ -1,6 +1,7 @@
 import { BIN_NIGHT, FOCUS_SHELL_COPY } from '@app/core';
 import { fireEvent, render, screen, within } from '@testing-library/react-native';
 import { LogOutIcon } from 'lucide-react-native';
+import { Text } from 'react-native';
 
 import { ConfirmSheet } from './confirm-sheet';
 
@@ -49,6 +50,14 @@ it('holds both buttons while the move is on its way, and says why it was refused
   expect(screen.getByTestId('cancel')).toBeDisabled();
   await fireEvent.press(screen.getByTestId('confirm'));
   expect(onConfirm).not.toHaveBeenCalled();
+});
+
+it('puts what the sentence needs beside it under the body, above the move', async () => {
+  await render(confirm({ children: <Text>Try again</Text> }));
+  const words = screen.getAllByText(/./).map((text) => text.props.children);
+  const body = words.indexOf('Your Johns this week go back to the house.');
+  expect(words.indexOf('Try again')).toBe(body + 1);
+  expect(words.indexOf('Leave the house')).toBeGreaterThan(body + 1);
 });
 
 it('shows nothing while shut', async () => {

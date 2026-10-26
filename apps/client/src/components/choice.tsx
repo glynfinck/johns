@@ -1,13 +1,14 @@
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 
-import { Body } from '@/components/text';
-import { FONT, RADIUS, SPACE, TAP, useTheme } from '@/theme';
+import { FieldLabel } from '@/components/field';
+import { RADIUS, SPACE, TAP, useTheme } from '@/theme';
 
 /**
  * Pick one of a few, as a row of chips: the native stand-in for the web's
- * select. Each chip says its full name to a screen reader. `disabled`
- * shows the choice without letting it change (the house rules, to a
- * housemate who isn't an admin).
+ * select. Labelled as a Field is (Body Bold, sentence case), each chip's
+ * words a button's (RowTitle), and each chip says its full name to a screen
+ * reader. `disabled` shows the choice without letting it change (the house
+ * rules, to a housemate who isn't an admin).
  */
 export function Choice<T extends string | number>({
   label,
@@ -25,7 +26,7 @@ export function Choice<T extends string | number>({
   const { colors, type } = useTheme();
   return (
     <View style={styles.field}>
-      <Body style={[type.eyebrow, styles.label]}>{label}</Body>
+      <FieldLabel>{label}</FieldLabel>
       <View accessibilityRole="radiogroup" accessibilityLabel={label} style={styles.chips}>
         {options.map((option) => {
           const chosen = option.value === value;
@@ -46,7 +47,7 @@ export function Choice<T extends string | number>({
                   : { backgroundColor: 'transparent', borderColor: colors.border },
               ]}
             >
-              <Text style={[styles.chipText, { color: chosen ? colors.background : colors.foreground }]}>{option.label}</Text>
+              <Text style={[type.rowTitle, { color: chosen ? colors.background : colors.foreground }]}>{option.label}</Text>
             </Pressable>
           );
         })}
@@ -56,8 +57,7 @@ export function Choice<T extends string | number>({
 }
 
 const styles = StyleSheet.create({
-  field: { gap: SPACE.xs },
-  label: { marginBottom: SPACE.xs },
+  field: { gap: SPACE.sm },
   chips: { flexDirection: 'row', flexWrap: 'wrap', gap: SPACE.sm },
   chip: {
     minHeight: TAP,
@@ -69,5 +69,4 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   off: { opacity: 0.5 },
-  chipText: { fontFamily: FONT.bold, fontSize: 15 },
 });

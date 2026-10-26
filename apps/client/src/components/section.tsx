@@ -6,17 +6,24 @@ import { Group } from '@/components/group';
 import { Meta, SectionLabel } from '@/components/text';
 import { INSET, LABEL_GAP, ROW_GAP, SPACE, TAP } from '@/theme';
 
+/** The label's line. */
+const LINE = 24;
 /** How far a thumb-tall control in the label's line hangs above and below it, so the line stays 24 tall. */
-const OVERHANG = -(TAP - 24) / 2;
+const OVERHANG = (TAP - LINE) / 2;
 
 /**
  * A section of a page: its header, then LABEL_GAP, then one Group of its
  * rows. The header is the label, with a count badge after it when there's a
- * count, and an optional right-hand item (Meta words, a TextButton, a
- * Segmented). Week's person header adds `leading` (a 24pt Avatar) before the
- * label and `tag` (a quiet Chip, "Swap ready") after it. Sections don't
- * space themselves: the Screen, or a flush Sheet, holding them puts
- * SECTION_GAP between its children.
+ * count, and an optional right-hand item: Meta words, or a control (a
+ * TextButton, a Segmented). Week's person header adds `leading` (a 24pt
+ * Avatar) before the label and `tag` (a quiet Chip, "Swap ready") after it.
+ *
+ * The label keeps its width: Meta on the right gives way first, moving under
+ * the label when the line can't hold both, and only then truncating. A
+ * control hangs over the label's line, and the group starts LABEL_GAP below
+ * where the control ends, so the two never overlap. Sections don't space
+ * themselves: the Screen, or a flush Sheet, holding them puts SECTION_GAP
+ * between its children.
  */
 export function Section({
   label,
@@ -34,14 +41,20 @@ export function Section({
   leading?: ReactNode;
   /** After the label (and its badge): a quiet Chip, such as "Swap ready". */
   tag?: ReactNode;
-  /** A string is set as Meta. */
-  right?: ReactNode;
+  /**
+   * A string is set as Meta; a few strings are a Meta line each, the second
+   * under the first ("1 of 3 done · 6 pts", then "away 28–31 Oct"). Anything
+   * else is a control.
+   */
+  right?: ReactNode | readonly string[];
   children: ReactNode;
   testID?: string;
 }) {
+  const lines = metaLines(right);
+  const control = right != null && lines === null;
   return (
     <View testID={testID}>
-      <View style={styles.header}>
+      <View style={[styles.header, control ? styles.withControl : styles.wraps]}>
         <View style={styles.label}>
           {leading}
           <SectionLabel
@@ -55,33 +68,49 @@ export function Section({
           {count ? <CountBadge count={count} /> : null}
           {tag}
         </View>
-        {right == null ? null : typeof right === 'string' ? (
-          <Meta numberOfLines={1} style={styles.meta}>
-            {right}
-          </Meta>
-        ) : (
-          <View style={styles.right}>{right}</View>
-        )}
+        {lines ? (
+          <View style={styles.meta}>
+            {lines.map((line, i) => (
+              <Meta key={i} numberOfLines={1} style={styles.end}>
+                {line}
+              </Meta>
+            ))}
+          </View>
+        ) : control ? (
+          <View style={styles.control}>{right as ReactNode}</View>
+        ) : null}
       </View>
       <Group>{children}</Group>
     </View>
   );
 }
 
+/** The right-hand item as Meta lines, when it's words. */
+function metaLines(right: ReactNode | readonly string[]): readonly string[] | null {
+  if (typeof right === 'string') return [right];
+  if (Array.isArray(right) && right.length > 0 && right.every((line) => typeof line === 'string')) return right;
+  return null;
+}
+
 const styles = StyleSheet.create({
   header: {
-    minHeight: 24,
+    minHeight: LINE,
     flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    gap: ROW_GAP,
+    alignItems: 'flex-start',
+    columnGap: ROW_GAP,
+    rowGap: SPACE.xs,
     paddingHorizontal: INSET,
-    marginBottom: LABEL_GAP,
   },
-  label: { flexShrink: 1, flexDirection: 'row', alignItems: 'center', gap: SPACE.sm },
+  // Words on the right move under the label rather than cutting it short.
+  wraps: { flexWrap: 'wrap', marginBottom: LABEL_GAP },
+  // A control stays in the label's line, and the group keeps clear of its overhang.
+  withControl: { marginBottom: LABEL_GAP + OVERHANG },
+  // Shrinks only when it can't fit a line on its own.
+  label: { minHeight: LINE, flexShrink: 1, flexDirection: 'row', alignItems: 'center', gap: SPACE.sm },
   // Overpass's caps sit high in their line, so the label comes down a little.
   words: { flexShrink: 1, paddingTop: 2 },
-  // Meta on the right gives way before the label does.
-  meta: { flexShrink: 1, textAlign: 'right' },
-  right: { flexShrink: 0, marginVertical: OVERHANG },
+  // Pushed to the right, on the label's line or the one under it: a 20pt line centred on the 24pt one.
+  meta: { flexShrink: 1, marginLeft: 'auto', alignItems: 'flex-end', paddingTop: 2 },
+  end: { textAlign: 'right' },
+  control: { flexShrink: 0, marginLeft: 'auto', marginVertical: -OVERHANG },
 });

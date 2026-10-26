@@ -95,14 +95,15 @@ export function YouSection({ houseId, userId, view }: { houseId: string; userId:
         name={name}
         onClose={() => setSheet(null)}
       />
-      {/* No title of its own: the reminders control heads itself. */}
       <Sheet
         visible={sheet === 'reminders'}
+        title={HOUSE_LOWER_COPY.reminders}
         onClose={() => setSheet(null)}
         onDismissed={reminders.read}
         testID="reminders-sheet"
       >
-        <Reminders userId={userId} />
+        {/* The sheet's title says Reminders, so the control doesn't again. */}
+        <Reminders userId={userId} labelled={false} />
       </Sheet>
     </View>
   );

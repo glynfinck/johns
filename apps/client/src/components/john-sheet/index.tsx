@@ -72,7 +72,8 @@ export function JohnSheetProvider({ houseId, userId, children }: { houseId: stri
   return (
     <JohnSheetApiContext.Provider value={api}>
       {children}
-      <Sheet visible={item !== null} onClose={close} flush testID="john-sheet">
+      {/* Opened for something with a part of its own (If you can't), it opens scrolled to that part. */}
+      <Sheet visible={item !== null} onClose={close} flush openAt={shown?.focus ?? undefined} testID="john-sheet">
         {body}
       </Sheet>
     </JohnSheetApiContext.Provider>

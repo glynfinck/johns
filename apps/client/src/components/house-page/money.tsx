@@ -34,9 +34,7 @@ export function MetaLine({ parts, tinted = false }: { parts: readonly MetaPart[]
           {words(before)}
         </Meta>
       ) : null}
-      <View style={styles.mark}>
-        <Mark size={14} color={colors.hazard} aria-hidden />
-      </View>
+      <Mark size={14} color={colors.hazard} aria-hidden />
       <Meta numberOfLines={1} style={styles.after}>
         {words(parts.slice(first))}
       </Meta>
@@ -83,11 +81,10 @@ export function Money({
 }
 
 const styles = StyleSheet.create({
-  line: { flexDirection: 'row', alignItems: 'center' },
-  // Overpass's middle dot has no width of its own and is drawn past it: the
-  // room after it keeps the dot from being clipped with the line.
-  before: { flexShrink: 0, paddingRight: SPACE.xs },
-  mark: { marginRight: SPACE.xs },
+  // The gap stands in for the space after the last separator before the mark,
+  // which a line drops at its end.
+  line: { flexDirection: 'row', alignItems: 'center', gap: SPACE.xs },
+  before: { flexShrink: 0 },
   after: { flexShrink: 1, minWidth: 0 },
   value: { flexShrink: 0, ...TABULAR },
   losing: { flexShrink: 0, flexDirection: 'row', alignItems: 'center', gap: SPACE.xs },

@@ -1,13 +1,8 @@
-import { DEAL_COPY, NOT_DEALT_COPY, WEEK_SUMMARY_COPY } from '@app/core';
+import { NOT_DEALT_COPY, WEEK_SUMMARY_COPY } from '@app/core';
 import { CalendarDaysIcon, ShuffleIcon } from 'lucide-react-native';
-import { StyleSheet, View } from 'react-native';
 
-import { dealThisWeek } from '@/api/settings';
-import { Alert } from '@/components/alert';
-import { Button } from '@/components/button';
 import { EmptyState } from '@/components/empty-state';
-import { useMove } from '@/hooks/use-move';
-import { SPACE } from '@/theme';
+import { DealButton } from '@/components/house/deal-button';
 
 /**
  * Week with nothing on it. Before the house's first deal: "This week hasn't
@@ -43,32 +38,8 @@ export function WeekEmpty({
       icon={ShuffleIcon}
       title={WEEK_SUMMARY_COPY.notDealt}
       body={isAdmin ? WEEK_SUMMARY_COPY.notDealtBody : WEEK_SUMMARY_COPY.waitingFor(adminName)}
-      action={isAdmin ? <FirstDeal houseId={houseId} /> : undefined}
+      action={isAdmin ? <DealButton houseId={houseId} label={WEEK_SUMMARY_COPY.deal} /> : undefined}
       testID="week-not-dealt"
     />
   );
 }
-
-/**
- * The first deal, as House's deal button makes it, in Week's words. The
- * server checks it's an admin asking; a refusal shows under the button.
- */
-function FirstDeal({ houseId }: { houseId: string }) {
-  const move = useMove(houseId);
-  return (
-    <View style={styles.stack}>
-      <Button
-        icon={ShuffleIcon}
-        label={move.pending ? DEAL_COPY.dealing : WEEK_SUMMARY_COPY.deal}
-        disabled={move.pending}
-        onPress={() => void move.run(() => dealThisWeek(houseId))}
-        testID="deal-week"
-      />
-      {move.problem ? <Alert message={move.problem} /> : null}
-    </View>
-  );
-}
-
-const styles = StyleSheet.create({
-  stack: { alignItems: 'flex-start', gap: SPACE.sm },
-});

@@ -2,7 +2,7 @@ import { BIN_NIGHT } from '@app/core';
 import { fireEvent, render, screen } from '@testing-library/react-native';
 import { CameraIcon } from 'lucide-react-native';
 
-import { TAP } from '@/theme';
+import { FONT, LookContext, TAP } from '@/theme';
 
 import { Button } from './button';
 import { Choice } from './choice';
@@ -101,6 +101,14 @@ describe('Choice', () => {
     await fireEvent.press(screen.getByRole('radio', { name: 'Tuesday' }));
     expect(onChange).not.toHaveBeenCalled();
   });
+
+  it("is labelled as a Field is, its chips in a button's words", async () => {
+    await render(<Choice label="Week starts" options={options} value={1} onChange={jest.fn()} />);
+    const label = screen.getByText('Week starts');
+    expect(label).toHaveStyle({ fontFamily: FONT.bold, fontSize: 16 });
+    expect(label).not.toHaveStyle({ textTransform: 'uppercase' });
+    expect(screen.getByText('Tue')).toHaveStyle({ fontFamily: FONT.bold, fontSize: 17 });
+  });
 });
 
 describe('Toggle', () => {
@@ -113,4 +121,35 @@ describe('Toggle', () => {
     await fireEvent(toggle, 'valueChange', true);
     expect(onChange).toHaveBeenCalledWith(true);
   });
+
+  it.each(['light', 'dark'] as const)('stands out from the card when off, in %s', async (scheme) => {
+    const colors = BIN_NIGHT[scheme];
+    await render(
+      <LookContext.Provider value={scheme}>
+        <Toggle label="Needs a photo" value={false} onChange={jest.fn()} />
+      </LookContext.Provider>,
+    );
+    const toggle = screen.getByRole('switch', { name: 'Needs a photo' });
+    // iOS draws the off track's edge in the tint and fills it behind the thumb.
+    expect(toggle).toHaveProp('tintColor', colors.mutedForeground);
+    expect(toggle).toHaveStyle({ backgroundColor: colors.mutedForeground });
+    expect(toggle).toHaveProp('thumbTintColor', colors.card);
+    // WCAG's 3:1 for a control's edge, against the card and the pavement, and the thumb against the track.
+    expect(contrast(colors.mutedForeground, colors.card)).toBeGreaterThanOrEqual(3);
+    expect(contrast(colors.mutedForeground, colors.background)).toBeGreaterThanOrEqual(3);
+  });
 });
+
+/** WCAG's contrast ratio between two #rrggbb colours. */
+function contrast(a: string, b: string) {
+  const [light, dark] = [luminance(a), luminance(b)].sort((x, y) => y - x);
+  return (light + 0.05) / (dark + 0.05);
+}
+
+function luminance(hex: string) {
+  const [r, g, b] = [1, 3, 5].map((at) => {
+    const channel = parseInt(hex.slice(at, at + 2), 16) / 255;
+    return channel <= 0.03928 ? channel / 12.92 : ((channel + 0.055) / 1.055) ** 2.4;
+  });
+  return 0.2126 * r + 0.7152 * g + 0.0722 * b;
+}

@@ -122,6 +122,8 @@ export function WallEventRow({
       <Row
         leading={row.actor ? <Avatar name={row.actor.name} me={row.actor.me} /> : <RowIcon icon={WALL_ICON[row.icon]} />}
         title={row.title}
+        // A sentence: two lines, so it isn't cut off mid-way.
+        titleLines={2}
         meta={<WallMeta detail={row.detail} when={row.when} />}
         trailing={trailing}
         trailingControl

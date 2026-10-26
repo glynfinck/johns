@@ -6,7 +6,6 @@ import { HousePage } from '@/components/house/house-page';
 import { RulesFoot, RulesForm, useRulesForm, type RulesValues } from '@/components/house/rules-form';
 import { Row } from '@/components/row';
 import { Section } from '@/components/section';
-import { RowValue } from '@/components/setup/row-value';
 import { Meta } from '@/components/text';
 import { TextButton } from '@/components/text-button';
 import { useToast } from '@/components/toast';
@@ -81,7 +80,7 @@ function RulesReadOut({ userId, view, onEdit }: { userId: string; view: HouseVie
         testID="rules-panel"
       >
         {rulesRows(snapshot.rules, snapshot.house.awayMakeup).map((rule) => (
-          <Row key={rule.label} title={rule.label} trailing={<RowValue>{rule.value}</RowValue>} testID="rule" />
+          <Row key={rule.label} title={rule.label} trailing={rule.value} testID="rule" />
         ))}
       </Section>
       <Meta style={styles.note} testID="rules-admins">

@@ -111,6 +111,8 @@ it('tells each in one sentence with first names, and a meta line with when', asy
   expect(hob).toHaveTextContent(/You ticked Wipe the hob/);
   expect(joined).toHaveTextContent(/Sam moved in.*New housemate/);
   expect(target(bath)).toHaveAccessibleName('Sam ticked Clean the bath, Checking · 3h');
+  // A sentence gets two lines before it's cut short.
+  expect(within(dispute).getByText('Sam disputed your Wipe the hob')).toHaveProp('numberOfLines', 2);
 });
 
 it("gives a housemate's tick its Nice one, selected once it's yours, and takes it back", async () => {

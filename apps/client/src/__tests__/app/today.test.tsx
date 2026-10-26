@@ -3,7 +3,7 @@ import {
   buildStake,
   DISPUTE_COPY,
   FOCUS_SHELL_COPY,
-  INVITE_COPY,
+  HOUSE_PAGE_COPY,
   JOHN_COPY,
   JOHN_SHEET_COPY,
   monthOf,
@@ -341,9 +341,15 @@ describe('what takes Next up’s place', () => {
       await open();
       expect(screen.getByText(NEXT_UP_COPY.housemates(1))).toBeOnTheScreen();
       await fireEvent.press(screen.getByRole('button', { name: new RegExp(NEXT_UP_COPY.invite) }));
-      expect(await screen.findByTestId('invite-url')).toHaveTextContent('https://johns.glyn.dev/join/AB3DEF7H');
-      // The invite says its heading once: the sheet leaves it to the card.
-      expect(within(screen.getByTestId('invite-sheet')).getAllByText(INVITE_COPY.heading)).toHaveLength(1);
+      // House's invite sheet: the code to read out, the link, and the sheet's one amber button.
+      const sheet = within(await screen.findByTestId('invite-sheet'));
+      expect(sheet.getByRole('header', { name: HOUSE_PAGE_COPY.invite })).toBeOnTheScreen();
+      expect(sheet.getByTestId('invite-code')).toHaveTextContent('AB3DEF7H');
+      expect(sheet.getByTestId('invite-url')).toHaveTextContent('https://johns.glyn.dev/join/AB3DEF7H');
+      expect(sheet.getByRole('button', { name: HOUSE_PAGE_COPY.shareInvite })).toHaveStyle({
+        backgroundColor: BIN_NIGHT.light.hivis,
+      });
+      await fireEvent.press(sheet.getByTestId('sheet-close'));
       await fireEvent.press(screen.getByRole('link', { name: new RegExp(NEXT_UP_COPY.addJohns) }));
       expect(screen).toHavePathname('/house/johns');
     });

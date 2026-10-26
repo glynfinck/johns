@@ -6,19 +6,24 @@ import { FONT, RADIUS, SPACE, TAP, useTheme } from '@/theme';
  * A small two- or three-way switch for how a section shows itself
  * (Week | Oct, Mine | Whole house, Day | Night | Auto): a tinted track with
  * the chosen part raised on the card colour. A radio group to a screen
- * reader, `label` naming it; the chosen part is `aria-checked`.
+ * reader, `label` naming it; the chosen part is `aria-checked`, and each
+ * says its `spoken` name where what it shows is short for one ("Mon" for
+ * Monday). `equal` spreads it across its container, the parts sharing the
+ * width, so seven days fit across a phone.
  */
 export function Segmented<T extends string | number>({
   options,
   value,
   onChange,
   label,
+  equal = false,
   testID,
 }: {
-  options: readonly { value: T; label: string }[];
+  options: readonly { value: T; label: string; spoken?: string }[];
   value: T;
   onChange: (value: T) => void;
   label: string;
+  equal?: boolean;
   testID?: string;
 }) {
   const { colors, type } = useTheme();
@@ -27,7 +32,7 @@ export function Segmented<T extends string | number>({
       accessibilityRole="radiogroup"
       accessibilityLabel={label}
       testID={testID}
-      style={[styles.track, { backgroundColor: colors.secondary }]}
+      style={[styles.track, equal && styles.across, { backgroundColor: colors.secondary }]}
     >
       {options.map((option) => {
         const chosen = option.value === value;
@@ -35,13 +40,13 @@ export function Segmented<T extends string | number>({
           <Pressable
             key={String(option.value)}
             accessibilityRole="radio"
-            accessibilityLabel={option.label}
+            accessibilityLabel={option.spoken ?? option.label}
             aria-checked={chosen}
             onPress={() => {
               if (!chosen) onChange(option.value);
             }}
             // The chosen part sits inset in the track: a border of the track's own colour.
-            style={[styles.part, { borderColor: colors.secondary }, chosen && { backgroundColor: colors.card }]}
+            style={[styles.part, equal && styles.share, { borderColor: colors.secondary }, chosen && { backgroundColor: colors.card }]}
           >
             <Text
               numberOfLines={1}
@@ -58,6 +63,7 @@ export function Segmented<T extends string | number>({
 
 const styles = StyleSheet.create({
   track: { flexDirection: 'row', alignSelf: 'flex-start', borderRadius: RADIUS },
+  across: { alignSelf: 'stretch' },
   part: {
     minHeight: TAP,
     minWidth: TAP,
@@ -67,4 +73,6 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
+  // An equal share of the track, however narrow: still a thumb tall.
+  share: { flex: 1, minWidth: 0, paddingHorizontal: 0 },
 });

@@ -1,18 +1,13 @@
-import { DEAL_COPY, NEXT_UP_COPY, setupChecklist } from '@app/core';
-import { ShuffleIcon } from 'lucide-react-native';
+import { NEXT_UP_COPY, setupChecklist } from '@app/core';
 import { useState } from 'react';
 import { StyleSheet, View } from 'react-native';
 
-import { dealThisWeek } from '@/api/settings';
-import { Alert } from '@/components/alert';
-import { Button } from '@/components/button';
 import { Card, CardRows } from '@/components/card';
-import { InviteCard } from '@/components/invite-card';
+import { DealButton } from '@/components/house/deal-button';
+import { InviteSheet } from '@/components/house-page/invite-sheet';
 import { Row } from '@/components/row';
-import { Sheet } from '@/components/sheet';
 import { Lead, SectionLabel } from '@/components/text';
 import { TickCircle } from '@/components/tick-circle';
-import { useMove } from '@/hooks/use-move';
 import { SPACE } from '@/theme';
 
 /** A checklist step's circle: ticked once it's done. A picture, not a control: the row is the way in. */
@@ -23,10 +18,10 @@ function Step({ done }: { done: boolean }) {
 /**
  * An admin's Today before anything is dealt, in Next up's place: the steps
  * to start the house. Add the Johns (the John list), invite the housemates
- * (the join link, in a sheet), then "Deal week 1", across the card, which
- * becomes the screen's amber button once the first two have something.
- * It's there before then too, in outline: the server says what's missing
- * (no Johns yet), and a house of one may deal alone.
+ * (House's invite sheet), then "Deal week 1", across the card, which becomes
+ * the screen's amber button once the first two have something. It's there
+ * before then too, in outline: the server says what's missing (no Johns
+ * yet), and a house of one may deal alone.
  */
 export function SetupCard({
   houseId,
@@ -43,7 +38,6 @@ export function SetupCard({
   memberCount: number;
 }) {
   const [inviting, setInviting] = useState(false);
-  const deal = useMove(houseId);
   const steps = setupChecklist(johns, memberCount);
   return (
     <>
@@ -69,21 +63,10 @@ export function SetupCard({
           />
         </CardRows>
         <View style={styles.deal}>
-          <Button
-            variant={steps.ready ? 'primary' : 'outline'}
-            icon={ShuffleIcon}
-            label={deal.pending ? DEAL_COPY.dealing : NEXT_UP_COPY.dealWeek1}
-            disabled={deal.pending}
-            onPress={() => void deal.run(() => dealThisWeek(houseId))}
-            testID="deal-week"
-          />
-          {deal.problem ? <Alert message={deal.problem} /> : null}
+          <DealButton houseId={houseId} label={NEXT_UP_COPY.dealWeek1} variant={steps.ready ? 'primary' : 'outline'} fill />
         </View>
       </Card>
-      {/* The join link for now, under its own heading; House's invite sheet takes its place. */}
-      <Sheet visible={inviting} onClose={() => setInviting(false)} testID="invite-sheet">
-        <InviteCard code={joinCode} houseName={houseName} />
-      </Sheet>
+      <InviteSheet visible={inviting} onClose={() => setInviting(false)} code={joinCode} houseName={houseName} />
     </>
   );
 }
@@ -92,5 +75,5 @@ const styles = StyleSheet.create({
   // Overpass's caps sit high in their line.
   label: { paddingTop: 2 },
   lead: { marginTop: SPACE.sm },
-  deal: { marginTop: SPACE.lg, gap: SPACE.sm },
+  deal: { marginTop: SPACE.lg },
 });

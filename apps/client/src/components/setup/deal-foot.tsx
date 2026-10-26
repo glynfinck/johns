@@ -4,9 +4,9 @@ import { useState } from 'react';
 import { StyleSheet, View } from 'react-native';
 
 import { dealThisWeek } from '@/api/settings';
-import { Alert } from '@/components/alert';
 import { Button } from '@/components/button';
 import { ConfirmSheet } from '@/components/confirm-sheet';
+import { DealButton } from '@/components/house/deal-button';
 import { Meta } from '@/components/text';
 import { useToast } from '@/components/toast';
 import { useMove } from '@/hooks/use-move';
@@ -14,12 +14,12 @@ import { INSET, SPACE } from '@/theme';
 
 /**
  * The deal at the foot of the John list, for an admin: what it does in a
- * sentence, then the button. Before the first deal it starts the house, the
- * page's one amber button. Afterwards it re-deals this week, in outline and
- * only while nothing in it is ticked (`canRedeal`), asking first, since it
- * hands everyone's Johns out again; with something ticked there's nothing to
- * offer, so nothing shows. The server checks it's an admin asking, and its
- * refusal shows where the move was made.
+ * sentence, then the button. Before the first deal it starts the house: the
+ * DealButton, the page's one amber button. Afterwards it re-deals this week,
+ * in outline and only while nothing in it is ticked (`canRedeal`), asking
+ * first, since it hands everyone's Johns out again; with something ticked
+ * there's nothing to offer, so nothing shows. The server checks it's an
+ * admin asking, and its refusal shows where the move was made.
  */
 export function DealFoot({ houseId, started, canRedeal = true }: { houseId: string; started: boolean; canRedeal?: boolean }) {
   const move = useMove(houseId);
@@ -41,8 +41,8 @@ export function DealFoot({ houseId, started, canRedeal = true }: { houseId: stri
   return (
     <View style={styles.foot} testID="deal">
       <Meta>{started ? DEAL_COPY.againBody : DEAL_COPY.firstBody}</Meta>
-      <View style={styles.start}>
-        {started ? (
+      {started ? (
+        <View style={styles.start}>
           <Button
             variant="outline"
             icon={ShuffleIcon}
@@ -53,17 +53,10 @@ export function DealFoot({ houseId, started, canRedeal = true }: { houseId: stri
             }}
             testID="deal-week"
           />
-        ) : (
-          <Button
-            icon={ShuffleIcon}
-            label={move.pending ? DEAL_COPY.dealing : DEAL_COPY.first}
-            disabled={move.pending}
-            onPress={() => void move.run(() => dealThisWeek(houseId))}
-            testID="deal-week"
-          />
-        )}
-      </View>
-      {!started && move.problem ? <Alert message={move.problem} /> : null}
+        </View>
+      ) : (
+        <DealButton houseId={houseId} />
+      )}
       <ConfirmSheet
         visible={confirming}
         title={SETUP_COPY.redealTitle}

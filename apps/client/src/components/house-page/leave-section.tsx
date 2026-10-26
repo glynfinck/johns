@@ -1,6 +1,6 @@
-import { HOUSE_LOWER_COPY, leaveCost } from '@app/core';
+import { FOCUS_SHELL_COPY, HOUSE_LOWER_COPY, leaveCost } from '@app/core';
 import { useQueryClient } from '@tanstack/react-query';
-import { DoorOpenIcon } from 'lucide-react-native';
+import { DoorOpenIcon, RefreshCwIcon } from 'lucide-react-native';
 import { useState } from 'react';
 import { StyleSheet, View } from 'react-native';
 
@@ -22,7 +22,8 @@ import { INSET, SPACE, useTheme } from '@/theme';
  * Stake once it's read (your share so far of the month's forfeits, and any
  * settling up still open with you), then leaves; the house's screens close
  * behind you as the guard moves you on. Until the Stake is read it says so,
- * and if it can't be, it says that instead and asks again the next time.
+ * and if it can't be, it says that instead, with Try again under it, and
+ * asks again the next time the sheet opens.
  */
 export function LeaveSection({ houseId, userId, view }: { houseId: string; userId: string; view: HouseView }) {
   const { colors } = useTheme();
@@ -34,6 +35,8 @@ export function LeaveSection({ houseId, userId, view }: { houseId: string; userI
   const [problem, setProblem] = useState<string | null>(null);
   const { house, members, rules } = view.snapshot;
 
+  // A read that failed, and isn't being tried again right now.
+  const unread = stake.isError && !stake.isFetching;
   let cost: string = HOUSE_LOWER_COPY.costReading;
   if (stake.data) {
     cost = leaveCost({
@@ -44,7 +47,7 @@ export function LeaveSection({ houseId, userId, view }: { houseId: string; userI
       members,
       currency: rules.currency,
     });
-  } else if (stake.isError) {
+  } else if (unread) {
     cost = HOUSE_LOWER_COPY.costUnread;
   }
 
@@ -94,7 +97,17 @@ export function LeaveSection({ houseId, userId, view }: { houseId: string; userI
         onConfirm={() => void leave()}
         onClose={() => setAsking(false)}
         testID="leave-sheet"
-      />
+      >
+        {unread ? (
+          <TextButton
+            label={FOCUS_SHELL_COPY.retry}
+            icon={RefreshCwIcon}
+            align="start"
+            onPress={() => void stake.refetch()}
+            testID="leave-retry"
+          />
+        ) : null}
+      </ConfirmSheet>
     </View>
   );
 }

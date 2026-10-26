@@ -1,6 +1,7 @@
 import type { Session } from '@supabase/supabase-js';
 import { router, Slot } from 'expo-router';
 import { act, fireEvent, renderRouter, screen } from 'expo-router/testing-library';
+import { useState } from 'react';
 import { Text } from 'react-native';
 
 import HouseStack, { unstable_settings as houseStackSettings } from '@/app/(house)/house/_layout';
@@ -93,13 +94,46 @@ describe('signed in, in no house', () => {
     await open('/house/new');
     expect(screen.getByText('New house')).toBeOnTheScreen();
   });
+
+  it("goes where sign-in's next was carrying you: naming the house, the invite, or a join link", async () => {
+    for (const [url, to, text] of [
+      ['/signin?next=%2Fhouse%2Fnew', '/house/new', 'New house'],
+      ['/signin?next=%2Fwelcome', '/welcome', 'Welcome'],
+      ['/signin?next=%2Fjoin%2FAB3DEF7H', '/join/AB3DEF7H', 'Join'],
+    ]) {
+      await open(url);
+      expect(screen).toHavePathname(to);
+      expect(screen.getByText(text)).toBeOnTheScreen();
+    }
+  });
+
+  it('goes to starting or joining a house when next leads anywhere else', async () => {
+    for (const url of ['/signin?next=%2Ftoday', '/signin?next=%2Fhouse%2Fstake', '/signin?next=%2F%2Fevil.example']) {
+      await open(url);
+      expect(screen).toHavePathname('/welcome');
+    }
+  });
+
+  it('follows next the moment signing in finishes, as it does on a phone', async () => {
+    let signIn: () => void = () => undefined;
+    (useMembership as jest.Mock).mockImplementation(() => {
+      const [session, setSession] = useState<Session | null>(null);
+      signIn = () => setSession(SESSION);
+      return { session, house: null, loading: false, failed: false, refresh };
+    });
+    await open('/signin?next=%2Fhouse%2Fnew');
+    expect(screen.getByText('Sign in')).toBeOnTheScreen();
+    await act(() => signIn());
+    expect(screen).toHavePathname('/house/new');
+    expect(screen.getByText('New house')).toBeOnTheScreen();
+  });
 });
 
 describe('in a house', () => {
   beforeEach(() => as(SESSION, FLAT));
 
   it('goes to Today, from anywhere else', async () => {
-    for (const url of ['/', '/signin', '/welcome', '/house/new']) {
+    for (const url of ['/', '/signin', '/signin?next=%2Fhouse%2Fnew', '/welcome', '/house/new']) {
       await open(url);
       expect(screen).toHavePathname('/today');
     }

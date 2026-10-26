@@ -1,12 +1,8 @@
 import { BIN_NIGHT, type BinNightScheme, type Look } from '@app/core';
 // Each weight from its own path: the package's index pulls in all eighteen
 // weights and italics, and the bundle would carry every one.
-import { Overpass_400Regular } from '@expo-google-fonts/overpass/400Regular';
 import { Overpass_500Medium } from '@expo-google-fonts/overpass/500Medium';
 import { Overpass_600SemiBold } from '@expo-google-fonts/overpass/600SemiBold';
-import { Overpass_700Bold } from '@expo-google-fonts/overpass/700Bold';
-import { Overpass_800ExtraBold } from '@expo-google-fonts/overpass/800ExtraBold';
-import { Overpass_900Black } from '@expo-google-fonts/overpass/900Black';
 import { createContext, useContext } from 'react';
 import { useColorScheme, type TextStyle } from 'react-native';
 
@@ -29,14 +25,19 @@ export const FONT = {
   black: 'Overpass_900Black',
 } as const;
 
-/** The font files, keyed by family, for `useFonts`. */
+/**
+ * The font files, keyed by family, for `useFonts`. The four weights Focus sets
+ * are the app's own copies (assets/fonts), whose middle dot keeps its width so
+ * " · " has a space on both sides; the README there says what changed. Medium
+ * and SemiBold are the package's, for the older pieces that still name them.
+ */
 export const FONT_FILES = {
-  [FONT.regular]: Overpass_400Regular,
+  [FONT.regular]: require('../assets/fonts/Overpass_400Regular.ttf'),
   [FONT.medium]: Overpass_500Medium,
   [FONT.semibold]: Overpass_600SemiBold,
-  [FONT.bold]: Overpass_700Bold,
-  [FONT.extrabold]: Overpass_800ExtraBold,
-  [FONT.black]: Overpass_900Black,
+  [FONT.bold]: require('../assets/fonts/Overpass_700Bold.ttf'),
+  [FONT.extrabold]: require('../assets/fonts/Overpass_800ExtraBold.ttf'),
+  [FONT.black]: require('../assets/fonts/Overpass_900Black.ttf'),
 };
 
 /** Spacing in points, on the web's 4px grid. */

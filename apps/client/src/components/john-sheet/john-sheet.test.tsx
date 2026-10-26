@@ -1,4 +1,5 @@
 import {
+  BIN_NIGHT,
   buildStake,
   DISPUTE_COPY,
   FOCUS_SHELL_COPY,
@@ -13,7 +14,7 @@ import {
 import type { QueryClient } from '@tanstack/react-query';
 import { QueryClientProvider } from '@tanstack/react-query';
 import { act, fireEvent, render, screen, waitFor, within } from '@testing-library/react-native';
-import { Pressable, Text } from 'react-native';
+import { Pressable, ScrollView, Text } from 'react-native';
 
 import type { Housemate, HouseSnapshot } from '@/api/board';
 import { loadHouse } from '@/api/board';
@@ -24,6 +25,7 @@ import { loadWall } from '@/api/wall';
 import { ToastProvider } from '@/components/toast';
 import { houseKey, listKey, stakeKey } from '@/hooks/keys';
 import { assignment, snapshot } from '@/testing/house';
+import { measureAt, measureNowhere } from '@/testing/layout';
 import { testQueryClient } from '@/testing/query';
 
 import { JohnSheetProvider, useJohnSheet, type JohnSheetFocus } from '.';
@@ -205,6 +207,33 @@ describe('your open John', () => {
       expect(within(body).getByTestId('skip-row')).toBeOnTheScreen();
       expect(within(body).getByTestId('swap-row')).toBeOnTheScreen();
     });
+
+    it('opens scrolled to them, should the tick above leave them out of view', async () => {
+      // Jest lays nothing out: the sheet is 400 tall, its content 900, and If you can't starts at 500.
+      measureAt(500);
+      const scrollTo = jest.spyOn(ScrollView.prototype, 'scrollTo');
+      await show(house([binsOut(), samsBath()], priyaWith({ immunityTokens: 1, swapTokens: 1 })));
+      const body = await openOn('Open a1 at cant');
+      const anchor = within(body).getByTestId('sheet-anchor-cant');
+      expect(anchor).toContainElement(within(body).getByTestId('if-you-cant'));
+      await fireEvent(screen.getByTestId('sheet-scroll'), 'layout', { nativeEvent: { layout: { x: 0, y: 0, width: 390, height: 400 } } });
+      await fireEvent(screen.getByTestId('sheet-scroll'), 'contentSizeChange', 390, 900);
+      await fireEvent(anchor, 'layout', { nativeEvent: { layout: { x: 0, y: 0, width: 358, height: 160 } } });
+      expect(scrollTo).toHaveBeenCalledWith({ y: 500 - 16, animated: false });
+      measureNowhere();
+    });
+
+    it('opens at the top when opened on the John itself', async () => {
+      measureAt(500);
+      const scrollTo = jest.spyOn(ScrollView.prototype, 'scrollTo');
+      await show(house([binsOut(), samsBath()], priyaWith({ immunityTokens: 1, swapTokens: 1 })));
+      const body = await openOn('Open a1');
+      await fireEvent(screen.getByTestId('sheet-scroll'), 'layout', { nativeEvent: { layout: { x: 0, y: 0, width: 390, height: 400 } } });
+      await fireEvent(screen.getByTestId('sheet-scroll'), 'contentSizeChange', 390, 900);
+      await fireEvent(within(body).getByTestId('sheet-anchor-cant'), 'layout', { nativeEvent: { layout: { x: 0, y: 0, width: 358, height: 160 } } });
+      expect(scrollTo).not.toHaveBeenCalled();
+      measureNowhere();
+    });
   });
 
   describe('skipping with immunity', () => {
@@ -256,11 +285,15 @@ describe('your open John', () => {
       expect(within(body).queryByTestId('swap-chosen')).toBeNull();
       expect(within(body).getByTestId('swap-them')).toBeDisabled();
 
+      expect(within(body).getByTestId('swap-choice')).not.toHaveStyle({ backgroundColor: BIN_NIGHT.light.secondary });
+
       await fireEvent.press(choice);
       expect(choice).toBeChecked();
-      // Ticked at the end of its row; the owner's initials keep their plate.
+      // Ticked at the end of its row, which takes the tint; the owner's initials keep a plate that shows on it.
       expect(within(choice).getByTestId('swap-chosen')).toBeOnTheScreen();
-      expect(choice).not.toHaveStyle({ backgroundColor: expect.anything() });
+      const row = within(body).getByTestId('swap-choice');
+      expect(row).toHaveStyle({ backgroundColor: BIN_NIGHT.light.secondary });
+      expect(within(row).getByTestId('avatar', { includeHiddenElements: true })).toHaveStyle({ backgroundColor: BIN_NIGHT.light.card });
       await fireEvent.press(within(body).getByRole('button', { name: SWAP_COPY.swap }));
       expect(spendSwap).toHaveBeenCalledWith('a1', 'a4');
       // The John is Sam's now: the sheet goes.
@@ -272,7 +305,7 @@ describe('your open John', () => {
       const body = await openOn('Open a1 at swap');
       const choice = within(body).getByRole('radio', { name: /^Clean the bath, Sam · was due / });
       expect(within(choice).getByTestId('status-overdue')).toBeOnTheScreen();
-      expect(within(choice).getByTestId('hazard-tape', { includeHiddenElements: true })).toBeOnTheScreen();
+      expect(within(within(body).getByTestId('swap-choice')).getByTestId('hazard-tape', { includeHiddenElements: true })).toBeOnTheScreen();
       await fireEvent.press(choice);
       expect(within(choice).queryByTestId('status-overdue')).toBeNull();
       expect(within(choice).getByTestId('swap-chosen')).toBeOnTheScreen();

@@ -10,8 +10,8 @@ jest.mock('@/hooks/use-membership', () => ({ useMembership: () => ({ refresh: mo
 jest.mock('@/locale', () => ({ deviceTimeZone: () => 'America/St_Johns', deviceCurrency: () => 'CAD' }));
 
 const create = createHouse as jest.Mock;
-/** The defaults line as it's drawn: its parts between bullet operators, which Overpass gives room. */
-const line = (...parts: string[]) => parts.join(' \u2219 ');
+/** The defaults line as it's drawn: its parts between middle dots, as every Meta line's are. */
+const line = (...parts: string[]) => parts.join(' · ');
 
 beforeEach(() => jest.clearAllMocks());
 

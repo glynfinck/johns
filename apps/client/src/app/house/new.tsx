@@ -16,11 +16,11 @@ import { StyleSheet, View } from 'react-native';
 import { createHouse } from '@/api/house';
 import { Alert } from '@/components/alert';
 import { Button } from '@/components/button';
-import { Field } from '@/components/field';
+import { Field, FieldLabel } from '@/components/field';
 import { DefaultsLine } from '@/components/front-door/defaults-line';
 import { Door, DoorFoot, Sign, SignHeading } from '@/components/front-door/door';
-import { Pick } from '@/components/front-door/pick';
 import { PageTitle } from '@/components/page-title';
+import { Segmented } from '@/components/segmented';
 import { Meta } from '@/components/text';
 import { TextButton } from '@/components/text-button';
 import { useMembership } from '@/hooks/use-membership';
@@ -82,8 +82,28 @@ export default function NewHouse() {
         </View>
         {changing ? (
           <View style={styles.rest} testID="house-defaults-fields">
-            <Pick label={NEW_HOUSE_COPY.currency} options={CURRENCY_CHOICES} value={currency} onChange={setCurrency} />
-            <Pick label={NEW_HOUSE_COPY.weekStarts} options={DAY_CHOICES} value={weekStarts} onChange={setWeekStarts} />
+            <View style={styles.pick}>
+              <FieldLabel>{NEW_HOUSE_COPY.currency}</FieldLabel>
+              <Segmented
+                equal
+                label={NEW_HOUSE_COPY.currency}
+                options={CURRENCY_CHOICES}
+                value={currency}
+                onChange={setCurrency}
+                testID="house-currency"
+              />
+            </View>
+            <View style={styles.pick}>
+              <FieldLabel>{NEW_HOUSE_COPY.weekStarts}</FieldLabel>
+              <Segmented
+                equal
+                label={NEW_HOUSE_COPY.weekStarts}
+                options={DAY_CHOICES}
+                value={weekStarts}
+                onChange={setWeekStarts}
+                testID="house-week-starts"
+              />
+            </View>
             <Meta>{FRONT_DOOR_COPY.zoneNote(timeZoneName(timezone))}</Meta>
           </View>
         ) : null}
@@ -106,4 +126,6 @@ const styles = StyleSheet.create({
   // The defaults read as the field's hint, right under it.
   name: { gap: SPACE.xs },
   rest: { gap: SPACE.xl },
+  // Labelled as a field is.
+  pick: { gap: SPACE.sm },
 });

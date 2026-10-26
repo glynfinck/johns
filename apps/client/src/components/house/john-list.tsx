@@ -30,7 +30,6 @@ import { Row, RowIcon } from '@/components/row';
 import { Section } from '@/components/section';
 import { ChoiceRow } from '@/components/setup/choice-row';
 import { PickRow } from '@/components/setup/pick-row';
-import { RowValue } from '@/components/setup/row-value';
 import { Sheet } from '@/components/sheet';
 import { Meta } from '@/components/text';
 import { useMove } from '@/hooks/use-move';
@@ -132,7 +131,7 @@ export function JohnList({
         {reading ? (
           <Group>
             {johnFacts(reading, groupName(reading.groupId)).map((fact) => (
-              <Row key={fact.label} title={fact.label} trailing={<RowValue>{fact.value}</RowValue>} testID="john-fact" />
+              <Row key={fact.label} title={fact.label} trailing={fact.value} testID="john-fact" />
             ))}
           </Group>
         ) : null}

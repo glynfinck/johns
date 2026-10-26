@@ -2,7 +2,7 @@ import { HOUSE_PAGE_COPY, localDate, monthAbbr, monthOf, tableLines, tableMetaFi
 import type { UseQueryResult } from '@tanstack/react-query';
 import { InfoIcon, UserPlusIcon } from 'lucide-react-native';
 import { useState } from 'react';
-import { StyleSheet, View, useWindowDimensions } from 'react-native';
+import { View, useWindowDimensions } from 'react-native';
 
 import type { AwayView } from '@/api/away';
 import type { StakeRead } from '@/api/stake';
@@ -18,7 +18,6 @@ import { useContentWidth } from '@/components/screen';
 import { Section } from '@/components/section';
 import { Segmented } from '@/components/segmented';
 import type { HouseView } from '@/hooks/use-house';
-import { TAP } from '@/theme';
 
 type Span = 'week' | 'month';
 
@@ -69,18 +68,16 @@ export function TableSection({
       <Section
         label={HOUSE_PAGE_COPY.table}
         right={
-          <View style={styles.switch}>
-            <Segmented
-              options={[
-                { value: 'week', label: HOUSE_PAGE_COPY.week },
-                { value: 'month', label: monthAbbr(month) },
-              ]}
-              value={span}
-              onChange={setSpan}
-              label={HOUSE_PAGE_COPY.show}
-              testID="table-span"
-            />
-          </View>
+          <Segmented
+            options={[
+              { value: 'week', label: HOUSE_PAGE_COPY.week },
+              { value: 'month', label: monthAbbr(month) },
+            ]}
+            value={span}
+            onChange={setSpan}
+            label={HOUSE_PAGE_COPY.show}
+            testID="table-span"
+          />
         }
         testID="house-table"
       >
@@ -147,10 +144,3 @@ function Standing({ line }: { line: TableLine }) {
     />
   );
 }
-
-const styles = StyleSheet.create({
-  // Section lets a thumb-tall control hang over its label's line, into the gap
-  // above the group, where the switch's track would run into the group. This
-  // one stands in the line instead, the label centred beside it.
-  switch: { marginVertical: (TAP - 24) / 2 },
-});

@@ -1,9 +1,9 @@
 import { BIN_NIGHT, FOCUS_SHELL_COPY, withAlpha } from '@app/core';
 import { CalendarIcon } from 'lucide-react-native';
 import { fireEvent, render, screen, within } from '@testing-library/react-native';
-import { StyleSheet, Text } from 'react-native';
+import { StyleSheet, Text, View } from 'react-native';
 
-import { INSET, LEADING, ROW_MIN, TAP } from '@/theme';
+import { INSET, LABEL_GAP, LEADING, ROW_MIN, TAP } from '@/theme';
 
 import { Avatar } from './avatar';
 import { CountBadge } from './badge';
@@ -117,6 +117,39 @@ describe('Row', () => {
   it('tints your own row', async () => {
     await render(<Row title="You" tint testID="row" />);
     expect(screen.getByTestId('row')).toHaveStyle({ backgroundColor: light.secondary });
+  });
+
+  it('is one of several to choose from when told whether it is chosen: a radio, the chosen one tinted', async () => {
+    const choose = jest.fn();
+    await render(
+      <View accessibilityRole="radiogroup" accessibilityLabel="Their open Johns">
+        <Row title="Bins out" leading={<Avatar name="Tom Reilly" />} selected={false} onPress={choose} testID="bins" />
+        <Row title="Clean the bath" leading={<Avatar name="Sam Carter" />} selected onPress={choose} testID="bath" />
+      </View>,
+    );
+    const bins = screen.getByRole('radio', { name: /Bins out/ });
+    expect(bins).not.toBeChecked();
+    expect(screen.getByRole('radio', { name: /Clean the bath/ })).toBeChecked();
+    expect(screen.getByTestId('bins')).not.toHaveStyle({ backgroundColor: light.secondary });
+    expect(screen.getByTestId('bath')).toHaveStyle({ backgroundColor: light.secondary });
+    // A housemate's plate is the tint too: on the chosen row it's the card colour, so it still shows.
+    const plate = (row: string) => within(screen.getByTestId(row)).getByTestId('avatar', HIDDEN);
+    expect(plate('bins')).toHaveStyle({ backgroundColor: light.secondary });
+    expect(plate('bath')).toHaveStyle({ backgroundColor: light.card });
+    await fireEvent.press(bins);
+    expect(choose).toHaveBeenCalledTimes(1);
+  });
+
+  it('lets a value in words take up to 60% of the row, cut short past that', async () => {
+    await render(<Row title="Shared by" trailing="The upstairs bathroom and the landing" />);
+    const value = screen.getByText('The upstairs bathroom and the landing');
+    expect(value).toHaveProp('numberOfLines', 1);
+    expect(value).toHaveStyle({ flexShrink: 1, maxWidth: '60%', textAlign: 'right' });
+  });
+
+  it('gives a sentence two lines when asked', async () => {
+    await render(<Row title="Megan ticked Food waste caddy out" titleLines={2} />);
+    expect(screen.getByText('Megan ticked Food waste caddy out')).toHaveProp('numberOfLines', 2);
   });
 });
 
@@ -242,6 +275,43 @@ describe('Section', () => {
     expect(screen.getByTestId('avatar', HIDDEN)).toHaveStyle({ width: 24 });
     expect(screen.getByTestId('tag')).toHaveStyle({ borderColor: light.border });
   });
+
+  /** The header: the label's line, and what's on its right. */
+  const header = (label: string) => screen.getByRole('header', { name: label }).parent!.parent!;
+
+  it('keeps the label whole: words on the right move under it when the line is full, a line each', async () => {
+    await render(
+      <Section label="Megan" leading={<Avatar name="Megan" size={24} />} right={['1 of 3 done · 2 pts', 'away 28–31 Oct']}>
+        <Row title="Bins out" />
+      </Section>,
+    );
+    // The header wraps, rather than shrinking the label to fit the words beside it.
+    expect(header('Megan')).toHaveStyle({ flexWrap: 'wrap', marginBottom: LABEL_GAP });
+    const counts = screen.getByText('1 of 3 done · 2 pts');
+    const away = screen.getByText('away 28–31 Oct');
+    for (const line of [counts, away]) {
+      expect(line).toHaveProp('numberOfLines', 1);
+      expect(line).toHaveStyle({ color: light.mutedForeground, textAlign: 'right' });
+    }
+    // Pushed to the right, whichever line it lands on.
+    expect(counts.parent).toHaveStyle({ marginLeft: 'auto', flexShrink: 1 });
+    expect(away.parent).toBe(counts.parent);
+  });
+
+  it('keeps a thumb-tall control on the right clear of the group below', async () => {
+    await render(
+      <Section
+        label="The Table"
+        right={<Segmented options={[{ value: 'week', label: 'Week' }]} value="week" onChange={jest.fn()} label="Show" />}
+      >
+        <Row title="Priya" />
+      </Section>,
+    );
+    // The control hangs 12 over the 24pt line, above and below: the group starts LABEL_GAP under it.
+    expect(screen.getByLabelText('Show').parent).toHaveStyle({ marginVertical: -(TAP - 24) / 2 });
+    expect(header('The Table')).toHaveStyle({ marginBottom: LABEL_GAP + (TAP - 24) / 2 });
+    expect(header('The Table')).not.toHaveStyle({ flexWrap: 'wrap' });
+  });
 });
 
 describe('Chip', () => {
@@ -348,6 +418,31 @@ describe('Segmented', () => {
     expect(onChange).not.toHaveBeenCalled();
     await fireEvent.press(screen.getByRole('radio', { name: 'Oct' }));
     expect(onChange).toHaveBeenCalledWith('month');
+    // At its own width, each part at least a thumb wide.
+    expect(screen.getByLabelText('Standings')).toHaveStyle({ alignSelf: 'flex-start' });
+    expect(screen.getByRole('radio', { name: 'Oct' })).toHaveStyle({ minWidth: TAP });
+  });
+
+  it('shares the width equally when asked, each part saying its whole name', async () => {
+    await render(
+      <Segmented
+        equal
+        label="Weeks start on"
+        options={[
+          { value: 1, label: 'Mon', spoken: 'Monday' },
+          { value: 7, label: 'Sun', spoken: 'Sunday' },
+        ]}
+        value={1}
+        onChange={jest.fn()}
+      />,
+    );
+    expect(screen.getByLabelText('Weeks start on')).toHaveStyle({ alignSelf: 'stretch' });
+    const monday = screen.getByRole('radio', { name: 'Monday' });
+    expect(monday).toBeChecked();
+    expect(monday).toHaveTextContent('Mon');
+    // However narrow, so seven days fit across a phone, and still a thumb tall.
+    expect(monday).toHaveStyle({ flex: 1, minWidth: 0, minHeight: TAP });
+    expect(screen.getByRole('radio', { name: 'Sunday' })).not.toBeChecked();
   });
 });
 

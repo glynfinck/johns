@@ -1,4 +1,5 @@
 import { FOCUS_SHELL_COPY } from '@app/core';
+import type { ReactNode } from 'react';
 import { StyleSheet, View } from 'react-native';
 
 import { Alert } from '@/components/alert';
@@ -12,8 +13,10 @@ import { SPACE } from '@/theme';
  * the sheet's Lead, what it costs in a sentence, then the move and Cancel,
  * full width, the move first. `tone="hazard"` makes the move a hazard
  * outline (striking something out); `primary` makes it the sheet's one amber
- * button. `busy` holds both buttons while the move is on its way, and
- * `problem` is the refusal's sentence, shown above them.
+ * button. `children` go under the body, for what the sentence needs beside
+ * it (Leave's Try again, when the Stake couldn't be read). `busy` holds both
+ * buttons while the move is on its way, and `problem` is the refusal's
+ * sentence, shown above them.
  */
 export function ConfirmSheet({
   visible,
@@ -26,6 +29,7 @@ export function ConfirmSheet({
   problem,
   onConfirm,
   onClose,
+  children,
   testID,
 }: {
   visible: boolean;
@@ -38,10 +42,12 @@ export function ConfirmSheet({
   problem?: string | null;
   onConfirm: () => void;
   onClose: () => void;
+  children?: ReactNode;
   testID?: string;
 }) {
   return (
     <Sheet visible={visible} title={title} description={body} onClose={onClose} testID={testID}>
+      {children}
       {problem ? <Alert message={problem} /> : null}
       <View style={styles.buttons}>
         <Button

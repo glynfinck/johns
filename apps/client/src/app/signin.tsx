@@ -8,8 +8,9 @@ import { SignInPanel } from '@/components/sign-in-panel';
 /**
  * Sign in. Once a session exists the root layout's guard moves on by itself:
  * to Today, or to starting or joining a house. `?next=` is the front door's
- * choice, said under the heading; the web's Google redirect comes back here
- * still carrying it, so a refusal is said here and the choice isn't lost.
+ * choice, said under the heading and followed by the guard once you're in;
+ * the web's Google redirect comes back here still carrying it, so a refusal
+ * is said here and the choice isn't lost.
  */
 export default function SignIn() {
   // The web build comes back here from Google; a failure arrives as ?error=.

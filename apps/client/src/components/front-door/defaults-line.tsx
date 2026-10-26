@@ -6,12 +6,6 @@ import { Meta } from '@/components/text';
 import { FONT, ROW_GAP, TAP, useTheme } from '@/theme';
 
 /**
- * Between the line's parts. Overpass makes "·" a mark with no width, so the
- * space after it vanishes; the bullet operator is the same dot with room.
- */
-const DOT = ' \u2219 ';
-
-/**
  * A new house's defaults as one Meta line, truncating rather than wrapping,
  * with "Change" as its one trailing item (Body Bold, as a text button's
  * words). The whole line is one button a thumb tall that opens and closes
@@ -35,7 +29,7 @@ export function DefaultsLine({ parts, open, onToggle }: { parts: readonly string
       style={[styles.line, pressed && styles.pressed]}
     >
       <Meta numberOfLines={1} style={styles.words} testID="house-defaults">
-        {parts.join(DOT)}
+        {parts.join(' · ')}
       </Meta>
       <Text style={[type.body, styles.action, { color: colors.foreground }]}>{action}</Text>
     </Pressable>

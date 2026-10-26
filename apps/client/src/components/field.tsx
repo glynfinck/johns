@@ -4,6 +4,11 @@ import { Alert } from '@/components/alert';
 import { Body, Meta } from '@/components/text';
 import { FONT, RADIUS, SPACE, TAP, useTheme } from '@/theme';
 
+/** A form control's label: Body Bold, sentence case. Field, Choice and a Segmented in a form use it. */
+export function FieldLabel({ children }: { children: string }) {
+  return <Body style={styles.label}>{children}</Body>;
+}
+
 /**
  * A labelled text box at least a thumb tall: the label in Body Bold and
  * sentence case, the box on the card colour, then a hint in Meta or a
@@ -18,7 +23,7 @@ export function Field({
   const { colors, type } = useTheme();
   return (
     <View style={styles.field}>
-      <Body style={styles.label}>{label}</Body>
+      <FieldLabel>{label}</FieldLabel>
       <TextInput
         accessibilityLabel={label}
         placeholderTextColor={colors.mutedForeground}

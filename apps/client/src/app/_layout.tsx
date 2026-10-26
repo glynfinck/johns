@@ -1,6 +1,6 @@
-import { ERROR_COPY, SIGN_IN } from '@app/core';
+import { afterSignIn, ERROR_COPY, SIGN_IN } from '@app/core';
 import { useFonts } from 'expo-font';
-import { Stack, type ErrorBoundaryProps } from 'expo-router';
+import { Stack, useGlobalSearchParams, usePathname, type ErrorBoundaryProps } from 'expo-router';
 import * as SplashScreen from 'expo-splash-screen';
 import { StatusBar } from 'expo-status-bar';
 import * as SystemUI from 'expo-system-ui';
@@ -36,6 +36,8 @@ function Routes() {
   const [fontsLoaded, fontError] = useFonts(FONT_FILES);
   const { session, house, loading, failed, refresh } = useMembership();
   const { scheme, colors } = useTheme();
+  const pathname = usePathname();
+  const { next } = useGlobalSearchParams<{ next?: string | string[] }>();
   // A font that fails to load falls back to the system font rather than a stuck splash.
   const ready = (fontsLoaded || fontError !== null) && !loading;
 
@@ -53,8 +55,11 @@ function Routes() {
   const signedIn = session !== null;
   const housed = house !== null;
   // Where each guard sends you when its screens aren't yours: signed out to
-  // sign-in, as on the web; signed in to your house, or to starting one.
-  const home = !signedIn ? SIGN_IN : housed ? '/today' : '/welcome';
+  // sign-in, as on the web; signed in to your house, or to starting one. On
+  // every platform, signing in with no house goes where sign-in's ?next was
+  // carrying you (naming the house, or a join link), if it's one of those.
+  const carried = pathname === SIGN_IN && typeof next === 'string' ? afterSignIn(next) : undefined;
+  const home = !signedIn ? SIGN_IN : housed ? '/today' : (carried ?? '/welcome');
   return (
     <>
       <StatusBar style={scheme === 'dark' ? 'light' : 'dark'} />

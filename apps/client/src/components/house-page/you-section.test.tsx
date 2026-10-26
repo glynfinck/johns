@@ -108,7 +108,8 @@ it("says whether this device's reminders are on, and holds their switch in a she
   await waitFor(() => expect(screen.getByTestId('to-reminders')).toHaveTextContent(/Reminders.*On/));
   await fireEvent.press(within(screen.getByTestId('to-reminders')).getByRole('button'));
   const sheet = within(screen.getByTestId('reminders-sheet'));
-  // The control heads itself: the sheet doesn't say Reminders twice.
+  // Its title says Reminders, as every sheet's does, and the control doesn't say it again.
+  expect(sheet.getByRole('header', { name: HOUSE_LOWER_COPY.reminders })).toBeOnTheScreen();
   expect(sheet.getAllByText(new RegExp(`^${HOUSE_LOWER_COPY.reminders}$`, 'i'))).toHaveLength(1);
   expect(sheet.getByTestId('reminders')).toBeOnTheScreen();
 });

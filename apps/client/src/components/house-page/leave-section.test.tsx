@@ -1,4 +1,4 @@
-import { BIN_NIGHT, HOUSE_LOWER_COPY } from '@app/core';
+import { BIN_NIGHT, FOCUS_SHELL_COPY, HOUSE_LOWER_COPY } from '@app/core';
 import { fireEvent, screen, waitFor, within } from 'expo-router/testing-library';
 import { Text } from 'react-native';
 
@@ -94,9 +94,9 @@ it('says nothing about money until the Stake is read', async () => {
 });
 
 it("says when it can't read what leaving costs, and reads the Stake again when asked again", async () => {
-  (loadStake as jest.Mock).mockRejectedValueOnce(new Error('offline'));
+  (loadStake as jest.Mock).mockRejectedValue(new Error('offline'));
   await open();
-  await waitFor(() => expect(loadStake).toHaveBeenCalledTimes(1));
+  await waitFor(() => expect(loadStake).toHaveBeenCalled());
   let sheet = await ask();
   expect(await sheet.findByText(HOUSE_LOWER_COPY.costUnread)).toBeOnTheScreen();
   expect(sheet.queryByText(HOUSE_LOWER_COPY.costsNothing)).toBeNull();
@@ -104,9 +104,29 @@ it("says when it can't read what leaving costs, and reads the Stake again when a
   expect(sheet.getByTestId('confirm')).toBeEnabled();
   await fireEvent.press(sheet.getByTestId('cancel'));
   await waitFor(() => expect(screen.queryByTestId('leave-sheet')).toBeNull());
+  (loadStake as jest.Mock).mockResolvedValue(stake(333, [{ from: 'sam', to: 'priya', amount: 450 }]));
   sheet = await ask();
   expect(await sheet.findByText(/Sam still owes you £4\.50/)).toBeOnTheScreen();
-  expect(loadStake).toHaveBeenCalledTimes(2);
+  expect(sheet.queryByTestId('leave-retry')).toBeNull();
+});
+
+it("reads the Stake again from the sheet, when it couldn't", async () => {
+  (loadStake as jest.Mock).mockRejectedValue(new Error('offline'));
+  await open();
+  const sheet = await ask();
+  expect(await sheet.findByText(HOUSE_LOWER_COPY.costUnread)).toBeOnTheScreen();
+  const retry = sheet.getByRole('button', { name: FOCUS_SHELL_COPY.retry });
+  let answer: (value: unknown) => void = () => undefined;
+  (loadStake as jest.Mock).mockReturnValue(new Promise((resolve) => (answer = resolve)));
+  const asked = (loadStake as jest.Mock).mock.calls.length;
+  await fireEvent.press(retry);
+  expect(loadStake).toHaveBeenCalledTimes(asked + 1);
+  // While it reads, the sheet says so, and there's nothing to press again.
+  expect(await sheet.findByText(HOUSE_LOWER_COPY.costReading)).toBeOnTheScreen();
+  expect(sheet.queryByTestId('leave-retry')).toBeNull();
+  answer(stake(0, [{ from: 'priya', to: 'sam', amount: 120 }]));
+  expect(await sheet.findByText('You still owe Sam £1.20.')).toBeOnTheScreen();
+  expect(sheet.queryByTestId('leave-retry')).toBeNull();
 });
 
 it('leaves once you confirm, and lets the guard move you on', async () => {
