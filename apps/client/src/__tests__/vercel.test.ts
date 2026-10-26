@@ -8,6 +8,7 @@ import { join } from 'node:path';
 interface Rule {
   source: string;
   destination?: string;
+  permanent?: boolean;
   headers?: { key: string; value: string }[];
 }
 
@@ -15,6 +16,7 @@ const config = JSON.parse(readFileSync(join(__dirname, '../../vercel.json'), 'ut
   framework: null;
   buildCommand: string;
   outputDirectory: string;
+  redirects: Rule[];
   rewrites: Rule[];
   headers: Rule[];
 };
@@ -36,6 +38,19 @@ describe("johns.glyn.dev's web build on Vercel", () => {
 
   it('never caches what the API answers', () => {
     expect(headersFor('/api/:path*')).toContainEqual({ key: 'x-vercel-enable-rewrite-caching', value: '0' });
+  });
+
+  it("sends the old Wall, Stake and Table links on to their places under House, as the app's router does", () => {
+    // On a phone and inside the app the router follows app.json's redirects.
+    // A web page opened cold on one would get the router's own redirect
+    // screen, which leaves a wrong address behind (/house/house/wall), so the
+    // host sends it on before the app loads. Not permanent: a browser would
+    // keep a permanent one for good.
+    const app = JSON.parse(readFileSync(join(__dirname, '../../app.json'), 'utf8'));
+    const router = app.expo.plugins.find((p: unknown) => Array.isArray(p) && p[0] === 'expo-router')[1];
+    expect(config.redirects).toEqual(
+      router.redirects.map((r: Rule) => ({ source: r.source, destination: r.destination, permanent: false })),
+    );
   });
 
   it('opens any other path on the app, which draws its own not-found', () => {

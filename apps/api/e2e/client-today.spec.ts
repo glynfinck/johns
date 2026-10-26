@@ -1,4 +1,4 @@
-import { JOHN_COPY, TODAY_COPY } from "@app/core";
+import { JOHN_COPY, PAGE_TITLE } from "@app/core";
 import { expect, test, type Page } from "@playwright/test";
 
 import { admin, CLIENT_URL, cleanUp, dealtHouseInClient } from "./auth";
@@ -24,8 +24,7 @@ test("tick a John, take it back, and tick one with a photo", async ({ context, p
 
   await page.goto("/");
   await expect(page).toHaveURL(/\/today$/);
-  await expect(page.getByRole("heading", { name: TODAY_COPY.title })).toBeVisible();
-  await expect(page.getByText("Flat 12")).toBeVisible();
+  await expect(page.getByRole("heading", { name: PAGE_TITLE.today })).toBeVisible();
   await expect(page.getByTestId("john-card")).toHaveCount(2);
   await expect(page.getByTestId("johns-left")).toHaveText("2");
 

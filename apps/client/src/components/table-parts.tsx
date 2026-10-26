@@ -161,7 +161,7 @@ export function TableBeside({ rows, people }: { rows: TableRow[]; people: People
     <Card style={styles.card}>
       <View style={styles.cardTop}>
         <Eyebrow>{TABLE_COPY.beside}</Eyebrow>
-        <TextLink href="/table" label={TABLE_COPY.full} style={styles.link} />
+        <TextLink href="/house" label={TABLE_COPY.full} style={styles.link} />
       </View>
       <Standings rows={rows} people={people} dense />
     </Card>
@@ -175,7 +175,7 @@ export function ShareCard({ balance }: { balance: BalanceRow }) {
     <Card style={styles.card}>
       <View style={styles.cardTop} testID="my-share">
         <Eyebrow>{TABLE_COPY.yourShare}</Eyebrow>
-        <TextLink href="/table" label={TABLE_COPY.everyones} style={styles.link} />
+        <TextLink href="/house" label={TABLE_COPY.everyones} style={styles.link} />
       </View>
       <Text style={[styles.big, { color: colors.foreground }]}>{formatBalance(balance.balance)}</Text>
       <Body muted style={styles.ruleBody}>

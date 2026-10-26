@@ -41,7 +41,9 @@ test("a closed month's debt is settled once the person paid marks it received", 
 
   // Ben sees what he owes, with nothing to mark.
   const benPage = await benContext.newPage();
+  // The old link still lands on the Stake, now one of House's pages.
   await benPage.goto("/stake");
+  await expect(benPage).toHaveURL(/\/house\/stake$/);
   const owed = benPage.getByTestId("stake-screen").getByTestId("transfer");
   await expect(owed).toContainText("You");
   await expect(owed).toContainText("Ava Stake");
@@ -51,8 +53,9 @@ test("a closed month's debt is settled once the person paid marks it received", 
   // Ava, paid, marks it received; the house is square.
   const avaPage = await avaContext.newPage();
   await avaPage.goto("/today");
-  await avaPage.getByRole("tab", { name: SECTION_LABEL.stake }).click();
-  await expect(avaPage).toHaveURL(/\/stake$/);
+  await avaPage.getByRole("tab", { name: SECTION_LABEL.house }).click();
+  await avaPage.getByTestId("house-screen").getByTestId("to-stake").getByRole("link").click();
+  await expect(avaPage).toHaveURL(/\/house\/stake$/);
   const stake = avaPage.getByTestId("stake-screen");
   await stake.getByTestId("transfer").getByRole("button", { name: STAKE_COPY.markReceived }).click();
   await expect(stake.getByText(STAKE_COPY.square)).toBeVisible();

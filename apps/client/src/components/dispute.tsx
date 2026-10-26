@@ -23,44 +23,67 @@ export function DisputeButton({
   john: string;
   owner: string;
 }) {
-  const move = useMove(houseId);
   const [open, setOpen] = useState(false);
-  const [reason, setReason] = useState('');
-
-  async function send() {
-    if (await move.run(() => raiseDispute(assignmentId, reason))) {
-      setOpen(false);
-      setReason('');
-    }
-  }
-
   return (
     <>
       <Button variant="ghost" icon={FlagIcon} label={DISPUTE_COPY.open} onPress={() => setOpen(true)} testID="dispute" />
       <Sheet visible={open} title={DISPUTE_COPY.title(john)} description={DISPUTE_COPY.body(owner)} onClose={() => setOpen(false)}>
-        <Field
-          label={DISPUTE_COPY.label}
-          placeholder={DISPUTE_COPY.placeholder}
-          value={reason}
-          onChangeText={setReason}
-          maxLength={280}
-          multiline
-          autoFocus
-          testID="dispute-reason"
-        />
-        {move.problem ? <Alert message={move.problem} /> : null}
-        <Button
-          label={move.pending ? DISPUTE_COPY.sending : DISPUTE_COPY.send}
-          disabled={move.pending || !reason.trim()}
-          onPress={() => void send()}
-          testID="send-dispute"
-        />
+        <DisputeForm houseId={houseId} assignmentId={assignmentId} onSent={() => setOpen(false)} />
       </Sheet>
     </>
   );
 }
 
-/** The house's vote on a dispute: your vote shows filled in, and you can change it while it's open. */
+/**
+ * The dispute itself: what's wrong with the tick, and "Put it to the house".
+ * In DisputeButton's sheet, or in place inside the John sheet (which never
+ * opens a second sheet). `onSent` follows a dispute the house accepted.
+ */
+export function DisputeForm({
+  houseId,
+  assignmentId,
+  onSent,
+  autoFocus = true,
+}: {
+  houseId: string;
+  assignmentId: string;
+  onSent?: () => void;
+  autoFocus?: boolean;
+}) {
+  const move = useMove(houseId);
+  const [reason, setReason] = useState('');
+
+  async function send() {
+    if (await move.run(() => raiseDispute(assignmentId, reason))) {
+      setReason('');
+      onSent?.();
+    }
+  }
+
+  return (
+    <View style={styles.form}>
+      <Field
+        label={DISPUTE_COPY.label}
+        placeholder={DISPUTE_COPY.placeholder}
+        value={reason}
+        onChangeText={setReason}
+        maxLength={280}
+        multiline
+        autoFocus={autoFocus}
+        testID="dispute-reason"
+      />
+      {move.problem ? <Alert message={move.problem} /> : null}
+      <Button
+        label={move.pending ? DISPUTE_COPY.sending : DISPUTE_COPY.send}
+        disabled={move.pending || !reason.trim()}
+        onPress={() => void send()}
+        testID="send-dispute"
+      />
+    </View>
+  );
+}
+
+/** The house's vote on a dispute: two equal outline buttons, your vote shown chosen, and you can change it while it's open. */
 export function VoteButtons({ houseId, disputeId, myVote }: { houseId: string; disputeId: string; myVote: boolean | null }) {
   const move = useMove(houseId);
   return (
@@ -68,7 +91,8 @@ export function VoteButtons({ houseId, disputeId, myVote }: { houseId: string; d
       <View style={styles.row}>
         <View style={styles.half}>
           <Button
-            variant={myVote === false ? 'primary' : 'outline'}
+            variant="outline"
+            chosen={myVote === false}
             icon={ThumbsUpIcon}
             label={DISPUTE_COPY.fine}
             disabled={move.pending}
@@ -77,7 +101,8 @@ export function VoteButtons({ houseId, disputeId, myVote }: { houseId: string; d
         </View>
         <View style={styles.half}>
           <Button
-            variant={myVote === true ? 'hazard' : 'outline'}
+            variant="outline"
+            chosen={myVote === true}
             icon={ThumbsDownIcon}
             label={DISPUTE_COPY.notDone}
             disabled={move.pending}
@@ -91,6 +116,7 @@ export function VoteButtons({ houseId, disputeId, myVote }: { houseId: string; d
 }
 
 const styles = StyleSheet.create({
+  form: { gap: SPACE.md },
   votes: { gap: SPACE.sm },
   row: { flexDirection: 'row', gap: SPACE.sm },
   half: { flex: 1 },

@@ -1,24 +1,32 @@
-import { awayThisWeek, isOpen, PAGE_TITLE, TODAY_COPY, WEEK_COPY, weekRange } from '@app/core';
-import { RefreshCwIcon } from 'lucide-react-native';
-import { useState } from 'react';
-import { ActivityIndicator, StyleSheet, View, useWindowDimensions } from 'react-native';
+import { awayThisWeek, isOpen, PAGE_TITLE, TODAY_COPY, weekRange } from '@app/core';
+import { StyleSheet, View, useWindowDimensions } from 'react-native';
 
-import { Alert } from '@/components/alert';
-import { Button } from '@/components/button';
 import { NotDealt } from '@/components/not-dealt';
 import { PageTitle } from '@/components/page-title';
+import { Reading, ReadFailed } from '@/components/read-state';
 import { Screen } from '@/components/screen';
 import { SwapSheet } from '@/components/swap-sheet';
 import { TableBeside } from '@/components/table-parts';
-import { Eyebrow, Heading } from '@/components/text';
+import { Eyebrow } from '@/components/text';
+import { TitleBar } from '@/components/title-bar';
 import { DealButton } from '@/components/house/deal-button';
 import { AwayThisWeek, DisputeList, PersonSection, Stats, WeekTable, type BoardContext } from '@/components/week-board';
 import { useAway } from '@/hooks/use-away';
-import { useCatchUp, useHouse, type HouseView } from '@/hooks/use-house';
+import { useHouse, type HouseView } from '@/hooks/use-house';
 import { useMembership } from '@/hooks/use-membership';
-import { SPACE, useTheme, WIDE } from '@/theme';
+import { usePull } from '@/hooks/use-refresh';
+import { CONTENT_MAX, SPACE, WIDE } from '@/theme';
 
-/** The board: the whole house's week, as the web's /week. */
+/**
+ * For now, room on a laptop for the old board's table and its side column.
+ * Focus keeps every tab to CONTENT_MAX, and the Week track's table does too.
+ */
+const WEEK_WIDE = 1280;
+
+/**
+ * Week: the whole house's week. For now the old board under Focus's title
+ * bar; the Week track rebuilds it.
+ */
 export default function Week() {
   const { session, house } = useMembership();
   // The layout's guard only shows the house's screens with a house and a session.
@@ -26,34 +34,25 @@ export default function Week() {
 }
 
 function WeekFor({ houseId, userId }: { houseId: string; userId: string }) {
-  const { colors } = useTheme();
   const wide = useWindowDimensions().width >= WIDE;
   const { query, view } = useHouse(houseId, userId);
-  const [refreshing, setRefreshing] = useState(false);
-  const freshen = useCatchUp(houseId);
-
-  async function pull() {
-    setRefreshing(true);
-    if (!(await freshen())) await query.refetch();
-    setRefreshing(false);
-  }
+  const { refreshing, pull } = usePull(houseId, query.refetch);
 
   return (
-    <Screen maxWidth={wide ? 1280 : 720} refreshing={refreshing} onRefresh={() => void pull()}>
+    <Screen
+      bar={<TitleBar title={PAGE_TITLE.week} />}
+      maxWidth={wide ? WEEK_WIDE : CONTENT_MAX}
+      refreshing={refreshing}
+      onRefresh={pull}
+      testID="week-screen"
+    >
       <PageTitle page={PAGE_TITLE.week} />
-      {!view ? (
-        query.isError ? (
-          <View style={styles.stack}>
-            <Alert message="Couldn't read the house. Check the connection." />
-            <View style={styles.start}>
-              <Button variant="outline" icon={RefreshCwIcon} label="Try again" onPress={() => void query.refetch()} />
-            </View>
-          </View>
-        ) : (
-          <ActivityIndicator color={colors.foreground} accessibilityLabel="Reading the house" style={styles.loading} />
-        )
-      ) : (
+      {view ? (
         <Board view={view} wide={wide} />
+      ) : query.isError ? (
+        <ReadFailed onRetry={() => void query.refetch()} />
+      ) : (
+        <Reading />
       )}
     </Screen>
   );
@@ -71,10 +70,7 @@ function Board({ view, wide }: { view: HouseView; wide: boolean }) {
   if (!board.week) {
     return (
       <View style={styles.stack}>
-        <View>
-          <Eyebrow>{TODAY_COPY.thisWeek}</Eyebrow>
-          <Heading style={styles.title}>{WEEK_COPY.title}</Heading>
-        </View>
+        <Eyebrow>{TODAY_COPY.thisWeek}</Eyebrow>
         <NotDealt houseId={house.id} notStarted={board.notStarted} isAdmin={me?.role === 'admin'} adminName={admin?.name ?? 'An admin'} />
       </View>
     );
@@ -94,7 +90,6 @@ function Board({ view, wide }: { view: HouseView; wide: boolean }) {
       <View style={styles.header}>
         <View style={styles.headerText}>
           <Eyebrow>{TODAY_COPY.thisWeekRange(weekRange(board.week.startsAt, board.week.endsAt, rules.timezone))}</Eyebrow>
-          <Heading style={styles.title}>{WEEK_COPY.title}</Heading>
         </View>
         {me && me.swapTokens > 0 ? (
           <SwapSheet
@@ -142,9 +137,6 @@ function Board({ view, wide }: { view: HouseView; wide: boolean }) {
 
 const styles = StyleSheet.create({
   stack: { gap: SPACE.xl },
-  start: { alignItems: 'flex-start' },
-  loading: { marginTop: SPACE.xxl },
-  title: { marginTop: SPACE.xs },
   header: { flexDirection: 'row', flexWrap: 'wrap', alignItems: 'flex-end', justifyContent: 'space-between', gap: SPACE.md },
   headerText: { flexShrink: 1 },
   columns: { flexDirection: 'row', alignItems: 'flex-start', gap: SPACE.xl },

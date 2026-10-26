@@ -73,6 +73,10 @@ function Routes() {
         <Stack.Protected guard={signedIn && housed} redirectTo={home}>
           <Stack.Screen name="(house)" />
         </Stack.Protected>
+        {/* The old /wall, /stake and /table links are the router's redirects
+            (app.json), on to their places under House, whose guard then
+            applies. A link followed inside the app goes straight there, into
+            the house already open, never stacking a second one. */}
         {/* A join link opens for anyone, and signs you in in place. */}
         <Stack.Screen name="join/[joinCode]" />
         {/* So does what Johns keeps about you, and a link to nowhere. */}

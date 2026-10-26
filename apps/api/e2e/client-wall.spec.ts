@@ -33,8 +33,9 @@ test("ticks land on the Wall with their photos, and take reactions", async ({ br
   // Ava watches the Wall. So far it says who moved in.
   const wall = await contexts.ava.newPage();
   await wall.goto("/today");
-  await wall.getByRole("tab", { name: SECTION_LABEL.wall }).click();
-  await expect(wall).toHaveURL(/\/wall$/);
+  await wall.getByRole("tab", { name: SECTION_LABEL.house }).click();
+  await wall.getByTestId("house-screen").getByTestId("to-wall").getByRole("link").click();
+  await expect(wall).toHaveURL(/\/house\/wall$/);
   await expect(wall.getByRole("heading", { name: WALL_COPY.title })).toBeVisible();
   await expect(wall.getByTestId("wall-event").filter({ hasText: "Ben Wall moved in." })).toBeVisible();
 

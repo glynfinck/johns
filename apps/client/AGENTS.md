@@ -124,14 +124,25 @@ permanent once a store has seen them.
   for anyone's John, `DisputeButton` and `VoteButtons`, `SwapSheet`, the
   board's pieces in `week-board.tsx`, `Toggle` for an on/off setting,
   `DateRangePicker` for picking days (no native date module), House's
-  panels in `house/`, and the shell in `shell/`).
-- **A house's screens are tabs** (`src/app/(house)/_layout.tsx`, Expo
-  Router's JS tabs from `expo-router/js-tabs`): `HouseTabBar` draws them in
-  the web's look, along the bottom of a phone and as a sidebar from `WIDE`
-  on the web; `HouseHeader` names the house above each screen on a phone.
-  The layout follows the house live (`useLiveHouse`) once for every tab. A
-  new screen adds its file to the group and a `Tabs.Screen`, with its label
-  from `SECTION_LABEL` in core.
+  panels in `house/`, and the shell in `shell/`), and Focus's pieces every
+  house screen is built from: `TitleBar`, `Section`, `Group`, `Row`, `Fold`,
+  `TickCircle`, `StatusMark`, `Card`, `EmptyState`, `ConfirmSheet`,
+  `ActionMenu`, toasts and the John sheet (`john-sheet/`).
+- **A house is three places, as tabs** (`src/app/(house)/_layout.tsx`, Expo
+  Router's JS tabs from `expo-router/js-tabs`): Today, Week and House,
+  labelled from `SECTION_LABEL` in core. `HouseTabBar` draws them along the
+  bottom of a phone and as a left rail from `WIDE` on the web. There is no
+  header strip: each screen draws its own `TitleBar`. The layout follows the
+  house live (`useLiveHouse`) once for every tab, and mounts the John sheet
+  and the toasts for all of them. JS tabs makes every file in `(house)` a
+  tab, so nothing else goes there: House is a stack
+  (`(house)/house/_layout.tsx`), and a new page goes in `(house)/house/`,
+  built on `HousePage` (whose back goes to `/house`), keeping the tabs. The
+  old `/wall`, `/stake` and `/table` links are the router's redirects in
+  `app.json` (a phone, and links inside the app) and, the same three, the
+  host's in `vercel.json` (a web page opened cold on one, where the router's
+  own redirect screen would leave `/house/house/wall` in the address bar);
+  `vercel.test.ts` keeps the two lists alike.
 - **What a house screen shows comes through React Query**
   (`@tanstack/react-query`; `QueryProvider` in `hooks/query.tsx` wraps the
   root layout). One cache entry per house, `houseKey(id)` from
@@ -207,12 +218,18 @@ permanent once a store has seen them.
   web's `globals.css` carries the same values, and a test in `apps/api` fails
   if they drift, so change a token in both places together.
 - **Type:** Overpass, loaded behind the splash screen in `_layout.tsx`. Text
-  goes through `Heading` (uppercase council-sign weight), `Eyebrow` and
-  `Body`. On iOS and Android each weight is its own family, so a style names
-  the family from `FONT`; `fontWeight` alone falls back to the system font.
-- **Signage:** `Wordmark` (the road sign), `HazardTape` on late and missed,
-  a `Lid` per kind of John, `StatusChip` in the web's words. Decoration is
-  `aria-hidden`.
+  goes through six roles (`useTheme().type`, drawn by `components/text.tsx`):
+  `Title` (once per screen, in the title bar), `Lead`, `SectionLabel`,
+  `RowTitle`, `Body` and `Meta`, never an inline size. `Heading` and
+  `Eyebrow` stay for the brand pages (the front door, sign-in, joining) and
+  screens not yet rebuilt. On iOS and Android each weight is its own
+  family, so a style names the family from `FONT`; `fontWeight` alone falls
+  back to the system font.
+- **Signage:** `Wordmark` (the road sign) and the full `HazardTape` belong to
+  the brand pages. Inside the house, tape is only a row's 4pt edge on an
+  overdue or missed John, a lid colour only a `LidDot` before a John's
+  category, and where a John has got to a `StatusMark` (the older `Lid` and
+  `StatusChip` stay on screens not yet rebuilt). Decoration is `aria-hidden`.
 - **Controls** are at least `TAP` (48) tall; links get the same target
   (`TextLink`, or `Button` with `href`, which is an anchor on the web).
 - **`Link asChild` merges its child's style by spreading it**, so a child
@@ -236,7 +253,8 @@ permanent once a store has seen them.
 - **No emoji**, reactions included: `src/no-emoji.test.ts` scans `src/` and
   `app.json` and fails on any.
 - Responsive: tabs along the bottom on a phone; on web from 1024px (`WIDE`) a
-  sidebar, with the week board as a table, as the web app does now.
+  left rail of the same three, the content capped at 680 (`CONTENT_MAX`) on
+  every tab, and Week as a table.
 
 ### Tests
 

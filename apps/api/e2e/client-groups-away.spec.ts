@@ -39,33 +39,37 @@ test("make a group, give it a John, and book time away", async ({ browser }) => 
   const db = admin();
 
   const page = await avaContext.newPage();
-  await page.goto("/house");
-  const house = page.getByTestId("house-screen");
-  await expect(house.getByText(GROUPS_COPY.empty)).toBeVisible();
+  await page.goto("/house/groups");
+  const groups = page.getByTestId("groups-screen");
+  await expect(groups.getByText(GROUPS_COPY.empty)).toBeVisible();
 
   // A group of the people who share the upstairs bathroom: Ava alone.
-  await house.getByTestId("add-group").click();
+  await groups.getByTestId("add-group").click();
   const groupForm = page.getByTestId("group-form");
   await groupForm.getByLabel(GROUPS_COPY.name).fill("Upstairs bathroom");
   await groupForm.getByRole("checkbox", { name: "You" }).click();
   await groupForm.getByTestId("save-group").click();
   await expect(groupForm).toBeHidden();
-  await expect(house.getByTestId("group")).toContainText("Upstairs bathroom");
+  await expect(groups.getByTestId("group")).toContainText("Upstairs bathroom");
 
-  // A John only that group is handed.
-  await house.getByTestId("add-john").click();
+  // A John only that group is handed, on the John list.
+  await page.goto("/house/johns");
+  const list = page.getByTestId("johns-screen");
+  await list.getByTestId("add-john").click();
   const johnForm = page.getByTestId("john-form");
   await johnForm.getByLabel(JOHN_LIST_COPY.name).fill("Bathroom clean");
   await johnForm.getByRole("radio", { name: "Upstairs bathroom" }).click();
   await johnForm.getByTestId("save-john").click();
   await expect(johnForm).toBeHidden();
-  await expect(house.getByTestId("john-def").filter({ hasText: "Bathroom clean" })).toContainText("Upstairs bathroom");
+  await expect(list.getByTestId("john-def").filter({ hasText: "Bathroom clean" })).toContainText("Upstairs bathroom");
   const { data: group } = await db.from("groups").select("id, group_members(user_id)").eq("house_id", houseId).single();
   expect(group!.group_members).toEqual([{ user_id: ava }]);
   const { data: john } = await db.from("johns").select("group_id").eq("house_id", houseId).eq("name", "Bathroom clean").single();
   expect(john!.group_id).toBe(group!.id);
 
   // Time away, booked ahead from the calendar.
+  await page.goto("/house/away");
+  const awayPage = page.getByTestId("away-screen");
   const today = localDate(new Date(), "Europe/London");
   const from = addDaysTo(today, 2);
   const to = addDaysTo(today, 5);
@@ -75,25 +79,26 @@ test("make a group, give it a John, and book time away", async ({ browser }) => 
   await expect(away.getByTestId("away-picked")).toContainText("Away");
   await away.getByLabel(AWAY_COPY.note).fill("Lisbon");
   await away.getByTestId("book-away").click();
-  const panel = house.getByTestId("away-panel");
-  await expect(panel.getByTestId("away-period").filter({ hasText: "Lisbon" })).toContainText("You");
-  await expect(panel.getByTestId("my-trip")).toBeVisible();
+  await expect(awayPage.getByTestId("away-period").filter({ hasText: "Lisbon" })).toContainText("You");
+  await expect(awayPage.getByTestId("my-trip")).toBeVisible();
   const { data: booked } = await db.from("away").select("starts_on, ends_on, note").eq("house_id", houseId);
   expect(booked).toEqual([{ starts_on: from, ends_on: to, note: "Lisbon" }]);
 
-  // Today says so; Ben sees it on House.
+  // Today says so; Ben sees it on Time away, and can't change the groups.
   await page.getByRole("tab", { name: SECTION_LABEL.today }).click();
   await expect(page.getByTestId("away-banner")).toContainText("You're away");
   const benPage = await benContext.newPage();
-  await benPage.goto("/house");
-  await expect(benPage.getByTestId("house-screen").getByTestId("away-period")).toContainText("Ava Away");
-  await expect(benPage.getByTestId("house-screen").getByTestId("add-group")).toHaveCount(0);
+  await benPage.goto("/house/away");
+  await expect(benPage.getByTestId("away-screen").getByTestId("away-period")).toContainText("Ava Away");
+  await benPage.goto("/house/groups");
+  await expect(benPage.getByTestId("groups-screen").getByTestId("group")).toBeVisible();
+  await expect(benPage.getByTestId("groups-screen").getByTestId("add-group")).toHaveCount(0);
 
   // Ava changes her mind.
-  await page.getByRole("tab", { name: SECTION_LABEL.house }).click();
-  await panel.getByTestId("my-trip").getByRole("button", { name: AWAY_COPY.cancel }).click();
-  await expect(panel.getByTestId("my-trip")).toHaveCount(0);
-  await expect(panel.getByText(AWAY_COPY.nobody)).toBeVisible();
+  await page.goto("/house/away");
+  await awayPage.getByTestId("my-trip").getByRole("button", { name: AWAY_COPY.cancel }).click();
+  await expect(awayPage.getByTestId("my-trip")).toHaveCount(0);
+  await expect(awayPage.getByText(AWAY_COPY.nobody)).toBeVisible();
   expect((await db.from("away").select("id").eq("house_id", houseId)).data).toEqual([]);
 
   await avaContext.close();

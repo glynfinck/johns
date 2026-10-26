@@ -1,4 +1,4 @@
-import { JOIN_COPY, NEW_HOUSE_COPY, NO_HOUSE_COPY, signInReason, SIGN_IN_COPY, TODAY_COPY } from "@app/core";
+import { JOIN_COPY, NEW_HOUSE_COPY, NO_HOUSE_COPY, PAGE_TITLE, SECTION_LABEL, signInReason, SIGN_IN_COPY } from "@app/core";
 import { expect, test, type Page } from "@playwright/test";
 
 import { CLIENT_URL, cleanUp, houseOf, signInToClient } from "./auth";
@@ -9,6 +9,16 @@ test.use({ baseURL: CLIENT_URL });
 
 const made: string[] = [];
 test.afterAll(async () => cleanUp(made));
+
+/**
+ * The house you're in, by name: on a phone Today names no house, so ask
+ * House, whose title bar does.
+ */
+async function expectHouseNamed(page: Page, name: string) {
+  await page.getByRole("tab", { name: SECTION_LABEL.house }).click();
+  await expect(page).toHaveURL(/\/house$/);
+  await expect(page.getByRole("heading", { name })).toBeVisible();
+}
 
 /** Today asks the API to catch the house up as it opens; this is that call's answer. */
 function caughtUp(page: Page) {
@@ -31,11 +41,11 @@ test("start a house, and land on it caught up", async ({ context, page }) => {
   await page.getByTestId("create-house").click();
 
   await expect(page).toHaveURL(/\/today$/);
-  await expect(page.getByRole("heading", { name: TODAY_COPY.title })).toBeVisible();
-  await expect(page.getByText(name)).toBeVisible();
+  await expect(page.getByRole("heading", { name: PAGE_TITLE.today })).toBeVisible();
   const answer = await fresh;
   expect(answer.status()).toBe(200);
   expect(await answer.json()).toEqual({ ticked: true });
+  await expectHouseNamed(page, name);
 });
 
 test("a join link signs you in on the spot, then joins", async ({ context, page }) => {
@@ -60,9 +70,9 @@ test("a join link signs you in on the spot, then joins", async ({ context, page 
   const catching = caughtUp(joiner);
   await joiner.getByRole("button", { name: JOIN_COPY.join("Number 9") }).click();
   await expect(joiner).toHaveURL(/\/today$/);
-  await expect(joiner.getByRole("heading", { name: TODAY_COPY.title })).toBeVisible();
-  await expect(joiner.getByText("Number 9")).toBeVisible();
+  await expect(joiner.getByRole("heading", { name: PAGE_TITLE.today })).toBeVisible();
   expect((await catching).status()).toBe(200);
+  await expectHouseNamed(joiner, "Number 9");
 });
 
 test("a code typed in joins too, however it's spelt", async ({ context, page }) => {

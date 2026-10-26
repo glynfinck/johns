@@ -31,14 +31,15 @@ test("a tick scores on the Table at once, beside fair shares and streaks", async
   await ava.getByTestId("john-card").filter({ hasText: mine![0].name }).getByTestId("mark-done").click();
   await expect(ava.getByText("Done, being checked")).toBeVisible();
 
-  await ava.getByRole("tab", { name: SECTION_LABEL.table }).click();
-  await expect(ava).toHaveURL(/\/table$/);
-  await expect(ava.getByRole("heading", { name: TABLE_COPY.title })).toBeVisible();
+  // The Table lives at the foot of House for now.
+  await ava.getByRole("tab", { name: SECTION_LABEL.house }).click();
+  await expect(ava).toHaveURL(/\/house$/);
+  await expect(ava.getByRole("heading", { name: TABLE_COPY.beside })).toBeVisible();
   // Two tables, this week's then this month's, each with everyone on it. This
   // week Ava leads with her John's points (the month's depends on whether it
   // falls due this month).
   // (Tabs keep Today mounted underneath, with its own week Table: look on this screen.)
-  const table = ava.getByTestId("table-screen");
+  const table = ava.getByTestId("house-table");
   const standings = table.getByTestId("standing");
   await expect(standings).toHaveCount(4);
   await expect(standings.first()).toContainText("You");

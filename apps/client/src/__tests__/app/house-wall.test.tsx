@@ -1,4 +1,4 @@
-import { REACTION_LABEL, WALL_COPY, wallEvents } from '@app/core';
+import { FOCUS_SHELL_COPY, REACTION_LABEL, SECTION_LABEL, WALL_COPY, wallEvents } from '@app/core';
 import { QueryClientProvider } from '@tanstack/react-query';
 import { Slot } from 'expo-router';
 import { fireEvent, renderRouter, screen, waitFor, within } from 'expo-router/testing-library';
@@ -6,7 +6,7 @@ import { fireEvent, renderRouter, screen, waitFor, within } from 'expo-router/te
 import { loadHouse } from '@/api/board';
 import { catchUp } from '@/api/house';
 import { loadWall, setReaction } from '@/api/wall';
-import WallScreen from '@/app/(house)/wall';
+import WallScreen from '@/app/(house)/house/wall';
 import { snapshot } from '@/testing/house';
 import { testQueryClient } from '@/testing/query';
 
@@ -55,9 +55,9 @@ async function open() {
           <Slot />
         </QueryClientProvider>
       ),
-      wall: WallScreen,
+      'house/wall': WallScreen,
     },
-    { initialUrl: '/wall' },
+    { initialUrl: '/house/wall' },
   );
   await screen.findByText(WALL_COPY.title);
 }
@@ -113,4 +113,11 @@ it('says what lands here before anything has', async () => {
   (loadWall as jest.Mock).mockResolvedValue({ events: [], photos: {} });
   await open();
   expect(await screen.findByText(WALL_COPY.empty)).toBeOnTheScreen();
+});
+
+it('sits under a title bar with the way back to House', async () => {
+  await open();
+  const bar = within(screen.getByTestId('title-bar'));
+  expect(bar.getByRole('header', { name: WALL_COPY.title })).toBeOnTheScreen();
+  expect(bar.getByRole('button', { name: FOCUS_SHELL_COPY.backTo(SECTION_LABEL.house) })).toBeOnTheScreen();
 });

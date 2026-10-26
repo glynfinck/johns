@@ -65,6 +65,42 @@ export const STATUS_LABEL: Record<LiveStatus, string> = {
   excused: "Excused",
 };
 
+/** How loud a status is: nothing, a quiet outline, the done green, or hazard. */
+export type StatusTone = "none" | "quiet" | "good" | "hazard";
+
+/** The icon a status wears, named for what it shows (each app maps it to a lucide icon). */
+export type StatusIcon = "clock" | "check" | "triangle" | "x" | "flag" | "shield";
+
+export interface StatusMark {
+  tone: StatusTone;
+  icon: StatusIcon | null;
+  /** Sentence case: a chip sets it in caps by style. */
+  label: string;
+}
+
+/**
+ * Focus's one status map, for Today, Week, the John sheet and the Wall alike:
+ * upcoming shows nothing (its time is in the meta line), hazard only for
+ * what is late, overdue, missed or disputed, green only for done, and every
+ * mark that shows carries an icon and a word.
+ */
+export const STATUS_MARK: Record<LiveStatus, StatusMark> = {
+  upcoming: { tone: "none", icon: null, label: "Upcoming" },
+  "due-soon": { tone: "quiet", icon: "clock", label: "Due soon" },
+  checking: { tone: "quiet", icon: "check", label: "Checking" },
+  done: { tone: "good", icon: "check", label: "Done" },
+  late: { tone: "hazard", icon: "clock", label: "Late" },
+  overdue: { tone: "hazard", icon: "triangle", label: "Overdue" },
+  missed: { tone: "hazard", icon: "x", label: "Missed" },
+  disputed: { tone: "hazard", icon: "flag", label: "Disputed" },
+  excused: { tone: "quiet", icon: "shield", label: "Excused" },
+};
+
+/** "Sun 25 Oct": a day in the house's zone, as a title bar shows today's date. */
+export function dayLabel(at: Date, zone: string): string {
+  return format(at, "EEE d MMM", { in: tz(zone) });
+}
+
 /** First letters of up to two words: "Priya Shah" → "PS". */
 export function initials(name: string): string {
   const parts = name.trim().split(/\s+/).filter(Boolean);

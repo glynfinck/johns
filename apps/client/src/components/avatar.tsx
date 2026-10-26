@@ -1,20 +1,30 @@
 import { initials } from '@app/core';
 import { StyleSheet, Text, View } from 'react-native';
 
-import { FONT, RADIUS, useTheme } from '@/theme';
+import { useTheme } from '@/theme';
+
+/** Initials are never smaller than 12, so neither is a plate smaller than this. */
+const SMALLEST = 24;
 
 /**
- * A housemate's initials on a plate, as on the web: yours in hi-vis. Photos
- * are deliberately not shown; initials stay legible small, in both themes.
+ * A housemate's initials on a round plate: theirs on the neutral tint, yours
+ * on an ink plate with light letters (never amber). Photos are deliberately
+ * not shown; initials stay legible small, in both themes. 32 in a row's
+ * leading slot, 24 in a header, and never smaller than 24.
  */
-export function Avatar({ name, me = false, size = 32 }: { name: string; me?: boolean; size?: number }) {
-  const { colors } = useTheme();
+export function Avatar({ name, me = false, size: asked = 32 }: { name: string; me?: boolean; size?: number }) {
+  const { colors, type } = useTheme();
+  const size = Math.max(asked, SMALLEST);
   return (
     <View
       aria-hidden
-      style={[styles.plate, { width: size, height: size, backgroundColor: me ? colors.hivis : colors.secondary }]}
+      testID={me ? 'avatar-me' : 'avatar'}
+      style={[
+        styles.plate,
+        { width: size, height: size, borderRadius: size / 2, backgroundColor: me ? colors.foreground : colors.secondary },
+      ]}
     >
-      <Text style={[styles.letters, { color: me ? colors.onHivis : colors.secondaryForeground, fontSize: size * 0.34 }]}>
+      <Text style={[type.initials, styles.letters, { color: me ? colors.card : colors.secondaryForeground }]}>
         {initials(name)}
       </Text>
     </View>
@@ -22,6 +32,7 @@ export function Avatar({ name, me = false, size = 32 }: { name: string; me?: boo
 }
 
 const styles = StyleSheet.create({
-  plate: { borderRadius: RADIUS, alignItems: 'center', justifyContent: 'center' },
-  letters: { fontFamily: FONT.extrabold, letterSpacing: 0.5 },
+  plate: { alignItems: 'center', justifyContent: 'center' },
+  // Overpass's caps sit high in their line, so the letters come down a little.
+  letters: { paddingTop: 2 },
 });

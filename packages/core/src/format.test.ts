@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 
 import {
   dateRange,
+  dayLabel,
   dueLabel,
   firstName,
   formatBalance,
@@ -11,6 +12,8 @@ import {
   nameFromParts,
   pointsLabel,
   relative,
+  STATUS_LABEL,
+  STATUS_MARK,
   weekRange,
 } from "./format";
 import { weekWindow } from "./week";
@@ -115,5 +118,53 @@ describe("nameFromParts", () => {
   it("never ends on a space when the limit falls between words", () => {
     const name = nameFromParts(["A".repeat(59), "Shah"])!;
     expect(name).toBe("A".repeat(59));
+  });
+});
+
+describe("STATUS_MARK", () => {
+  const statuses = Object.keys(STATUS_LABEL) as (keyof typeof STATUS_LABEL)[];
+
+  it("marks every live status, and only those", () => {
+    expect(Object.keys(STATUS_MARK).sort()).toEqual([...statuses].sort());
+  });
+
+  it("shows nothing for an upcoming John: its time is in the meta line", () => {
+    expect(STATUS_MARK.upcoming).toEqual({ tone: "none", icon: null, label: "Upcoming" });
+  });
+
+  it("keeps hazard for late, overdue, missed and disputed", () => {
+    const hazard = statuses.filter((s) => STATUS_MARK[s].tone === "hazard").sort();
+    expect(hazard).toEqual(["disputed", "late", "missed", "overdue"]);
+    expect(STATUS_MARK.late.label).toBe("Late");
+  });
+
+  it("keeps green for done alone", () => {
+    expect(statuses.filter((s) => STATUS_MARK[s].tone === "good")).toEqual(["done"]);
+  });
+
+  it("gives every mark that shows an icon and a word", () => {
+    for (const status of statuses) {
+      const mark = STATUS_MARK[status];
+      if (mark.tone === "none") continue;
+      expect(mark.icon).not.toBeNull();
+      expect(mark.label.length).toBeGreaterThan(0);
+    }
+    expect(STATUS_MARK.overdue.icon).toBe("triangle");
+    expect(STATUS_MARK.missed.icon).toBe("x");
+    expect(STATUS_MARK.disputed.icon).toBe("flag");
+    expect(STATUS_MARK.excused).toEqual({ tone: "quiet", icon: "shield", label: "Excused" });
+  });
+
+  it("writes its words in sentence case, leaving caps to the style", () => {
+    for (const status of statuses) expect(STATUS_MARK[status].label).toMatch(/^[A-Z][a-z]*( [a-z]+)*$/);
+  });
+});
+
+describe("dayLabel", () => {
+  it("names the day in the house's zone", () => {
+    expect(dayLabel(now, LONDON)).toBe("Thu 8 Oct");
+    // 23:30 UTC on the 8th is already the 9th in London, and still the 8th in New York.
+    expect(dayLabel(new Date("2026-10-08T23:30:00Z"), LONDON)).toBe("Fri 9 Oct");
+    expect(dayLabel(new Date("2026-10-08T23:30:00Z"), "America/New_York")).toBe("Thu 8 Oct");
   });
 });

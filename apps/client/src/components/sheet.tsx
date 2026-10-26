@@ -1,59 +1,90 @@
 import { SHELL_COPY, withAlpha } from '@app/core';
 import { XIcon } from 'lucide-react-native';
-import type { ReactNode } from 'react';
+import { useEffect, useRef, type ReactNode } from 'react';
 import { KeyboardAvoidingView, Modal, Platform, Pressable, ScrollView, StyleSheet, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { Button } from '@/components/button';
-import { Body, Heading } from '@/components/text';
-import { RADIUS, SPACE, useTheme } from '@/theme';
+import { Body, Lead } from '@/components/text';
+import { GUTTER, INSET, SECTION_GAP, SPACE, useTheme } from '@/theme';
 
 /**
- * A form that rises from the bottom over the screen, as the web's sheets do:
- * a title, a sentence on what it does, and the form. Tapping outside it or
- * the close button puts it away.
+ * Something that rises from the bottom over the screen: a form, a menu, the
+ * John sheet. A grabber, a 48pt close button, then the content on the
+ * pavement. `title` (a Lead, announced as its heading) and `description`
+ * head it; leave them out for a sheet that draws its own header. The
+ * content sits on the leading edge, like a form on a page, SPACE.md apart;
+ * `flush` sets it at the gutter instead, for groups and sections that inset
+ * themselves, with SECTION_GAP between them as on a page.
+ * Tapping outside it or the close button puts it away. A sheet changes its
+ * own content and never opens a second one. `onDismissed` runs once it has
+ * gone: on iOS when its slide out has ended (a modal can't rise while
+ * another is still going), elsewhere as soon as it closes.
  */
 export function Sheet({
   visible,
   title,
   description,
   onClose,
+  onDismissed,
+  flush = false,
+  testID,
   children,
 }: {
   visible: boolean;
-  title: string;
+  title?: string;
   description?: string;
   onClose: () => void;
+  onDismissed?: () => void;
+  flush?: boolean;
+  testID?: string;
   children: ReactNode;
 }) {
   const { colors, scheme } = useTheme();
   const insets = useSafeAreaInsets();
+  // iOS says when the slide out ends (Modal's onDismiss); elsewhere a closed
+  // sheet is gone at once, so it says so as it closes.
+  const wasVisible = useRef(visible);
+  useEffect(() => {
+    if (wasVisible.current && !visible && Platform.OS !== 'ios') onDismissed?.();
+    wasVisible.current = visible;
+  }, [visible, onDismissed]);
   // On the web a closed react-native-web Modal stays mounted until its slide
   // out reports it has ended, and until then it holds on to focus: typing
   // into the next sheet would land on this one's backdrop instead. So on the
   // web a closed sheet goes at once.
   if (Platform.OS === 'web' && !visible) return null;
   // The darker of the two inks, faintly, whichever way the theme is.
-  const shade = withAlpha(scheme === 'dark' ? colors.background : colors.foreground, 0.35);
+  const shade = withAlpha(scheme === 'dark' ? colors.background : colors.foreground, 0.5);
   return (
-    <Modal visible={visible} transparent animationType="slide" onRequestClose={onClose}>
+    <Modal visible={visible} transparent animationType="slide" onRequestClose={onClose} onDismiss={onDismissed}>
       <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined} style={styles.fill}>
         <Pressable accessibilityLabel={SHELL_COPY.close} onPress={onClose} style={[styles.fill, { backgroundColor: shade }]} />
         <View
           accessibilityViewIsModal
-          style={[
-            styles.sheet,
-            { backgroundColor: colors.card, borderColor: colors.border, paddingBottom: insets.bottom + SPACE.xl },
-          ]}
+          testID={testID}
+          style={[styles.sheet, { backgroundColor: colors.background, paddingBottom: insets.bottom + SPACE.xl }]}
         >
-          <ScrollView contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled">
-            <View style={styles.top}>
-              <Heading level={3} style={styles.title}>
+          <View aria-hidden style={[styles.grabber, { backgroundColor: colors.mutedForeground }]} />
+          <View style={styles.top}>
+            {title ? (
+              <Lead header style={styles.title}>
                 {title}
-              </Heading>
-              <Button variant="ghost" icon={XIcon} label={SHELL_COPY.close} iconOnly onPress={onClose} />
-            </View>
-            {description ? <Body muted>{description}</Body> : null}
+              </Lead>
+            ) : (
+              <View style={styles.title} />
+            )}
+            <Button variant="ghost" icon={XIcon} label={SHELL_COPY.close} iconOnly onPress={onClose} testID="sheet-close" />
+          </View>
+          <ScrollView
+            contentContainerStyle={[styles.content, flush ? styles.flush : styles.inset]}
+            keyboardShouldPersistTaps="handled"
+          >
+            {description ? (
+              <View style={flush ? styles.flushText : null}>
+                <Body muted>{description}</Body>
+              </View>
+            ) : null}
             {children}
           </ScrollView>
         </View>
@@ -67,13 +98,24 @@ const styles = StyleSheet.create({
   sheet: {
     width: '100%',
     maxWidth: 512,
-    maxHeight: '85%',
+    maxHeight: '90%',
     alignSelf: 'center',
-    borderTopLeftRadius: RADIUS * 2,
-    borderTopRightRadius: RADIUS * 2,
-    borderWidth: StyleSheet.hairlineWidth,
+    paddingTop: SPACE.sm,
+    borderTopLeftRadius: 16,
+    borderTopRightRadius: 16,
   },
-  content: { padding: SPACE.xl, gap: SPACE.md },
-  top: { flexDirection: 'row', alignItems: 'flex-start', justifyContent: 'space-between', gap: SPACE.md },
+  grabber: { alignSelf: 'center', width: 36, height: 4, borderRadius: 2 },
+  // The close button's icon lines up with the content's right edge.
+  top: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: SPACE.md,
+    paddingLeft: GUTTER + INSET,
+    paddingRight: GUTTER + INSET - SPACE.md,
+  },
   title: { flex: 1 },
+  content: { paddingTop: SPACE.xs },
+  inset: { paddingHorizontal: GUTTER + INSET, gap: SPACE.md },
+  flush: { paddingHorizontal: GUTTER, gap: SECTION_GAP },
+  flushText: { paddingHorizontal: INSET },
 });

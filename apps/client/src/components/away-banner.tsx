@@ -39,7 +39,7 @@ export function AwayBanner({
             {AWAY_COPY.bannerBody(makeup)}
           </Body>
         </View>
-        <TextLink href="/house" label={AWAY_COPY.change} style={styles.link} />
+        <TextLink href="/house/away" label={AWAY_COPY.change} style={styles.link} />
       </View>
     </Card>
   );

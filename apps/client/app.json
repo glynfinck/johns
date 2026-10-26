@@ -28,7 +28,12 @@
       [
         "expo-router",
         {
-          "sitemap": false
+          "sitemap": false,
+          "redirects": [
+            { "source": "/wall", "destination": "/house/wall" },
+            { "source": "/stake", "destination": "/house/stake" },
+            { "source": "/table", "destination": "/house" }
+          ]
         }
       ],
       [

@@ -32,6 +32,15 @@ describe("Bin Night", () => {
     expect(lidColour(BIN_NIGHT.light, "")).toBe(BIN_NIGHT.light.bin.other);
   });
 
+  it("keeps the floors lid teal, so no lid shares the done green", () => {
+    expect(BIN_NIGHT.light.bin.floors).toBe("#0f7c7a");
+    expect(BIN_NIGHT.dark.bin.floors).toBe("#4fbdb9");
+    for (const scheme of [BIN_NIGHT.light, BIN_NIGHT.dark]) {
+      expect(Object.values(scheme.bin)).not.toContain(scheme.good);
+      expect(Object.values(scheme.bin)).not.toContain(scheme.hazard);
+    }
+  });
+
   it("adds an opacity the way the web's /15 does", () => {
     expect(withAlpha("#c8410c", 0.15)).toBe("#c8410c26");
     expect(withAlpha("#c8410c", 1)).toBe("#c8410cff");

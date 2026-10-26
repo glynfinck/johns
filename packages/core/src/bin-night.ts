@@ -68,7 +68,8 @@ export const BIN_NIGHT: { light: BinNightScheme; dark: BinNightScheme; radius: n
       kitchen: "#7a4e2d",
       bathroom: "#1f5fae",
       bins: "#2a2d30",
-      floors: "#2e7d32",
+      // Teal, not green: green means done, so a lid never shares a status's hue.
+      floors: "#0f7c7a",
       errands: "#6a3d9a",
       other: "#8a9096",
     },
@@ -102,7 +103,7 @@ export const BIN_NIGHT: { light: BinNightScheme; dark: BinNightScheme; radius: n
       kitchen: "#c08a5e",
       bathroom: "#5e9be8",
       bins: "#8d959c",
-      floors: "#6cc070",
+      floors: "#4fbdb9",
       errands: "#a97fd6",
       other: "#6b7378",
     },

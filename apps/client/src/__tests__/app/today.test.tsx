@@ -2,9 +2,11 @@ import {
   AWAY_COPY,
   buildStake,
   DISPUTE_COPY,
+  FOCUS_SHELL_COPY,
   INVITE_COPY,
   JOHN_COPY,
   NOT_DEALT_COPY,
+  PAGE_TITLE,
   STAKE_COPY,
   TABLE_COPY,
   TODAY_COPY,
@@ -69,7 +71,8 @@ async function show() {
 
 async function open() {
   await show();
-  await screen.findByText(TODAY_COPY.title);
+  // The week's line under the title bar: the house has been read.
+  await screen.findByText(/^This week/);
 }
 
 beforeEach(() => {
@@ -99,7 +102,10 @@ beforeEach(() => {
 
 it("reads the house, and leaves signing out to House", async () => {
   await open();
-  expect(screen.getByRole('header', { name: TODAY_COPY.title })).toBeOnTheScreen();
+  // Focus's title bar: TODAY, and the day it is in the house.
+  const bar = within(screen.getByTestId('title-bar'));
+  expect(bar.getByRole('header', { name: PAGE_TITLE.today })).toBeOnTheScreen();
+  expect(bar.getByText(/^(Mon|Tue|Wed|Thu|Fri|Sat|Sun) \d{1,2} [A-Z][a-z]{2}$/)).toBeOnTheScreen();
   expect(read).toHaveBeenCalledWith('h1', expect.any(Date));
   expect(screen.queryByTestId('sign-out')).toBeNull();
 });
@@ -208,16 +214,16 @@ describe('catching up', () => {
     jest.spyOn(console, 'warn').mockImplementation(() => undefined);
     (catchUp as jest.Mock).mockRejectedValue(new Error('offline'));
     await open();
-    expect(screen.getByText(TODAY_COPY.title)).toBeOnTheScreen();
+    expect(screen.getByText(/^This week/)).toBeOnTheScreen();
   });
 });
 
 it("says when it can't read the house, and tries again", async () => {
   read.mockRejectedValueOnce(new Error('offline'));
   await show();
-  expect(await screen.findByRole('alert')).toHaveTextContent("Couldn't read the house. Check the connection.");
+  expect(await screen.findByRole('alert')).toHaveTextContent(FOCUS_SHELL_COPY.unreadable);
   await fireEvent.press(screen.getByRole('button', { name: 'Try again' }));
-  expect(await screen.findByText(TODAY_COPY.title)).toBeOnTheScreen();
+  expect(await screen.findByText(/^This week/)).toBeOnTheScreen();
 });
 
 

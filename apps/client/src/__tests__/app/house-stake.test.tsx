@@ -6,7 +6,7 @@ import { fireEvent, renderRouter, screen, within } from 'expo-router/testing-lib
 import { loadHouse } from '@/api/board';
 import { catchUp } from '@/api/house';
 import { confirmPayment, loadStake } from '@/api/stake';
-import StakeScreen from '@/app/(house)/stake';
+import StakeScreen from '@/app/(house)/house/stake';
 import { snapshot } from '@/testing/house';
 import { testQueryClient } from '@/testing/query';
 
@@ -41,9 +41,9 @@ async function open() {
           <Slot />
         </QueryClientProvider>
       ),
-      stake: StakeScreen,
+      'house/stake': StakeScreen,
     },
-    { initialUrl: '/stake' },
+    { initialUrl: '/house/stake' },
   );
   await screen.findByText(STAKE_COPY.title);
 }

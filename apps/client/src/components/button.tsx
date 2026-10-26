@@ -1,8 +1,9 @@
+import { withAlpha } from '@app/core';
 import { Link, type Href } from 'expo-router';
 import { useState, type ComponentType } from 'react';
-import { Pressable, StyleSheet, Text } from 'react-native';
+import { Platform, Pressable, StyleSheet, Text } from 'react-native';
 
-import { FONT, RADIUS, SPACE, TAP, useTheme } from '@/theme';
+import { RADIUS, SPACE, TAP, useTheme } from '@/theme';
 
 type Variant = 'primary' | 'outline' | 'ghost' | 'hazard';
 
@@ -10,11 +11,17 @@ type Variant = 'primary' | 'outline' | 'ghost' | 'hazard';
 export type ButtonIcon = ComponentType<{ size?: number; color?: string; 'aria-hidden'?: boolean }>;
 
 /**
- * A button at least a thumb tall. `primary` wears hi-vis amber: the one thing
- * to do on a screen; `hazard` is for a choice that strikes something out.
- * With `href` it is a link dressed as a button (an anchor on the web), as
- * the web app's are. `iconOnly` shows just the icon, square,
- * and `label` still names it for screen readers.
+ * A button at least a thumb tall, its label in RowTitle. `primary` wears
+ * hi-vis amber: the one thing to do on a screen, at most one per screen.
+ * `outline` is the secondary one, edged in muted ink. `ghost` has no edge.
+ * `hazard` is for a choice that strikes something out: an outline edged in
+ * hazard with a hazard icon and the words in ink, never a fill, so it reads
+ * on the pavement too. `chosen` (true or false) makes it one of a pair you
+ * pick from, such as the vote: the chosen one gets an ink edge on the tint,
+ * never amber, and says so (`aria-pressed` on the web, `aria-selected`
+ * elsewhere). With `href` it is a link dressed as a button (an anchor on
+ * the web). `iconOnly` shows just the icon, square, and `label` still names
+ * it for screen readers.
  */
 export function Button({
   label,
@@ -24,6 +31,7 @@ export function Button({
   icon: Icon,
   disabled = false,
   iconOnly = false,
+  chosen,
   testID,
 }: {
   label: string;
@@ -33,21 +41,29 @@ export function Button({
   icon?: ButtonIcon;
   disabled?: boolean;
   iconOnly?: boolean;
+  /** One of a pair to pick from: whether this is the one picked. */
+  chosen?: boolean;
   testID?: string;
 }) {
-  const { colors } = useTheme();
+  const { colors, type } = useTheme();
   const [pressed, setPressed] = useState(false);
-  const look = {
-    primary: { background: colors.hivis, ink: colors.onHivis, edge: colors.hivis },
-    outline: { background: 'transparent', ink: colors.foreground, edge: colors.border },
-    ghost: { background: 'transparent', ink: colors.foreground, edge: 'transparent' },
-    hazard: { background: colors.hazard, ink: colors.onHazard, edge: colors.hazard },
-  }[variant];
+  const look = chosen
+    ? { background: colors.secondary, ink: colors.foreground, edge: colors.foreground, icon: colors.foreground }
+    : {
+        primary: { background: colors.hivis, ink: colors.onHivis, edge: colors.hivis, icon: colors.onHivis },
+        outline: { background: 'transparent', ink: colors.foreground, edge: colors.mutedForeground, icon: colors.foreground },
+        ghost: { background: 'transparent', ink: colors.foreground, edge: 'transparent', icon: colors.foreground },
+        hazard: { background: 'transparent', ink: colors.foreground, edge: colors.hazard, icon: colors.hazard },
+      }[variant];
+  // A toggle's state: the web hears aria-pressed, which React Native lacks.
+  const chosenState =
+    chosen === undefined ? {} : Platform.OS === 'web' ? ({ 'aria-pressed': chosen } as object) : { 'aria-selected': chosen };
 
   const button = (
     <Pressable
       accessibilityRole={href ? 'link' : 'button'}
-      accessibilityState={{ disabled }}
+      aria-disabled={disabled}
+      {...chosenState}
       accessibilityLabel={iconOnly ? label : undefined}
       disabled={disabled}
       onPress={onPress}
@@ -59,11 +75,15 @@ export function Button({
       style={StyleSheet.flatten([
         styles.button,
         iconOnly && styles.square,
-        { backgroundColor: look.background, borderColor: look.edge, opacity: disabled ? 0.5 : pressed ? 0.85 : 1 },
+        {
+          backgroundColor: pressed && look.background === 'transparent' ? withAlpha(colors.foreground, 0.06) : look.background,
+          borderColor: look.edge,
+          opacity: disabled ? 0.5 : pressed && look.background !== 'transparent' ? 0.85 : 1,
+        },
       ])}
     >
-      {Icon ? <Icon size={18} color={look.ink} aria-hidden /> : null}
-      {iconOnly ? null : <Text style={[styles.label, { color: look.ink }]}>{label}</Text>}
+      {Icon ? <Icon size={20} color={look.icon} aria-hidden /> : null}
+      {iconOnly ? null : <Text style={[type.rowTitle, { color: look.ink }]}>{label}</Text>}
     </Pressable>
   );
   return href ? (
@@ -87,5 +107,4 @@ const styles = StyleSheet.create({
     gap: SPACE.sm,
   },
   square: { minWidth: TAP, paddingHorizontal: SPACE.md },
-  label: { fontFamily: FONT.bold, fontSize: 16 },
 });

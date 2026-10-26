@@ -1,4 +1,4 @@
-import { AWAY_COPY, DEAL_COPY, DISPUTE_COPY, JOHN_COPY, NOT_DEALT_COPY, SWAP_COPY, WEEK_COPY } from '@app/core';
+import { AWAY_COPY, DEAL_COPY, DISPUTE_COPY, FOCUS_SHELL_COPY, JOHN_COPY, NOT_DEALT_COPY, PAGE_TITLE, SWAP_COPY, WEEK_COPY } from '@app/core';
 import { QueryClientProvider } from '@tanstack/react-query';
 import { Slot } from 'expo-router';
 import { fireEvent, renderRouter, screen, waitFor, within } from 'expo-router/testing-library';
@@ -70,7 +70,9 @@ async function open() {
     },
     { initialUrl: '/week' },
   );
-  await screen.findByText(WEEK_COPY.title);
+  // The house has been read once the spinner goes.
+  await waitFor(() => expect(screen.queryByLabelText(FOCUS_SHELL_COPY.reading)).toBeNull());
+  expect(within(screen.getByTestId('title-bar')).getByRole('header', { name: PAGE_TITLE.week })).toBeOnTheScreen();
 }
 
 beforeEach(() => {

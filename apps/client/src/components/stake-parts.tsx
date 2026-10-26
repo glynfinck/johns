@@ -172,7 +172,7 @@ export function StakeCard({ stake, me, currency }: { stake: StakeView; me: strin
     <Card style={styles.card}>
       <View style={styles.cardTop} testID="my-stake">
         <Eyebrow>{STAKE_COPY.yours}</Eyebrow>
-        <TextLink href="/stake" label={STAKE_COPY.title} style={styles.link} />
+        <TextLink href="/house/stake" label={STAKE_COPY.title} style={styles.link} />
       </View>
       <Text style={[styles.big, { color: colors.foreground }]}>{formatMoney(stake.stakeMinor, currency)}</Text>
       <Body muted style={styles.body}>

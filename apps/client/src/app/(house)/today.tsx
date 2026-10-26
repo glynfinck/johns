@@ -1,28 +1,31 @@
-import { isOpen, PAGE_TITLE, TODAY_COPY, weekRange } from '@app/core';
-import { FlameIcon, RefreshCwIcon, RepeatIcon, ShieldIcon } from 'lucide-react-native';
-import { useState } from 'react';
-import { ActivityIndicator, StyleSheet, Text, View } from 'react-native';
+import { dayLabel, isOpen, PAGE_TITLE, TODAY_COPY, weekRange } from '@app/core';
+import { FlameIcon, RepeatIcon, ShieldIcon } from 'lucide-react-native';
+import { StyleSheet, Text, View } from 'react-native';
 
-import { Alert } from '@/components/alert';
 import { AwayBanner } from '@/components/away-banner';
-import { Button } from '@/components/button';
 import { Card } from '@/components/card';
 import { InviteCard } from '@/components/invite-card';
 import { JohnCard } from '@/components/john-card';
 import { NotDealt } from '@/components/not-dealt';
 import { PageTitle } from '@/components/page-title';
+import { Reading, ReadFailed } from '@/components/read-state';
 import { Screen } from '@/components/screen';
 import { StakeCard } from '@/components/stake-parts';
 import { ShareCard, TableBeside } from '@/components/table-parts';
-import { Body, Eyebrow, Heading } from '@/components/text';
+import { Body, Eyebrow } from '@/components/text';
+import { TitleBar } from '@/components/title-bar';
 import { useAway } from '@/hooks/use-away';
-import { useCatchUp, useHouse, type HouseView } from '@/hooks/use-house';
+import { useHouse, type HouseView } from '@/hooks/use-house';
 import { useMembership } from '@/hooks/use-membership';
+import { usePull } from '@/hooks/use-refresh';
 import { useStake } from '@/hooks/use-stake';
 import { useTable } from '@/hooks/use-table';
 import { FONT, RADIUS, SPACE, useTheme } from '@/theme';
 
-/** Today: your Johns this week, what's left, and the tick, as the web's Today. */
+/**
+ * Today: your Johns this week, what's left, and the tick. For now the old
+ * Today's content under Focus's title bar; the Today track rebuilds it.
+ */
 export default function Today() {
   const { session, house } = useMembership();
   // The layout's guard only shows Today with a house and a session.
@@ -30,33 +33,28 @@ export default function Today() {
 }
 
 function TodayFor({ houseId, userId }: { houseId: string; userId: string }) {
-  const { colors } = useTheme();
   const { query, view } = useHouse(houseId, userId);
-  const [refreshing, setRefreshing] = useState(false);
-  const freshen = useCatchUp(houseId);
-
-  async function pull() {
-    setRefreshing(true);
-    if (!(await freshen())) await query.refetch();
-    setRefreshing(false);
-  }
+  const { refreshing, pull } = usePull(houseId, query.refetch);
 
   return (
-    <Screen refreshing={refreshing} onRefresh={() => void pull()}>
+    <Screen
+      bar={
+        <TitleBar
+          title={PAGE_TITLE.today}
+          right={view ? dayLabel(view.now, view.snapshot.rules.timezone) : undefined}
+        />
+      }
+      refreshing={refreshing}
+      onRefresh={pull}
+      testID="today-screen"
+    >
       <PageTitle page={PAGE_TITLE.today} />
-      {!view ? (
-        query.isError ? (
-          <View style={styles.stack}>
-            <Alert message="Couldn't read the house. Check the connection." />
-            <View style={styles.start}>
-              <Button variant="outline" icon={RefreshCwIcon} label="Try again" onPress={() => void query.refetch()} />
-            </View>
-          </View>
-        ) : (
-          <ActivityIndicator color={colors.foreground} accessibilityLabel="Reading the house" style={styles.loading} />
-        )
-      ) : (
+      {view ? (
         <Week view={view} />
+      ) : query.isError ? (
+        <ReadFailed onRetry={() => void query.refetch()} />
+      ) : (
+        <Reading />
       )}
     </Screen>
   );
@@ -75,12 +73,9 @@ function Week({ view }: { view: HouseView }) {
 
   return (
     <View style={styles.stack}>
-      <View>
-        <Eyebrow>
-          {board.week ? TODAY_COPY.thisWeekRange(weekRange(board.week.startsAt, board.week.endsAt, rules.timezone)) : TODAY_COPY.thisWeek}
-        </Eyebrow>
-        <Heading style={styles.title}>{TODAY_COPY.title}</Heading>
-      </View>
+      <Eyebrow>
+        {board.week ? TODAY_COPY.thisWeekRange(weekRange(board.week.startsAt, board.week.endsAt, rules.timezone)) : TODAY_COPY.thisWeek}
+      </Eyebrow>
 
       {away.data && me ? (
         <AwayBanner periods={away.data.periods} me={me.userId} today={away.data.today} makeup={house.awayMakeup} />
@@ -182,9 +177,6 @@ function Week({ view }: { view: HouseView }) {
 
 const styles = StyleSheet.create({
   stack: { gap: SPACE.lg },
-  start: { alignItems: 'flex-start' },
-  loading: { marginTop: SPACE.xxl },
-  title: { marginTop: SPACE.xs },
   yours: { marginTop: SPACE.sm },
   hero: {
     flexDirection: 'row',

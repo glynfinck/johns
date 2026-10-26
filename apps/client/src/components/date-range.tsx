@@ -33,7 +33,7 @@ export function DateRangePicker({
   value: DateRange;
   onChange: (range: DateRange, picking: boolean) => void;
 }) {
-  const { colors } = useTheme();
+  const { colors, type } = useTheme();
   const first = today.slice(0, 7);
   const [month, setMonth] = useState(value.from?.slice(0, 7) ?? first);
   const [picking, setPicking] = useState(false);
@@ -60,14 +60,14 @@ export function DateRangePicker({
           disabled={month <= first}
           onPress={() => setMonth(shiftMonth(month, -1))}
         />
-        <Text style={[styles.month, { color: colors.foreground }]} accessibilityLiveRegion="polite">
+        <Text style={type.rowTitle} accessibilityLiveRegion="polite">
           {monthLabel(month)}
         </Text>
         <Button variant="ghost" icon={ChevronRightIcon} label={AWAY_COPY.nextMonth} iconOnly onPress={() => setMonth(shiftMonth(month, 1))} />
       </View>
       <View style={styles.week} aria-hidden>
         {days.map((d) => (
-          <Text key={d} style={[styles.dow, { color: colors.mutedForeground }]}>
+          <Text key={d} style={[type.sectionLabel, styles.dow]}>
             {d.slice(0, 1)}
           </Text>
         ))}
@@ -93,11 +93,12 @@ export function DateRangePicker({
                   styles.day,
                   end && { backgroundColor: colors.foreground },
                   inside && { backgroundColor: colors.secondary },
-                  date === today && !end && { borderColor: colors.hivis, borderWidth: 2 },
+                  date === today && !end && { borderColor: colors.foreground, borderWidth: 2 },
                 ]}
               >
                 <Text
                   style={[
+                    type.body,
                     styles.date,
                     { color: end ? colors.background : past ? colors.mutedForeground : colors.foreground },
                     past && styles.past,
@@ -117,11 +118,10 @@ export function DateRangePicker({
 const styles = StyleSheet.create({
   calendar: { gap: 2 },
   head: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
-  month: { fontFamily: FONT.extrabold, fontSize: 15 },
   week: { flexDirection: 'row', gap: 2 },
-  dow: { flex: 1, textAlign: 'center', fontFamily: FONT.bold, fontSize: 11, paddingVertical: SPACE.xs },
+  dow: { flex: 1, textAlign: 'center', paddingVertical: SPACE.xs },
   cell: { flex: 1, minHeight: TAP - 4 },
   day: { alignItems: 'center', justifyContent: 'center', borderRadius: RADIUS },
-  date: { fontFamily: FONT.bold, fontSize: 14 },
+  date: { fontFamily: FONT.bold },
   past: { opacity: 0.4 },
 });

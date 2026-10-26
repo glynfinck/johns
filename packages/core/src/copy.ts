@@ -27,6 +27,10 @@ export const PAGE_TITLE = {
   house: "House",
   privacy: "Privacy",
   notFound: "Nothing here",
+  johnList: "The John list",
+  rules: "House rules",
+  away: "Time away",
+  groups: "Groups",
 } as const;
 
 /** What Johns keeps, and who sees it. */
@@ -263,6 +267,41 @@ export const SHELL_COPY = {
   housemates: (count: number) => `${count} ${count === 1 ? "housemate" : "housemates"}`,
   close: "Close",
   standing: (streak: number, tokens: number) => `${streak}-week streak · ${tokens} ${tokens === 1 ? "token" : "tokens"}`,
+} as const;
+
+const waitingForYourVote = (count: number) => `${count} waiting for your vote`;
+
+/**
+ * Focus's shell: the words of the tabs, the rail, the title bars and the
+ * pieces every screen is built from. Each screen's own words live in its
+ * own object (the empty ones at the end of this file, one per track).
+ */
+export const FOCUS_SHELL_COPY = {
+  /** A pushed page's way back. */
+  back: "Back",
+  /** The way back, spoken, when it shows the place it goes to ("‹ House"): "Back to House". */
+  backTo: (place: string) => `Back to ${place}`,
+  /** The title bar's "•••" button, which opens the screen's menu. */
+  more: "More",
+  /** The tabs, or the rail, to a screen reader. */
+  places: "Places",
+  /** Today's badge, spoken: the disputes waiting for your vote. */
+  toVote: waitingForYourVote,
+  /** A tab's spoken name, with its badge when it has one: "Today, 1 waiting for your vote". */
+  tab: (label: string, toVote: number) => (toVote > 0 ? `${label}, ${waitingForYourVote(toVote)}` : label),
+  /** The fold that keeps finished Johns out of the way. */
+  done: (count: number) => `Done (${count})`,
+  reading: "Reading the house",
+  unreadable: "Couldn’t read the house. Check the connection.",
+  retry: "Try again",
+  /** A confirm sheet's way out without doing it. */
+  cancel: "Cancel",
+  /** House's setup pages, as a section: they change the house for everyone. */
+  setup: "House setup",
+  /** A housemate's page for someone who isn't in the house any more. */
+  gone: "They’re not in the house any more.",
+  /** Someone in the house's history who has since left. */
+  formerHousemate: "A former housemate",
 } as const;
 
 /** The Table: effort points for the week and the month, fair shares, streaks and perks. */
@@ -513,4 +552,44 @@ export const AWAY_COPY = {
         : "."
     }`,
   change: "Change",
+} as const;
+
+/** Today track: Next up, Needs you, the rest of your week and the standing line. */
+export const NEXT_UP_COPY = {
+} as const;
+
+/** Today track: the John sheet's states, from yours to settled. */
+export const JOHN_SHEET_COPY = {
+} as const;
+
+/** Week track: the summary bar, the person groups, the fair-share footer and the menu. */
+export const WEEK_SUMMARY_COPY = {
+} as const;
+
+/** House, the money half: the month card and settling up, and the Table with its invite and rules sheets. */
+export const HOUSE_PAGE_COPY = {
+} as const;
+
+/** House, the money half: a housemate's page. */
+export const PERSON_COPY = {
+} as const;
+
+/** House, the money half: Stake history, the ledger by month. */
+export const STAKE_HISTORY_COPY = {
+} as const;
+
+/** House, the lower half: the whole Wall, by day. */
+export const WALL_FEED_COPY = {
+} as const;
+
+/** House, the lower half: the Wall's latest, House setup's rows, You, and leaving. */
+export const HOUSE_LOWER_COPY = {
+} as const;
+
+/** Setup track: the Johns, Rules, Time away and Groups pages. */
+export const SETUP_COPY = {
+} as const;
+
+/** Front door track: the front door, starting a house, welcome and privacy. */
+export const FRONT_DOOR_COPY = {
 } as const;

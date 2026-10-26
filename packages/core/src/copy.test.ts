@@ -1,9 +1,11 @@
 import { describe, expect, it } from "vitest";
 
+import * as copy from "./copy";
 import {
   APP_NAME,
   ERROR_COPY,
   AWAY_COPY,
+  FOCUS_SHELL_COPY,
   DEAL_COPY,
   DISPUTE_COPY,
   FRONT_DOOR,
@@ -297,5 +299,65 @@ describe("looks", () => {
 describe("REMINDERS_COPY", () => {
   it("tells an iPhone to install first", () => {
     expect(REMINDERS_COPY.unsupported).toMatch(/home screen/);
+  });
+});
+
+describe("FOCUS_SHELL_COPY", () => {
+  it("speaks Today's badge, and leaves a tab with none as its name", () => {
+    expect(FOCUS_SHELL_COPY.toVote(1)).toBe("1 waiting for your vote");
+    expect(FOCUS_SHELL_COPY.tab("Today", 2)).toBe("Today, 2 waiting for your vote");
+    expect(FOCUS_SHELL_COPY.tab("Today", 0)).toBe("Today");
+    expect(FOCUS_SHELL_COPY.tab("Week", 0)).toBe("Week");
+  });
+
+  it("counts what a fold holds", () => {
+    expect(FOCUS_SHELL_COPY.done(0)).toBe("Done (0)");
+    expect(FOCUS_SHELL_COPY.done(2)).toBe("Done (2)");
+  });
+});
+
+describe("the tracks' word objects", () => {
+  const TRACKS = [
+    "NEXT_UP_COPY",
+    "JOHN_SHEET_COPY",
+    "WEEK_SUMMARY_COPY",
+    "HOUSE_PAGE_COPY",
+    "PERSON_COPY",
+    "STAKE_HISTORY_COPY",
+    "WALL_FEED_COPY",
+    "HOUSE_LOWER_COPY",
+    "SETUP_COPY",
+    "FRONT_DOOR_COPY",
+  ];
+
+  it("are in place, in order, for each track to fill", () => {
+    // Vitest keeps the module's exports in the order they're written.
+    const names = Object.keys(copy).filter((name) => TRACKS.includes(name));
+    expect(names).toEqual(TRACKS);
+    for (const name of names) expect(typeof copy[name as keyof typeof copy]).toBe("object");
+  });
+});
+
+/** Every sentence an export holds: strings, lists and objects of them (functions are tested one by one). */
+function sentences(value: unknown): string[] {
+  if (typeof value === "string") return [value];
+  if (Array.isArray(value)) return value.flatMap(sentences);
+  if (value && typeof value === "object") return Object.values(value).flatMap(sentences);
+  return [];
+}
+
+describe("every word in copy.ts", () => {
+  const all = Object.values(copy).flatMap(sentences);
+
+  it("is there to check", () => {
+    expect(all.length).toBeGreaterThan(100);
+  });
+
+  it("never calls it a rota or a chore app", () => {
+    for (const text of all) expect(text).not.toMatch(/\brota\b|chore app/i);
+  });
+
+  it("carries no emoji", () => {
+    for (const text of all) expect(text).not.toMatch(/\p{Extended_Pictographic}/u);
   });
 });

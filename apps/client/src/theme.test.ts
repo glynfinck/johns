@@ -1,7 +1,7 @@
 import { BIN_NIGHT } from '@app/core';
 
 import app from '../app.json';
-import { FONT, themeFor } from './theme';
+import { CONTENT_MAX, FONT, GUTTER, INSET, LEADING, ROW_GAP, ROW_MIN, TAP, themeFor } from './theme';
 
 describe('theme', () => {
   it('follows the system into the dark, and treats anything else as daylight', () => {
@@ -16,6 +16,54 @@ describe('theme', () => {
     expect(h1.textTransform).toBe('uppercase');
     expect(h1.fontFamily).toBe(FONT.black);
     expect(themeFor('dark').type.heading(2).color).toBe(BIN_NIGHT.dark.foreground);
+  });
+});
+
+describe("Focus's type", () => {
+  const { type } = themeFor('light');
+  const dark = themeFor('dark').type;
+
+  it('has six roles, each its own size, from the caps title down to the meta line', () => {
+    const roles = [type.title, type.lead, type.sectionLabel, type.rowTitle, type.body, type.meta];
+    expect(roles.map((r) => [r.fontSize, r.lineHeight])).toEqual([
+      [28, 32],
+      [22, 28],
+      [12, 16],
+      [17, 22],
+      [16, 24],
+      [14, 20],
+    ]);
+    // Numbers line up in columns everywhere.
+    for (const role of roles) expect(role.fontVariant).toEqual(['tabular-nums']);
+  });
+
+  it('sets the title and the section labels in caps, the labels quiet', () => {
+    expect(type.title).toMatchObject({ fontFamily: FONT.black, textTransform: 'uppercase' });
+    expect(type.sectionLabel).toMatchObject({ fontFamily: FONT.extrabold, textTransform: 'uppercase' });
+    expect(type.sectionLabel.color).toBe(BIN_NIGHT.light.mutedForeground);
+    expect(type.meta.color).toBe(BIN_NIGHT.light.mutedForeground);
+    expect(type.rowTitle.textTransform).toBeUndefined();
+  });
+
+  it('follows the scheme into the dark', () => {
+    expect(dark.title.color).toBe(BIN_NIGHT.dark.foreground);
+    expect(dark.meta.color).toBe(BIN_NIGHT.dark.mutedForeground);
+  });
+
+  it("keeps a tab's label and the initials colourless, for the tab or the plate to ink", () => {
+    expect(type.tabLabel.color).toBeUndefined();
+    expect(type.initials).toMatchObject({ fontSize: 12, lineHeight: 16, fontFamily: FONT.extrabold, textTransform: 'uppercase' });
+    expect(type.initials.color).toBeUndefined();
+  });
+});
+
+describe('the layout constants', () => {
+  it('make a row a thumb tall at least, its words on one keyline', () => {
+    expect(ROW_MIN).toBeGreaterThanOrEqual(TAP);
+    // Where a row's words start when it has a leading slot.
+    expect(INSET + LEADING + ROW_GAP).toBe(60);
+    expect(GUTTER).toBe(16);
+    expect(CONTENT_MAX).toBe(680);
   });
 });
 

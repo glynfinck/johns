@@ -21,4 +21,11 @@ export * from "./stake";
 export * from "./streak";
 export * from "./wall";
 export * from "./week";
+// The Focus tracks' modules, made empty so that no two tracks write here.
+export * from "./today";
+export * from "./week-summary";
+export * from "./house-page";
+export * from "./house-lower";
+export * from "./setup";
+export * from "./front-door";
 export type * from "./db-types";

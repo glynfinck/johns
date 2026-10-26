@@ -1,4 +1,4 @@
-import { DISPUTE_COPY, SECTION_LABEL, WEEK_COPY } from "@app/core";
+import { DISPUTE_COPY, PAGE_TITLE, SECTION_LABEL } from "@app/core";
 import { expect, test, type Locator, type Page } from "@playwright/test";
 
 import { admin, CLIENT_URL, cleanUp, dealtHouseInClient } from "./auth";
@@ -46,7 +46,7 @@ test("dispute a housemate's tick from the board, and the house of two decides at
   await ava.goto("/today");
   await ava.getByRole("tab", { name: SECTION_LABEL.week }).click();
   await expect(ava).toHaveURL(/\/week$/);
-  await expect(ava.getByRole("heading", { name: WEEK_COPY.title })).toBeVisible();
+  await expect(ava.getByRole("heading", { name: PAGE_TITLE.week })).toBeVisible();
   const theirs = onBoard(ava, benJohn);
   await expect(theirs.getByText("Done, being checked")).toBeVisible();
 
