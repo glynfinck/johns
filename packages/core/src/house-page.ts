@@ -200,9 +200,13 @@ export interface SettleRow {
 /**
  * What's left to do about a debt from closed months, as its meta line says
  * it wherever it shows (House's settle-up, a housemate's page): owed to you,
- * it's paid however you like; yours, it waits for them to confirm.
+ * it's paid however you like; yours, it waits for them to confirm. With
+ * someone who has left, neither can happen here: the database only takes a
+ * payment between housemates.
  */
 function settleMeta(t: Transfer, me: string, members: readonly Named[]): string {
+  const other = t.to === me ? t.from : t.to;
+  if (!members.some((m) => m.userId === other)) return HOUSE_PAGE_COPY.gone;
   return t.to === me ? HOUSE_PAGE_COPY.paidHowYouLike : HOUSE_PAGE_COPY.waitingFor(firstNameMid(members, t.to));
 }
 
@@ -235,7 +239,7 @@ export function settleRows(input: {
         owedToYou: true,
         amount: t.amount,
         title: HOUSE_PAGE_COPY.owesYou(who, amount, monthsOf(t.from)),
-        meta: here(t.from) ? settleMeta(t, me, members) : HOUSE_PAGE_COPY.gone,
+        meta: settleMeta(t, me, members),
         action: here(t.from) ? HOUSE_PAGE_COPY.markReceived(amount) : null,
         spoken: here(t.from) ? HOUSE_PAGE_COPY.markReceivedFrom(who, amount) : null,
         primary: false,
@@ -255,7 +259,7 @@ export function settleRows(input: {
         owedToYou: false,
         amount: t.amount,
         title: HOUSE_PAGE_COPY.youOwe(name, formatMoney(t.amount, currency), months),
-        meta: here(t.to) ? settleMeta(t, me, members) : HOUSE_PAGE_COPY.gone,
+        meta: settleMeta(t, me, members),
         action: null,
         spoken: null,
         primary: false,
@@ -567,10 +571,11 @@ export interface HistoryLine {
   meta: string;
   /**
    * Signed from the entry's side of the ledger, as the Stake sums it: "−£1"
-   * forfeited, "+£4.01" shared out, and a payment "+" to whoever paid what
-   * they owed and "−" to whoever was paid what they were owed. Null for a
-   * payment between two others: its amount is only theirs to see, as on the
-   * Wall.
+   * forfeited, "+£4.01" shared out, "+£2" over the stake and returned. A
+   * payment you're in has no sign, "£1.34": the ledger books it the other
+   * way round from the cash (the payer's row is "+", as it clears what they
+   * owed), so a sign would read backwards. Null for a payment between two
+   * others: its amount is only theirs to see, as on the Wall.
    */
   amount: string | null;
   /** Money lost: a forfeit, in hazard. */

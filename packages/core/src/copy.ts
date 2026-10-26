@@ -1015,8 +1015,8 @@ export const HOUSE_LOWER_COPY = {
   costsNothing: "You’re square with everyone, so it costs you nothing.",
   /** The only admin, with others still in the house: the database won't let them go yet. */
   lastAdmin: "You’re the only admin, so you can’t leave yet. Make someone else an admin first, from their page.",
-  /** The last one out, after what it costs. */
-  lastOne: "Nobody will be left in the house, and its invite will stop working.",
+  /** The last one out, after what it costs. No more than that: the house and its invite stay as they were. */
+  lastOne: "Nobody will be left in the house.",
   /** Until the Stake is read, and if it can't be. */
   costReading: "Working out what leaving costs you…",
   costUnread: "Couldn’t read the Stake, so this can’t say what leaving costs you.",

@@ -69,6 +69,11 @@ export function useJohnRow(item: BoardItem, context: JohnRowContext) {
     plan.trailing === 'undo'
       ? undoWarning(item, context.rules, context.now, forfeitRoom(stake, item.userId, monthOf(item.dueAt, context.zone)))
       : null;
+  // The confirm lasts only while the row offers Undo: when the John moves on
+  // under it (a dispute lands, the tick stands), the question goes, and
+  // stays gone should Undo come back. (Set while rendering, as React
+  // suggests for state that follows other state.)
+  if (asking && warning === null) setAsking(false);
   const undoNow = async () => {
     if (await undo.run(() => undoDone(item.id))) setAsking(false);
   };
@@ -95,7 +100,7 @@ export function useJohnRow(item: BoardItem, context: JohnRowContext) {
       undoing: undo.pending,
       vote: open,
     }),
-    // A refusal from the confirm is said in it.
+    // A refusal from the confirm is said in it, and under the row once it has gone.
     problem: tick.problem ?? (asking ? null : undo.problem),
     confirm: warning ? (
       <ConfirmSheet

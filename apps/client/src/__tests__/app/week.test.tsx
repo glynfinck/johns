@@ -1,4 +1,15 @@
-import { BIN_NIGHT, FOCUS_SHELL_COPY, NEXT_UP_COPY, NOT_DEALT_COPY, PAGE_TITLE, TABLE_COPY, WEEK_COPY, WEEK_SUMMARY_COPY } from '@app/core';
+import {
+  BIN_NIGHT,
+  FOCUS_SHELL_COPY,
+  humanError,
+  JOHN_SHEET_COPY,
+  NEXT_UP_COPY,
+  NOT_DEALT_COPY,
+  PAGE_TITLE,
+  TABLE_COPY,
+  WEEK_COPY,
+  WEEK_SUMMARY_COPY,
+} from '@app/core';
 import { QueryClientProvider, type QueryClient } from '@tanstack/react-query';
 import { Slot } from 'expo-router';
 import { act, fireEvent, renderRouter, screen, waitFor, within } from 'expo-router/testing-library';
@@ -13,6 +24,7 @@ import { dealThisWeek, loadJohnList } from '@/api/settings';
 import { loadTable } from '@/api/table';
 import Week from '@/app/(house)/week';
 import { ToastProvider } from '@/components/toast';
+import { houseKey } from '@/hooks/keys';
 import { assignment, snapshot } from '@/testing/house';
 import { testQueryClient } from '@/testing/query';
 
@@ -279,6 +291,66 @@ describe('on a phone', () => {
     await open();
     await fireEvent.press(screen.getByRole('button', { name: NEXT_UP_COPY.undo('Hoover the stairs') }));
     expect(undoDone).toHaveBeenCalledWith('a2');
+  });
+
+  describe('an undo that would make the John late', () => {
+    // Priya's Hoover the stairs: ticked on time, now past its due time, being checked.
+    const checking = () =>
+      busyWeek({
+        assignments: [
+          ...busyWeek().assignments.slice(0, 1),
+          assignment({ id: 'a2', name: 'Hoover the stairs', category: 'floors', due_at: at(-2), done_at: at(-3) }),
+        ],
+        disputes: [],
+      });
+    // A moment later: Sam disputes it.
+    const disputed = () => ({
+      ...checking(),
+      disputes: [
+        { id: 'd2', assignment_id: 'a2', raised_by: 'sam', reason: 'Still dusty', closes_at: at(20), dispute_votes: [{ user_id: 'sam', uphold: true }] },
+      ],
+    });
+    /** The house read again, as a Realtime change does. */
+    async function reread(client: QueryClient, house: ReturnType<typeof checking>) {
+      read.mockResolvedValue(house);
+      await act(async () => {
+        await client.invalidateQueries({ queryKey: houseKey('h1') });
+      });
+    }
+
+    it('asks first, and says a refusal under the row once a dispute has taken the question away', async () => {
+      read.mockResolvedValue(checking());
+      let refuse: (reason: Error) => void = () => undefined;
+      (undoDone as jest.Mock).mockImplementation(() => new Promise((_ok, no) => (refuse = no)));
+      const client = await open();
+      await fireEvent.press(screen.getByRole('button', { name: NEXT_UP_COPY.undo('Hoover the stairs') }));
+      expect(undoDone).not.toHaveBeenCalled();
+      const confirm = screen.getByTestId('undo-confirm');
+      await fireEvent.press(within(confirm).getByRole('button', { name: JOHN_SHEET_COPY.undoIt }));
+      expect(undoDone).toHaveBeenCalledWith('a2');
+
+      // Sam's dispute lands while the undo is on its way: the row offers no Undo, so the question goes.
+      await reread(client, disputed());
+      await waitFor(() => expect(screen.queryByTestId('undo-confirm')).toBeNull());
+      const refusal = humanError({ message: 'under_dispute', code: 'P0001' });
+      await act(async () => refuse(new Error(refusal)));
+      expect(within(screen.getByTestId('person-priya')).getByText(refusal)).toBeOnTheScreen();
+    });
+
+    it('never asks again by itself when the dispute that took the question away is turned down', async () => {
+      read.mockResolvedValue(checking());
+      const client = await open();
+      await fireEvent.press(screen.getByRole('button', { name: NEXT_UP_COPY.undo('Hoover the stairs') }));
+      expect(screen.getByTestId('undo-confirm')).toBeOnTheScreen();
+
+      await reread(client, disputed());
+      await waitFor(() => expect(screen.queryByTestId('undo-confirm')).toBeNull());
+      // The house turns the dispute down before the tick stands: Undo is back, the question isn't.
+      await reread(client, checking());
+      expect(await screen.findByRole('button', { name: NEXT_UP_COPY.undo('Hoover the stairs') })).toBeOnTheScreen();
+      expect(screen.queryByTestId('undo-confirm')).toBeNull();
+      expect(undoDone).not.toHaveBeenCalled();
+    });
   });
 
   it('opens the John sheet from any row: on Dispute for a fresh tick, on the vote for a dispute', async () => {

@@ -311,6 +311,9 @@ describe('Section', () => {
     expect(screen.getByLabelText('Show').parent).toHaveStyle({ marginVertical: -(TAP - 24) / 2 });
     expect(header('The Table')).toHaveStyle({ marginBottom: LABEL_GAP });
     expect(header('The Table')).not.toHaveStyle({ flexWrap: 'wrap' });
+    // Its foot (12 below the line) reaches into the group (LABEL_GAP below it), so the header is drawn over the
+    // group, a later sibling: the control is seen whole, and a tap on its foot is the control's, not the first row's.
+    expect(header('The Table')).toHaveStyle({ zIndex: 1 });
   });
 });
 

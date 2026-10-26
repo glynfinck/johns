@@ -486,8 +486,13 @@ describe("a housemate's page", () => {
       ["You owe Sam £4.01 for September", "Waiting for Sam to confirm"],
     ]);
     expect(owingLines({ ...input, personId: "megan", me: "sam" })).toEqual([]);
+    // With someone who has left, nobody can mark it: said as House's settle-up says it, whichever way it's owed.
     const left = owingLines({ ...input, transfers: [{ from: "sam", to: "ben", amount: 100 }], personId: "sam", me: "sam" });
-    expect(left.map((l) => l.title)).toEqual(["You owe a former housemate £1"]);
+    expect(left.map((l) => [l.title, l.meta[0].text])).toEqual([["You owe a former housemate £1", HOUSE_PAGE_COPY.gone]]);
+    const theirs = owingLines({ ...input, transfers: [{ from: "ben", to: "sam", amount: 100 }], personId: "sam", me: "sam" });
+    expect(theirs.map((l) => [l.title, l.meta[0].text])).toEqual([["A former housemate owes you £1", HOUSE_PAGE_COPY.gone]]);
+    const house = settleRows({ ...input, transfers: [{ from: "sam", to: "ben", amount: 100 }, { from: "ben", to: "sam", amount: 100 }], me: "sam" });
+    expect(house.map((r) => r.meta)).toEqual([...theirs, ...left].map((l) => l.meta[0].text));
   });
 
   it("lists their time away from today on, or says there's none", () => {

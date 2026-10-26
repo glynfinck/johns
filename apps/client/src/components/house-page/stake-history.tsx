@@ -28,8 +28,10 @@ const KIND_ICON: Record<HistoryKind, LucideIcon> = {
 /**
  * The ledger by month, newest first: a section for each month, a row for
  * each entry. A forfeit names its John, with the late or missed mark and
- * its amount in hazard; shares, refunds and payments are said in words,
- * signed in ink. A payment between two others has no amount: it's theirs.
+ * its amount in hazard; shares and refunds are said in words, signed in
+ * ink. A payment says who paid whom, its amount in ink without a sign
+ * (core's HistoryLine says why); one between two others has no amount:
+ * it's theirs.
  */
 export function StakeHistory({ months }: { months: readonly HistoryMonth[] }) {
   const { colors } = useTheme();

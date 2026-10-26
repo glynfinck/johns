@@ -13,7 +13,7 @@ jest.mock('./supabase', () => ({
   supabase: {
     from: jest.fn((table: string) => {
       const builder: Record<string, unknown> = {};
-      for (const method of ['select', 'eq', 'order', 'range']) {
+      for (const method of ['select', 'eq', 'lt', 'order', 'limit']) {
         builder[method] = jest.fn((...args: unknown[]) => {
           mockCalls.push([table, method, args]);
           return builder;

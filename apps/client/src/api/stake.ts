@@ -52,24 +52,28 @@ const PAGE = 1000;
 
 /**
  * The house's whole ledger, newest first, a page at a time: every balance is
- * a sum of all of it, so a long-lived house can't lose its oldest rows.
+ * a sum of all of it, so a long-lived house can't lose its oldest rows. Each
+ * page starts below the last id read rather than at a count of rows: the id
+ * only grows, so a row written between two pages (a payment, a month
+ * closing) lands above them all instead of pushing one onto the next page
+ * twice.
  */
 async function readLedger(houseId: string) {
-  const page = (from: number) =>
-    supabase
+  const page = (below: number | null) => {
+    const query = supabase
       .from('ledger')
       .select('id, user_id, kind, amount_minor, month, counterparty, created_at, assignments(name, outcome, due_at)')
-      .eq('house_id', houseId)
-      .order('created_at', { ascending: false })
-      // Rows written together share a time; the id keeps the pages from overlapping.
-      .order('id', { ascending: false })
-      .range(from, from + PAGE - 1);
+      .eq('house_id', houseId);
+    return (below === null ? query : query.lt('id', below)).order('id', { ascending: false }).limit(PAGE);
+  };
   const rows: NonNullable<Awaited<ReturnType<typeof page>>['data']> = [];
-  for (let from = 0; ; from += PAGE) {
-    const { data, error } = await page(from);
+  for (let below: number | null = null; ; ) {
+    const { data, error } = await page(below);
     if (error) throw error;
-    rows.push(...(data ?? []));
-    if ((data?.length ?? 0) < PAGE) return rows;
+    const got = data ?? [];
+    rows.push(...got);
+    if (got.length < PAGE) return rows;
+    below = got[got.length - 1].id;
   }
 }
 

@@ -21,9 +21,11 @@ const OVERHANG = (TAP - LINE) / 2;
  * The label keeps its width: Meta on the right gives way first, moving under
  * the label when the line can't hold both, and only then truncating. A
  * control hangs over the label's line, above and below it, so the group
- * starts LABEL_GAP below the label under every header alike. Sections don't space
- * themselves: the Screen, or a flush Sheet, holding them puts SECTION_GAP
- * between its children.
+ * starts LABEL_GAP below the label under every header alike. Its last few
+ * points rest on the group's top edge, as the kit's do, so the header is
+ * drawn over the group: the control is seen whole and keeps its whole
+ * target. Sections don't space themselves: the Screen, or a flush Sheet,
+ * holding them puts SECTION_GAP between its children.
  */
 export function Section({
   label,
@@ -104,8 +106,10 @@ const styles = StyleSheet.create({
   // Words on the right move under the label rather than cutting it short.
   wraps: { flexWrap: 'wrap', marginBottom: LABEL_GAP },
   // A control stays in the label's line, hanging over it (as the kit's does),
-  // so the group sits LABEL_GAP below the label whatever is on the right.
-  withControl: { marginBottom: LABEL_GAP },
+  // so the group sits LABEL_GAP below the label whatever is on the right. Its
+  // foot reaches into the group, so the header is drawn over the group and
+  // takes the taps there.
+  withControl: { marginBottom: LABEL_GAP, zIndex: 1 },
   // Shrinks only when it can't fit a line on its own.
   label: { minHeight: LINE, flexShrink: 1, flexDirection: 'row', alignItems: 'center', gap: SPACE.sm },
   // Overpass's caps sit high in their line, so the label comes down a little.
