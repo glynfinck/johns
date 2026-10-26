@@ -1,0 +1,203 @@
+import { describe, expect, it } from "vitest";
+
+import { signInPath, signInReason } from "./auth-paths";
+import { FRONT_DOOR_COPY, PRIVACY_COPY, SIGN_IN_COPY } from "./copy";
+import { CURRENCIES } from "./domain";
+import {
+  afterSignIn,
+  CURRENCY_CHOICES,
+  DAY_CHOICES,
+  DOOR,
+  googleReturn,
+  houseDefaults,
+  inviteCode,
+  signInLine,
+  timeZoneName,
+} from "./front-door";
+
+describe("afterSignIn", () => {
+  it("leads to where the front door's choice or a join link said", () => {
+    expect(afterSignIn(DOOR.start)).toBe("/house/new");
+    expect(afterSignIn(DOOR.invite)).toBe("/welcome");
+    expect(afterSignIn("/join/AB3DEF7H")).toBe("/join/AB3DEF7H");
+    // A bad code is the join page's to say, so the link keeps it.
+    expect(afterSignIn("/join/nope")).toBe("/join/nope");
+  });
+
+  it("survives the trip through /signin?next=", () => {
+    const next = new URL(signInPath(DOOR.start), "https://johns.glyn.dev").searchParams.get("next");
+    expect(afterSignIn(next)).toBe("/house/new");
+  });
+
+  it("leaves everything else to the root layout, so nothing goes round in circles", () => {
+    const nowhere = [null, undefined, "", "/", "/signin", "/signin?next=%2Fwelcome", "/today", "/house/stake"];
+    const offSite = ["//evil.example", "/\\evil", "https://evil.example", "//evil.example/house/new"];
+    const near = ["/house/new/x", "/welcome?x=1", "/join/", "/join/AB3DEF7H/more", "/join/AB3DEF7H?x=1"];
+    for (const next of [...nowhere, ...offSite, ...near]) expect(afterSignIn(next)).toBeUndefined();
+  });
+});
+
+describe("googleReturn", () => {
+  it("brings the web back to sign-in, carrying the front door's choice", () => {
+    expect(googleReturn(DOOR.start)).toBe("/signin?next=%2Fhouse%2Fnew");
+    expect(googleReturn(DOOR.invite)).toBe("/signin?next=%2Fwelcome");
+  });
+
+  it("brings a join link back to itself, which anyone can open", () => {
+    expect(googleReturn("/join/AB3DEF7H")).toBe("/join/AB3DEF7H");
+  });
+
+  it("brings anything else back to plain sign-in", () => {
+    for (const next of [null, undefined, "", "/", "/today", "//evil.example", "https://evil.example", "/signin"]) {
+      expect(googleReturn(next)).toBe("/signin");
+    }
+  });
+});
+
+describe("signInLine", () => {
+  it("names the front door's choice", () => {
+    expect(signInLine("/house/new")).toBe(FRONT_DOOR_COPY.startReason);
+    expect(signInLine("/welcome")).toBe(FRONT_DOOR_COPY.inviteReason);
+  });
+
+  it("says what anything else is shut on, as the web does", () => {
+    expect(signInLine("/join/AB3DEF7H")).toBe(signInReason("/join/AB3DEF7H"));
+    expect(signInLine(null)).toBe(signInReason(null));
+    expect(signInLine("//evil.example/house/new")).toBe(signInReason(null));
+  });
+
+  it("warns, wherever it leads, that with Apple the house stays with the account chosen", () => {
+    for (const next of [null, "/house/new", "/welcome", "/join/AB3DEF7H"]) {
+      expect(signInLine(next, true)).toBe(SIGN_IN_COPY.eitherAccount);
+    }
+  });
+});
+
+describe("inviteCode", () => {
+  it("reads the code alone, however it's spelt", () => {
+    expect(inviteCode("AB3DEF7H")).toBe("AB3DEF7H");
+    expect(inviteCode("ab3d-ef7h")).toBe("AB3DEF7H");
+    expect(inviteCode("  AB3D EF7H \n")).toBe("AB3DEF7H");
+  });
+
+  it("reads it out of a whole link, on the web or the phone", () => {
+    expect(inviteCode("https://johns.glyn.dev/join/AB3DEF7H")).toBe("AB3DEF7H");
+    expect(inviteCode("johns://join/ab3def7h")).toBe("AB3DEF7H");
+    expect(inviteCode("johns.glyn.dev/join/AB3D-EF7H/")).toBe("AB3DEF7H");
+    expect(inviteCode("https://johns.glyn.dev/JOIN/AB3DEF7H?from=chat#top")).toBe("AB3DEF7H");
+  });
+
+  it("finds the link in the message it was shared in", () => {
+    expect(inviteCode("Join 29 Albert Road on Johns: https://johns.glyn.dev/join/AB3DEF7H")).toBe("AB3DEF7H");
+  });
+
+  it("leaves off the punctuation a chat puts round it", () => {
+    const link = "https://johns.glyn.dev/join/AB3DEF7H";
+    for (const pasted of [`${link}.`, `(${link})`, `<${link}>`, `Join here: ${link}!`, `“${link}”`, `${link}, see you there`]) {
+      expect(inviteCode(pasted)).toBe("AB3DEF7H");
+    }
+    for (const pasted of ["AB3DEF7H.", "(AB3D-EF7H)", "“ab3def7h”", "AB3DEF7H!"]) {
+      expect(inviteCode(pasted)).toBe("AB3DEF7H");
+    }
+  });
+
+  it("is null for nothing, or anything that can't be a code", () => {
+    for (const input of ["", "   ", "nope", "...", "AB3DEF7", "AB3DEF7HJ", "AB0DEF1H", "https://johns.glyn.dev/today"]) {
+      expect(inviteCode(input)).toBeNull();
+    }
+  });
+
+  it("doesn't fall back to the rest of the text when a link's code is bad", () => {
+    expect(inviteCode("https://johns.glyn.dev/join/NOPE")).toBeNull();
+    expect(inviteCode("https://johns.glyn.dev/join/")).toBeNull();
+    expect(inviteCode("https://johns.glyn.dev/join/.")).toBeNull();
+  });
+});
+
+describe("timeZoneName", () => {
+  it("swaps underscores for spaces", () => {
+    expect(timeZoneName("America/New_York")).toBe("America/New York");
+    expect(timeZoneName("America/Argentina/Buenos_Aires")).toBe("America/Argentina/Buenos Aires");
+    expect(timeZoneName("Europe/London")).toBe("Europe/London");
+    expect(timeZoneName("")).toBe("");
+  });
+});
+
+describe("houseDefaults", () => {
+  it("says the stake, the week and the zone, in that order", () => {
+    expect(houseDefaults({ currency: "GBP", weekStarts: 1, timezone: "Europe/London" })).toEqual([
+      "GBP 20 a month each",
+      "weeks start Monday",
+      "Europe/London",
+    ]);
+  });
+
+  it("follows the currency, the day and the zone as they change", () => {
+    expect(houseDefaults({ currency: "CAD", weekStarts: 7, timezone: "America/St_Johns" })).toEqual([
+      "CAD 20 a month each",
+      "weeks start Sunday",
+      "America/St Johns",
+    ]);
+  });
+
+  it("shows pence only when there are some, and a stake of nothing as 0", () => {
+    expect(houseDefaults({ currency: "EUR", weekStarts: 3, timezone: "Europe/Dublin", stakeMinor: 2050 })[0]).toBe(
+      "EUR 20.50 a month each",
+    );
+    expect(houseDefaults({ currency: "USD", weekStarts: 1, timezone: "UTC", stakeMinor: 0 })[0]).toBe("USD 0 a month each");
+    expect(houseDefaults({ currency: "USD", weekStarts: 1, timezone: "UTC", stakeMinor: 5 })[0]).toBe("USD 0.05 a month each");
+  });
+});
+
+describe("the choices behind Change", () => {
+  it("offers every currency by its code, as the line says it", () => {
+    expect(CURRENCY_CHOICES.map((c) => c.value)).toEqual([...CURRENCIES]);
+    for (const choice of CURRENCY_CHOICES) expect(choice.label).toBe(choice.value);
+  });
+
+  it("offers the seven days from Monday, three letters to see and the whole day to hear", () => {
+    expect(DAY_CHOICES.map((d) => d.value)).toEqual([1, 2, 3, 4, 5, 6, 7]);
+    expect(DAY_CHOICES.map((d) => d.label)).toEqual(["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"]);
+    expect(DAY_CHOICES[6].spoken).toBe("Sunday");
+  });
+});
+
+/** Sentences, as a reader meets them: split after each full stop. */
+function sentences(paragraphs: readonly string[]): string[] {
+  return paragraphs.flatMap((p) => p.split(/(?<=\.)\s+/));
+}
+
+describe("FRONT_DOOR_COPY", () => {
+  it("puts every word of privacy under one heading, and only its words", () => {
+    const shown = sentences(FRONT_DOOR_COPY.privacy.flatMap((s) => s.body));
+    // Split from the address it names, the reminders paragraph's "it" says which.
+    const web = sentences(PRIVACY_COPY.paragraphs).map((s) =>
+      s === "Turning reminders off deletes it." ? "Turning reminders off deletes that address." : s,
+    );
+    expect([...shown].sort()).toEqual([...web].sort());
+  });
+
+  it("heads privacy in four short sections", () => {
+    expect(FRONT_DOOR_COPY.privacy.map((s) => s.heading)).toEqual([
+      "What we keep",
+      "What we don’t",
+      "Who sees what",
+      "Deleting your data",
+    ]);
+    for (const { heading, body } of FRONT_DOOR_COPY.privacy) {
+      expect(heading.split(" ").length).toBeLessThanOrEqual(3);
+      expect(body.length).toBeGreaterThan(0);
+    }
+  });
+
+  it("names the phone's time zone in the note under Change", () => {
+    expect(FRONT_DOOR_COPY.zoneNote("America/New York")).toBe(
+      "The time zone is this phone’s, America/New York. Change it later from House.",
+    );
+  });
+
+  it("says the front door in three sentences", () => {
+    expect(FRONT_DOOR_COPY.points).toHaveLength(3);
+    for (const point of FRONT_DOOR_COPY.points) expect(point.body).toMatch(/\.$/);
+  });
+});

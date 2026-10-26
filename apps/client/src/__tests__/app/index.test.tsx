@@ -1,28 +1,38 @@
-import { FRONT_DOOR, SIGN_IN, TAGLINE } from '@app/core';
+import { BIN_NIGHT, FRONT_DOOR, FRONT_DOOR_COPY, SIGN_IN } from '@app/core';
 import { render, screen } from '@testing-library/react-native';
 
 import FrontDoor from '@/app/index';
 import { TAP } from '@/theme';
 
-it('opens on the same front door as the web', async () => {
+it('opens on the wordmark, the taped sign and three plain sentences', async () => {
   await render(<FrontDoor />);
+  expect(screen.getByRole('image', { name: 'Johns' })).toBeOnTheScreen();
+  expect(screen.getByTestId('hazard-tape', { includeHiddenElements: true })).toBeOnTheScreen();
   expect(screen.getByRole('header', { name: FRONT_DOOR.headline })).toBeOnTheScreen();
-  expect(screen.getByText(TAGLINE)).toBeOnTheScreen();
-  for (const point of FRONT_DOOR.points) expect(screen.getByText(point.title)).toBeOnTheScreen();
-  expect(screen.getByRole('link', { name: 'Privacy' })).toBeOnTheScreen();
+  for (const point of FRONT_DOOR_COPY.points) expect(screen.getByText(point.body)).toBeOnTheScreen();
+  // The old feature cards are gone.
+  for (const point of FRONT_DOOR.points) expect(screen.queryByText(point.title)).not.toBeOnTheScreen();
+  expect(screen.getByRole('link', { name: 'Privacy' })).toHaveProp('href', '/privacy');
 });
 
-it('leads every way in to sign-in, as the web does', async () => {
+it('carries the way in through sign-in, so it survives signing in', async () => {
   await render(<FrontDoor />);
-  for (const label of [FRONT_DOOR.signIn, FRONT_DOOR.start, FRONT_DOOR.join]) {
-    expect(screen.getByRole('link', { name: label })).toHaveProp('href', SIGN_IN);
-  }
+  expect(screen.getByRole('link', { name: FRONT_DOOR_COPY.start })).toHaveProp('href', '/signin?next=%2Fhouse%2Fnew');
+  expect(screen.getByRole('link', { name: FRONT_DOOR_COPY.invite })).toHaveProp('href', '/signin?next=%2Fwelcome');
+  // Someone with a house already just signs in.
+  expect(screen.getByRole('link', { name: FRONT_DOOR.signIn })).toHaveProp('href', SIGN_IN);
+});
+
+it('has one amber button: starting a house', async () => {
+  await render(<FrontDoor />);
+  expect(screen.getByTestId('start')).toHaveStyle({ backgroundColor: BIN_NIGHT.light.hivis });
+  expect(screen.getByTestId('invite')).toHaveStyle({ backgroundColor: 'transparent' });
 });
 
 it('gives every link a whole thumb to land on', async () => {
   await render(<FrontDoor />);
   expect(screen.getByTestId('privacy')).toHaveStyle({ minHeight: TAP });
-  for (const label of [FRONT_DOOR.start, FRONT_DOOR.join]) {
+  for (const label of [FRONT_DOOR_COPY.start, FRONT_DOOR_COPY.invite, FRONT_DOOR.signIn]) {
     expect(screen.getByRole('link', { name: label })).toHaveStyle({ minHeight: TAP });
   }
 });

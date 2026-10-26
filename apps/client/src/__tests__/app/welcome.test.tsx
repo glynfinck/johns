@@ -1,4 +1,4 @@
-import { NO_HOUSE_COPY, SIGN_IN_COPY } from '@app/core';
+import { BIN_NIGHT, FRONT_DOOR_COPY, NO_HOUSE_COPY, SIGN_IN_COPY } from '@app/core';
 import { fireEvent, renderRouter, screen } from 'expo-router/testing-library';
 import { Text } from 'react-native';
 
@@ -14,30 +14,46 @@ async function open() {
   );
 }
 
+async function paste(text: string) {
+  await fireEvent.changeText(screen.getByLabelText(FRONT_DOOR_COPY.paste), text);
+  await fireEvent.press(screen.getByRole('button', { name: FRONT_DOOR_COPY.open }));
+}
+
 beforeEach(() => jest.clearAllMocks());
 
-it('offers to start a house', async () => {
+it('asks for the invite in one field, with one amber button', async () => {
   await open();
   expect(screen.getByRole('header', { name: NO_HOUSE_COPY.heading })).toBeOnTheScreen();
-  expect(screen.getByRole('link', { name: NO_HOUSE_COPY.start })).toHaveProp('href', '/house/new');
+  expect(screen.getByText(FRONT_DOOR_COPY.pasteHint)).toBeOnTheScreen();
+  const button = screen.getByRole('button', { name: FRONT_DOOR_COPY.open });
+  expect(button).toBeDisabled();
+  expect(button).toHaveStyle({ backgroundColor: BIN_NIGHT.light.hivis });
+});
+
+it('offers to start a house instead', async () => {
+  await open();
+  expect(screen.getByRole('link', { name: FRONT_DOOR_COPY.startInstead })).toHaveProp('href', '/house/new');
 });
 
 it('opens the join screen for a code, however it was typed', async () => {
   await open();
-  await fireEvent.changeText(screen.getByLabelText(NO_HOUSE_COPY.code), 'ab3d-ef7h');
-  await fireEvent.press(screen.getByRole('button', { name: NO_HOUSE_COPY.join }));
+  await paste('ab3d-ef7h');
   expect(screen).toHavePathname('/join/AB3DEF7H');
 });
 
-it("says so when the code can't be one, until it's changed", async () => {
+it('opens the join screen for a whole link pasted in', async () => {
   await open();
-  const field = screen.getByLabelText(NO_HOUSE_COPY.code);
-  await fireEvent.changeText(field, 'nope');
-  await fireEvent.press(screen.getByRole('button', { name: NO_HOUSE_COPY.join }));
-  expect(screen.getByText(NO_HOUSE_COPY.badCode)).toBeOnTheScreen();
+  await paste('https://johns.glyn.dev/join/AB3DEF7H');
+  expect(screen).toHavePathname('/join/AB3DEF7H');
+});
+
+it("says so when it can't be an invite, until it's changed", async () => {
+  await open();
+  await paste('nope');
+  expect(screen.getByRole('alert')).toHaveTextContent(FRONT_DOOR_COPY.badInvite);
   expect(screen).toHavePathname('/welcome');
-  await fireEvent.changeText(field, 'nopeX');
-  expect(screen.queryByText(NO_HOUSE_COPY.badCode)).toBeNull();
+  await fireEvent.changeText(screen.getByLabelText(FRONT_DOOR_COPY.paste), 'nopeX');
+  expect(screen.queryByText(FRONT_DOOR_COPY.badInvite)).not.toBeOnTheScreen();
 });
 
 it('lets whoever signed in with the wrong account out', async () => {

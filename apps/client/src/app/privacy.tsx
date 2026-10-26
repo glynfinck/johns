@@ -1,39 +1,41 @@
-import { PAGE_TITLE, PRIVACY_COPY } from '@app/core';
-import { Link } from 'expo-router';
-import { Pressable, ScrollView, StyleSheet, View } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { FRONT_DOOR_COPY, PAGE_TITLE, PRIVACY_COPY } from '@app/core';
+import { StyleSheet, View } from 'react-native';
 
+import { GroupItem } from '@/components/group';
 import { PageTitle } from '@/components/page-title';
-import { Body, Heading } from '@/components/text';
-import { Wordmark } from '@/components/wordmark';
-import { SPACE, useTheme } from '@/theme';
+import { Screen } from '@/components/screen';
+import { Section } from '@/components/section';
+import { Body } from '@/components/text';
+import { TitleBar } from '@/components/title-bar';
+import { SPACE } from '@/theme';
 
-/** What Johns keeps and who sees it, as the web's /privacy. Open to anyone, signed in or not. */
+/**
+ * What Johns keeps and who sees it, in the web's /privacy words under
+ * headings: what we keep, what we don't, who sees what, deleting your data.
+ * Open to anyone, signed in or not; Back goes where you came from, or to the
+ * front door (which, signed in, is your house).
+ */
 export default function Privacy() {
-  const { colors } = useTheme();
   return (
-    <SafeAreaView style={[styles.screen, { backgroundColor: colors.background }]}>
+    <>
       <PageTitle page={PAGE_TITLE.privacy} />
-      <ScrollView contentContainerStyle={styles.page}>
-        <Link href="/" asChild>
-          <Pressable accessibilityRole="link" accessibilityLabel="Johns" style={styles.home}>
-            <Wordmark />
-          </Pressable>
-        </Link>
-        <Heading>{PRIVACY_COPY.title}</Heading>
-        <View style={styles.text}>
-          {PRIVACY_COPY.paragraphs.map((p) => (
-            <Body key={p}>{p}</Body>
-          ))}
-        </View>
-      </ScrollView>
-    </SafeAreaView>
+      <Screen bar={<TitleBar title={PRIVACY_COPY.title} back="/" />} testID="privacy-screen">
+        {FRONT_DOOR_COPY.privacy.map(({ heading, body }) => (
+          <Section key={heading} label={heading}>
+            <GroupItem>
+              <View style={styles.words}>
+                {body.map((paragraph) => (
+                  <Body key={paragraph}>{paragraph}</Body>
+                ))}
+              </View>
+            </GroupItem>
+          </Section>
+        ))}
+      </Screen>
+    </>
   );
 }
 
 const styles = StyleSheet.create({
-  screen: { flex: 1 },
-  page: { width: '100%', maxWidth: 672, alignSelf: 'center', padding: SPACE.xl, gap: SPACE.xl },
-  home: { alignSelf: 'flex-start' },
-  text: { gap: SPACE.lg },
+  words: { gap: SPACE.md },
 });

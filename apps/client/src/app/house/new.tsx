@@ -1,52 +1,45 @@
 import {
-  CURRENCIES,
   type Currency,
-  CURRENCY_SYMBOL,
-  DOW_LABEL,
+  CURRENCY_CHOICES,
+  DAY_CHOICES,
+  DOOR,
+  FRONT_DOOR_COPY,
+  houseDefaults,
   type IsoDow,
   NEW_HOUSE_COPY,
   PAGE_TITLE,
+  timeZoneName,
 } from '@app/core';
 import { useState } from 'react';
-import { ScrollView, StyleSheet, View } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { StyleSheet, View } from 'react-native';
 
 import { createHouse } from '@/api/house';
 import { Alert } from '@/components/alert';
 import { Button } from '@/components/button';
-import { Card } from '@/components/card';
-import { Choice } from '@/components/choice';
 import { Field } from '@/components/field';
+import { DefaultsLine } from '@/components/front-door/defaults-line';
+import { Door, DoorFoot, Sign, SignHeading } from '@/components/front-door/door';
+import { Pick } from '@/components/front-door/pick';
 import { PageTitle } from '@/components/page-title';
-import { Body, Eyebrow, Heading } from '@/components/text';
-import { Wordmark } from '@/components/wordmark';
+import { Meta } from '@/components/text';
+import { TextButton } from '@/components/text-button';
 import { useMembership } from '@/hooks/use-membership';
 import { deviceCurrency, deviceTimeZone } from '@/locale';
-import { SPACE, useTheme } from '@/theme';
-
-const CURRENCY_OPTIONS = CURRENCIES.map((currency) => ({
-  value: currency,
-  label: `${CURRENCY_SYMBOL[currency]} ${currency}`,
-}));
-
-const DAY_OPTIONS = (Object.entries(DOW_LABEL) as [string, string][]).map(([day, name]) => ({
-  value: Number(day) as IsoDow,
-  label: name.slice(0, 3),
-  spoken: name,
-}));
+import { SPACE } from '@/theme';
 
 /**
- * Setting up a house, as the web's /house/new: its name, currency and first
- * day of the week, with the time zone and currency starting from this phone.
- * Once the house exists, the root layout's guard moves on to Today.
+ * Starting a house: one field, its name. The rest starts from this phone
+ * (its time zone and currency) and Monday, said in one line under the name
+ * with "Change" to open the currency and the first day of the week. Once the
+ * house exists, the root layout's guard moves on to Today.
  */
 export default function NewHouse() {
-  const { colors } = useTheme();
   const { refresh } = useMembership();
   const [timezone] = useState(deviceTimeZone);
   const [name, setName] = useState('');
   const [currency, setCurrency] = useState<Currency>(deviceCurrency);
   const [weekStarts, setWeekStarts] = useState<IsoDow>(1);
+  const [changing, setChanging] = useState(false);
   const [busy, setBusy] = useState(false);
   const [problem, setProblem] = useState<string | null>(null);
 
@@ -63,57 +56,54 @@ export default function NewHouse() {
   }
 
   return (
-    <SafeAreaView style={[styles.screen, { backgroundColor: colors.background }]}>
+    <Door testID="new-house-screen">
       <PageTitle page={PAGE_TITLE.newHouse} />
-      <ScrollView contentContainerStyle={styles.page} keyboardShouldPersistTaps="handled">
-        <Wordmark />
-        <View>
-          <Heading>{NEW_HOUSE_COPY.heading}</Heading>
-          <Body muted style={styles.intro}>
-            {NEW_HOUSE_COPY.intro}
-          </Body>
-        </View>
-
-        <Card style={styles.form}>
+      <Sign>
+        <SignHeading title={NEW_HOUSE_COPY.heading} body={NEW_HOUSE_COPY.intro} />
+        <View style={styles.name}>
           <Field
-            label={NEW_HOUSE_COPY.name}
+            label={FRONT_DOOR_COPY.name}
             placeholder={NEW_HOUSE_COPY.namePlaceholder}
             value={name}
             onChangeText={setName}
+            onSubmitEditing={() => {
+              if (name.trim() && !busy) void submit();
+            }}
             maxLength={60}
             autoFocus
             returnKeyType="done"
             testID="house-name"
           />
-          <Choice label={NEW_HOUSE_COPY.currency} options={CURRENCY_OPTIONS} value={currency} onChange={setCurrency} />
-          <Choice label={NEW_HOUSE_COPY.weekStarts} options={DAY_OPTIONS} value={weekStarts} onChange={setWeekStarts} />
-          <View>
-            <Eyebrow>{NEW_HOUSE_COPY.timezone}</Eyebrow>
-            <Body style={styles.zone}>{timezone.replaceAll('_', ' ')}</Body>
-            <Body muted style={styles.note}>
-              {NEW_HOUSE_COPY.timezoneFromPhone}
-            </Body>
-          </View>
-          {problem ? <Alert message={problem} /> : null}
-          <Button
-            label={busy ? NEW_HOUSE_COPY.busy : NEW_HOUSE_COPY.submit}
-            onPress={() => void submit()}
-            disabled={busy || !name.trim()}
-            testID="create-house"
+          <DefaultsLine
+            parts={houseDefaults({ currency, weekStarts, timezone })}
+            open={changing}
+            onToggle={() => setChanging((was) => !was)}
           />
-        </Card>
-
-        <Body muted>{NEW_HOUSE_COPY.joinInstead}</Body>
-      </ScrollView>
-    </SafeAreaView>
+        </View>
+        {changing ? (
+          <View style={styles.rest} testID="house-defaults-fields">
+            <Pick label={NEW_HOUSE_COPY.currency} options={CURRENCY_CHOICES} value={currency} onChange={setCurrency} />
+            <Pick label={NEW_HOUSE_COPY.weekStarts} options={DAY_CHOICES} value={weekStarts} onChange={setWeekStarts} />
+            <Meta>{FRONT_DOOR_COPY.zoneNote(timeZoneName(timezone))}</Meta>
+          </View>
+        ) : null}
+        {problem ? <Alert message={problem} /> : null}
+        <Button
+          label={busy ? NEW_HOUSE_COPY.busy : FRONT_DOOR_COPY.submit}
+          onPress={() => void submit()}
+          disabled={busy || !name.trim()}
+          testID="create-house"
+        />
+      </Sign>
+      <DoorFoot>
+        <TextButton href={DOOR.invite} label={FRONT_DOOR_COPY.invite} chevron align="start" />
+      </DoorFoot>
+    </Door>
   );
 }
 
 const styles = StyleSheet.create({
-  screen: { flex: 1 },
-  page: { width: '100%', maxWidth: 512, alignSelf: 'center', padding: SPACE.xl, gap: SPACE.xl },
-  intro: { marginTop: SPACE.sm },
-  form: { gap: SPACE.xl },
-  zone: { marginTop: SPACE.xs },
-  note: { fontSize: 13, lineHeight: 18 },
+  // The defaults read as the field's hint, right under it.
+  name: { gap: SPACE.xs },
+  rest: { gap: SPACE.xl },
 });

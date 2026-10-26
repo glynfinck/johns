@@ -850,4 +850,60 @@ export const SETUP_COPY = {
 
 /** Front door track: the front door, starting a house, welcome and privacy. */
 export const FRONT_DOOR_COPY = {
+  /** The front door's three plain sentences, in place of the old feature cards. */
+  points: [
+    { key: "list", body: "List your house’s chores. We call them Johns." },
+    { key: "share", body: "Each week the app shares them out fairly." },
+    {
+      key: "stake",
+      body: "Everyone puts in the same each month. Miss a John and your share goes to the ones who did theirs.",
+    },
+  ],
+  start: "Start a house",
+  invite: "I’ve got an invite",
+  /** Under "Sign in", when the front door's choice came with it. */
+  startReason: "Sign in to start your house.",
+  inviteReason: "Sign in to use your invite.",
+  // Starting a house: one field, and the defaults in one line with Change for the rest.
+  name: "Name your house",
+  stakeEach: (amount: string) => `${amount} a month each`,
+  weekStarts: (day: string) => `weeks start ${day}`,
+  change: "Change",
+  /** In place of Change while the currency and the week are open. */
+  done: "Done",
+  changeSpoken: "The currency and the day weeks start",
+  zoneNote: (zone: string) => `The time zone is this phone’s, ${zone}. Change it later from House.`,
+  submit: "Start the house",
+  // Welcome: signed in with no house, the fallback.
+  welcome: "Paste the invite a housemate sent you, or start a house of your own.",
+  paste: "Paste your invite link or code",
+  pasteHint: "The whole link, or just the eight letters and numbers at its end.",
+  badInvite: "That isn’t an invite link or code. Check it against the one you were sent.",
+  open: "Open the invite",
+  startInstead: "Start a house instead",
+  // A join link, signed in.
+  join: "Join the house",
+  lookingUp: "Looking up the house",
+  /**
+   * Privacy's words under headings, a paragraph or two each. The reminders
+   * paragraph is split between what's kept and deleting it, so its "it"
+   * names the address.
+   */
+  privacy: [
+    {
+      heading: "What we keep",
+      body: [
+        PRIVACY_COPY.paragraphs[0],
+        "If you turn on reminders, your browser gives us an address to send notifications to.",
+      ],
+    },
+    { heading: "What we don’t", body: [PRIVACY_COPY.paragraphs[2]] },
+    { heading: "Who sees what", body: [PRIVACY_COPY.paragraphs[1]] },
+    {
+      heading: "Deleting your data",
+      body: [
+        "Turning reminders off deletes that address. Leaving a house removes you from it; your past Johns stay in its history.",
+      ],
+    },
+  ],
 } as const;

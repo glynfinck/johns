@@ -1,31 +1,31 @@
-import { JOIN_COPY, PAGE_TITLE } from '@app/core';
+import { DOOR, FRONT_DOOR_COPY, JOIN_COPY, PAGE_TITLE } from '@app/core';
 import { router, useLocalSearchParams } from 'expo-router';
 import { useEffect, useState } from 'react';
-import { ActivityIndicator, ScrollView, StyleSheet, View } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { houseByCode, joinHouse, type Invite } from '@/api/house';
 import { Alert } from '@/components/alert';
 import { Button } from '@/components/button';
+import { Door, Sign, SignHeading } from '@/components/front-door/door';
 import { PageTitle } from '@/components/page-title';
+import { ReadFailed, Reading } from '@/components/read-state';
 import { SignInPanel } from '@/components/sign-in-panel';
-import { Body, Eyebrow, Heading } from '@/components/text';
-import { Wordmark } from '@/components/wordmark';
 import { useMembership } from '@/hooks/use-membership';
-import { SPACE, useTheme } from '@/theme';
 
 /**
  * A join link: /join/CODE on the web, johns://join/CODE on a phone, the same
  * path the web app's links use. Open to anyone, so the code survives signing
  * in: signed out, it signs you in here. Like the web, it names the house only
- * to someone signed in. (The parameter is `joinCode`, not `code`: the web's
- * Google redirect comes back with a `?code=` of its own.)
+ * to someone signed in: then the house's name on the taped sign, how many
+ * live there, and "Join the house". A read that fails says so, with "Try
+ * again". (The parameter is `joinCode`, not `code`: the web's Google redirect
+ * comes back with a `?code=` of its own, and a refusal with `?error=`.)
  */
 export default function Join() {
-  const { colors } = useTheme();
-  const { joinCode } = useLocalSearchParams<{ joinCode: string }>();
+  const { joinCode, error } = useLocalSearchParams<{ joinCode: string; error?: string }>();
   const { session, house, refresh } = useMembership();
   const [invite, setInvite] = useState<Invite | null | undefined>(undefined);
+  const [unreadable, setUnreadable] = useState(false);
+  const [reads, setReads] = useState(0);
   const [joining, setJoining] = useState(false);
   const [problem, setProblem] = useState<string | null>(null);
 
@@ -37,12 +37,18 @@ export default function Join() {
         if (active) setInvite(found);
       })
       .catch(() => {
-        if (active) setInvite(null);
+        if (active) setUnreadable(true);
       });
     return () => {
       active = false;
     };
-  }, [session, joinCode]);
+  }, [session, joinCode, reads]);
+
+  function readAgain() {
+    setUnreadable(false);
+    setInvite(undefined);
+    setReads((n) => n + 1);
+  }
 
   async function join() {
     setJoining(true);
@@ -58,69 +64,44 @@ export default function Join() {
   }
 
   return (
-    <SafeAreaView style={[styles.screen, { backgroundColor: colors.background }]}>
+    <Door testID="join-screen">
       <PageTitle page={PAGE_TITLE.join} />
-      <ScrollView contentContainerStyle={styles.page}>
-        {!session ? (
-          <SignInPanel returnTo={`/join/${joinCode}`} />
-        ) : invite === undefined ? (
-          <ActivityIndicator color={colors.foreground} accessibilityLabel="Looking up the house" />
-        ) : (
-          <View style={styles.stack}>
-            <Wordmark size={32} />
-            {!invite ? (
-              <>
-                <Heading level={2}>{JOIN_COPY.badLink}</Heading>
-                <Body muted>{JOIN_COPY.badLinkBody}</Body>
-                {!house ? <Button href="/welcome" variant="outline" label={JOIN_COPY.back} /> : null}
-              </>
-            ) : house?.id === invite.id ? (
-              <>
-                <Heading level={2}>{JOIN_COPY.alreadyIn(invite.name)}</Heading>
-                <Button href="/today" label={JOIN_COPY.goToJohns} />
-              </>
-            ) : house ? (
-              <>
-                <Heading level={2}>{JOIN_COPY.otherHouse}</Heading>
-                <Body muted>{JOIN_COPY.otherHouseBody}</Body>
-                <Button href="/today" variant="outline" label={JOIN_COPY.yourHouse} />
-              </>
-            ) : (
-              <>
-                <View>
-                  <Eyebrow>{JOIN_COPY.invited}</Eyebrow>
-                  <Heading style={styles.name}>{invite.name}</Heading>
-                  <Body muted style={styles.size}>
-                    {JOIN_COPY.livesHere(invite.members)}
-                  </Body>
-                </View>
-                {problem ? <Alert message={problem} /> : null}
-                <Button
-                  label={joining ? JOIN_COPY.joining : JOIN_COPY.join(invite.name)}
-                  onPress={() => void join()}
-                  disabled={joining}
-                  testID="join-house"
-                />
-              </>
-            )}
-          </View>
-        )}
-      </ScrollView>
-    </SafeAreaView>
+      {!session ? (
+        <SignInPanel next={`/join/${joinCode}`} failed={Boolean(error)} />
+      ) : unreadable ? (
+        <Sign>
+          <SignHeading title={PAGE_TITLE.join} />
+          <ReadFailed onRetry={readAgain} />
+        </Sign>
+      ) : invite === undefined ? (
+        <Reading label={FRONT_DOOR_COPY.lookingUp} />
+      ) : !invite ? (
+        <Sign>
+          <SignHeading title={JOIN_COPY.badLink} body={JOIN_COPY.badLinkBody} />
+          {!house ? <Button href={DOOR.invite} variant="outline" label={JOIN_COPY.back} /> : null}
+        </Sign>
+      ) : house?.id === invite.id ? (
+        <Sign>
+          <SignHeading title={JOIN_COPY.alreadyIn(invite.name)} />
+          <Button href="/today" label={JOIN_COPY.goToJohns} />
+        </Sign>
+      ) : house ? (
+        <Sign>
+          <SignHeading title={JOIN_COPY.otherHouse} body={JOIN_COPY.otherHouseBody} />
+          <Button href="/today" variant="outline" label={JOIN_COPY.yourHouse} />
+        </Sign>
+      ) : (
+        <Sign>
+          <SignHeading above={JOIN_COPY.invited} title={invite.name} body={JOIN_COPY.livesHere(invite.members)} />
+          {problem ? <Alert message={problem} /> : null}
+          <Button
+            label={joining ? JOIN_COPY.joining : FRONT_DOOR_COPY.join}
+            onPress={() => void join()}
+            disabled={joining}
+            testID="join-house"
+          />
+        </Sign>
+      )}
+    </Door>
   );
 }
-
-const styles = StyleSheet.create({
-  screen: { flex: 1 },
-  page: {
-    flexGrow: 1,
-    width: '100%',
-    maxWidth: 384,
-    alignSelf: 'center',
-    justifyContent: 'center',
-    padding: SPACE.xl,
-  },
-  stack: { gap: SPACE.xl },
-  name: { marginTop: SPACE.xs },
-  size: { marginTop: SPACE.sm },
-});
