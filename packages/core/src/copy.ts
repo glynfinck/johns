@@ -564,6 +564,81 @@ export const JOHN_SHEET_COPY = {
 
 /** Week track: the summary bar, the person groups, the fair-share footer and the menu. */
 export const WEEK_SUMMARY_COPY = {
+  /** The summary, to a screen reader. */
+  soFar: "This week so far",
+  /** The week's days and when it ends: "19–25 Oct · ends tonight". */
+  range: (days: string, ends: string) => `${days} · ${ends}`,
+  endsTonight: "ends tonight",
+  endsTomorrow: "ends tomorrow",
+  /** The week's last day: "ends Sun". */
+  endsOn: (day: string) => `ends ${day}`,
+  ended: "ended",
+  /** The bar's and the legend's parts, which add up to the week's Johns. */
+  parts: { done: "done", checking: "checking", disputed: "disputed", overdue: "overdue", toGo: "to go" },
+  /** The bar, spoken: "11 Johns: 5 done, 2 checking, 2 to go". */
+  bar: (total: number, parts: readonly string[]) =>
+    total === 0 ? "No Johns this week" : `${total} ${total === 1 ? "John" : "Johns"}: ${parts.join(", ")}`,
+  /** A legend part, spoken; pressing it shows only those Johns. */
+  part: (count: number, label: string) => `${count} ${label}`,
+  showOnly: "Shows only these Johns. Press again to show them all.",
+  swapReady: "Swap ready",
+  /** A person's header: "1 of 3 done · 6 pts", and under it "away 29 Oct – 1 Nov". */
+  doneOf: (done: number, total: number) => `${done} of ${total} done`,
+  away: (days: string) => `away ${days}`,
+  awayAllWeek: "away all week",
+  /** On a laptop, who's away, under the summary: "Megan is away 28–31 Oct · You’re away all week". */
+  isAway: (who: string, note: string, you: boolean) => `${you ? "You’re" : `${who} is`} ${note}`,
+  nothing: "Nothing this week.",
+  /** After a fold's "Done (2)", in hazard: "1 late". */
+  late: (count: number) => `${count} late`,
+  /** A John's tick circle, spoken, when it's a picture rather than a checkbox. */
+  notDone: "Not done",
+  markDone: (john: string) => `Mark ${john} done`,
+  undo: (john: string) => `Undo ${john}`,
+  vote: "Vote",
+  voteOn: (john: string) => `Vote on ${john}`,
+  // A row's meta line, after the lid dot and the kind.
+  /** An overdue or missed John: "due Tue", "due 09:00" (today). */
+  wasDue: (when: string) => `due ${when}`,
+  ticked: (when: string) => `ticked ${when}`,
+  standsIn: (when: string) => `stands ${when}`,
+  /** Your own tick, with Undo beside it rather than the Checking mark: "checking, 18h left". */
+  checkingLeft: (time: string) => `checking, ${time} left`,
+  beforeYouGo: "before you go",
+  beforeTheyGo: (name: string) => `before ${name} goes`,
+  immunityUsed: "immunity used",
+  /** A dispute's meta line beside its Vote button: "Disputed by Megan · 17h left". */
+  disputedBy: (who: string) => `Disputed by ${who}`,
+  /** Beside the Disputed mark, which already says it: "By Megan · 17h left". */
+  raisedBy: (who: string) => `By ${who}`,
+  byYou: "you",
+  someoneGone: "a former housemate",
+  left: (time: string) => `${time} left`,
+  closing: "closing now",
+  /** On a laptop, a John's row to a screen reader: its name, meta, whose, points and status. */
+  spokenRow: (parts: readonly string[]) => parts.join(", "),
+  /** The footer: the deal's fairness, from the fair shares. Pressed, it explains them. */
+  sharesHint: "Shows everyone’s fair share and how the deal evens it out.",
+  /** The fair shares sheet's key: "Below zero is behind, above is ahead. Time away is made up: in full." */
+  sharesKey: (key: string, makeup: string) => `${key} ${makeup.toLowerCase()}.`,
+  fairLevel: "The deal is even: everyone’s on their share.",
+  fairClose: "The deal is even: nobody’s more than half a John off their share.",
+  fairBehind: (who: string, points: string, you: boolean) =>
+    `${you ? "You’re" : `${who} is`} ${points} behind on fair shares, and catching up a little each week.`,
+  fairAhead: (who: string, points: string, you: boolean) =>
+    `${you ? "You’re" : `${who} is`} ${points} ahead on fair shares; the next deals even it out.`,
+  /** The "•••" menu. */
+  awayAction: "I’m away…",
+  editJohns: "Edit the John list",
+  redeal: "Re-deal this week",
+  redealTitle: "Re-deal this week?",
+  redealBody: "Everyone’s Johns will be dealt again.",
+  redealt: "This week’s Johns were dealt again.",
+  /** Before the deal. */
+  notDealt: "This week hasn’t been dealt yet",
+  deal: "Deal this week",
+  notDealtBody: "Johns are shared so the effort evens out.",
+  waitingFor: (admin: string) => `${admin} will deal it soon.`,
 } as const;
 
 /** House, the money half: the month card and settling up, and the Table with its invite and rules sheets. */
