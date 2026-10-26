@@ -168,13 +168,13 @@ it("opens this week's John in the John sheet, and anything else in full", async 
 });
 
 it('puts a reaction back and says why under the row it was made on', async () => {
-  (setReaction as jest.Mock).mockRejectedValue(new Error("You can't do that."));
+  (setReaction as jest.Mock).mockRejectedValue(new Error("You can’t do that."));
   await open();
   const [bath] = day(WALL_FEED_COPY.today).getAllByTestId('wall-event');
   await fireEvent.press(within(bath).getByTestId('nice-one'));
   expect(setReaction).toHaveBeenCalledWith('e1', 'priya', 'nice', false);
   const alert = await screen.findByRole('alert');
-  expect(alert).toHaveTextContent("You can't do that.");
+  expect(alert).toHaveTextContent("You can’t do that.");
   // In today's group, not at the top of the page.
   expect(day(WALL_FEED_COPY.today).getByRole('alert')).toBe(alert);
   await waitFor(() => expect(within(bath).getByTestId('nice-one')).toBeSelected());

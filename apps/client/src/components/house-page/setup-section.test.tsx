@@ -63,7 +63,7 @@ it('shows what each page is set to now', async () => {
   // The bins every week (1) and the bathroom every other (4 / 2).
   await rowSays('to-johns', /Johns.*2 · about 3 pts a week/);
   expect(screen.getByTestId('to-rules')).toHaveTextContent(/Rules.*£20 stake · £1 late · £3 missed/);
-  await rowSays('to-away', /Time away.*Sam, 29 Oct – 1 Nov/);
+  await rowSays('to-away', /Time away.*Sam, 29 Oct–1 Nov/);
   // Priya is an admin: Groups shows before there are any.
   expect(screen.getByTestId('to-groups')).toHaveTextContent(/Groups.*None/);
 });
@@ -102,7 +102,7 @@ it('counts the groups once there are some, for everyone', async () => {
     groups: [{ id: 'g1', name: 'Upstairs', memberIds: ['priya', 'sam'] }],
   });
   await open();
-  await rowSays('to-groups', /Groups.*1/);
+  await rowSays('to-groups', /Groups.*1 group$/);
 });
 
 it.each([

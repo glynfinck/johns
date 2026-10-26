@@ -5,7 +5,7 @@ import { Pressable, StyleSheet, Text, View } from 'react-native';
 
 import { CountBadge } from '@/components/badge';
 import { Meta, RowTitle } from '@/components/text';
-import { FONT, GUTTER, INSET, SPACE, TAP, useTheme } from '@/theme';
+import { FONT, GUTTER, INSET, RAIL, SPACE, TAP, useTheme } from '@/theme';
 
 /** The house's three places, in the order the tabs and the rail show them. */
 export const PLACES = ['today', 'week', 'house'] as const;
@@ -124,7 +124,7 @@ const styles = StyleSheet.create({
   },
   badge: { position: 'absolute', top: -7, left: 14 },
   rail: {
-    width: 232,
+    width: RAIL,
     borderRightWidth: StyleSheet.hairlineWidth,
     paddingVertical: SPACE.xl,
     gap: SPACE.xl,

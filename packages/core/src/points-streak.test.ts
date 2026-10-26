@@ -43,6 +43,22 @@ describe("standings", () => {
     expect(table.find((r) => r.userId === "tom")!.missed).toBe(1);
   });
 
+  it("puts fewer late first among those level on points and misses, whatever their ids", () => {
+    // Abe's 4 points with one of them late equal Zoe's 4 on time.
+    const level = standings(
+      [
+        { userId: "abe", points: 4, status: "late" },
+        { userId: "abe", points: 2, status: "done" },
+        { userId: "zoe", points: 4, status: "done" },
+      ],
+      ["abe", "zoe"],
+    );
+    expect(level.map((r) => [r.userId, r.points, r.late, r.rank])).toEqual([
+      ["zoe", 4, 0, 1],
+      ["abe", 4, 1, 1],
+    ]);
+  });
+
   it("counts done, late and missed", () => {
     const sam = table.find((r) => r.userId === "sam")!;
     expect([sam.done, sam.late, sam.missed]).toEqual([1, 1, 0]);

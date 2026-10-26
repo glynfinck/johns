@@ -298,7 +298,7 @@ describe('Section', () => {
     expect(away.parent).toBe(counts.parent);
   });
 
-  it('keeps a thumb-tall control on the right clear of the group below', async () => {
+  it('hangs a thumb-tall control on the right over the label line, so the group sits as far under it as under any label', async () => {
     await render(
       <Section
         label="The Table"
@@ -307,9 +307,9 @@ describe('Section', () => {
         <Row title="Priya" />
       </Section>,
     );
-    // The control hangs 12 over the 24pt line, above and below: the group starts LABEL_GAP under it.
+    // The control hangs 12 over the 24pt line, above and below: the group starts LABEL_GAP under the label, as it does under a plain one.
     expect(screen.getByLabelText('Show').parent).toHaveStyle({ marginVertical: -(TAP - 24) / 2 });
-    expect(header('The Table')).toHaveStyle({ marginBottom: LABEL_GAP + (TAP - 24) / 2 });
+    expect(header('The Table')).toHaveStyle({ marginBottom: LABEL_GAP });
     expect(header('The Table')).not.toHaveStyle({ flexWrap: 'wrap' });
   });
 });

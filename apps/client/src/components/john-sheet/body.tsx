@@ -111,9 +111,12 @@ function JohnSheetHeader({ item, context }: { item: BoardItem; context: JohnShee
   const Sign = icon ? STATUS_ICON[icon] : null;
   return (
     <View style={styles.header}>
-      <View style={styles.line}>
-        <LidDot category={item.category} />
-        <Meta numberOfLines={1} style={styles.shrink}>
+      {/* In full, as everything in the sheet is: it may take a second line. */}
+      <View style={[styles.line, styles.top]}>
+        <View style={styles.mark}>
+          <LidDot category={item.category} />
+        </View>
+        <Meta numberOfLines={2} style={styles.shrink}>
           {sheetKind(item)}
         </Meta>
       </View>
@@ -134,5 +137,8 @@ const styles = StyleSheet.create({
   // The flush sheet sets content at the gutter; the John's words sit on the leading edge.
   header: { paddingHorizontal: INSET, gap: SPACE.xs },
   line: { flexDirection: 'row', alignItems: 'center', gap: 6 },
+  top: { alignItems: 'flex-start' },
+  // The dot centred on the first line of words.
+  mark: { height: 20, justifyContent: 'center' },
   shrink: { flexShrink: 1 },
 });

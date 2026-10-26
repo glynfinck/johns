@@ -53,7 +53,7 @@ test("a closed month's debt is settled once the person paid marks it received", 
   const owed = benPage.getByTestId("house-screen").getByTestId("month-card").getByTestId("transfer");
   await expect(owed).toHaveCount(1);
   await expect(owed).toContainText(HOUSE_PAGE_COPY.youOwe("Ava", four));
-  await expect(owed).toContainText(HOUSE_PAGE_COPY.waiting("Ava"));
+  await expect(owed).toContainText(HOUSE_PAGE_COPY.waitingFor("Ava"));
   await expect(owed.getByRole("button")).toHaveCount(0);
 
   // Ava, paid, marks it received from House's month card; the house is square.
@@ -63,7 +63,7 @@ test("a closed month's debt is settled once the person paid marks it received", 
   const card = avaPage.getByTestId("house-screen").getByTestId("month-card");
   const due = card.getByTestId("transfer");
   await expect(due).toContainText(HOUSE_PAGE_COPY.owesYou("Ben", four));
-  await due.getByRole("button", { name: HOUSE_PAGE_COPY.markReceived(four) }).click();
+  await due.getByRole("button", { name: HOUSE_PAGE_COPY.markReceivedFrom("Ben", four) }).click();
   await expect(due).toHaveCount(0);
   // Ben's House follows, live.
   await expect(owed).toHaveCount(0);

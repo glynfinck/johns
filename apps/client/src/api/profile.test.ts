@@ -44,7 +44,7 @@ describe('renameMe', () => {
 
   it("says the database's refusal in words", async () => {
     mockAnswer = { error: { code: '42501', message: 'permission denied' } };
-    await expect(renameMe('ava', 'Ava')).rejects.toThrow("You can't do that.");
+    await expect(renameMe('ava', 'Ava')).rejects.toThrow("You can’t do that.");
   });
 });
 

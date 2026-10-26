@@ -104,7 +104,7 @@ async function clientSession(context: BrowserContext, name: string): Promise<{ i
  * with this week already handed out: they create the house as the app does,
  * any `housemates` join it by its code (each signed in to their own
  * context), its Johns are added as an admin adds them, and the week is dealt
- * through the engine, as "Hand out this week's Johns" does. Alone, every John
+ * through the engine, as "Hand out this week’s Johns" does. Alone, every John
  * lands on them; with housemates, the deal shares them out. Every John falls
  * due on Sunday at 21:00 unless it names another time (`dueTime`), so a test
  * can say which comes first.

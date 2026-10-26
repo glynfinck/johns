@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 
 import {
+  joinRange,
   dateRange,
   dayLabel,
   dueInLine,
@@ -78,7 +79,7 @@ describe("weekRange", () => {
     const w = weekWindow(now, LONDON, 1);
     expect(weekRange(w.startsAt, w.endsAt, LONDON)).toBe("5–11 Oct");
     const spanning = weekWindow(new Date("2026-09-30T12:00:00Z"), LONDON, 1);
-    expect(weekRange(spanning.startsAt, spanning.endsAt, LONDON)).toBe("28 Sep – 4 Oct");
+    expect(weekRange(spanning.startsAt, spanning.endsAt, LONDON)).toBe("28 Sep–4 Oct");
   });
 });
 
@@ -98,10 +99,17 @@ describe("pointsLabel", () => {
   });
 });
 
+describe("joinRange", () => {
+  it("writes every range one way: an en dash, no spaces, whatever its ends hold", () => {
+    expect(joinRange("6", "12 Oct")).toBe("6–12 Oct");
+    expect(joinRange("29 Oct", "1 Nov")).toBe("29 Oct–1 Nov");
+  });
+});
+
 describe("dateRange", () => {
   it("reads like a calendar", () => {
     expect(dateRange("2026-10-14", "2026-10-21")).toBe("14–21 Oct");
-    expect(dateRange("2026-10-28", "2026-11-02")).toBe("28 Oct – 2 Nov");
+    expect(dateRange("2026-10-28", "2026-11-02")).toBe("28 Oct–2 Nov");
     expect(dateRange("2026-10-16", "2026-10-16")).toBe("Fri 16 Oct");
   });
 });

@@ -5,18 +5,26 @@ import {
   KeyboardAvoidingView,
   Modal,
   Platform,
-  Pressable,
   ScrollView,
   StyleSheet,
   View,
+  useWindowDimensions,
   type HostInstance,
   type ScrollViewInstance,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { Button } from '@/components/button';
+import { HazardTape, SIGN_TAPE } from '@/components/hazard-tape';
 import { Body, Lead } from '@/components/text';
-import { GUTTER, INSET, SECTION_GAP, SPACE, useTheme } from '@/theme';
+import { GUTTER, INSET, SECTION_GAP, SPACE, TAP, useTheme, WIDE } from '@/theme';
+
+/**
+ * How wide a rail down the window's left is, where one stands (the house's,
+ * from WIDE): a sheet centres itself on the page beside it, the one it
+ * belongs to, rather than on the whole window.
+ */
+export const SheetRailContext = createContext(0);
 
 /** How an anchor in a sheet's content says where it is: its view, to be measured against the content. */
 const AnchorContext = createContext<((name: string, view: HostInstance) => void) | null>(null);
@@ -51,9 +59,17 @@ export function SheetAnchor({ name, children }: { name: string; children: ReactN
  * content sits on the leading edge, like a form on a page, SPACE.md apart;
  * `flush` sets it at the gutter instead, for groups and sections that inset
  * themselves, with SECTION_GAP between them as on a page.
- * The scrim dims the whole window behind it; from WIDE the sheet stays a
- * column in the middle. In the dark, where the scrim and the sheet are
- * nearly one colour, a hairline marks its top edge.
+ * The scrim dims the whole window behind it; from WIDE the sheet is a
+ * dialog in the middle of the page beside the rail, with no grabber. In the
+ * dark, where the scrim and the sheet are nearly one colour, a hairline
+ * marks its edge, drawn over it so it takes no room from the content.
+ * The dialog is named by `label` (the title, unless it says otherwise: the
+ * John sheet draws its own header, so it names itself after the John). The
+ * scrim is for a pointer only, out of the focus order and the accessibility
+ * tree: the close button and Escape do its job for a keyboard or a screen
+ * reader, so the close button is where focus lands as it opens.
+ * `tape` lays the front door's hazard tape across its top, for the one
+ * sheet that is a brand moment (the invite).
  * `openAt` names a `SheetAnchor` in the content to open scrolled to, when
  * there's more than fits; the sheet scrolls there once each time it opens.
  * Tapping outside it or the close button puts it away. A sheet changes its
@@ -64,27 +80,35 @@ export function SheetAnchor({ name, children }: { name: string; children: ReactN
 export function Sheet({
   visible,
   title,
+  label,
   description,
   onClose,
   onDismissed,
   flush = false,
+  tape = false,
   openAt,
   testID,
   children,
 }: {
   visible: boolean;
   title?: string;
+  /** What the dialog is called, when there's no title or it isn't the name. */
+  label?: string;
   description?: string;
   onClose: () => void;
   onDismissed?: () => void;
   flush?: boolean;
+  /** The brand tape across the top: the invite sheet's. */
+  tape?: boolean;
   /** The `SheetAnchor` to open scrolled to. */
   openAt?: string;
   testID?: string;
   children: ReactNode;
 }) {
-  const { colors, scheme } = useTheme();
+  const { colors, scheme, type } = useTheme();
   const insets = useSafeAreaInsets();
+  const wide = useWindowDimensions().width >= WIDE;
+  const rail = useContext(SheetRailContext);
   const { scroll, content, place, measured, reset } = useOpenAt(openAt);
   // iOS says when the slide out ends (Modal's onDismiss); elsewhere a closed
   // sheet is gone at once, so it says so as it closes.
@@ -102,24 +126,47 @@ export function Sheet({
   // The darker of the two inks, faintly, whichever way the theme is.
   const shade = withAlpha(scheme === 'dark' ? colors.background : colors.foreground, 0.5);
   return (
-    <Modal visible={visible} transparent animationType="slide" onRequestClose={onClose} onDismiss={onDismissed}>
+    <Modal
+      visible={visible}
+      transparent
+      animationType={wide ? 'fade' : 'slide'}
+      onRequestClose={onClose}
+      onDismiss={onDismissed}
+      aria-label={label ?? title}
+    >
       <View style={styles.fill}>
-        {/* Behind the sheet, the whole window: beside it too, where the sheet is a column. */}
-        <Pressable accessibilityLabel={SHELL_COPY.close} onPress={onClose} style={[StyleSheet.absoluteFill, { backgroundColor: shade }]} />
-        <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined} style={styles.rise}>
+        {/* Behind the sheet, the whole window: beside it too, where the sheet is a column. A tap here closes it. */}
+        <View
+          aria-hidden
+          onStartShouldSetResponder={() => true}
+          onResponderRelease={onClose}
+          style={[StyleSheet.absoluteFill, { backgroundColor: shade }]}
+          testID="sheet-scrim"
+        />
+        <KeyboardAvoidingView
+          behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+          style={[styles.rise, wide && [styles.middle, { paddingLeft: rail }]]}
+        >
           <View
             accessibilityViewIsModal
             testID={testID}
             style={[
               styles.sheet,
-              { backgroundColor: colors.background, paddingBottom: insets.bottom + SPACE.xl },
-              scheme === 'dark' && [styles.edge, { borderColor: colors.border }],
+              wide && styles.dialog,
+              tape && styles.taped,
+              { backgroundColor: colors.background, paddingBottom: (wide ? 0 : insets.bottom) + SPACE.xl },
             ]}
           >
-            <View aria-hidden style={[styles.grabber, { backgroundColor: colors.mutedForeground }]} />
+            {tape ? (
+              <View style={styles.tape}>
+                <HazardTape />
+              </View>
+            ) : null}
+            {wide ? null : <View aria-hidden style={[styles.grabber, { backgroundColor: colors.mutedForeground }]} />}
             <View style={styles.top}>
+              {/* The title starts where a one-line one would sit beside the close button, however many lines it takes. */}
               {title ? (
-                <Lead header style={styles.title}>
+                <Lead header style={[styles.title, { paddingTop: (TAP - (type.lead.lineHeight ?? 0)) / 2 }]}>
                   {title}
                 </Lead>
               ) : (
@@ -145,6 +192,14 @@ export function Sheet({
                 </AnchorContext.Provider>
               </View>
             </ScrollView>
+            {scheme === 'dark' ? (
+              <View
+                aria-hidden
+                pointerEvents="none"
+                style={[StyleSheet.absoluteFill, styles.edge, wide && styles.dialogEdge, { borderColor: colors.border }]}
+                testID="sheet-edge"
+              />
+            ) : null}
           </View>
         </KeyboardAvoidingView>
       </View>
@@ -197,6 +252,8 @@ const styles = StyleSheet.create({
   fill: { flex: 1 },
   // The sheet at the bottom; taps beside and above it reach the scrim.
   rise: { flex: 1, justifyContent: 'flex-end', pointerEvents: 'box-none' },
+  // From WIDE, in the middle of the page beside the rail.
+  middle: { justifyContent: 'center', paddingVertical: SPACE.xl },
   sheet: {
     width: '100%',
     maxWidth: 512,
@@ -206,12 +263,32 @@ const styles = StyleSheet.create({
     borderTopLeftRadius: 16,
     borderTopRightRadius: 16,
   },
-  edge: { borderTopWidth: StyleSheet.hairlineWidth, borderLeftWidth: StyleSheet.hairlineWidth, borderRightWidth: StyleSheet.hairlineWidth },
+  dialog: { borderRadius: 16 },
+  taped: { paddingTop: SIGN_TAPE + SPACE.sm },
+  // Clipped to the sheet's rounded top corners.
+  tape: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    borderTopLeftRadius: 16,
+    borderTopRightRadius: 16,
+    overflow: 'hidden',
+  },
+  edge: {
+    borderTopWidth: StyleSheet.hairlineWidth,
+    borderLeftWidth: StyleSheet.hairlineWidth,
+    borderRightWidth: StyleSheet.hairlineWidth,
+    borderTopLeftRadius: 16,
+    borderTopRightRadius: 16,
+  },
+  dialogEdge: { borderWidth: StyleSheet.hairlineWidth, borderRadius: 16 },
   grabber: { alignSelf: 'center', width: 36, height: 4, borderRadius: 2 },
-  // The close button's icon lines up with the content's right edge.
+  // The close button's icon lines up with the content's right edge, at the
+  // top beside a title of any length.
   top: {
     flexDirection: 'row',
-    alignItems: 'center',
+    alignItems: 'flex-start',
     gap: SPACE.md,
     paddingLeft: GUTTER + INSET,
     paddingRight: GUTTER + INSET - SPACE.md,

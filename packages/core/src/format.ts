@@ -52,14 +52,22 @@ export function pointsLabel(points: number): string {
   return `${points} ${points === 1 ? "pt" : "pts"}`;
 }
 
-/** "6–12 Oct", "28 Sep – 4 Oct". The end is the last day, not the instant the week ends. */
+/**
+ * A range's two ends, written one way everywhere, as the mockups write it:
+ * an en dash with no spaces, "6–12 Oct", "29 Oct–1 Nov".
+ */
+export function joinRange(first: string, last: string): string {
+  return `${first}–${last}`;
+}
+
+/** "6–12 Oct", "28 Sep–4 Oct". The end is the last day, not the instant the week ends. */
 export function weekRange(startsAt: Date, endsAt: Date, zone: string): string {
   const inZone = tz(zone);
   const last = new Date(endsAt.getTime() - 1);
   const sameMonth = format(startsAt, "MM", { in: inZone }) === format(last, "MM", { in: inZone });
   return sameMonth
-    ? `${format(startsAt, "d", { in: inZone })}–${format(last, "d MMM", { in: inZone })}`
-    : `${format(startsAt, "d MMM", { in: inZone })} – ${format(last, "d MMM", { in: inZone })}`;
+    ? joinRange(format(startsAt, "d", { in: inZone }), format(last, "d MMM", { in: inZone }))
+    : joinRange(format(startsAt, "d MMM", { in: inZone }), format(last, "d MMM", { in: inZone }));
 }
 
 /** "October 2026" from "2026-10". */
@@ -147,7 +155,7 @@ export function firstName(name: string): string {
   return name.trim().split(/\s+/)[0] || name;
 }
 
-/** "14–21 Oct", "28 Oct – 2 Nov", "Fri 16 Oct" for a single day. Local `yyyy-MM-dd` dates. */
+/** "14–21 Oct", "28 Oct–2 Nov", "Fri 16 Oct" for a single day. Local `yyyy-MM-dd` dates. */
 export function dateRange(from: string, to: string): string {
   const day = (d: string) => {
     const [y, m, dd] = d.split("-").map(Number);
@@ -158,9 +166,9 @@ export function dateRange(from: string, to: string): string {
   const utc = tz("UTC");
   if (from === to) return format(a, "EEE d MMM", { in: utc });
   if (format(a, "yyyy-MM", { in: utc }) === format(b, "yyyy-MM", { in: utc })) {
-    return `${format(a, "d", { in: utc })}–${format(b, "d MMM", { in: utc })}`;
+    return joinRange(format(a, "d", { in: utc }), format(b, "d MMM", { in: utc }));
   }
-  return `${format(a, "d MMM", { in: utc })} – ${format(b, "d MMM", { in: utc })}`;
+  return joinRange(format(a, "d MMM", { in: utc }), format(b, "d MMM", { in: utc }));
 }
 
 /** A balance against your share: "+3.5", "−9", "level". */

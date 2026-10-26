@@ -16,7 +16,8 @@ import { SPACE } from '@/theme';
  * button. `children` go under the body, for what the sentence needs beside
  * it (Leave's Try again, when the Stake couldn't be read). `busy` holds both
  * buttons while the move is on its way, and `problem` is the refusal's
- * sentence, shown above them.
+ * sentence, shown above them. A null `confirmLabel` is a move that can't be
+ * made yet: the body says why, and only Cancel shows.
  */
 export function ConfirmSheet({
   visible,
@@ -35,7 +36,7 @@ export function ConfirmSheet({
   visible: boolean;
   title: string;
   body?: string;
-  confirmLabel: string;
+  confirmLabel: string | null;
   icon?: ButtonIcon;
   tone?: 'primary' | 'hazard';
   busy?: boolean;
@@ -50,14 +51,9 @@ export function ConfirmSheet({
       {children}
       {problem ? <Alert message={problem} /> : null}
       <View style={styles.buttons}>
-        <Button
-          variant={tone}
-          icon={icon}
-          label={confirmLabel}
-          disabled={busy}
-          onPress={onConfirm}
-          testID="confirm"
-        />
+        {confirmLabel === null ? null : (
+          <Button variant={tone} icon={icon} label={confirmLabel} disabled={busy} onPress={onConfirm} testID="confirm" />
+        )}
         <Button variant="outline" label={FOCUS_SHELL_COPY.cancel} disabled={busy} onPress={onClose} testID="cancel" />
       </View>
     </Sheet>

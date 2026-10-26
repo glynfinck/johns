@@ -270,6 +270,15 @@ export const TODAY_ORDER: Record<LiveStatus, number> = {
   missed: 8,
 };
 
+/**
+ * Finished Johns as a "Done (n)" fold lists them, on Today and Week alike:
+ * the latest done first (a John skipped with immunity, never ticked, by
+ * when it was due).
+ */
+export function byDoneLatest(a: { doneAt?: Date | null; dueAt: Date }, b: { doneAt?: Date | null; dueAt: Date }): number {
+  return (b.doneAt ?? b.dueAt).getTime() - (a.doneAt ?? a.dueAt).getTime();
+}
+
 /** Today for one housemate: their Johns in Today's order, how many are left, and what awaits their vote. */
 export function todayView(board: WeekBoard, userId: string) {
   const mine = board.items

@@ -1,8 +1,10 @@
-import { REACTION_LABEL, WALL_FEED_COPY } from '@app/core';
+import { REACTION_LABEL, STATUS_MARK, WALL_FEED_COPY, type WallFeedRow } from '@app/core';
 import { fireEvent, render, screen, within } from '@testing-library/react-native';
 import { Platform } from 'react-native';
 
-import { NiceToggle, ReactButton, ReactionTally } from './wall-row';
+import { NiceToggle, ReactButton, ReactionTally, WallEventRow } from './wall-row';
+
+import { useTheme } from '@/theme';
 
 afterEach(() => jest.restoreAllMocks());
 
@@ -47,4 +49,61 @@ it('offers a way to react where there are none yet', async () => {
   await render(<ReactButton onPress={onPress} />);
   await fireEvent.press(screen.getByRole('button', { name: WALL_FEED_COPY.react }));
   expect(onPress).toHaveBeenCalledTimes(1);
+});
+
+const none = { count: 0, mine: false };
+const feedRow = (overrides: Partial<WallFeedRow> = {}): WallFeedRow => ({
+  id: 'e1',
+  kind: 'done',
+  at: new Date('2026-10-26T12:00:00Z'),
+  actor: { userId: 'megan', name: 'Megan Doyle', me: false },
+  icon: 'check',
+  title: 'Megan ticked Food waste caddy out',
+  detail: WALL_FEED_COPY.checking,
+  mark: null,
+  when: '6h',
+  reactable: true,
+  nice: true,
+  top: null,
+  reactions: { nice: { count: 2, mine: false }, fire: none, sparkle: none, eyes: none },
+  board: { assignmentId: 'a1', vote: false },
+  full: 'Checking · Today, 12:00',
+  label: 'Megan ticked Food waste caddy out, Checking · 6h',
+  john: 'Food waste caddy out',
+  photoPath: null,
+  repeat: 'tick:megan',
+  who: 'Megan',
+  ...overrides,
+});
+
+it("gives a housemate's tick a key's way to all four reactions beside its Nice one", async () => {
+  const onReactions = jest.fn();
+  const onReact = jest.fn();
+  await render(<WallEventRow row={feedRow()} onReact={onReact} onPress={jest.fn()} onReactions={onReactions} />);
+  await fireEvent.press(screen.getByRole('button', { name: WALL_FEED_COPY.react }));
+  expect(onReactions).toHaveBeenCalledTimes(1);
+  await fireEvent.press(screen.getByRole('button', { name: WALL_FEED_COPY.tally(REACTION_LABEL.nice, 2) }));
+  expect(onReact).toHaveBeenCalledWith('nice', true);
+});
+
+it('marks a John that went wrong in hazard, and leaves the rest quiet', async () => {
+  let hazard = '';
+  function Probe() {
+    hazard = useTheme().colors.hazard;
+    return null;
+  }
+  await render(
+    <>
+      <Probe />
+      <WallEventRow
+        row={feedRow({ kind: 'missed', detail: WALL_FEED_COPY.missedWord, mark: STATUS_MARK.missed.icon, nice: false })}
+        onReact={jest.fn()}
+        onPress={jest.fn()}
+        onReactions={jest.fn()}
+      />
+    </>,
+  );
+  expect(screen.getByText(WALL_FEED_COPY.missedWord)).toHaveStyle({ color: hazard });
+  await screen.rerender(<WallEventRow row={feedRow()} onReact={jest.fn()} onPress={jest.fn()} onReactions={jest.fn()} />);
+  expect(screen.getByText(WALL_FEED_COPY.checking)).not.toHaveStyle({ color: hazard });
 });

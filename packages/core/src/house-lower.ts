@@ -5,7 +5,7 @@ import type { AwayPeriod } from "./away";
 import { weeklyEffort, type JohnDef } from "./board";
 import { FOCUS_SHELL_COPY, HOUSE_LOWER_COPY, WALL_FEED_COPY } from "./copy";
 import type { Currency, HouseRules } from "./domain";
-import { dateRange, dayLabel, firstName } from "./format";
+import { dateRange, dayLabel, firstName, STATUS_MARK, type StatusIcon } from "./format";
 import { formatMoney } from "./money";
 import type { LiveStatus } from "./outcome";
 import type { Transfer } from "./stake";
@@ -51,6 +51,12 @@ export interface WallFeedRow {
   title: string;
   /** The meta line's words before the time (a dispute's reason in quotes): they truncate, the time never does. */
   detail: string | null;
+  /**
+   * The status mark before those words, from the one status map, for how a
+   * John went wrong: late a clock, missed or struck out an X, disputed a
+   * flag. Null for everything else.
+   */
+  mark: StatusIcon | null;
   when: string;
   /** Housemates can react to it: it's about how a John went. */
   reactable: boolean;
@@ -162,21 +168,21 @@ export function struckAt(events: readonly WallEvent[]): Map<string, Date> {
 }
 
 /**
- * A tick's meta words: from where its John has got to on this week's board
- * when it's there, else from whether the house struck it out since.
+ * A tick's meta words, and the mark before them: from where its John has got
+ * to on this week's board when it's there, else from whether the house
+ * struck it out since.
  */
-function tickDetail(event: WallEvent, scene: WallScene): string {
+function tickDetail(event: WallEvent, scene: WallScene): { detail: string; mark: StatusIcon | null } {
   const id = event.assignmentId;
   const status = id ? scene.statusOf?.(id) : undefined;
   const struck = id ? scene.struck?.get(id) : undefined;
-  if (status === "disputed") return WALL_FEED_COPY.disputedTick;
+  const struckOut = { detail: WALL_FEED_COPY.struck, mark: STATUS_MARK.missed.icon };
+  if (status === "disputed") return { detail: WALL_FEED_COPY.disputedTick, mark: STATUS_MARK.disputed.icon };
   // Undoing a tick takes its event away, so a ticked John that's open again was struck out.
-  if (status === "upcoming" || status === "due-soon" || status === "overdue" || status === "missed") {
-    return WALL_FEED_COPY.struck;
-  }
-  if (!status && struck && event.createdAt < struck) return WALL_FEED_COPY.struck;
-  if (event.kind === "late") return WALL_FEED_COPY.late;
-  return status === "checking" ? WALL_FEED_COPY.checking : WALL_FEED_COPY.onTime;
+  if (status === "upcoming" || status === "due-soon" || status === "overdue" || status === "missed") return struckOut;
+  if (!status && struck && event.createdAt < struck) return struckOut;
+  if (event.kind === "late") return { detail: WALL_FEED_COPY.late, mark: STATUS_MARK.late.icon };
+  return { detail: status === "checking" ? WALL_FEED_COPY.checking : WALL_FEED_COPY.onTime, mark: null };
 }
 
 const ICON: Record<string, WallIcon> = {
@@ -215,6 +221,7 @@ export function wallFeedRow(event: WallEvent, scene: WallScene): WallFeedRow {
 
   let title: string;
   let detail: string | null = null;
+  let mark: StatusIcon | null = null;
   let repeat: string | null = null;
   // Whose John it is: the ticker, or the one a dispute or a verdict is against.
   let owner = event.userId;
@@ -222,11 +229,13 @@ export function wallFeedRow(event: WallEvent, scene: WallScene): WallFeedRow {
     case "done":
     case "late":
       title = WALL_FEED_COPY.ticked(who.subject, johnName);
-      detail = tickDetail(event, scene);
+      ({ detail, mark } = tickDetail(event, scene));
       repeat = `tick:${event.userId}`;
       break;
     case "missed":
       title = WALL_FEED_COPY.missed(who.subject, johnName);
+      detail = WALL_FEED_COPY.missedWord;
+      mark = STATUS_MARK.missed.icon;
       repeat = `missed:${event.userId}`;
       break;
     case "disputed": {
@@ -310,6 +319,7 @@ export function wallFeedRow(event: WallEvent, scene: WallScene): WallFeedRow {
     icon: ICON[event.kind] ?? "badge-check",
     title,
     detail,
+    mark,
     when,
     reactable: REACTABLE.has(event.kind),
     nice: (event.kind === "done" || event.kind === "late") && event.userId !== me,
@@ -439,9 +449,25 @@ export function houseSetupValues(input: {
       money(rules.missedForfeitMinor),
     ),
     away: awayValue,
-    groups: groups === undefined ? null : groups === 0 ? HOUSE_LOWER_COPY.noGroups : String(groups),
+    groups: groups === undefined ? null : groups === 0 ? HOUSE_LOWER_COPY.noGroups : HOUSE_LOWER_COPY.groupsValue(groups),
     showGroups: input.admin || (groups ?? 0) > 0,
   };
+}
+
+/**
+ * What stands in the way of leaving, or what it leaves behind, from who lives
+ * here: the only admin of a house with others in it can't leave until
+ * someone else is made an admin (the database refuses it, last_admin); the
+ * last one out leaves the house with nobody in it. Null for anyone else.
+ */
+export function leaveBar(
+  me: string,
+  members: readonly { userId: string; role: "admin" | "member" }[],
+): "last-admin" | "last-one" | null {
+  const others = members.filter((m) => m.userId !== me);
+  if (others.length === 0) return "last-one";
+  const admin = members.some((m) => m.userId === me && m.role === "admin");
+  return admin && !others.some((m) => m.role === "admin") ? "last-admin" : null;
 }
 
 /**

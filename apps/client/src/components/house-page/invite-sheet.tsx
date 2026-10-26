@@ -21,8 +21,9 @@ function webNavigator(): WebNavigator | undefined {
 }
 
 /**
- * Inviting housemates, a brand moment: the join code large and spaced in
- * the road sign's caps, the link under it, then the sheet's one amber
+ * Inviting housemates, a brand moment, so it's signed like the join page
+ * the link opens: the front door's tape across the top, the join code in
+ * its big caps, spaced wide to read out across a room, the link under it, then the sheet's one amber
  * "Share invite" (the system share sheet, as the old invite card) and, on
  * the web, "Copy link". A phone has no clipboard module, and its share
  * sheet has a Copy of its own, so there it's Share invite alone; a browser
@@ -73,11 +74,12 @@ export function InviteSheet({
       }}
       title={HOUSE_PAGE_COPY.invite}
       description={HOUSE_PAGE_COPY.inviteBody}
+      tape
       testID="invite-sheet"
     >
       <View style={styles.sign}>
         <SectionLabel>{HOUSE_PAGE_COPY.code}</SectionLabel>
-        <Text selectable style={[type.title, styles.code]} testID="invite-code">
+        <Text selectable style={[type.heading(1), styles.code]} testID="invite-code">
           {code}
         </Text>
         <Text selectable numberOfLines={1} style={[type.meta, { color: colors.mutedForeground }]} testID="invite-url">
@@ -102,7 +104,7 @@ export function InviteSheet({
 
 const styles = StyleSheet.create({
   sign: { gap: SPACE.xs, marginTop: SPACE.sm },
-  // The code to read out across a room: the title's caps, spaced wide.
+  // The code to read out across a room: the brand pages' big caps, spaced wide.
   code: { letterSpacing: 6 },
   buttons: { gap: SPACE.sm, marginTop: SPACE.md },
 });

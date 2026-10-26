@@ -1,4 +1,4 @@
-import { afterSignIn, ERROR_COPY, SIGN_IN } from '@app/core';
+import { afterSignIn, ERROR_COPY, SIGN_IN, signedOutTo } from '@app/core';
 import { useFonts } from 'expo-font';
 import { Stack, useGlobalSearchParams, usePathname, type ErrorBoundaryProps } from 'expo-router';
 import * as SplashScreen from 'expo-splash-screen';
@@ -34,7 +34,7 @@ export default function RootLayout() {
 
 function Routes() {
   const [fontsLoaded, fontError] = useFonts(FONT_FILES);
-  const { session, house, loading, failed, refresh } = useMembership();
+  const { session, signedOut, house, loading, failed, refresh } = useMembership();
   const { scheme, colors } = useTheme();
   const pathname = usePathname();
   const { next } = useGlobalSearchParams<{ next?: string | string[] }>();
@@ -55,11 +55,13 @@ function Routes() {
   const signedIn = session !== null;
   const housed = house !== null;
   // Where each guard sends you when its screens aren't yours: signed out to
-  // sign-in, as on the web; signed in to your house, or to starting one. On
+  // sign-in, as on the web, still carrying a link to starting a house or the
+  // invite opened cold (but not the screen you signed out on); signed in to
+  // your house, or to starting one. On
   // every platform, signing in with no house goes where sign-in's ?next was
   // carrying you (naming the house, or a join link), if it's one of those.
   const carried = pathname === SIGN_IN && typeof next === 'string' ? afterSignIn(next) : undefined;
-  const home = !signedIn ? SIGN_IN : housed ? '/today' : (carried ?? '/welcome');
+  const home = !signedIn ? (signedOut ? SIGN_IN : signedOutTo(pathname)) : housed ? '/today' : (carried ?? '/welcome');
   return (
     <>
       <StatusBar style={scheme === 'dark' ? 'light' : 'dark'} />

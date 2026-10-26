@@ -5,7 +5,7 @@ import { FOCUS_SHELL_COPY, GROUPS_COPY, JOHN_LIST_COPY, RULES_COPY, SETUP_COPY }
 import { MAKEUP_LABEL } from "./deal";
 import { CATEGORIES, CATEGORY_LABEL, DOW_LABEL, type Category, type Currency, type HouseRules, type IsoDow } from "./domain";
 import { humanError } from "./errors";
-import { dateRange, firstName, monthLabel, pointsLabel } from "./format";
+import { dateRange, firstName, joinRange, monthLabel, pointsLabel } from "./format";
 import { formatMoney, formatSigned, moneyInput, parseMoney } from "./money";
 import { HouseSettings } from "./schemas";
 import { addDaysTo } from "./week";
@@ -177,13 +177,13 @@ export function bookingWeeks(today: string, weekStarts: IsoDow, from: number, co
   );
 }
 
-/** What a run of dates spans, by month: "October 2026", "October – November 2026", "December 2026 – January 2027". */
+/** What a run of dates spans, by month: "October 2026", "October–November 2026", "December 2026–January 2027". */
 export function monthsSpanned(first: string, last: string): string {
   const [a, b] = [monthLabel(first.slice(0, 7)), monthLabel(last.slice(0, 7))];
   if (a === b) return a;
   const [aMonth, aYear] = a.split(" ");
   const [, bYear] = b.split(" ");
-  return aYear === bYear ? `${aMonth} – ${b}` : `${a} – ${b}`;
+  return aYear === bYear ? joinRange(aMonth, b) : joinRange(a, b);
 }
 
 /** A local date said in full, for a screen reader: "Monday 26 October". */

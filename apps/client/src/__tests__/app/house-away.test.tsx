@@ -63,7 +63,7 @@ it("shows who else is away, by first name, in words as well as squares", async (
   await open();
   const panel = within(screen.getByTestId('away-panel'));
   expect(panel.getByText(SETUP_COPY.whosAway)).toBeOnTheScreen();
-  expect(panel.getByText(SETUP_COPY.nextWeeks('21 Oct – 17 Nov'))).toBeOnTheScreen();
+  expect(panel.getByText(SETUP_COPY.nextWeeks('21 Oct–17 Nov'))).toBeOnTheScreen();
   // Soonest first; your own trip is under Your time away, not here again.
   const [tom, sam] = panel.getAllByTestId('away-period');
   expect(panel.getAllByTestId('away-period')).toHaveLength(2);
@@ -134,7 +134,7 @@ describe('booking', () => {
   it('opens the calendar on this week, the first you can book', async () => {
     await open();
     const calendar = within(screen.getByTestId('date-range'));
-    expect(calendar.getByText('October – November 2026')).toBeOnTheScreen();
+    expect(calendar.getByText('October–November 2026')).toBeOnTheScreen();
     // The week began on Monday; the days already gone can't be picked.
     expect(calendar.getByRole('button', { name: 'Monday 19 October' })).toBeDisabled();
     expect(calendar.getByRole('button', { name: 'Wednesday 21 October' })).toBeEnabled();
@@ -179,11 +179,11 @@ describe('booking', () => {
   });
 
   it("says why a booking didn't take", async () => {
-    (setAway as jest.Mock).mockRejectedValue(new Error("You're already away for some of those days."));
+    (setAway as jest.Mock).mockRejectedValue(new Error("You’re already away for some of those days."));
     await open();
     const form = within(screen.getByTestId('away-form'));
     await fireEvent.press(form.getByRole('button', { name: 'Thursday 22 October' }));
     await fireEvent.press(form.getByTestId('book-away'));
-    expect(await form.findByRole('alert')).toHaveTextContent("You're already away for some of those days.");
+    expect(await form.findByRole('alert')).toHaveTextContent("You’re already away for some of those days.");
   });
 });

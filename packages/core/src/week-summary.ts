@@ -2,7 +2,7 @@ import { tz } from "@date-fns/tz";
 import { format } from "date-fns";
 
 import { awayDays, currentOrNext, type AwayPeriod } from "./away";
-import type { BoardItem } from "./board";
+import { byDoneLatest, type BoardItem } from "./board";
 import { FOCUS_SHELL_COPY, TABLE_COPY, WEEK_COPY, WEEK_SUMMARY_COPY } from "./copy";
 import { MAKEUP_LABEL } from "./deal";
 import { dateRange, firstName, formatBalance, pointsLabel, STATUS_LABEL, STATUS_MARK, weekRange } from "./format";
@@ -124,7 +124,7 @@ export interface WeekPerson<T> {
  * without Johns. With a filter, only the people with Johns in its part,
  * showing just those, unfolded.
  */
-export function weekPeople<T extends { userId: string; status: LiveStatus; dueAt: Date }>(
+export function weekPeople<T extends { userId: string; status: LiveStatus; dueAt: Date; doneAt?: Date | null }>(
   items: readonly T[],
   memberIds: readonly string[],
   viewerId: string,
@@ -151,14 +151,15 @@ export function weekPeople<T extends { userId: string; status: LiveStatus; dueAt
  * first, whoever's it is, then the finished ones to fold; with a filter,
  * just that part's, unfolded.
  */
-export function weekList<T extends { status: LiveStatus; dueAt: Date }>(
+export function weekList<T extends { status: LiveStatus; dueAt: Date; doneAt?: Date | null }>(
   items: readonly T[],
   filter: WeekPart | null = null,
 ): { rows: T[]; folded: T[] } {
   if (filter) return { rows: items.filter((i) => weekPart(i.status) === filter).sort(byNeed), folded: [] };
   return {
     rows: items.filter((i) => !weekFinished(i.status)).sort(byNeed),
-    folded: items.filter((i) => weekFinished(i.status)).sort(byNeed),
+    // In Today's order for its fold: the latest done first.
+    folded: items.filter((i) => weekFinished(i.status)).sort(byDoneLatest),
   };
 }
 

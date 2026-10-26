@@ -1,8 +1,10 @@
 import { describe, expect, it } from "vitest";
 
 import { HOUSE_LOWER_COPY, WALL_FEED_COPY } from "./copy";
+import { STATUS_MARK } from "./format";
 import {
   houseSetupValues,
+  leaveBar,
   leaveCost,
   paymentShown,
   struckAt,
@@ -125,6 +127,20 @@ describe("wallFeedRow", () => {
     expect(struckAt([])).toEqual(new Map());
   });
 
+  it("marks what went wrong from the one status map, and says a miss in words", () => {
+    const status = (s: string) => () => s as never;
+    expect(row({}, { statusOf: status("disputed") }).mark).toBe(STATUS_MARK.disputed.icon);
+    expect(row({}, { statusOf: status("overdue") }).mark).toBe(STATUS_MARK.missed.icon);
+    expect(row({ kind: "late" }).mark).toBe(STATUS_MARK.late.icon);
+    expect(row().mark).toBeNull();
+    expect(row({}, { statusOf: status("checking") }).mark).toBeNull();
+    const missed = row({ kind: "missed", data: { name: "Bins out" } });
+    expect(missed.detail).toBe(WALL_FEED_COPY.missedWord);
+    expect(missed.mark).toBe(STATUS_MARK.missed.icon);
+    expect(missed.label).toBe("Megan missed Bins out, Missed · 3h");
+    expect(row({ kind: "joined" }).mark).toBeNull();
+  });
+
   it("gives a housemate's tick the Nice one toggle, and your own only what the house gave it", () => {
     expect(row().nice).toBe(true);
     expect(row({ kind: "late" }).nice).toBe(true);
@@ -140,9 +156,9 @@ describe("wallFeedRow", () => {
       user_id: "megan",
       data: { name: "Clean the bathroom", against: "priya", reason: "Shower drain's still full of hair" },
     });
-    expect(r.title).toBe("Megan disputed Priya’s Clean the bathroom");
+    expect(r.title).toBe("Megan disputed Priya’s tick on Clean the bathroom");
     expect(r.detail).toBe("“Shower drain's still full of hair”");
-    expect(row({ kind: "disputed", data: { name: "Bins", against: "sam" } }).title).toBe("Megan disputed your Bins");
+    expect(row({ kind: "disputed", data: { name: "Bins", against: "sam" } }).title).toBe("Megan disputed your tick on Bins");
     expect(row({ kind: "disputed", data: { name: "Bins", against: "sam" } }).detail).toBeNull();
   });
 
@@ -162,9 +178,9 @@ describe("wallFeedRow", () => {
 
   it("says who is away, and what that moved", () => {
     const away = { kind: "away", data: { starts_on: "2026-10-29", ends_on: "2026-11-01", moved: 0 } };
-    expect(row(away).title).toBe("Megan is away 29 Oct – 1 Nov");
+    expect(row(away).title).toBe("Megan is away 29 Oct–1 Nov");
     expect(row(away).detail).toBe(WALL_FEED_COPY.timeAway);
-    expect(row({ ...away, user_id: "sam", data: { ...away.data, moved: 1 } }).title).toBe("You’re away 29 Oct – 1 Nov");
+    expect(row({ ...away, user_id: "sam", data: { ...away.data, moved: 1 } }).title).toBe("You’re away 29 Oct–1 Nov");
     expect(row({ ...away, user_id: "sam", data: { ...away.data, moved: 1 } }).detail).toBe(
       "Time away · 1 John due before you go",
     );
@@ -188,7 +204,7 @@ describe("wallFeedRow", () => {
     expect(r.title).toBe("A former housemate ticked Wipe down the kitchen");
     expect(r.actor).toBeNull();
     expect(row({ kind: "disputed", data: { name: "Bins", against: "gone", reason: "No" } }).title).toBe(
-      "Megan disputed a former housemate’s Bins",
+      "Megan disputed a former housemate’s tick on Bins",
     );
   });
 
@@ -399,7 +415,7 @@ describe("houseSetupValues", () => {
 
   it("names who is away next, today's included, and nobody when nobody is", () => {
     const away = [period("megan", "2026-10-29", "2026-11-01"), period("tom", "2026-11-05", "2026-11-06")];
-    expect(houseSetupValues({ ...base, away }).away).toBe("Megan, 29 Oct – 1 Nov");
+    expect(houseSetupValues({ ...base, away }).away).toBe("Megan, 29 Oct–1 Nov");
     const now = [...away, period("tom", "2026-10-20", "2026-10-26")];
     expect(houseSetupValues({ ...base, away: now }).away).toBe("Tom, 20–26 Oct");
     expect(houseSetupValues({ ...base, away: [period("sam", "2026-10-28", "2026-10-28")] }).away).toBe("You, Wed 28 Oct");
@@ -422,8 +438,25 @@ describe("houseSetupValues", () => {
   it("shows Groups to admins, and to everyone once a group exists", () => {
     expect(houseSetupValues({ ...base, groups: 0 })).toMatchObject({ groups: "None", showGroups: false });
     expect(houseSetupValues({ ...base, admin: true, groups: 0 })).toMatchObject({ groups: "None", showGroups: true });
-    expect(houseSetupValues({ ...base, groups: 2 })).toMatchObject({ groups: "2", showGroups: true });
+    expect(houseSetupValues({ ...base, groups: 2 })).toMatchObject({ groups: "2 groups", showGroups: true });
+    expect(houseSetupValues({ ...base, groups: 1 }).groups).toBe("1 group");
     expect(houseSetupValues({ ...base, admin: true })).toMatchObject({ groups: null, showGroups: true });
+  });
+});
+
+describe("leaveBar", () => {
+  const admin = { userId: "sam", role: "admin" as const };
+  const member = (userId: string) => ({ userId, role: "member" as const });
+
+  it("stops the only admin of a house with others in it, as the database would", () => {
+    expect(leaveBar("sam", [admin, member("tom")])).toBe("last-admin");
+    expect(leaveBar("sam", [admin, { userId: "tom", role: "admin" }])).toBeNull();
+    expect(leaveBar("tom", [admin, member("tom")])).toBeNull();
+  });
+
+  it("says when the last one out would leave the house empty", () => {
+    expect(leaveBar("sam", [admin])).toBe("last-one");
+    expect(leaveBar("tom", [member("tom")])).toBe("last-one");
   });
 });
 

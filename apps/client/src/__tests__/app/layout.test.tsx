@@ -74,6 +74,28 @@ describe('signed out', () => {
     }
   });
 
+  it('keeps a link to starting a house or the invite through sign-in, as the front door does', async () => {
+    for (const [url, next] of [
+      ['/house/new', '/house/new'],
+      ['/welcome', '/welcome'],
+    ]) {
+      await open(url);
+      expect(screen).toHavePathname('/signin');
+      expect(screen).toHaveSearchParams({ next });
+    }
+    await open('/today');
+    expect(screen).toHaveSearchParams({});
+  });
+
+  it('goes to plain sign-in after signing out, not back to the screen you left', async () => {
+    (useMembership as jest.Mock).mockReturnValue({ session: null, signedOut: true, house: null, loading: false, failed: false, refresh });
+    for (const url of ['/welcome', '/house/new', '/today']) {
+      await open(url);
+      expect(screen).toHavePathname('/signin');
+      expect(screen).toHaveSearchParams({});
+    }
+  });
+
   it('still opens a join link, which signs you in itself', async () => {
     await open('/join/AB3DEF7H');
     expect(screen.getByText('Join')).toBeOnTheScreen();

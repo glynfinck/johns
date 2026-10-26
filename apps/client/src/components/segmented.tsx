@@ -1,6 +1,6 @@
-import { Pressable, StyleSheet, Text, View } from 'react-native';
+import { Pressable, StyleSheet, Text, useWindowDimensions, View } from 'react-native';
 
-import { FONT, RADIUS, SPACE, TAP, useTheme } from '@/theme';
+import { FONT, NARROW, RADIUS, SPACE, TAP, useTheme } from '@/theme';
 
 /**
  * A small two- or three-way switch for how a section shows itself
@@ -9,7 +9,8 @@ import { FONT, RADIUS, SPACE, TAP, useTheme } from '@/theme';
  * reader, `label` naming it; the chosen part is `aria-checked`, and each
  * says its `spoken` name where what it shows is short for one ("Mon" for
  * Monday). `equal` spreads it across its container, the parts sharing the
- * width, so seven days fit across a phone.
+ * width, so seven days fit across a phone. On a small phone its parts
+ * pad their words less, so the row beside it keeps its name ("Look").
  */
 export function Segmented<T extends string | number>({
   options,
@@ -27,6 +28,7 @@ export function Segmented<T extends string | number>({
   testID?: string;
 }) {
   const { colors, type } = useTheme();
+  const narrow = useWindowDimensions().width < NARROW;
   return (
     <View
       accessibilityRole="radiogroup"
@@ -46,7 +48,13 @@ export function Segmented<T extends string | number>({
               if (!chosen) onChange(option.value);
             }}
             // The chosen part sits inset in the track: a border of the track's own colour.
-            style={[styles.part, equal && styles.share, { borderColor: colors.secondary }, chosen && { backgroundColor: colors.card }]}
+            style={[
+              styles.part,
+              narrow && styles.tight,
+              equal && styles.share,
+              { borderColor: colors.secondary },
+              chosen && { backgroundColor: colors.card },
+            ]}
           >
             <Text
               numberOfLines={1}
@@ -73,6 +81,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
+  tight: { paddingHorizontal: SPACE.xs },
   // An equal share of the track, however narrow: still a thumb tall.
   share: { flex: 1, minWidth: 0, paddingHorizontal: 0 },
 });

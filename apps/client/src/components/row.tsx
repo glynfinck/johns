@@ -35,8 +35,9 @@ function looksLikeControl(node: ReactNode): boolean {
 
 /**
  * The one row, everywhere: a 32pt leading slot (a tick circle, an avatar or
- * an icon), a one-line title (two where a sentence is the point, as on the
- * Wall: `titleLines`), one meta line, and one trailing item (a value, a chip
+ * an icon), a one-line title (two where a name or a sentence must show whole,
+ * as a John's or on the Wall: `titleLines`), one meta line (two where what
+ * it ends with matters, a John's due time: `metaLines`), and one trailing item (a value, a chip
  * or a text button), 56 to 64 tall. A value in words takes what it needs, up
  * to about 60% of the row, and is cut short past that, so it never squeezes
  * the title out. With `onPress` or `href` it is a button or a link a whole
@@ -46,8 +47,9 @@ function looksLikeControl(node: ReactNode): boolean {
  * `trailing` element that has its own `onPress`, `href`, `onChange` or
  * `onValueChange` is its own control and sits beside the row's press target,
  * never inside it; `leadingControl` / `trailingControl` say so outright for
- * a component that takes none of those. In a Group (or a card's CardRows) it
- * draws the hairline above itself from the leading edge.
+ * a component that takes none of those. `cells` are columns of their own
+ * before the trailing item, for a row in a table. In a Group (or a card's
+ * CardRows) it draws the hairline above itself from the leading edge.
  */
 export function Row({
   title,
@@ -65,6 +67,8 @@ export function Row({
   disabled = false,
   selected,
   titleLines = 1,
+  metaLines = 1,
+  cells,
   leadingControl,
   trailingControl,
   testID,
@@ -92,8 +96,12 @@ export function Row({
   disabled?: boolean;
   /** One of several to choose from: a radio, checked and tinted when chosen. Needs `onPress`. */
   selected?: boolean;
-  /** How many lines the title may take before it's cut short: 2 for a sentence (a Wall row). */
+  /** How many lines the title may take before it's cut short: 2 for a John's name or a sentence (a Wall row). */
   titleLines?: 1 | 2;
+  /** How many lines a meta string may take before it's cut short: 2 for a John's, which ends with when it's due. */
+  metaLines?: 1 | 2;
+  /** Fixed columns between the words and the trailing item, part of the row's press target: Week's table on a laptop. */
+  cells?: ReactNode;
   /** `leading` is a control of its own (kept out of the row's press target). Guessed from its props when left out. */
   leadingControl?: boolean;
   /** `trailing` is a control of its own (a toggle, a reaction). Guessed from its props when left out. */
@@ -129,13 +137,19 @@ export function Row({
         </RowTitle>
         {hasMeta ? (
           <View style={styles.metaLine}>
-            {lid != null ? <LidDot category={lid} /> : null}
+            {/* The dot stays on the meta's first line. */}
+            {lid != null ? (
+              <View style={styles.lid}>
+                <LidDot category={lid} />
+              </View>
+            ) : null}
             <View style={styles.metaText}>
-              {typeof meta === 'string' || typeof meta === 'number' ? <Meta numberOfLines={1}>{meta}</Meta> : meta}
+              {typeof meta === 'string' || typeof meta === 'number' ? <Meta numberOfLines={metaLines}>{meta}</Meta> : meta}
             </View>
           </View>
         ) : null}
       </View>
+      {cells}
       {trailingOutside ? null : trailingItem}
       {chevron ? <ChevronRightIcon size={20} color={colors.mutedForeground} aria-hidden /> : null}
     </>
@@ -219,7 +233,9 @@ const styles = StyleSheet.create({
   disabled: { opacity: 0.5 },
   leading: { width: LEADING, alignItems: 'center', justifyContent: 'center' },
   words: { flex: 1, minWidth: 0, gap: 2 },
-  metaLine: { flexDirection: 'row', alignItems: 'center', gap: 6 },
+  metaLine: { flexDirection: 'row', alignItems: 'flex-start', gap: 6 },
+  // As tall as Meta's line, so the dot sits in the middle of the first one.
+  lid: { height: 20, justifyContent: 'center' },
   metaText: { flexShrink: 1, minWidth: 0 },
   value: { flexShrink: 1, maxWidth: '60%', textAlign: 'right', ...TABULAR },
   edge: { position: 'absolute', left: 0, top: 0, bottom: 0, width: 4 },

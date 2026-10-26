@@ -1,27 +1,36 @@
 import {
   doneFold,
+  forfeitRoom,
   JOHN_COPY,
+  JOHN_SHEET_COPY,
   johnRow,
+  monthOf,
   NEXT_UP_COPY,
   pointsLabel,
+  undoWarning,
   WEEK_SUMMARY_COPY,
   type BoardItem,
+  type HouseRules,
   type JohnRowPlan,
+  type StakeView,
 } from '@app/core';
-import { ClockIcon, ShieldIcon } from 'lucide-react-native';
-import type { ReactNode } from 'react';
+import { ClockIcon, ShieldIcon, Undo2Icon } from 'lucide-react-native';
+import { useState, type ReactNode } from 'react';
 import { StyleSheet, View } from 'react-native';
 
 import { undoDone } from '@/api/johns';
 import { Alert } from '@/components/alert';
+import { ConfirmSheet } from '@/components/confirm-sheet';
 import { Fold } from '@/components/fold';
 import { GroupItem } from '@/components/group';
 import { useJohnSheet } from '@/components/john-sheet';
+import { useCached } from '@/components/john-sheet/cached';
 import { Row, RowIcon } from '@/components/row';
 import { StatusMark } from '@/components/status-mark';
 import { Body } from '@/components/text';
 import { TextButton } from '@/components/text-button';
 import { TickCircle } from '@/components/tick-circle';
+import { stakeKey } from '@/hooks/keys';
 import { useMove } from '@/hooks/use-move';
 import { useTick } from '@/hooks/use-tick';
 import { FONT, SPACE, useTheme } from '@/theme';
@@ -31,6 +40,8 @@ export interface JohnRowContext {
   houseId: string;
   userId: string;
   zone: string;
+  /** The house's rules: what lateness costs, for an undo that would make a John late. */
+  rules: HouseRules;
   now: Date;
   /** Anyone's full name by id, or null for someone who has left. */
   nameOf: (userId: string) => string | null;
@@ -41,14 +52,26 @@ export interface JohnRowContext {
  * table): its plan from core's johnRow (what the circle shows and whether
  * it ticks, the meta line, the one trailing item, what the sheet opens on),
  * the circle, the trailing item, and opening its John sheet. `problem` is
- * the refusal of a tick or an undo made here.
+ * the refusal of a tick or an undo made here. An undo that would make the
+ * John late (after its due time) asks first: `confirm` is that sheet, to
+ * draw beside the row.
  */
 export function useJohnRow(item: BoardItem, context: JohnRowContext) {
   const sheet = useJohnSheet();
   const tick = useTick(context.houseId, item.id);
   const undo = useMove(context.houseId);
+  const [asking, setAsking] = useState(false);
+  // What lateness can still cost is capped at the stake, once a screen has read it.
+  const stake = useCached<StakeView>(stakeKey(context.houseId)) ?? null;
   const plan = johnRow(item, context.userId, context.now, context.zone, context.nameOf);
   const open = () => sheet.open(item.id, plan.focus ?? undefined);
+  const warning =
+    plan.trailing === 'undo'
+      ? undoWarning(item, context.rules, context.now, forfeitRoom(stake, item.userId, monthOf(item.dueAt, context.zone)))
+      : null;
+  const undoNow = async () => {
+    if (await undo.run(() => undoDone(item.id))) setAsking(false);
+  };
 
   // A photo John's circle goes to the camera (the file chooser, on the web) first.
   const leading = plan.ticks ? (
@@ -68,11 +91,26 @@ export function useJohnRow(item: BoardItem, context: JohnRowContext) {
     open,
     leading,
     trailing: trailingFor(plan, item, {
-      undo: () => void undo.run(() => undoDone(item.id)),
+      undo: () => (warning ? setAsking(true) : void undoNow()),
       undoing: undo.pending,
       vote: open,
     }),
-    problem: tick.problem ?? undo.problem,
+    // A refusal from the confirm is said in it.
+    problem: tick.problem ?? (asking ? null : undo.problem),
+    confirm: warning ? (
+      <ConfirmSheet
+        visible={asking}
+        title={JOHN_SHEET_COPY.undoTitle(item.name)}
+        body={warning}
+        confirmLabel={JOHN_SHEET_COPY.undoIt}
+        icon={Undo2Icon}
+        busy={undo.pending}
+        problem={undo.problem}
+        onConfirm={() => void undoNow()}
+        onClose={() => setAsking(false)}
+        testID="undo-confirm"
+      />
+    ) : null,
   };
 }
 
@@ -122,9 +160,12 @@ export function JohnRow({ item, context, testID }: { item: BoardItem; context: J
   const john = useJohnRow(item, context);
   return (
     <>
+      {/* A John's name is never cut short, nor when it's due. */}
       <Row
         title={item.name}
+        titleLines={2}
         meta={john.plan.meta}
+        metaLines={2}
         lid={john.plan.lid ? item.category : undefined}
         leading={john.leading}
         trailing={john.trailing}
@@ -132,6 +173,7 @@ export function JohnRow({ item, context, testID }: { item: BoardItem; context: J
         onPress={john.open}
         testID={testID}
       />
+      {john.confirm}
       {john.problem ? (
         <GroupItem>
           <Alert message={john.problem} />

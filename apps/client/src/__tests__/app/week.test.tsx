@@ -1,4 +1,4 @@
-import { FOCUS_SHELL_COPY, NEXT_UP_COPY, NOT_DEALT_COPY, PAGE_TITLE, TABLE_COPY, WEEK_COPY, WEEK_SUMMARY_COPY } from '@app/core';
+import { BIN_NIGHT, FOCUS_SHELL_COPY, NEXT_UP_COPY, NOT_DEALT_COPY, PAGE_TITLE, TABLE_COPY, WEEK_COPY, WEEK_SUMMARY_COPY } from '@app/core';
 import { QueryClientProvider, type QueryClient } from '@tanstack/react-query';
 import { Slot } from 'expo-router';
 import { act, fireEvent, renderRouter, screen, waitFor, within } from 'expo-router/testing-library';
@@ -9,7 +9,7 @@ import { loadHouse } from '@/api/board';
 import { catchUp } from '@/api/house';
 import { markDone, undoDone } from '@/api/johns';
 import { pickPhoto } from '@/api/photos';
-import { dealThisWeek } from '@/api/settings';
+import { dealThisWeek, loadJohnList } from '@/api/settings';
 import { loadTable } from '@/api/table';
 import Week from '@/app/(house)/week';
 import { ToastProvider } from '@/components/toast';
@@ -19,7 +19,7 @@ import { testQueryClient } from '@/testing/query';
 jest.mock('@/api/board', () => ({ loadHouse: jest.fn() }));
 jest.mock('@/api/away', () => ({ loadAway: jest.fn() }));
 jest.mock('@/api/table', () => ({ loadTable: jest.fn() }));
-jest.mock('@/api/settings', () => ({ dealThisWeek: jest.fn() }));
+jest.mock('@/api/settings', () => ({ dealThisWeek: jest.fn(), loadJohnList: jest.fn() }));
 jest.mock('@/api/house', () => ({ catchUp: jest.fn() }));
 jest.mock('@/api/johns', () => ({ markDone: jest.fn(), undoDone: jest.fn(), spendImmunity: jest.fn(), spendSwap: jest.fn() }));
 jest.mock('@/api/photos', () => ({ pickPhoto: jest.fn(), uploadProof: jest.fn() }));
@@ -70,6 +70,9 @@ function busyWeek(overrides: Parameters<typeof snapshot>[0] = {}) {
     ...overrides,
   });
 }
+
+/** One of Sam's still to do, for a swap to trade for. */
+const samsOpenJohn = assignment({ id: 'a6', user_id: 'sam', name: 'Descale the kettle', category: 'kitchen', due_at: at(30) });
 
 /** Week under a stand-in layout, with the pages its menu goes to standing in as their names. */
 async function open(): Promise<QueryClient> {
@@ -300,12 +303,19 @@ describe('on a phone', () => {
     expect(within(row('Bins out')).getByTestId('status-overdue')).toBeOnTheScreen();
   });
 
-  it('tags your group "Swap ready" while you hold a swap token', async () => {
+  it('tags your group "Swap ready" while you hold a swap token and a housemate has an open John to trade', async () => {
     const members = snapshot().members.map((m) => (m.userId === 'priya' ? { ...m, swapTokens: 1 } : m));
-    read.mockResolvedValue(busyWeek({ members }));
+    read.mockResolvedValue(busyWeek({ members, assignments: [...busyWeek().assignments, samsOpenJohn] }));
     await open();
     expect(within(screen.getByTestId('person-priya')).getByTestId('swap-ready')).toHaveTextContent(WEEK_SUMMARY_COPY.swapReady);
     expect(within(screen.getByTestId('person-sam')).queryByTestId('swap-ready')).toBeNull();
+  });
+
+  it("doesn't tag it while there's nothing to trade, token or not: Sam's Johns are all ticked", async () => {
+    const members = snapshot().members.map((m) => (m.userId === 'priya' ? { ...m, swapTokens: 1 } : m));
+    read.mockResolvedValue(busyWeek({ members }));
+    await open();
+    expect(screen.queryByTestId('swap-ready')).toBeNull();
   });
 
   it("is quiet about swaps without a token, and has no swap button (it's in the John sheet)", async () => {
@@ -434,20 +444,43 @@ describe('the fairness footer', () => {
 describe('before the deal', () => {
   const notDealt = () => snapshot({ week: null, assignments: [], house: { ...snapshot().house, everDealt: false } });
 
-  it('gives the admin the one amber button, "Deal this week", which deals the week', async () => {
+  it('gives the admin the first deal as Today does, "Deal week 1", amber once there are Johns and housemates', async () => {
     read.mockResolvedValue(notDealt());
+    (loadJohnList as jest.Mock).mockResolvedValue({ johns: [{ id: 'j1' }], groups: [] });
     await open();
     expect(screen.getByRole('header', { name: WEEK_SUMMARY_COPY.notDealt })).toBeOnTheScreen();
     expect(screen.queryByTestId('week-summary')).toBeNull();
-    await fireEvent.press(screen.getByRole('button', { name: WEEK_SUMMARY_COPY.deal }));
+    // Outline while the list is read, then amber.
+    await waitFor(() => expect(screen.getByRole('button', { name: NEXT_UP_COPY.dealWeek1 })).toHaveStyle({ backgroundColor: BIN_NIGHT.light.hivis }));
+    await fireEvent.press(screen.getByRole('button', { name: NEXT_UP_COPY.dealWeek1 }));
     expect(dealThisWeek).toHaveBeenCalledWith('h1');
+  });
+
+  it("keeps it outline in a house of one, which may deal alone, as Today's checklist does", async () => {
+    read.mockResolvedValue(snapshot({ ...notDealt(), members: [snapshot().members[0]] }));
+    (loadJohnList as jest.Mock).mockResolvedValue({ johns: [{ id: 'j1' }], groups: [] });
+    await open();
+    await waitFor(() => expect(loadJohnList).toHaveBeenCalled());
+    expect(await screen.findByRole('button', { name: NEXT_UP_COPY.dealWeek1 })).not.toHaveStyle({ backgroundColor: BIN_NIGHT.light.hivis });
+  });
+
+  it('with no Johns yet, offers to add them rather than a deal that would be refused', async () => {
+    read.mockResolvedValue(notDealt());
+    (loadJohnList as jest.Mock).mockResolvedValue({ johns: [], groups: [] });
+    await open();
+    const add = await screen.findByRole('link', { name: NEXT_UP_COPY.addJohns });
+    expect(add).not.toHaveStyle({ backgroundColor: BIN_NIGHT.light.hivis });
+    expect(screen.queryByTestId('deal-week')).toBeNull();
+    await fireEvent.press(add);
+    expect(await screen.findByText('John list page')).toBeOnTheScreen();
   });
 
   it("says why when the database won't deal, under the button", async () => {
     read.mockResolvedValue(notDealt());
+    (loadJohnList as jest.Mock).mockResolvedValue({ johns: [{ id: 'j1' }], groups: [] });
     (dealThisWeek as jest.Mock).mockRejectedValue(new Error('Only the house admins can do that.'));
     await open();
-    await fireEvent.press(screen.getByRole('button', { name: WEEK_SUMMARY_COPY.deal }));
+    await fireEvent.press(await screen.findByRole('button', { name: NEXT_UP_COPY.dealWeek1 }));
     expect(await within(screen.getByTestId('week-not-dealt')).findByText('Only the house admins can do that.')).toBeOnTheScreen();
   });
 
@@ -457,6 +490,8 @@ describe('before the deal', () => {
     await open();
     expect(screen.getByText(NEXT_UP_COPY.waiting('Priya'))).toBeOnTheScreen();
     expect(screen.queryByTestId('deal-week')).toBeNull();
+    // Nor is the John list read for them.
+    expect(loadJohnList).not.toHaveBeenCalled();
   });
 
   it('says why a week with nothing on it is empty, once the house has begun', async () => {
@@ -572,7 +607,7 @@ describe('on a laptop', () => {
 
   it("says who's away and that your swap is ready under the summary, as the table has no person headers", async () => {
     const members = snapshot().members.map((m) => (m.userId === 'priya' ? { ...m, swapTokens: 1 } : m));
-    read.mockResolvedValue(busyWeek({ members }));
+    read.mockResolvedValue(busyWeek({ members, assignments: [...busyWeek().assignments, samsOpenJohn] }));
     (loadAway as jest.Mock).mockResolvedValue({
       today: '2026-10-21',
       periods: [{ id: 'p1', userId: 'sam', startsOn: '2026-10-21', endsOn: '2026-10-23', note: null }],

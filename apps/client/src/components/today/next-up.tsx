@@ -11,7 +11,7 @@ import {
 } from '@app/core';
 import { CameraIcon, CheckIcon, ImagesIcon, TriangleAlertIcon } from 'lucide-react-native';
 import { useState, type ReactNode } from 'react';
-import { Pressable, StyleSheet, Text, View } from 'react-native';
+import { Pressable, StyleSheet, Text, View, useWindowDimensions } from 'react-native';
 
 import { Alert } from '@/components/alert';
 import { Button } from '@/components/button';
@@ -22,7 +22,7 @@ import { LidDot } from '@/components/lid';
 import { Lead, Meta, SectionLabel } from '@/components/text';
 import { TextButton } from '@/components/text-button';
 import { useTick } from '@/hooks/use-tick';
-import { SPACE, TAP, useTheme } from '@/theme';
+import { NARROW, SPACE, TAP, useTheme } from '@/theme';
 
 /** What the card shows beside a John: the tokens you hold that can skip or swap it. */
 export interface CantHeld {
@@ -32,9 +32,9 @@ export interface CantHeld {
 
 /**
  * Today's one card, Next up: your next open John with the screen's one
- * amber button, or what takes its place (all clear, time away, before the
- * first deal). Never stacked: one state at a time. The setup checklist is
- * its own card (SetupCard).
+ * amber button, or what takes its place (all clear, a tick of yours the
+ * house is voting on, time away, before the first deal). Never stacked: one
+ * state at a time. The setup checklist is its own card (SetupCard).
  */
 export function NextUp({
   houseId,
@@ -65,10 +65,13 @@ export function NextUp({
     case 'clear':
       return (
         <NextUpCard
-          lead={clearUntil(state.until, rules.timezone)}
+          lead={clearUntil(state.until, rules.timezone, now)}
           body={state.nothingYours ? NEXT_UP_COPY.nothingYours : NEXT_UP_COPY.clearBody}
         />
       );
+    case 'voting':
+      // Not clear yet: the disputed John is in the rest of the week, below.
+      return <NextUpCard lead={NEXT_UP_COPY.voting} body={NEXT_UP_COPY.votingBody(state.item.name)} />;
     case 'away':
       return (
         <NextUpCard lead={NEXT_UP_COPY.away(dateRange(state.until, state.until))} body={NEXT_UP_COPY.awayBody(awayMakeup)}>
@@ -126,6 +129,8 @@ function NextJohn({
   const meta = nextUpMeta(item, rules, now, room);
   const working = tick.pending ? JOHN_COPY.ticking : tick.uploading ? JOHN_COPY.uploading : null;
   const offersCant = cant.immunity || cant.swap;
+  // On a small phone the photo button beside Mark done is just its icon, so Mark done keeps to one line.
+  const narrow = useWindowDimensions().width < NARROW;
 
   return (
     <Card testID="next-up" style={[styles.edged, offersCant && styles.quietEnd]}>
@@ -185,6 +190,7 @@ function NextJohn({
             variant="outline"
             icon={ImagesIcon}
             label={NEXT_UP_COPY.library}
+            iconOnly={narrow}
             disabled={tick.busy}
             onPress={() => void tick.tickWithPhoto('library')}
             testID="choose-photo"
@@ -194,6 +200,7 @@ function NextJohn({
             variant="outline"
             icon={CameraIcon}
             label={NEXT_UP_COPY.photo}
+            iconOnly={narrow}
             disabled={tick.busy}
             onPress={() => void tick.tickWithPhoto('camera')}
             testID="done-with-photo"
@@ -230,8 +237,10 @@ const styles = StyleSheet.create({
   edge: { position: 'absolute', left: 0, top: 0, bottom: 0, width: 4 },
   // Overpass's caps sit high in their line.
   label: { paddingTop: 2 },
-  // The name is a thumb-sized target of its own; its words keep the Lead's place (the target reaches past them).
-  name: { minHeight: TAP, marginVertical: -2, justifyContent: 'center', alignSelf: 'stretch' },
+  // The name is a thumb-sized target of its own, reaching past its words by
+  // as much as makes a one-line Lead (28) 48 tall, and a fixed 8 from the
+  // label and the meta line however many lines the name takes.
+  name: { paddingVertical: (TAP - 28) / 2, marginVertical: SPACE.sm - (TAP - 28) / 2, alignSelf: 'stretch' },
   pressed: { opacity: 0.6 },
   lead: { marginTop: SPACE.sm },
   meta: { flexDirection: 'row', alignItems: 'flex-start', gap: 6 },

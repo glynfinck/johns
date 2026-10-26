@@ -40,7 +40,8 @@ function PersonFor({ houseId, userId, personId }: { houseId: string; userId: str
     Promise.all([query.refetch(), table.refetch(), stake.refetch(), away.refetch()]),
   );
   const person = view?.snapshot.members.find((m) => m.userId === personId) ?? null;
-  const title = person?.name ?? PAGE_TITLE.house;
+  // Someone who isn't in the house any more is named as such, not as House itself.
+  const title = person?.name ?? (view ? FOCUS_SHELL_COPY.formerHousemate : PAGE_TITLE.house);
 
   return (
     <Screen

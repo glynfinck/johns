@@ -123,6 +123,6 @@ describe('setReaction', () => {
     mockAnswer.reactions = { error: { message: 'duplicate key value violates unique constraint' } };
     await expect(setReaction('e1', 'ava', 'fire', true)).resolves.toBeUndefined();
     mockAnswer.reactions = { error: { message: 'permission denied', code: '42501' } };
-    await expect(setReaction('e1', 'ava', 'fire', true)).rejects.toThrow("You can't do that.");
+    await expect(setReaction('e1', 'ava', 'fire', true)).rejects.toThrow("You can’t do that.");
   });
 });

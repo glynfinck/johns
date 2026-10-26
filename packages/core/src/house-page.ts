@@ -185,30 +185,25 @@ export interface SettleRow {
   /** They owe you, and you mark it received; otherwise you owe them. */
   owedToYou: boolean;
   amount: number;
-  /** "Tom owes you £1.34", "You owe Priya £1.34". */
+  /** "Tom owes you £1.34 for September", "You owe Priya £1.34 for September". */
   title: string;
-  /** Which month it's from, and what happens next: "From September · waiting for Priya to confirm". */
+  /** What happens next: "Waiting for Priya to confirm". */
   meta: string;
   /** "Mark £1.34 received", only on what a housemate owes you. */
   action: string | null;
+  /** The same, to a screen reader, naming who paid: "Mark Tom’s £1.34 received". */
+  spoken: string | null;
   /** The first of those: the page's one amber button. Later ones are outlined. */
   primary: boolean;
 }
 
 /**
  * What's left to do about a debt from closed months, as its meta line says
- * it wherever it shows (House's settle-up, a housemate's page), after the
- * months it's from when they can be named: owed to you, it's paid however
- * you like; yours, it waits for them to confirm; between two others, it's
- * not paid yet.
+ * it wherever it shows (House's settle-up, a housemate's page): owed to you,
+ * it's paid however you like; yours, it waits for them to confirm.
  */
-function settleMeta(t: Transfer, me: string, members: readonly Named[], months: string): string {
-  if (t.to === me) return months ? [HOUSE_PAGE_COPY.from(months), HOUSE_PAGE_COPY.howYouLike].join(DOT) : HOUSE_PAGE_COPY.paidHowYouLike;
-  if (t.from === me) {
-    const name = firstNameMid(members, t.to);
-    return months ? [HOUSE_PAGE_COPY.from(months), HOUSE_PAGE_COPY.waiting(name)].join(DOT) : HOUSE_PAGE_COPY.waitingFor(name);
-  }
-  return PERSON_COPY.owesMeta(months || null);
+function settleMeta(t: Transfer, me: string, members: readonly Named[]): string {
+  return t.to === me ? HOUSE_PAGE_COPY.paidHowYouLike : HOUSE_PAGE_COPY.waitingFor(firstNameMid(members, t.to));
 }
 
 /**
@@ -232,16 +227,17 @@ export function settleRows(input: {
     .filter((t) => t.to === me && t.from !== me)
     .map((t): SettleRow => {
       const amount = formatMoney(t.amount, currency);
-      const months = monthsOf(t.from);
+      const who = firstNameIn(members, t.from);
       return {
         key: `${t.from}-${t.to}`,
         userId: t.from,
         name: nameIn(members, t.from),
         owedToYou: true,
         amount: t.amount,
-        title: HOUSE_PAGE_COPY.owesYou(firstNameIn(members, t.from), amount),
-        meta: here(t.from) ? settleMeta(t, me, members, months) : HOUSE_PAGE_COPY.gone,
+        title: HOUSE_PAGE_COPY.owesYou(who, amount, monthsOf(t.from)),
+        meta: here(t.from) ? settleMeta(t, me, members) : HOUSE_PAGE_COPY.gone,
         action: here(t.from) ? HOUSE_PAGE_COPY.markReceived(amount) : null,
+        spoken: here(t.from) ? HOUSE_PAGE_COPY.markReceivedFrom(who, amount) : null,
         primary: false,
       };
     });
@@ -258,9 +254,10 @@ export function settleRows(input: {
         name: nameIn(members, t.to),
         owedToYou: false,
         amount: t.amount,
-        title: HOUSE_PAGE_COPY.youOwe(name, formatMoney(t.amount, currency)),
-        meta: here(t.to) ? settleMeta(t, me, members, months) : HOUSE_PAGE_COPY.gone,
+        title: HOUSE_PAGE_COPY.youOwe(name, formatMoney(t.amount, currency), months),
+        meta: here(t.to) ? settleMeta(t, me, members) : HOUSE_PAGE_COPY.gone,
         action: null,
+        spoken: null,
         primary: false,
       };
     });
@@ -286,10 +283,15 @@ export interface TableLine {
 
 /** A Table row's meta line says at most this many things after the points... */
 const TABLE_EXTRAS = 2;
-/** ...and no more letters than fit beside the money: on the narrowest phone (360 wide), about this many. */
-const TABLE_META_FIT = 30;
+/** ...and no more letters than fit beside the money, in a column as wide as the narrowest phone's when it isn't said. */
+const NARROWEST = 360;
 /** A hazard mark takes about as much room as this many letters. */
 const MARK_LETTERS = 3;
+/** About how wide a letter of Meta (Overpass 14) is, and a character of the money in tabular Body. */
+const META_LETTER = 7;
+const MONEY_CHARACTER = 10;
+/** Room kept for the money before the Stake is read, so the line doesn't lose its end when it lands: "+£4.01". */
+const MONEY_GUESS = 6;
 
 /** How long a meta line runs, in letters, its hazard mark included. */
 function letters(parts: readonly MetaPart[]): number {
@@ -300,10 +302,12 @@ function letters(parts: readonly MetaPart[]): number {
  * How many letters of meta a Table row holds beside its money, in a content
  * column this wide: less the gutters and the group's inset each side (64),
  * the avatar and the gaps either side of the words (56), and the money
- * (about 60), at about 6 to a letter of Meta.
+ * itself (`money`, as it's drawn; the room for a usual figure while it's
+ * unread), at about 7 to a letter of Meta.
  */
-export function tableMetaFit(columnWidth: number): number {
-  return Math.floor((columnWidth - 180) / 6);
+export function tableMetaFit(columnWidth: number, money: string | null = null): number {
+  const room = columnWidth - 120 - (money?.length ?? MONEY_GUESS) * MONEY_CHARACTER;
+  return Math.max(0, Math.floor(room / META_LETTER));
 }
 
 /**
@@ -324,11 +328,10 @@ export function tableLines(input: {
   away?: readonly AwayPeriod[] | null;
   /** Today in the house's zone, `yyyy-MM-dd`. */
   today: string;
-  /** Letters the meta line holds (`tableMetaFit`); the narrowest phone's when left out. */
-  fit?: number;
+  /** How wide the content column is, for how much of the meta line fits (`tableMetaFit`); the narrowest phone's when left out. */
+  column?: number;
 }): TableLine[] {
   const { members, me, projection } = input;
-  const fit = input.fit ?? TABLE_META_FIT;
   return input.rows.map((row) => {
     const member = members.find((m) => m.userId === row.userId);
     const name = nameIn(members, row.userId);
@@ -343,6 +346,9 @@ export function tableLines(input: {
       member && member.immunityTokens > 0 ? [{ text: HOUSE_PAGE_COPY.immunity(member.immunityTokens) }] : [],
       member && member.swapTokens > 0 ? [{ text: HOUSE_PAGE_COPY.swap }] : [],
     ].filter((parts) => parts.length > 0);
+    const net = projection ? (projection.find((p) => p.userId === row.userId)?.net ?? 0) : null;
+    const money = net === null ? null : formatSigned(net, input.currency);
+    const fit = tableMetaFit(input.column ?? NARROWEST, money);
     // The most important first; after the first, only what still fits.
     const said: MetaPart[][] = [[{ text: pointsLabel(row.points) }]];
     for (const extra of extras) {
@@ -350,14 +356,13 @@ export function tableLines(input: {
       if (said.length > 1 && letters(joinParts([...said, extra])) > fit) break;
       said.push(extra);
     }
-    const net = projection ? (projection.find((p) => p.userId === row.userId)?.net ?? 0) : null;
     return {
       userId: row.userId,
       me: row.userId === me,
       title: called(members, row.userId, me),
       name,
       meta: joinParts(said),
-      money: net === null ? null : formatSigned(net, input.currency),
+      money,
       losing: net !== null && net < 0,
     };
   });
@@ -418,8 +423,8 @@ export function recordLines(
 }
 
 /**
- * Where they stand against their fair share, in words and in points ("−3.5",
- * "0"). No balance means nothing has been dealt to them lately: level.
+ * Where they stand against their fair share, in words and in points ("−3.5";
+ * level has no figure). No balance means nothing has been dealt to them lately: level.
  */
 export function shareLine(balance: BalanceRow | null | undefined, you: boolean): PersonLine {
   const points = balance?.balance ?? 0;
@@ -432,8 +437,8 @@ export function shareLine(balance: BalanceRow | null | undefined, you: boolean):
     return { key: "share", title: PERSON_COPY.behind(words, you), meta: [{ text: meta }], value };
   }
   if (rounded > 0) return { key: "share", title: PERSON_COPY.ahead(words, you), meta: [{ text: PERSON_COPY.easier }], value };
-  // Level says it in the title, so the figure is a plain 0 rather than the word again.
-  return { key: "share", title: PERSON_COPY.level(you), meta: [{ text: PERSON_COPY.overWeeks(BALANCE_WEEKS) }], value: "0" };
+  // Level says it in the title, so no figure trails it: not the word again, nor a bare 0.
+  return { key: "share", title: PERSON_COPY.level(you), meta: [{ text: PERSON_COPY.overWeeks(BALANCE_WEEKS) }] };
 }
 
 /** Their streak (and how far to the next immunity token), then the tokens they hold. */
@@ -500,7 +505,11 @@ export function moneyLines(input: {
   ];
 }
 
-/** What a housemate owes or is owed from closed months, said from whoever is looking, as House's settle-up says it. */
+/**
+ * What a housemate owes you or is owed by you from closed months, as House's
+ * settle-up says it. What they owe others, or others owe them, stays
+ * between the two of them, as a payment's amount does.
+ */
 export function owingLines(input: {
   transfers: readonly Transfer[];
   personId: string;
@@ -512,17 +521,15 @@ export function owingLines(input: {
 }): PersonLine[] {
   const { me, members, currency } = input;
   return input.transfers
-    .filter((t) => t.from === input.personId || t.to === input.personId)
+    .filter((t) => (t.from === input.personId || t.to === input.personId) && (t.from === me || t.to === me) && t.from !== t.to)
     .map((t) => {
       const amount = formatMoney(t.amount, currency);
+      const months = monthsInWords(owedMonths(input.ledger, input.closedMonths, t.from));
       const title =
         t.from === me
-          ? HOUSE_PAGE_COPY.youOwe(firstNameMid(members, t.to), amount)
-          : t.to === me
-            ? HOUSE_PAGE_COPY.owesYou(firstNameIn(members, t.from), amount)
-            : PERSON_COPY.owes(firstNameIn(members, t.from), firstNameMid(members, t.to), amount);
-      const months = monthsInWords(owedMonths(input.ledger, input.closedMonths, t.from));
-      return { key: `${t.from}-${t.to}`, title, meta: [{ text: settleMeta(t, me, members, months) }] };
+          ? HOUSE_PAGE_COPY.youOwe(firstNameMid(members, t.to), amount, months)
+          : HOUSE_PAGE_COPY.owesYou(firstNameIn(members, t.from), amount, months);
+      return { key: `${t.from}-${t.to}`, title, meta: [{ text: settleMeta(t, me, members) }] };
     });
 }
 
@@ -611,7 +618,8 @@ function historyLine(row: HistoryRow, input: { me: string; whole: boolean; membe
         title: STAKE_HISTORY_COPY.paid(called(members, payer, me), to),
         meta: STAKE_HISTORY_COPY.received(day),
         // stakeHistory hands over your own row of a payment you're in.
-        amount: row.user_id === me ? signed : null,
+        // Unsigned: the ledger books it the other way round from the cash, so a sign would read backwards.
+        amount: row.user_id === me ? formatMoney(Math.abs(row.amount_minor), currency) : null,
         losing: false,
       };
     }

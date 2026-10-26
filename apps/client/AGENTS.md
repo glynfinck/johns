@@ -293,7 +293,8 @@ permanent once a store has seen them.
   them (run it again after upgrading the package), and `theme.test.ts`
   checks the dot in each.
 - **Signage:** `Wordmark` (the road sign) and the full `HazardTape` belong to
-  the brand pages. Inside the house, tape is only a row's 4pt edge on an
+  the brand pages and the invite sheet (`Sheet`'s `tape`, with the code in
+  big caps). Inside the house, tape is otherwise only a row's 4pt edge on an
   overdue or missed John, a lid colour only a `LidDot` before a John's
   category, and where a John has got to a `StatusMark`. Decoration is
   `aria-hidden`.

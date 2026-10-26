@@ -4,6 +4,7 @@ import {
   WALL_COPY,
   WALL_FEED_COPY,
   type ReactionKind,
+  type StatusIcon,
   type WallEvent,
   type WallFeedRow,
   type WallIcon,
@@ -34,6 +35,7 @@ import { Alert } from '@/components/alert';
 import { Avatar } from '@/components/avatar';
 import { GroupItem } from '@/components/group';
 import { Row, RowIcon } from '@/components/row';
+import { STATUS_ICON } from '@/components/status-mark';
 import { Meta } from '@/components/text';
 import type { HouseView } from '@/hooks/use-house';
 import { INSET, LEADING, RADIUS, ROW_GAP, SPACE, TAP, useTheme } from '@/theme';
@@ -87,11 +89,12 @@ export function wallScene(view: HouseView, userId: string, events: readonly Wall
  * which always shows. Tapping it (`onPress`) opens this week's John in the
  * John sheet, or else the event in full; holding it down (`onReactions`)
  * shows the event with all four reactions. Where an event takes reactions,
- * its one trailing item is a control of its own: a housemate's tick trails
- * the "Nice one" toggle; anything else, what the house gave it most, or, on
- * a row whose tap opens the John, a way to react at all, so the reactions
- * are a key press away too. `problem` is a reaction's refusal, said under
- * the row it was made on. No hazard here: the Wall is history.
+ * its trailing item is a control of its own, so the reactions are a key
+ * press away too: a housemate's tick trails the "Nice one" toggle with the
+ * way to all four beside it; anything else, what the house gave it most,
+ * or, on a row whose tap opens the John, a way to react at all. `problem`
+ * is a reaction's refusal, said under the row it was made on. A John that
+ * went wrong wears its status mark, as everywhere else.
  */
 export function WallEventRow({
   row,
@@ -110,7 +113,10 @@ export function WallEventRow({
   let trailing = null;
   if (row.reactable && row.nice) {
     trailing = (
-      <NiceToggle count={nice.count} mine={nice.mine} onPress={() => onReact('nice', !nice.mine)} onLongPress={onReactions} />
+      <View style={styles.pair}>
+        <ReactButton compact onPress={onReactions} />
+        <NiceToggle count={nice.count} mine={nice.mine} onPress={() => onReact('nice', !nice.mine)} onLongPress={onReactions} />
+      </View>
     );
   } else if (row.reactable && row.top) {
     trailing = <ReactionTally kind={row.top.kind} count={row.top.count} onPress={onReactions} />;
@@ -124,7 +130,7 @@ export function WallEventRow({
         title={row.title}
         // A sentence: two lines, so it isn't cut off mid-way.
         titleLines={2}
-        meta={<WallMeta detail={row.detail} when={row.when} />}
+        meta={<WallMeta detail={row.detail} mark={row.mark} when={row.when} />}
         trailing={trailing}
         trailingControl
         onPress={onPress}
@@ -141,12 +147,19 @@ export function WallEventRow({
   );
 }
 
-/** The meta line: the words truncate, the time after them never does. */
-function WallMeta({ detail, when }: { detail: string | null; when: string }) {
+/**
+ * The meta line: the words truncate, the time after them never does. A
+ * John that went wrong (`mark`) leads with its status mark, its words in
+ * hazard on the card colour.
+ */
+function WallMeta({ detail, mark, when }: { detail: string | null; mark: StatusIcon | null; when: string }) {
+  const { colors } = useTheme();
+  const Mark = mark ? STATUS_ICON[mark] : null;
   return (
     <View style={styles.meta}>
+      {Mark ? <Mark size={14} color={colors.hazard} aria-hidden style={styles.mark} /> : null}
       {detail ? (
-        <Meta numberOfLines={1} style={styles.detail}>
+        <Meta numberOfLines={1} style={[styles.detail, Mark && { color: colors.hazard }]}>
           {detail}
         </Meta>
       ) : null}
@@ -228,8 +241,12 @@ export function ReactionTally({ kind, count, onPress }: { kind: ReactionKind; co
   );
 }
 
-/** The way to all four reactions on a row that has none yet, where tapping the row opens its John instead. */
-export function ReactButton({ onPress }: { onPress: () => void }) {
+/**
+ * The way to all four reactions on a row whose tap opens its John instead:
+ * on its own where nobody has reacted yet, or `compact` (no room for a
+ * count, kept clear of the row's edge) beside a "Nice one" toggle.
+ */
+export function ReactButton({ onPress, compact = false }: { onPress: () => void; compact?: boolean }) {
   const { colors } = useTheme();
   return (
     <Pressable
@@ -237,10 +254,10 @@ export function ReactButton({ onPress }: { onPress: () => void }) {
       accessibilityLabel={WALL_FEED_COPY.react}
       onPress={onPress}
       testID="react"
-      style={({ pressed }) => [styles.pill, pressed && { backgroundColor: colors.secondary }]}
+      style={({ pressed }) => [compact ? styles.compact : styles.pill, pressed && { backgroundColor: colors.secondary }]}
     >
       <SmilePlusIcon size={20} color={colors.mutedForeground} aria-hidden />
-      <Count count={0} color={colors.mutedForeground} />
+      {compact ? null : <Count count={0} color={colors.mutedForeground} />}
     </Pressable>
   );
 }
@@ -262,7 +279,8 @@ export function WallPhoto({ uri, john }: { uri: string; john: string | null }) {
 }
 
 const styles = StyleSheet.create({
-  meta: { flexDirection: 'row', minWidth: 0 },
+  meta: { flexDirection: 'row', alignItems: 'center', minWidth: 0 },
+  mark: { marginRight: SPACE.xs, flexShrink: 0 },
   detail: { flexShrink: 1 },
   when: { flexShrink: 0 },
   // The icon and its count end at the row's trailing edge, the room for a
@@ -278,6 +296,8 @@ const styles = StyleSheet.create({
     marginRight: -SPACE.sm,
     borderRadius: RADIUS,
   },
+  compact: { minHeight: TAP, minWidth: TAP, alignItems: 'center', justifyContent: 'center', borderRadius: RADIUS },
+  pair: { flexDirection: 'row', alignItems: 'center' },
   room: { opacity: 0 },
   photoRow: { paddingLeft: INSET + LEADING + ROW_GAP, paddingRight: INSET, paddingBottom: SPACE.md },
   photo: { width: '100%', maxWidth: 320, aspectRatio: 4 / 3, borderRadius: RADIUS },

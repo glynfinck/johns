@@ -22,6 +22,8 @@ export function NeedsYou({ items, members, now }: { items: BoardItem[]; members:
           key={item.id}
           leading={<Avatar name={members.find((m) => m.userId === item.userId)?.name ?? FOCUS_SHELL_COPY.formerHousemate} />}
           title={voteTitle(item, members)}
+          // The John's name is never cut short.
+          titleLines={2}
           meta={item.dispute ? voteMeta(item.dispute, members, now) : undefined}
           chevron
           onPress={() => sheet.open(item.id, 'vote')}

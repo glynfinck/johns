@@ -22,8 +22,8 @@ test("privacy, and a link to nowhere, open for anyone", async ({ page }) => {
     await page.goto(path);
     await expect(page.getByText(NOT_FOUND_COPY.body)).toBeVisible();
   }
-  // Back to your Johns: signed out, that's the front door.
-  await page.getByRole("link", { name: NOT_FOUND_COPY.back }).click();
+  // Signed out there are no Johns to go back to, so it's the front door.
+  await page.getByRole("link", { name: NOT_FOUND_COPY.backToDoor }).click();
   await expect(page).toHaveURL(/\/$/);
   await expect(page.getByRole("link", { name: SIGN_IN_COPY.privacy })).toBeVisible();
 });

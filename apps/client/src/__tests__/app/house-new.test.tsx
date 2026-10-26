@@ -15,14 +15,14 @@ const line = (...parts: string[]) => parts.join(' · ');
 
 beforeEach(() => jest.clearAllMocks());
 
-it('asks for one thing, the name, with the defaults in one line', async () => {
+it('asks for one thing, the name, with the defaults in a line', async () => {
   await render(<NewHouse />);
   expect(screen.getByRole('header', { name: NEW_HOUSE_COPY.heading })).toBeOnTheScreen();
   expect(screen.getByLabelText(FRONT_DOOR_COPY.name)).toBeOnTheScreen();
-  // The phone's currency and time zone, and Monday, on one line that truncates.
+  // The phone's currency and time zone, and Monday: two lines where one can't hold them, so the zone is never cut off.
   const defaults = screen.getByTestId('house-defaults');
   expect(defaults).toHaveTextContent(line('CAD 20 a month each', 'weeks start Monday', 'America/St Johns'));
-  expect(defaults).toHaveProp('numberOfLines', 1);
+  expect(defaults).toHaveProp('numberOfLines', 2);
   expect(screen.getByTestId('change-defaults')).toHaveTextContent(FRONT_DOOR_COPY.change, { exact: false });
   expect(screen.queryByRole('radio')).not.toBeOnTheScreen();
   const submit = screen.getByRole('button', { name: FRONT_DOOR_COPY.submit });
@@ -75,11 +75,11 @@ it('opens the currency and the first day under Change, and the line follows them
 });
 
 it('says what the database refused, and lets you try again', async () => {
-  create.mockRejectedValue(new Error("You're already in a house. Leave it first to join another."));
+  create.mockRejectedValue(new Error("You’re already in a house. Leave it first to join another."));
   await render(<NewHouse />);
   await fireEvent.changeText(screen.getByLabelText(FRONT_DOOR_COPY.name), 'Flat 3');
   await fireEvent.press(screen.getByRole('button', { name: FRONT_DOOR_COPY.submit }));
-  expect(screen.getByRole('alert')).toHaveTextContent("You're already in a house. Leave it first to join another.");
+  expect(screen.getByRole('alert')).toHaveTextContent("You’re already in a house. Leave it first to join another.");
   expect(screen.getByRole('button', { name: FRONT_DOOR_COPY.submit })).toBeEnabled();
   expect(mockRefresh).not.toHaveBeenCalled();
 });

@@ -18,14 +18,14 @@ describe('raiseDispute', () => {
   });
 
   it("says what's wrong before asking the API", async () => {
-    await expect(raiseDispute(JOHN, '   ')).rejects.toThrow("Say what's wrong with it.");
+    await expect(raiseDispute(JOHN, '   ')).rejects.toThrow("Say what’s wrong with it.");
     await expect(raiseDispute(JOHN, 'x'.repeat(281))).rejects.toThrow('Keep it under 280 characters.');
     expect(post).not.toHaveBeenCalled();
   });
 
   it("passes on the API's refusal", async () => {
-    post.mockRejectedValue(new Error("Someone's already disputing that tick."));
-    await expect(raiseDispute(JOHN, 'Still full')).rejects.toThrow("Someone's already disputing that tick.");
+    post.mockRejectedValue(new Error("Someone’s already disputing that tick."));
+    await expect(raiseDispute(JOHN, 'Still full')).rejects.toThrow("Someone’s already disputing that tick.");
   });
 });
 

@@ -1,6 +1,17 @@
-import { DISPUTE_COPY, JOHN_COPY, tickedLine, type BoardItem } from '@app/core';
+import {
+  DISPUTE_COPY,
+  FOCUS_SHELL_COPY,
+  forfeitRoom,
+  JOHN_COPY,
+  JOHN_SHEET_COPY,
+  monthOf,
+  tickedLine,
+  undoWarning,
+  type BoardItem,
+} from '@app/core';
 import { FlagIcon, Undo2Icon } from 'lucide-react-native';
 import { useState } from 'react';
+import { StyleSheet, View } from 'react-native';
 
 import { undoDone } from '@/api/johns';
 import { Alert } from '@/components/alert';
@@ -8,24 +19,53 @@ import { Button } from '@/components/button';
 import { DisputeForm } from '@/components/dispute';
 import { Body } from '@/components/text';
 import { useMove } from '@/hooks/use-move';
+import { SPACE } from '@/theme';
 
 import type { JohnSheetContext } from './body';
 import { SheetLines } from './parts';
 
-/** Your tick, being checked: when it stands, and Undo meanwhile. */
+/**
+ * Your tick, being checked: when it stands, and Undo meanwhile. Past the
+ * John's due time an undo makes it late, so Undo turns into the sentence
+ * that says so, with "Undo it" and "Cancel", in place.
+ */
 export function YoursChecking({ item, context }: { item: BoardItem; context: JohnSheetContext }) {
   const move = useMove(context.houseId);
+  const [asking, setAsking] = useState(false);
+  const warning = undoWarning(item, context.rules, context.now, forfeitRoom(context.stake, item.userId, monthOf(item.dueAt, context.zone)));
+  const undo = () => void move.run(() => undoDone(item.id));
   return (
     <SheetLines>
       <Body testID="ticked-line">{tickedLine(item, context.members, context.userId, context.rules, context.now)}</Body>
-      <Button
-        variant="outline"
-        icon={Undo2Icon}
-        label={JOHN_COPY.undo}
-        disabled={move.pending}
-        onPress={() => void move.run(() => undoDone(item.id))}
-        testID="sheet-undo"
-      />
+      {asking && warning ? (
+        <View style={styles.asking} testID="undo-warning">
+          <Body>{warning}</Body>
+          <View style={styles.pair}>
+            <View style={styles.half}>
+              <Button
+                variant="hazard"
+                icon={Undo2Icon}
+                label={JOHN_SHEET_COPY.undoIt}
+                disabled={move.pending}
+                onPress={undo}
+                testID="sheet-undo-it"
+              />
+            </View>
+            <View style={styles.half}>
+              <Button variant="ghost" label={FOCUS_SHELL_COPY.cancel} onPress={() => setAsking(false)} />
+            </View>
+          </View>
+        </View>
+      ) : (
+        <Button
+          variant="outline"
+          icon={Undo2Icon}
+          label={JOHN_COPY.undo}
+          disabled={move.pending}
+          onPress={warning ? () => setAsking(true) : undo}
+          testID="sheet-undo"
+        />
+      )}
       {move.problem ? <Alert message={move.problem} /> : null}
     </SheetLines>
   );
@@ -50,3 +90,9 @@ export function TheirsChecking({ item, context }: { item: BoardItem; context: Jo
     </SheetLines>
   );
 }
+
+const styles = StyleSheet.create({
+  asking: { gap: SPACE.sm },
+  pair: { flexDirection: 'row', gap: SPACE.sm },
+  half: { flex: 1 },
+});

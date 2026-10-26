@@ -1,4 +1,4 @@
-import { DEAL_COPY, FOCUS_SHELL_COPY, JOHN_LIST_COPY, NEW_JOHN, PAGE_TITLE, SECTION_LABEL, SETUP_COPY } from '@app/core';
+import { DEAL_COPY, FOCUS_SHELL_COPY, JOHN_LIST_COPY, NEW_JOHN, NEXT_UP_COPY, PAGE_TITLE, SECTION_LABEL, SETUP_COPY } from '@app/core';
 import { router, Slot } from 'expo-router';
 import { act, fireEvent, screen, waitFor, within } from 'expo-router/testing-library';
 import { Text } from 'react-native';
@@ -242,11 +242,11 @@ describe('the deal', () => {
 
   it('keeps the confirm open, saying why, when the re-deal is refused', async () => {
     (loadHouse as jest.Mock).mockResolvedValue(unticked());
-    (dealThisWeek as jest.Mock).mockRejectedValue(new Error("Someone's already ticked a John this week, so it can't be re-dealt."));
+    (dealThisWeek as jest.Mock).mockRejectedValue(new Error("Someone’s already ticked a John this week, so it can’t be re-dealt."));
     await open();
     await fireEvent.press(screen.getByRole('button', { name: DEAL_COPY.again }));
     await fireEvent.press(screen.getByTestId('confirm'));
-    expect(await within(screen.getByTestId('redeal-confirm')).findByRole('alert')).toHaveTextContent(/can't be re-dealt/);
+    expect(await within(screen.getByTestId('redeal-confirm')).findByRole('alert')).toHaveTextContent(/can’t be re-dealt/);
   });
 
   it('offers no re-deal once something this week is ticked', async () => {
@@ -257,11 +257,11 @@ describe('the deal', () => {
 
   it("hands out the first week, and says when it can't", async () => {
     (loadHouse as jest.Mock).mockResolvedValue(snapshot({ house: { ...snapshot().house, everDealt: false } }));
-    (dealThisWeek as jest.Mock).mockRejectedValue(new Error("Someone's already ticked a John this week, so it can't be re-dealt."));
+    (dealThisWeek as jest.Mock).mockRejectedValue(new Error("Someone’s already ticked a John this week, so it can’t be re-dealt."));
     await open();
     expect(screen.getByText(DEAL_COPY.firstBody)).toBeOnTheScreen();
-    await fireEvent.press(screen.getByRole('button', { name: DEAL_COPY.first }));
-    expect(await screen.findByRole('alert')).toHaveTextContent(/can't be re-dealt/);
+    await fireEvent.press(screen.getByRole('button', { name: NEXT_UP_COPY.dealWeek1 }));
+    expect(await screen.findByRole('alert')).toHaveTextContent(/can’t be re-dealt/);
   });
 });
 

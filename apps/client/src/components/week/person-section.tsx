@@ -26,7 +26,7 @@ export function PersonSection({
   context: JohnRowContext;
   /** Their points this week, as the Table counts them. */
   points: number;
-  /** "away 29 Oct – 1 Nov", from core's weekAwayNote: a line of its own under the counts. */
+  /** "away 29 Oct–1 Nov", from core's weekAwayNote: a line of its own under the counts. */
   away: string | null;
   swapReady?: boolean;
 }) {

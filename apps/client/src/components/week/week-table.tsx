@@ -1,26 +1,22 @@
-import { FOCUS_SHELL_COPY, WEEK_COPY, weekSpokenRow, weekWho, withAlpha, type BoardItem } from '@app/core';
-import { useState } from 'react';
-import { Pressable, StyleSheet, Text, View, type StyleProp, type TextStyle } from 'react-native';
+import { FOCUS_SHELL_COPY, WEEK_COPY, weekSpokenRow, weekWho, type BoardItem } from '@app/core';
+import { StyleSheet, Text, View, type StyleProp, type TextStyle } from 'react-native';
 
 import { Alert } from '@/components/alert';
 import { Avatar } from '@/components/avatar';
 import { Group, GroupItem, Hairline, useRowInset } from '@/components/group';
-import { HazardTape } from '@/components/hazard-tape';
 import { DoneFold, useJohnRow, type JohnRowContext } from '@/components/john-row';
-import { LidDot } from '@/components/lid';
-import { Body, Meta, RowTitle } from '@/components/text';
+import { Row } from '@/components/row';
+import { Body } from '@/components/text';
 import { LEADING, ROW_GAP, SPACE, TABULAR, TAP, useTheme } from '@/theme';
 
 /** The fixed columns; the John's takes what's left. */
 const WHO = 112;
 const POINTS = 40;
 const STATUS = 120;
-/** A row with a meta line, as Row has it. */
-const TWO_LINES = 64;
 
 /**
  * The laptop's Week: one row per John, the whole house in one group, within
- * the tab's 680. Each row is the phone's row with two columns of its own:
+ * the tab's 680. Each row is the phone's Row with two columns of its own:
  * the circle (yours ticks from it), the John and its meta line (the column
  * that flexes), whose it is, its points (earned, once it's finished), and
  * one cell for where it has got to or what to do about it (Undo, Vote).
@@ -56,7 +52,7 @@ function HeadRow() {
     </Text>
   );
   return (
-    <View aria-hidden testID="week-table-head" style={[styles.row, styles.head, { paddingHorizontal: inset }]}>
+    <View aria-hidden testID="week-table-head" style={[styles.head, { paddingHorizontal: inset }]}>
       <Hairline />
       <View style={styles.leading} />
       {head(WEEK_COPY.columns.john, styles.john)}
@@ -67,61 +63,47 @@ function HeadRow() {
   );
 }
 
-/** One John across the table's columns. */
+/**
+ * One John across the table's columns: the one Row, with whose it is and
+ * its points as cells of their own, and the status cell as its trailing
+ * item, kept beside its press target (it may hold Undo or Vote).
+ */
 function TableRow({ item, context }: { item: BoardItem; context: JohnRowContext }) {
-  const { colors } = useTheme();
-  const inset = useRowInset();
   const john = useJohnRow(item, context);
-  const [pressed, setPressed] = useState(false);
   const mine = item.userId === context.userId;
   const name = context.nameOf(item.userId) ?? FOCUS_SHELL_COPY.formerHousemate;
   const who = weekWho(item.userId, context.userId, context.nameOf);
-  // A circle that ticks is its own control, beside the row's press target.
-  const leading = <View style={styles.leading}>{john.leading}</View>;
   return (
     <>
-      <View testID="week-row" style={[styles.row, { paddingHorizontal: inset }]}>
-        {pressed ? (
-          <View pointerEvents="none" style={[StyleSheet.absoluteFill, { backgroundColor: withAlpha(colors.foreground, 0.06) }]} />
-        ) : null}
-        <Hairline />
-        {john.plan.hazardEdge ? (
-          <View aria-hidden pointerEvents="none" style={styles.edge}>
-            <HazardTape tone="hazard" width={4} height="100%" />
-          </View>
-        ) : null}
-        {john.plan.ticks ? leading : null}
-        <Pressable
-          accessibilityRole="button"
-          accessibilityLabel={weekSpokenRow(item, john.plan.meta, who, john.plan.points)}
-          onPress={john.open}
-          onPressIn={() => setPressed(true)}
-          onPressOut={() => setPressed(false)}
-          style={styles.target}
-        >
-          {john.plan.ticks ? null : leading}
-          <View style={styles.john}>
-            <RowTitle numberOfLines={1}>{item.name}</RowTitle>
-            <View style={styles.metaLine}>
-              {john.plan.lid ? <LidDot category={item.category} /> : null}
-              <Meta numberOfLines={1} style={styles.shrink}>
-                {john.plan.meta}
-              </Meta>
+      <Row
+        title={item.name}
+        titleLines={2}
+        meta={john.plan.meta}
+        metaLines={2}
+        lid={john.plan.lid ? item.category : undefined}
+        leading={john.leading}
+        cells={
+          <>
+            <View style={[styles.who, styles.person]}>
+              <Avatar name={name} me={mine} size={24} />
+              <Body numberOfLines={1} style={styles.shrink}>
+                {who}
+              </Body>
             </View>
-          </View>
-          <View style={[styles.who, styles.person]}>
-            <Avatar name={name} me={mine} size={24} />
-            <Body numberOfLines={1} style={styles.shrink}>
-              {who}
+            <Body numberOfLines={1} style={[styles.points, styles.end, TABULAR]}>
+              {String(john.plan.points)}
             </Body>
-          </View>
-          <Body numberOfLines={1} style={[styles.points, styles.end, TABULAR]}>
-            {String(john.plan.points)}
-          </Body>
-        </Pressable>
-        {/* Its points have their own column, so this cell is for anything else. */}
-        <View style={[styles.status, styles.cell]}>{john.plan.trailing === 'points' ? null : john.trailing}</View>
-      </View>
+          </>
+        }
+        // Its points have their own column, so this cell is for anything else.
+        trailing={<View style={[styles.status, styles.cell]}>{john.plan.trailing === 'points' ? null : john.trailing}</View>}
+        trailingControl
+        hazardEdge={john.plan.hazardEdge}
+        onPress={john.open}
+        accessibilityLabel={weekSpokenRow(item, john.plan.meta, who, john.plan.points)}
+        testID="week-row"
+      />
+      {john.confirm}
       {john.problem ? (
         <GroupItem>
           <Alert message={john.problem} />
@@ -132,21 +114,10 @@ function TableRow({ item, context }: { item: BoardItem; context: JohnRowContext 
 }
 
 const styles = StyleSheet.create({
-  row: { minHeight: TWO_LINES, flexDirection: 'row', alignItems: 'center', gap: ROW_GAP },
-  head: { minHeight: TAP },
-  target: {
-    flex: 1,
-    minWidth: 0,
-    minHeight: TAP,
-    alignSelf: 'stretch',
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: ROW_GAP,
-    paddingVertical: SPACE.sm,
-  },
-  leading: { width: LEADING, alignItems: 'center', justifyContent: 'center' },
-  john: { flex: 1, minWidth: 0, gap: 2 },
-  metaLine: { flexDirection: 'row', alignItems: 'center', gap: 6 },
+  head: { minHeight: TAP, flexDirection: 'row', alignItems: 'center', gap: ROW_GAP },
+  leading: { width: LEADING },
+  // The John's column flexes, as a Row's words do.
+  john: { flex: 1, minWidth: 0 },
   shrink: { flexShrink: 1, minWidth: 0 },
   who: { width: WHO },
   person: { flexDirection: 'row', alignItems: 'center', gap: SPACE.sm },
@@ -154,5 +125,4 @@ const styles = StyleSheet.create({
   status: { width: STATUS },
   end: { textAlign: 'right' },
   cell: { flexDirection: 'row', justifyContent: 'flex-end', alignItems: 'center' },
-  edge: { position: 'absolute', left: 0, top: 0, bottom: 0, width: 4 },
 });

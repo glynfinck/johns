@@ -298,12 +298,15 @@ describe('your open John', () => {
     it('says which of their Johns is overdue, with its edge and its mark until picked', async () => {
       await show(house([binsOut(), samsBath({ due_at: at(-5) })], priyaWith({ swapTokens: 1 })));
       const body = await openOn('Open a1 at swap');
-      const choice = within(body).getByRole('radio', { name: /^Clean the bath, Sam · was due / });
+      // Its status is said too, not just drawn.
+      const choice = within(body).getByRole('radio', { name: /^Clean the bath, Overdue, Sam · was due / });
       expect(within(choice).getByTestId('status-overdue')).toBeOnTheScreen();
       expect(within(within(body).getByTestId('swap-choice')).getByTestId('hazard-tape', { includeHiddenElements: true })).toBeOnTheScreen();
       await fireEvent.press(choice);
+      // Picked, the tick takes the mark's place, and the word leads the meta line instead.
       expect(within(choice).queryByTestId('status-overdue')).toBeNull();
       expect(within(choice).getByTestId('swap-chosen')).toBeOnTheScreen();
+      expect(within(choice).getByText(/^Overdue · Sam · was due /)).toBeOnTheScreen();
     });
 
     it('goes back to the tick on Cancel', async () => {

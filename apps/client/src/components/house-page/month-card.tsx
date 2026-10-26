@@ -74,13 +74,15 @@ function SettleUp({ houseId, row }: { houseId: string; row: SettleRow }) {
   const move = useMove(houseId);
   return (
     <View testID="transfer">
-      <Row leading={<Avatar name={row.name} />} title={row.title} meta={row.meta} />
+      {/* The months it's from are in the title: two lines, so it isn't cut off. */}
+      <Row leading={<Avatar name={row.name} />} title={row.title} titleLines={2} meta={row.meta} />
       {row.action ? (
         <View style={styles.action}>
           <Button
             variant={row.primary ? 'primary' : 'outline'}
             icon={CheckIcon}
             label={move.pending ? HOUSE_PAGE_COPY.marking : row.action}
+            spoken={move.pending ? undefined : (row.spoken ?? undefined)}
             disabled={move.pending}
             onPress={() => void move.run(() => confirmPayment(houseId, row.userId, row.amount))}
           />

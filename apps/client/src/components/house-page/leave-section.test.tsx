@@ -47,9 +47,12 @@ const stake = (received: number, transfers: { from: string; to: string; amount: 
   transfers,
 });
 
+/** Sam is an admin too, so Priya isn't the only one and can go. */
+const twoAdmins = () => snapshot({ members: snapshot().members.map((m) => ({ ...m, role: 'admin' as const })) });
+
 beforeEach(() => {
   jest.clearAllMocks();
-  (loadHouse as jest.Mock).mockResolvedValue(snapshot());
+  (loadHouse as jest.Mock).mockResolvedValue(twoAdmins());
   (loadStake as jest.Mock).mockResolvedValue(stake(333, [{ from: 'sam', to: 'priya', amount: 450 }]));
   (removeMember as jest.Mock).mockResolvedValue(undefined);
   mockMembership.refresh.mockResolvedValue(undefined);
@@ -73,13 +76,26 @@ it('asks first, saying what leaving costs in money', async () => {
   expect(removeMember).not.toHaveBeenCalled();
 });
 
-it("says it costs nothing when you're square and have no share to lose", async () => {
+it("says it costs nothing when you're square, and that the last one out leaves the house empty", async () => {
   (loadHouse as jest.Mock).mockResolvedValue(snapshot({ members: snapshot().members.slice(0, 1) }));
   (loadStake as jest.Mock).mockResolvedValue(stake(0, []));
   await open();
   await waitFor(() => expect(loadStake).toHaveBeenCalled());
   const sheet = await ask();
-  expect(await sheet.findByText(HOUSE_LOWER_COPY.costsNothing)).toBeOnTheScreen();
+  expect(await sheet.findByText(`${HOUSE_LOWER_COPY.costsNothing} ${HOUSE_LOWER_COPY.lastOne}`)).toBeOnTheScreen();
+  expect(sheet.getByTestId('confirm')).toBeEnabled();
+});
+
+it("tells the only admin to make someone else one first, with nothing to press that would be refused", async () => {
+  (loadHouse as jest.Mock).mockResolvedValue(snapshot());
+  await open();
+  await waitFor(() => expect(loadStake).toHaveBeenCalled());
+  const sheet = await ask();
+  expect(sheet.getByText(HOUSE_LOWER_COPY.lastAdmin)).toBeOnTheScreen();
+  expect(sheet.queryByTestId('confirm')).toBeNull();
+  await fireEvent.press(sheet.getByTestId('cancel'));
+  await waitFor(() => expect(screen.queryByTestId('leave-sheet')).toBeNull());
+  expect(removeMember).not.toHaveBeenCalled();
 });
 
 it('says nothing about money until the Stake is read', async () => {

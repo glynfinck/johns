@@ -57,8 +57,8 @@ describe('joinHouse', () => {
 
   it("says the database's refusal in words", async () => {
     rpc.mockResolvedValue({ data: null, error: { message: 'already_in_house', code: 'P0001' } });
-    await expect(joinHouse('AB3DEF7H')).rejects.toThrow("You're already in a house. Leave it first to join another.");
-    await expect(joinHouse('bad')).rejects.toThrow("That join link doesn't match a house. Ask for a fresh one.");
+    await expect(joinHouse('AB3DEF7H')).rejects.toThrow("You’re already in a house. Leave it first to join another.");
+    await expect(joinHouse('bad')).rejects.toThrow("That join link doesn’t match a house. Ask for a fresh one.");
   });
 });
 
@@ -80,7 +80,7 @@ describe('createHouse', () => {
     await expect(createHouse({ ...house, name: ' ' })).rejects.toThrow('Give the house a name.');
     expect(rpc).not.toHaveBeenCalled();
     rpc.mockResolvedValue({ data: null, error: { message: 'unknown_timezone', code: 'P0001' } });
-    await expect(createHouse(house)).rejects.toThrow("That time zone isn't one we recognise.");
+    await expect(createHouse(house)).rejects.toThrow("That time zone isn’t one we recognise.");
   });
 });
 

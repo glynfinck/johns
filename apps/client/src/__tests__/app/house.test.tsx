@@ -166,16 +166,18 @@ describe('the month card', () => {
     await open();
     const transfer = screen.getByTestId('transfer');
     expect(transfer).toHaveTextContent(
-      new RegExp(`${HOUSE_PAGE_COPY.owesYou('Sam', '£4')}${HOUSE_PAGE_COPY.from('September')} · ${HOUSE_PAGE_COPY.howYouLike}`),
+      new RegExp(`${HOUSE_PAGE_COPY.owesYou('Sam', '£4', 'September')}${HOUSE_PAGE_COPY.paidHowYouLike}`),
     );
-    await fireEvent.press(within(transfer).getByRole('button', { name: HOUSE_PAGE_COPY.markReceived('£4') }));
+    // It shows the amount beside the row, and names who paid to a screen reader.
+    expect(within(transfer).getByText(HOUSE_PAGE_COPY.markReceived('£4'))).toBeOnTheScreen();
+    await fireEvent.press(within(transfer).getByRole('button', { name: HOUSE_PAGE_COPY.markReceivedFrom('Sam', '£4') }));
     expect(confirmPayment).toHaveBeenCalledWith('h1', 'sam', 400);
   });
 
   it('says why marking it received was refused', async () => {
     (confirmPayment as jest.Mock).mockRejectedValue(new Error('Only the one who was paid can mark it received.'));
     await open();
-    await fireEvent.press(screen.getByRole('button', { name: HOUSE_PAGE_COPY.markReceived('£4') }));
+    await fireEvent.press(screen.getByRole('button', { name: HOUSE_PAGE_COPY.markReceivedFrom('Sam', '£4') }));
     expect(await screen.findByRole('alert')).toHaveTextContent('Only the one who was paid can mark it received.');
   });
 
@@ -186,7 +188,7 @@ describe('the month card', () => {
     await open();
     const transfer = screen.getByTestId('transfer');
     expect(transfer).toHaveTextContent(
-      new RegExp(`${HOUSE_PAGE_COPY.youOwe('Sam', '£4')}${HOUSE_PAGE_COPY.from('September')} · ${HOUSE_PAGE_COPY.waiting('Sam')}`),
+      new RegExp(`${HOUSE_PAGE_COPY.youOwe('Sam', '£4', 'September')}${HOUSE_PAGE_COPY.waitingFor('Sam')}`),
     );
     expect(within(transfer).queryByRole('button')).toBeNull();
   });
@@ -209,7 +211,7 @@ describe('the month card', () => {
     expect(within(gone).queryByRole('button')).toBeNull();
     // The one amber button is Sam's, the only one the database would take.
     expect(screen.getAllByRole('button', { name: /^Mark/ })).toHaveLength(1);
-    expect(screen.getByRole('button', { name: HOUSE_PAGE_COPY.markReceived('£4') })).toHaveStyle({
+    expect(screen.getByRole('button', { name: HOUSE_PAGE_COPY.markReceivedFrom('Sam', '£4') })).toHaveStyle({
       backgroundColor: BIN_NIGHT.light.hivis,
     });
   });
@@ -270,7 +272,7 @@ describe('the Table', () => {
 
   it('switches to the month, and back', async () => {
     await open();
-    await fireEvent.press(screen.getByRole('radio', { name: 'Oct' }));
+    await fireEvent.press(screen.getByRole('radio', { name: 'October' }));
     const month = screen.getAllByTestId('standing');
     expect(month[0]).toHaveTextContent(new RegExp(`Sam12 pts ·${HOUSE_PAGE_COPY.lateMissed(1, 0)} in Oct−£3`));
     expect(month[1]).toHaveTextContent(new RegExp(`${HOUSE_PAGE_COPY.you}9 pts`));
@@ -288,7 +290,7 @@ describe('the Table', () => {
   it("says when it can't read the month's Table", async () => {
     (loadTable as jest.Mock).mockRejectedValue(new Error('offline'));
     await open();
-    await fireEvent.press(screen.getByRole('radio', { name: 'Oct' }));
+    await fireEvent.press(screen.getByRole('radio', { name: 'October' }));
     expect(screen.getByRole('alert')).toHaveTextContent(HOUSE_PAGE_COPY.tableUnreadable);
   });
 

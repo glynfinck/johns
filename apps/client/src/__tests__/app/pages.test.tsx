@@ -6,6 +6,7 @@ import { Text } from 'react-native';
 import NotFound from '@/app/+not-found';
 import { ErrorBoundary } from '@/app/_layout';
 import Privacy from '@/app/privacy';
+import { useMembership } from '@/hooks/use-membership';
 
 // The root layout's module brings sign-in with it; these pages don't need it.
 jest.mock('@/hooks/use-membership', () => ({ MembershipProvider: ({ children }: { children: unknown }) => children, useMembership: jest.fn() }));
@@ -28,10 +29,18 @@ it('goes back to the front door from privacy opened cold', async () => {
 });
 
 it('turns a link to nowhere back to your Johns', async () => {
+  jest.mocked(useMembership).mockReturnValue({ session: { user: { id: 'sam' } } } as ReturnType<typeof useMembership>);
   await render(<NotFound />);
   expect(screen.getByRole('header', { name: NOT_FOUND_COPY.title })).toBeOnTheScreen();
   expect(screen.getByText(NOT_FOUND_COPY.body)).toBeOnTheScreen();
   expect(screen.getByRole('link', { name: NOT_FOUND_COPY.back })).toHaveProp('href', '/');
+});
+
+it('turns a link to nowhere back to the front door when signed out', async () => {
+  jest.mocked(useMembership).mockReturnValue({ session: null } as ReturnType<typeof useMembership>);
+  await render(<NotFound />);
+  expect(screen.getByRole('link', { name: NOT_FOUND_COPY.backToDoor })).toHaveProp('href', '/');
+  expect(screen.queryByRole('link', { name: NOT_FOUND_COPY.back })).toBeNull();
 });
 
 it('says a screen broke, and tries it again', async () => {

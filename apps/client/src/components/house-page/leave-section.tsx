@@ -1,4 +1,4 @@
-import { FOCUS_SHELL_COPY, HOUSE_LOWER_COPY, leaveCost } from '@app/core';
+import { FOCUS_SHELL_COPY, HOUSE_LOWER_COPY, leaveBar, leaveCost } from '@app/core';
 import { useQueryClient } from '@tanstack/react-query';
 import { DoorOpenIcon, RefreshCwIcon } from 'lucide-react-native';
 import { useState } from 'react';
@@ -23,7 +23,10 @@ import { INSET, SPACE, useTheme } from '@/theme';
  * settling up still open with you), then leaves; the house's screens close
  * behind you as the guard moves you on. Until the Stake is read it says so,
  * and if it can't be, it says that instead, with Try again under it, and
- * asks again the next time the sheet opens.
+ * asks again the next time the sheet opens. The only admin of a house with
+ * others in it is told to make someone else an admin first, with nothing
+ * to press, as the database would refuse it; the last one out is told the
+ * house will be empty.
  */
 export function LeaveSection({ houseId, userId, view }: { houseId: string; userId: string; view: HouseView }) {
   const { colors } = useTheme();
@@ -50,6 +53,8 @@ export function LeaveSection({ houseId, userId, view }: { houseId: string; userI
   } else if (unread) {
     cost = HOUSE_LOWER_COPY.costUnread;
   }
+  const bar = leaveBar(userId, members);
+  const body = bar === 'last-admin' ? HOUSE_LOWER_COPY.lastAdmin : bar === 'last-one' ? `${cost} ${HOUSE_LOWER_COPY.lastOne}` : cost;
 
   async function leave() {
     setBusy(true);
@@ -89,8 +94,8 @@ export function LeaveSection({ houseId, userId, view }: { houseId: string; userI
       <ConfirmSheet
         visible={asking}
         title={HOUSE_LOWER_COPY.leaveAsk(house.name)}
-        body={cost}
-        confirmLabel={HOUSE_LOWER_COPY.leaveConfirm}
+        body={body}
+        confirmLabel={bar === 'last-admin' ? null : HOUSE_LOWER_COPY.leaveConfirm}
         icon={DoorOpenIcon}
         busy={busy}
         problem={problem}
@@ -98,7 +103,7 @@ export function LeaveSection({ houseId, userId, view }: { houseId: string; userI
         onClose={() => setAsking(false)}
         testID="leave-sheet"
       >
-        {unread ? (
+        {unread && bar !== 'last-admin' ? (
           <TextButton
             label={FOCUS_SHELL_COPY.retry}
             icon={RefreshCwIcon}

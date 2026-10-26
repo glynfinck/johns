@@ -6,7 +6,7 @@ import {
   JOHN_SHEET_COPY,
   NEXT_UP_COPY,
   SWAP_COPY,
-  swapMeta,
+  swapChoice,
   type BoardItem,
   type CantOptions,
 } from '@app/core';
@@ -242,7 +242,12 @@ function SwapPicker({
   );
 }
 
-/** One of the swap's choices: a row to pick, the owner leading, and the tick as its trailing item once chosen. */
+/**
+ * One of the swap's choices: a row to pick, the owner leading, and the tick
+ * as its trailing item once chosen. Its status's word is always said, and
+ * leads the meta once picked, when the tick takes its mark's place (a
+ * hazard mark can't sit on the tint).
+ */
 function SwapChoice({
   item,
   context,
@@ -255,7 +260,7 @@ function SwapChoice({
   onChoose: () => void;
 }) {
   const { colors } = useTheme();
-  const meta = swapMeta(item, context.members, context.rules, context.now);
+  const { meta, label } = swapChoice(item, context.members, context.rules, context.now, chosen);
   return (
     <Row
       leading={<Avatar name={context.nameOf(item.userId)} />}
@@ -273,7 +278,7 @@ function SwapChoice({
       hazardEdge={item.status === 'overdue'}
       selected={chosen}
       onPress={onChoose}
-      accessibilityLabel={`${item.name}, ${meta}`}
+      accessibilityLabel={label}
       testID="swap-choice"
     />
   );

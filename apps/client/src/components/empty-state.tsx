@@ -9,7 +9,7 @@ import { INSET, SPACE, useTheme } from '@/theme';
  * Nothing here yet, said plainly on the pavement at the leading edge, with
  * no card and no tape: a 24pt icon on a 48 tint plate, the screen's Lead as
  * a heading, a sentence in muted Body, and, when there's something to do,
- * one action (an admin's amber "Deal this week"). Week before the deal, an
+ * one action (an admin's "Deal week 1"). Week before the deal, an
  * empty Groups page, Today when everything's done.
  */
 export function EmptyState({

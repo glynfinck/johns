@@ -25,16 +25,11 @@ export async function loadStake(
   now: Date,
 ): Promise<StakeRead> {
   const [ledger, closes] = await Promise.all([
-    supabase
-      .from('ledger')
-      .select('id, user_id, kind, amount_minor, month, counterparty, created_at, assignments(name, outcome, due_at)')
-      .eq('house_id', houseId)
-      .order('created_at', { ascending: false }),
+    readLedger(houseId),
     supabase.from('month_closes').select('month').eq('house_id', houseId),
   ]);
-  if (ledger.error) throw ledger.error;
   if (closes.error) throw closes.error;
-  const rows: HistoryRow[] = (ledger.data ?? []).map(({ assignments, ...row }) => ({ ...row, john: assignments ?? null }));
+  const rows: HistoryRow[] = ledger.map(({ assignments, ...row }) => ({ ...row, john: assignments ?? null }));
   const closedMonths = (closes.data ?? []).map((c) => c.month);
   return {
     ...buildStake({
@@ -47,6 +42,35 @@ export async function loadStake(
     ledger: rows,
     closedMonths,
   };
+}
+
+/**
+ * PostgREST hands back at most this many rows a read (`max_rows`, 1000 on
+ * Supabase and in config.toml), and says nothing when it stops short.
+ */
+const PAGE = 1000;
+
+/**
+ * The house's whole ledger, newest first, a page at a time: every balance is
+ * a sum of all of it, so a long-lived house can't lose its oldest rows.
+ */
+async function readLedger(houseId: string) {
+  const page = (from: number) =>
+    supabase
+      .from('ledger')
+      .select('id, user_id, kind, amount_minor, month, counterparty, created_at, assignments(name, outcome, due_at)')
+      .eq('house_id', houseId)
+      .order('created_at', { ascending: false })
+      // Rows written together share a time; the id keeps the pages from overlapping.
+      .order('id', { ascending: false })
+      .range(from, from + PAGE - 1);
+  const rows: NonNullable<Awaited<ReturnType<typeof page>>['data']> = [];
+  for (let from = 0; ; from += PAGE) {
+    const { data, error } = await page(from);
+    if (error) throw error;
+    rows.push(...(data ?? []));
+    if ((data?.length ?? 0) < PAGE) return rows;
+  }
 }
 
 /** Say the money arrived: only the person paid can (confirm_payment checks). */

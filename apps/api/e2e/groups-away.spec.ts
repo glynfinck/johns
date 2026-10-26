@@ -56,7 +56,7 @@ test("make a group, give it a John, and book time away", async ({ browser }) => 
   await expect(ava.locator("#away")).toContainText("Lisbon");
 
   await gotoSettled(ava, "/today");
-  await expect(ava.getByTestId("away-banner")).toContainText("You're away");
+  await expect(ava.getByTestId("away-banner")).toContainText("You’re away");
 
   await context.close();
 });

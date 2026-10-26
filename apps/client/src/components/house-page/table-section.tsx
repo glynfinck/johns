@@ -1,4 +1,4 @@
-import { HOUSE_PAGE_COPY, localDate, monthAbbr, monthOf, tableLines, tableMetaFit, type TableLine } from '@app/core';
+import { HOUSE_PAGE_COPY, localDate, monthAbbr, monthOf, monthWord, tableLines, type TableLine } from '@app/core';
 import type { UseQueryResult } from '@tanstack/react-query';
 import { InfoIcon, UserPlusIcon } from 'lucide-react-native';
 import { useState } from 'react';
@@ -59,7 +59,7 @@ export function TableSection({
         currency: snapshot.rules.currency,
         away: away.data?.periods ?? null,
         today: away.data?.today ?? localDate(now, zone),
-        fit: tableMetaFit(column),
+        column,
       })
     : null;
 
@@ -71,7 +71,7 @@ export function TableSection({
           <Segmented
             options={[
               { value: 'week', label: HOUSE_PAGE_COPY.week },
-              { value: 'month', label: monthAbbr(month) },
+              { value: 'month', label: monthAbbr(month), spoken: monthWord(month) },
             ]}
             value={span}
             onChange={setSpan}
@@ -102,6 +102,8 @@ export function TableSection({
         <Row
           leading={<RowIcon icon={InfoIcon} />}
           title={HOUSE_PAGE_COPY.rules}
+          // Whole on the narrowest phone, rather than cut at "How points and the…".
+          titleLines={2}
           onPress={() => setSheet('rules')}
           chevron
           testID="how-it-works"

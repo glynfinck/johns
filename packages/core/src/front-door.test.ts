@@ -9,6 +9,7 @@ import {
   DAY_CHOICES,
   DOOR,
   googleReturn,
+  signedOutTo,
   houseDefaults,
   inviteCode,
   signInLine,
@@ -34,6 +35,17 @@ describe("afterSignIn", () => {
     const offSite = ["//evil.example", "/\\evil", "https://evil.example", "//evil.example/house/new"];
     const near = ["/house/new/x", "/welcome?x=1", "/join/", "/join/AB3DEF7H/more", "/join/AB3DEF7H?x=1"];
     for (const next of [...nowhere, ...offSite, ...near]) expect(afterSignIn(next)).toBeUndefined();
+  });
+});
+
+describe("signedOutTo", () => {
+  it("carries a link to starting a house or the invite through sign-in", () => {
+    expect(signedOutTo("/house/new")).toBe("/signin?next=%2Fhouse%2Fnew");
+    expect(signedOutTo("/welcome")).toBe("/signin?next=%2Fwelcome");
+  });
+
+  it("sends anything else to plain sign-in", () => {
+    for (const path of ["/", "/today", "/house/stake", "/signin", "//evil.example", ""]) expect(signedOutTo(path)).toBe("/signin");
   });
 });
 

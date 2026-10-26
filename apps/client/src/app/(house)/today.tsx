@@ -108,7 +108,7 @@ function TodayView({
       <RestOfWeek
         going={page.going}
         finished={page.finished}
-        context={{ houseId: house.id, userId, zone: rules.timezone, now, nameOf }}
+        context={{ houseId: house.id, userId, zone: rules.timezone, rules, now, nameOf }}
       />
       {page.standing || page.away ? (
         // The page's quiet lines sit together, under the week.

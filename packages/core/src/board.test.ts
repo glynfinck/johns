@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 
 import {
+  byDoneLatest,
   groupDef,
   johnDef,
   NEW_JOHN,
@@ -274,6 +275,17 @@ describe("isOpen and TODAY_ORDER", () => {
   it("counts only what's still to do as open", () => {
     const open = (Object.keys(TODAY_ORDER) as (keyof typeof TODAY_ORDER)[]).filter(isOpen);
     expect(open.sort()).toEqual(["due-soon", "overdue", "upcoming"]);
+  });
+});
+
+describe("byDoneLatest", () => {
+  it("lists the latest done first, a John skipped with immunity by when it was due", () => {
+    const at = (iso: string) => new Date(iso);
+    const early = { id: "early", doneAt: at("2026-10-20T09:00:00Z"), dueAt: at("2026-10-21T20:00:00Z") };
+    const late = { id: "late", doneAt: at("2026-10-23T18:00:00Z"), dueAt: at("2026-10-22T20:00:00Z") };
+    const skipped = { id: "skipped", doneAt: null, dueAt: at("2026-10-22T08:00:00Z") };
+    expect([early, skipped, late].sort(byDoneLatest).map((i) => i.id)).toEqual(["late", "skipped", "early"]);
+    expect([].sort(byDoneLatest)).toEqual([]);
   });
 });
 

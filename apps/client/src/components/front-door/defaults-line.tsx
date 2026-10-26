@@ -6,10 +6,11 @@ import { Meta } from '@/components/text';
 import { FONT, ROW_GAP, TAP, useTheme } from '@/theme';
 
 /**
- * A new house's defaults as one Meta line, truncating rather than wrapping,
- * with "Change" as its one trailing item (Body Bold, as a text button's
- * words). The whole line is one button a thumb tall that opens and closes
- * what it sums up (`aria-expanded`), saying "Done" while it's open; a screen
+ * A new house's defaults in Meta, on two lines where a phone can't fit them
+ * on one (so the time zone is always there to see), with "Change" as its one
+ * trailing item (Body Bold, as a text button's words), level with the first
+ * line. The whole line is one button a thumb tall that opens and closes what
+ * it sums up (`aria-expanded`), saying "Done" while it's open; a screen
  * reader hears the whole line.
  */
 export function DefaultsLine({ parts, open, onToggle }: { parts: readonly string[]; open: boolean; onToggle: () => void }) {
@@ -28,16 +29,19 @@ export function DefaultsLine({ parts, open, onToggle }: { parts: readonly string
       testID="change-defaults"
       style={[styles.line, pressed && styles.pressed]}
     >
-      <Meta numberOfLines={1} style={styles.words} testID="house-defaults">
+      {/* Each sits in the middle of a thumb-tall line, so a one-line summary and Change share a centre. */}
+      <Meta numberOfLines={2} style={[styles.words, { paddingVertical: (TAP - (type.meta.lineHeight ?? 0)) / 2 }]} testID="house-defaults">
         {parts.join(' · ')}
       </Meta>
-      <Text style={[type.body, styles.action, { color: colors.foreground }]}>{action}</Text>
+      <Text style={[type.body, styles.action, { color: colors.foreground, paddingVertical: (TAP - (type.body.lineHeight ?? 0)) / 2 }]}>
+        {action}
+      </Text>
     </Pressable>
   );
 }
 
 const styles = StyleSheet.create({
-  line: { minHeight: TAP, flexDirection: 'row', alignItems: 'center', gap: ROW_GAP },
+  line: { minHeight: TAP, flexDirection: 'row', alignItems: 'flex-start', gap: ROW_GAP },
   words: { flex: 1 },
   action: { fontFamily: FONT.bold },
   pressed: { opacity: 0.6 },

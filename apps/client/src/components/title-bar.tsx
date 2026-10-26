@@ -14,7 +14,8 @@ import { FONT, GUTTER, INSET, SPACE, TAP, TITLE_BAR, useTheme } from '@/theme';
  * screen's one Title (caps, one line) on the pavement with a hairline under
  * it, `sub` as a Meta line beneath (House: "4 housemates · £20 a month
  * each"), and one thing on the right: the date (a string is set as Meta), a
- * MoreButton, or nothing. 52 tall, more with a sub line. A pushed page passes `back`, the page to
+ * MoreButton, or nothing. 52 tall; 74 with a sub line, which brings its own
+ * room above the Title and under the sub. A pushed page passes `back`, the page to
  * go to when there's no history (a link opened cold): a link-like "‹ House"
  * (`backLabel`, the place it goes back to) sits on its own line above the
  * Title, which stays on the leading edge. It keeps clear of the notch and
@@ -44,7 +45,7 @@ export function TitleBar({
     >
       <View style={[styles.inner, { maxWidth }]}>
         {back != null ? <BackLink fallback={back} label={backLabel} /> : null}
-        <View style={[styles.line, back != null && styles.pushed]}>
+        <View style={[styles.line, sub ? styles.withSub : null, back != null && styles.pushed]}>
           <View style={styles.words}>
             <Title numberOfLines={1} style={styles.title}>
               {title}
@@ -114,6 +115,8 @@ const styles = StyleSheet.create({
     gap: SPACE.md,
     paddingVertical: SPACE.xs,
   },
+  // With a sub line: the kit's 10 above (the Title's own 4 comes on top) and 8 under it.
+  withSub: { paddingTop: 10, paddingBottom: SPACE.sm },
   // Under a back link: no 52 of its own, and a little room under the Title.
   pushed: { minHeight: 0, paddingTop: 0, paddingBottom: SPACE.sm },
   words: { flex: 1, minWidth: 0 },

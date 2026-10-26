@@ -10,9 +10,10 @@ export function FieldLabel({ children }: { children: string }) {
 }
 
 /**
- * A labelled text box at least a thumb tall: the label in Body Bold and
- * sentence case, the box on the card colour, then a hint in Meta or a
- * problem to fix (an Alert: ink, a triangle, never hazard).
+ * A labelled text box at least a thumb tall (a multiline one, a few lines
+ * tall): the label in Body Bold and sentence case, the box on the card
+ * colour, then a hint in Meta or a problem to fix (an Alert: ink, a
+ * triangle, never hazard).
  */
 export function Field({
   label,
@@ -30,6 +31,7 @@ export function Field({
         {...input}
         style={[
           styles.input,
+          input.multiline && styles.multiline,
           // Body's face and size; a line height would set single-line text off centre on iOS.
           { fontFamily: type.body.fontFamily, fontSize: type.body.fontSize },
           {
@@ -53,4 +55,6 @@ const styles = StyleSheet.create({
     borderRadius: RADIUS,
     paddingHorizontal: SPACE.md,
   },
+  // Room for a few lines, written from the top, as far in from the edge above as from the sides.
+  multiline: { minHeight: 96, paddingVertical: SPACE.md, textAlignVertical: 'top' },
 });

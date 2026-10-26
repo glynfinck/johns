@@ -91,9 +91,9 @@ it('shows their week and month, and where they stand against their share', async
   expect(share.getByText(PERSON_COPY.catchingUp(2))).toBeOnTheScreen();
 });
 
-it('gives being level with your share a figure too', async () => {
+it('says being level with your share in words alone, with no bare figure after them', async () => {
   await open('priya');
-  expect(screen.getByTestId('person-share')).toHaveTextContent(new RegExp(`${PERSON_COPY.level(true)}.*0$`));
+  expect(screen.getByTestId('person-share')).toHaveTextContent(new RegExp(`${PERSON_COPY.level(true)}${PERSON_COPY.overWeeks(12)}$`));
 });
 
 it('counts someone dealt nothing lately as level, rather than reading for ever', async () => {
@@ -115,7 +115,7 @@ it('shows the month’s money, and apart from it what they owe from a closed mon
   expect(settling.getByRole('header', { name: PERSON_COPY.settling })).toBeOnTheScreen();
   expect(settling.getByTestId('person-owing')).toHaveTextContent(
     new RegExp(
-      `${PERSON_COPY.owes('Sam', HOUSE_PAGE_COPY.you.toLowerCase(), '£4')}${HOUSE_PAGE_COPY.from('September')} · ${HOUSE_PAGE_COPY.howYouLike}`,
+      `${HOUSE_PAGE_COPY.owesYou('Sam', '£4', 'September')}${HOUSE_PAGE_COPY.paidHowYouLike}`,
     ),
   );
 });

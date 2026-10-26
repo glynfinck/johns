@@ -79,10 +79,10 @@ it('names the house and how many live there, and joins it', async () => {
 it('says what went wrong joining, and stays', async () => {
   as(ME);
   byCode.mockResolvedValue(FLAT);
-  join.mockRejectedValue(new Error("You're already in a house. Leave it first to join another."));
+  join.mockRejectedValue(new Error("You’re already in a house. Leave it first to join another."));
   await open();
   await fireEvent.press(await screen.findByRole('button', { name: FRONT_DOOR_COPY.join }));
-  expect(screen.getByRole('alert')).toHaveTextContent("You're already in a house. Leave it first to join another.");
+  expect(screen.getByRole('alert')).toHaveTextContent("You’re already in a house. Leave it first to join another.");
   expect(screen).toHavePathname('/join/AB3DEF7H');
 });
 

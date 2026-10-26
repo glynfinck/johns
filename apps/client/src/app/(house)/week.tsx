@@ -1,4 +1,5 @@
 import {
+  canSwap,
   liveWeekFilter,
   PAGE_TITLE,
   toggleWeekFilter,
@@ -32,6 +33,7 @@ import { WeekMenu } from '@/components/week/week-menu';
 import { WeekTable } from '@/components/week/week-table';
 import { useAway } from '@/hooks/use-away';
 import { useHouse, type HouseView } from '@/hooks/use-house';
+import { useJohnList } from '@/hooks/use-john-list';
 import { useMembership } from '@/hooks/use-membership';
 import { usePull, useReadOnFocus } from '@/hooks/use-refresh';
 import { useTable } from '@/hooks/use-table';
@@ -57,6 +59,8 @@ function WeekFor({ houseId, userId }: { houseId: string; userId: string }) {
   // Time away isn't on Realtime: read it again on coming back to Week. A pull reads it and the fair shares too.
   const away = useAway(houseId, view?.snapshot);
   const shares = useTable(houseId, view?.snapshot);
+  // Before the first deal an admin's Week offers it as Today's checklist does, which counts the John list.
+  const list = useJohnList(houseId, view?.board.notStarted === true && view.me?.role === 'admin');
   useReadOnFocus(away.refetch, { skipFirst: true });
   const { refreshing, pull } = usePull(houseId, () =>
     Promise.all([query.refetch(), ...(view ? [away.refetch(), shares.refetch()] : [])]),
@@ -84,7 +88,7 @@ function WeekFor({ houseId, userId }: { houseId: string; userId: string }) {
     >
       <PageTitle page={PAGE_TITLE.week} />
       {view ? (
-        <Board view={view} wide={wide} away={away.data} shares={shares.data} />
+        <Board view={view} wide={wide} away={away.data} shares={shares.data} johns={list.data?.johns ?? null} />
       ) : query.isError ? (
         <ReadFailed onRetry={() => void query.refetch()} />
       ) : (
@@ -99,22 +103,31 @@ function Board({
   wide,
   away,
   shares,
+  johns,
 }: {
   view: HouseView;
   wide: boolean;
   away: ReturnType<typeof useAway>['data'];
   shares: ReturnType<typeof useTable>['data'];
+  johns: readonly unknown[] | null;
 }) {
   const { snapshot, board, me, now } = view;
   const { house, members, rules } = snapshot;
   const [filter, setFilter] = useState<WeekPart | null>(null);
   const userId = me?.userId ?? '';
   const nameOf = (id: string) => members.find((m) => m.userId === id)?.name ?? null;
-  const context: JohnRowContext = { houseId: house.id, userId, zone: rules.timezone, now, nameOf };
+  const context: JohnRowContext = { houseId: house.id, userId, zone: rules.timezone, rules, now, nameOf };
 
   if (!board.week || board.items.length === 0) {
     return (
-      <WeekEmpty houseId={house.id} notStarted={board.notStarted} isAdmin={me?.role === 'admin'} adminName={whoDeals(members)} />
+      <WeekEmpty
+        houseId={house.id}
+        notStarted={board.notStarted}
+        isAdmin={me?.role === 'admin'}
+        adminName={whoDeals(members)}
+        johns={johns}
+        memberCount={members.length}
+      />
     );
   }
 
@@ -127,7 +140,7 @@ function Board({
   const fairness = shares ? weekFairness(shares.balances, board.items.map((i) => i.points), userId, nameOf) : null;
   const pointsOf = (id: string) => board.table.find((r) => r.userId === id)?.points ?? 0;
   const awayOf = (id: string) => (away ? weekAwayNote(away.periods, id, week.startsOn, away.today) : null);
-  const swapReady = (me?.swapTokens ?? 0) > 0;
+  const swapReady = canSwap(board, me);
 
   return (
     <>

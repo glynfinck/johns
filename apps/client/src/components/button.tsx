@@ -21,7 +21,8 @@ export type ButtonIcon = ComponentType<{ size?: number; color?: string; 'aria-hi
  * never amber, and says so (`aria-pressed` on the web, `aria-selected`
  * elsewhere). With `href` it is a link dressed as a button (an anchor on
  * the web). `iconOnly` shows just the icon, square, and `label` still names
- * it for screen readers.
+ * it for screen readers. `spoken` is what a screen reader hears instead of
+ * the label, when the label leans on the row beside it.
  */
 export function Button({
   label,
@@ -32,6 +33,7 @@ export function Button({
   disabled = false,
   iconOnly = false,
   chosen,
+  spoken,
   testID,
 }: {
   label: string;
@@ -43,6 +45,7 @@ export function Button({
   iconOnly?: boolean;
   /** One of a pair to pick from: whether this is the one picked. */
   chosen?: boolean;
+  spoken?: string;
   testID?: string;
 }) {
   const { colors, type } = useTheme();
@@ -64,7 +67,7 @@ export function Button({
       accessibilityRole={href ? 'link' : 'button'}
       aria-disabled={disabled}
       {...chosenState}
-      accessibilityLabel={iconOnly ? label : undefined}
+      accessibilityLabel={iconOnly ? label : spoken}
       disabled={disabled}
       onPress={onPress}
       onPressIn={() => setPressed(true)}

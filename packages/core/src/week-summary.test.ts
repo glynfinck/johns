@@ -204,10 +204,11 @@ describe("weekPeople", () => {
 });
 
 describe("weekList", () => {
-  it("lists the whole house's open Johns, what needs doing first, and folds the finished", () => {
+  it("lists the whole house's open Johns, what needs doing first, and folds the finished, the latest done first, as Today does", () => {
     const { rows, folded } = weekList(MOCKUP);
     expect(rows.map((i) => i.id)).toEqual(["plants", "towels", "stairs", "bathroom", "fridge", "wipe"]);
-    expect(folded.map((i) => i.id)).toEqual(["hob", "bins", "mop", "loo", "caddy"]);
+    // By when each was ticked, or due when it never was.
+    expect(folded.map((i) => i.id)).toEqual(["caddy", "loo", "mop", "bins", "hob"]);
     expect(rows.length + folded.length).toBe(MOCKUP.length);
   });
 
@@ -248,7 +249,7 @@ describe("weekAwayNote", () => {
   });
 
   it("names the next trip when it starts within a week of today", () => {
-    expect(weekAwayNote([away("megan", "2026-10-29", "2026-11-01")], "megan", WEEK, TODAY)).toBe("away 29 Oct – 1 Nov");
+    expect(weekAwayNote([away("megan", "2026-10-29", "2026-11-01")], "megan", WEEK, TODAY)).toBe("away 29 Oct–1 Nov");
     expect(weekAwayNote([away("megan", "2026-11-03", "2026-11-04")], "megan", WEEK, TODAY)).toBeNull();
   });
 
@@ -319,7 +320,7 @@ describe("weekRangeLine", () => {
   it("spans two months", () => {
     const start = new Date("2026-10-26T00:00:00Z");
     const end = new Date("2026-11-02T00:00:00Z");
-    expect(weekRangeLine(start, end, new Date("2026-10-28T12:00:00Z"), ZONE)).toBe("26 Oct – 1 Nov · ends Sun");
+    expect(weekRangeLine(start, end, new Date("2026-10-28T12:00:00Z"), ZONE)).toBe("26 Oct–1 Nov · ends Sun");
   });
 });
 

@@ -27,6 +27,17 @@ export function afterSignIn(next: string | null | undefined): string | undefined
 }
 
 /**
+ * Where the root layout's guard sends someone signed out who opened a
+ * screen for the signed in: sign-in, carrying that screen when sign-in may
+ * lead on to it (starting a house, or the invite), so a link opened cold
+ * keeps its choice as the front door's buttons do. Anything else is plain
+ * sign-in.
+ */
+export function signedOutTo(pathname: string): string {
+  return signInPath(afterSignIn(pathname));
+}
+
+/**
  * Where Google sends the web back to. A join link comes back to itself: it's
  * open to anyone, so the code survives. Anything else comes back to sign-in,
  * still carrying where it leads, so a refusal is said where sign-in was tried

@@ -9,6 +9,7 @@ import { buildStake } from "./stake";
 import {
   awayLine,
   awayTodayUntil,
+  canSwap,
   cantOptions,
   clearUntil,
   forfeitRoom,
@@ -23,9 +24,11 @@ import {
   sheetWhen,
   standingLine,
   standingPlace,
+  swapChoice,
   swapMeta,
   tickedLine,
   todayPage,
+  undoWarning,
   voteCloses,
   voteMeta,
   voteTally,
@@ -109,19 +112,20 @@ describe("nextUp", () => {
 
 describe("restOfWeek", () => {
   const mine = [
-    item("done", { status: "done", dueAt: at(-30) }),
+    item("done", { status: "done", dueAt: at(-30), doneAt: at(-31) }),
     item("next", { status: "due-soon", dueAt: at(3) }),
     item("checking", { status: "checking" }),
     item("later", { status: "upcoming", dueAt: at(50) }),
-    item("excused", { status: "excused" }),
+    item("excused", { status: "excused", dueAt: at(-40) }),
     item("disputed", { status: "disputed" }),
-    item("late", { status: "late" }),
+    item("late", { status: "late", dueAt: at(-50), doneAt: at(-2) }),
     item("missed", { status: "missed" }),
   ];
 
   it("leaves out the John Next up shows, and folds what's finished, keeping a missed John in view", () => {
     const rest = restOfWeek(mine, "next");
     expect(rest.going.map((i) => i.id)).toEqual(["later", "disputed", "checking", "missed"]);
+    // The latest done first, as Week folds them (an excused John by when it was due).
     expect(rest.finished.map((i) => i.id)).toEqual(["late", "done", "excused"]);
   });
 
@@ -164,7 +168,7 @@ describe("awayLine", () => {
   it("names a trip of yours that starts within a fortnight", () => {
     expect(awayLine([trip("p", "2026-10-16", "2026-10-19")], ME, "2026-10-14")).toBe("You’re away 16–19 Oct");
     expect(awayLine([trip("p", "2026-10-15", "2026-10-15")], ME, "2026-10-14")).toBe("You’re away Thu 15 Oct");
-    expect(awayLine([trip("p", "2026-10-28", "2026-11-02")], ME, "2026-10-14")).toBe("You’re away 28 Oct – 2 Nov");
+    expect(awayLine([trip("p", "2026-10-28", "2026-11-02")], ME, "2026-10-14")).toBe("You’re away 28 Oct–2 Nov");
   });
 
   it("says until when while you're away, back-to-back trips together", () => {
@@ -219,6 +223,14 @@ describe("nextUpState", () => {
     expect(state(board([]), [item("a", { status: "checking" })])).toEqual({ kind: "clear", until: WEEK.endsAt, nothingYours: false });
     expect(state(board([]), [])).toEqual({ kind: "clear", until: WEEK.endsAt, nothingYours: true });
   });
+
+  it("isn't clear while the house votes on a tick of yours, which may come back", () => {
+    const disputed = item("a", { status: "disputed", dispute: dispute() });
+    expect(state(board([]), [item("b", { status: "done" }), disputed])).toEqual({ kind: "voting", item: disputed });
+    // A John still to do comes first.
+    const next = item("c");
+    expect(state(board([]), [disputed, next])).toEqual({ kind: "john", item: next });
+  });
 });
 
 describe("whoDeals", () => {
@@ -233,13 +245,25 @@ describe("whoDeals", () => {
 describe("clearUntil", () => {
   it("names the day the week turns over, in the house's zone", () => {
     // Midnight in London is still Sunday evening in New York.
-    expect(clearUntil(WEEK.endsAt, "Europe/London")).toBe("You’re clear until Mon");
-    expect(clearUntil(WEEK.endsAt, "America/New_York")).toBe("You’re clear until Sun");
+    expect(clearUntil(WEEK.endsAt, "Europe/London", now)).toBe("You’re clear until Mon");
+    expect(clearUntil(WEEK.endsAt, "America/New_York", now)).toBe("You’re clear until Sun");
   });
 
   it("follows the clocks going back", () => {
     // The week of the October change ends at midnight GMT, not BST.
-    expect(clearUntil(new Date("2026-10-26T00:00:00Z"), "Europe/London")).toBe("You’re clear until Mon");
+    expect(clearUntil(new Date("2026-10-26T00:00:00Z"), "Europe/London", new Date("2026-10-22T12:00:00Z"))).toBe("You’re clear until Mon");
+  });
+
+  it("dates a day that could be read as today, or one six days out", () => {
+    // On Monday 26 Oct, with the week turning over next Monday.
+    const monday = new Date("2026-10-26T09:00:00Z");
+    expect(clearUntil(new Date("2026-11-02T00:00:00Z"), "Europe/London", monday)).toBe("You’re clear until Mon 2 Nov");
+    // On Tuesday, the Monday six days out.
+    expect(clearUntil(new Date("2026-11-02T00:00:00Z"), "Europe/London", new Date("2026-10-27T09:00:00Z"))).toBe(
+      "You’re clear until Mon 2 Nov",
+    );
+    // A near day is plain.
+    expect(clearUntil(new Date("2026-11-02T00:00:00Z"), "Europe/London", new Date("2026-10-30T09:00:00Z"))).toBe("You’re clear until Mon");
   });
 });
 
@@ -485,6 +509,12 @@ describe("the sheet's header", () => {
     );
   });
 
+  it("tells whoever raised the dispute that they did", () => {
+    const priyas = item("a", { userId: "priya", status: "disputed", dispute: dispute({ raisedBy: ME }) });
+    expect(sheetWhen(priyas, PEOPLE, ME, RULES, now).text).toBe("Disputed by you");
+    expect(sheetWhen(priyas, PEOPLE, "megan", RULES, now).text).toBe("Disputed by Sam");
+  });
+
   it("says what happened once it's settled, in place of what lateness costs, signing late and missed", () => {
     const settled = (status: BoardItem["status"]) =>
       sheetWhen(item("a", { userId: "priya", status, doneAt: at(-48) }), PEOPLE, ME, RULES, now);
@@ -571,11 +601,62 @@ describe("cantOptions", () => {
     expect(cantOptions(item("done", { status: "checking" }), b, me(1, 1))).toBeNull();
   });
 
+  it("lists a choice's status word in what a screen reader hears, and in the meta once it's picked", () => {
+    const overdue = item("Descale the kettle", { userId: "priya", points: 1, status: "overdue", dueAt: at(-20) });
+    expect(swapChoice(overdue, PEOPLE, RULES, now, false)).toEqual({
+      meta: "Priya · was due Tue · 1 pt",
+      label: "Descale the kettle, Overdue, Priya · was due Tue · 1 pt",
+    });
+    expect(swapChoice(overdue, PEOPLE, RULES, now, true).meta).toBe("Overdue · Priya · was due Tue · 1 pt");
+    // An upcoming John has no word to say.
+    const later = item("Bins", { userId: "megan", status: "upcoming", dueAt: at(50) });
+    expect(swapChoice(later, PEOPLE, RULES, now, true)).toEqual({ meta: "Megan · Fri 14:00 · 2 pts", label: "Bins, Megan · Fri 14:00 · 2 pts" });
+  });
+
   it("lists a housemate's John as the swap does, saying when an overdue one was due", () => {
     expect(swapMeta(item("a", { userId: "priya", points: 3 }), PEOPLE, RULES, now)).toBe("Priya · today 21:00 · 3 pts");
     expect(swapMeta(item("a", { userId: "megan", points: 1, status: "overdue", dueAt: at(-20) }), PEOPLE, RULES, now)).toBe(
       "Megan · was due Tue · 1 pt",
     );
+  });
+});
+
+describe("canSwap", () => {
+  const me = (swapTokens: number) => ({ userId: ME, swapTokens });
+  const mine = item("mine");
+  const theirs = item("theirs", { userId: "priya" });
+
+  it("is ready with a token, one of your Johns open and a housemate's to trade it for", () => {
+    expect(canSwap(board([mine, theirs]), me(1))).toBe(true);
+  });
+
+  it("isn't without a token, or with nothing of yours open, or nothing of theirs", () => {
+    expect(canSwap(board([mine, theirs]), me(0))).toBe(false);
+    expect(canSwap(board([mine, theirs]), null)).toBe(false);
+    // Yours is disputed (Priya on the seeded house): nothing to swap.
+    expect(canSwap(board([item("mine", { status: "disputed", dispute: dispute() }), theirs]), me(1))).toBe(false);
+    expect(canSwap(board([mine, item("theirs", { userId: "priya", status: "checking" })]), me(1))).toBe(false);
+    expect(canSwap(board([]), me(1))).toBe(false);
+  });
+});
+
+describe("undoWarning", () => {
+  it("is nothing before the John's due time", () => {
+    expect(undoWarning({ dueAt: at(2), doneAt: at(-1) }, RULES, now)).toBeNull();
+  });
+
+  it("warns after the due time that ticking again counts as late, and what late costs", () => {
+    expect(undoWarning({ dueAt: at(-5), doneAt: at(-6) }, RULES, now)).toBe(
+      "It’s past its due time, so it’s overdue as soon as it’s undone, and ticking it again counts as late: £1.",
+    );
+    // Capped at what's left of the stake: nothing left, nothing said about money.
+    expect(undoWarning({ dueAt: at(-5), doneAt: at(-6) }, RULES, now, 0)).toBe(
+      "It’s past its due time, so it’s overdue as soon as it’s undone, and ticking it again counts as late.",
+    );
+  });
+
+  it("is nothing for a tick that was late already: ticking again costs the same", () => {
+    expect(undoWarning({ dueAt: at(-5), doneAt: at(-1) }, RULES, now)).toBeNull();
   });
 });
 

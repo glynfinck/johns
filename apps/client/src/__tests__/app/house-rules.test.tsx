@@ -215,11 +215,11 @@ describe('an admin', () => {
   });
 
   it('shows a time zone the database refuses under Time zone', async () => {
-    (updateHouse as jest.Mock).mockRejectedValue(new Error("That time zone isn't one we recognise."));
+    (updateHouse as jest.Mock).mockRejectedValue(new Error("That time zone isn’t one we recognise."));
     await edit();
     await fireEvent.changeText(screen.getByTestId('rules-timezone'), 'Europe/Londn');
     await fireEvent.press(screen.getByTestId('save-rules'));
-    expect(await within(screen.getByTestId('rules-house')).findByRole('alert')).toHaveTextContent("That time zone isn't one we recognise.");
+    expect(await within(screen.getByTestId('rules-house')).findByRole('alert')).toHaveTextContent("That time zone isn’t one we recognise.");
     expect(within(screen.getByTestId('rules-foot')).queryByRole('alert')).toBeNull();
     // Fixing it takes the problem away.
     await fireEvent.changeText(screen.getByTestId('rules-timezone'), 'Europe/London');

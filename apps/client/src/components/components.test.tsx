@@ -17,11 +17,11 @@ const HIDDEN = { includeHiddenElements: true };
 describe('Bin Night components', () => {
   it('presses a button, and not a disabled one', async () => {
     const onPress = jest.fn();
-    const { rerender } = await render(<Button label="Hand out this week's Johns" onPress={onPress} />);
-    await fireEvent.press(screen.getByRole('button', { name: "Hand out this week's Johns" }));
+    const { rerender } = await render(<Button label="Hand out this week’s Johns" onPress={onPress} />);
+    await fireEvent.press(screen.getByRole('button', { name: "Hand out this week’s Johns" }));
     expect(onPress).toHaveBeenCalledTimes(1);
 
-    await rerender(<Button label="Hand out this week's Johns" onPress={onPress} disabled />);
+    await rerender(<Button label="Hand out this week’s Johns" onPress={onPress} disabled />);
     await fireEvent.press(screen.getByRole('button'));
     expect(onPress).toHaveBeenCalledTimes(1);
   });

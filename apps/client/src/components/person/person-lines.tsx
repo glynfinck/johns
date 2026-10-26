@@ -13,6 +13,7 @@ export function PersonLines({ lines, testID }: { lines: readonly PersonLine[]; t
     <Row
       key={line.key}
       title={line.title}
+      titleLines={2}
       meta={line.meta.length ? <MetaLine parts={line.meta} /> : undefined}
       trailing={
         line.value != null ? (

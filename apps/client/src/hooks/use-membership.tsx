@@ -7,6 +7,8 @@ import { useSession } from '@/hooks/use-session';
 /** Who is signed in and which house they're in: what every screen's guard needs. */
 export interface Membership {
   session: Session | null;
+  /** A session ended here (Sign out), rather than nobody having signed in. */
+  signedOut: boolean;
   house: MyHouse | null;
   /** The saved session, or the house for it, is still being read. */
   loading: boolean;
@@ -21,7 +23,7 @@ const MembershipContext = createContext<Membership | null>(null);
 type Known = { userId: string; house: MyHouse | null } | { userId: string; failed: true };
 
 export function MembershipProvider({ children }: { children: ReactNode }) {
-  const { session, loading: sessionLoading } = useSession();
+  const { session, loading: sessionLoading, ended } = useSession();
   const userId = session?.user.id;
   const [known, setKnown] = useState<Known | null>(null);
 
@@ -54,6 +56,7 @@ export function MembershipProvider({ children }: { children: ReactNode }) {
   const current = userId && known?.userId === userId ? known : null;
   const value: Membership = {
     session,
+    signedOut: ended === true,
     house: current && 'house' in current ? current.house : null,
     loading: sessionLoading || (userId !== undefined && current === null),
     failed: current !== null && 'failed' in current,

@@ -24,6 +24,7 @@ export const PAGE_TITLE = {
   house: "House",
   privacy: "Privacy",
   notFound: "Nothing here",
+  welcome: "No house yet",
   johnList: "The John list",
   rules: "House rules",
   away: "Time away",
@@ -46,6 +47,8 @@ export const NOT_FOUND_COPY = {
   title: "Nothing here",
   body: "That page isn’t on the list.",
   back: "Back to your Johns",
+  /** Signed out, there are no Johns to go back to. */
+  backToDoor: "Back to the front door",
 } as const;
 
 export const ERROR_COPY = {
@@ -72,7 +75,7 @@ export const FRONT_DOOR = {
     {
       key: "stake",
       title: "The Stake",
-      body: "Everyone stakes the same each month. Miss a John and part of yours goes to the people who didn't.",
+      body: "Everyone stakes the same each month. Miss a John and part of yours goes to the people who didn’t.",
     },
     {
       key: "wall",
@@ -96,7 +99,7 @@ export const SIGN_IN_COPY = {
   heading: "Sign in",
   google: "Continue with Google",
   googleBusy: "Opening Google…",
-  eitherAccount: "Your house's Johns are kept with the account you sign in with.",
+  eitherAccount: "Your house’s Johns are kept with the account you sign in with.",
   sameAccount: "Already in a house? Use the account you joined with.",
   terms: "By signing in you agree to the house rules your housemates set.",
   privacy: "Privacy",
@@ -168,7 +171,7 @@ export const JOHN_COPY = {
   withPhoto: "Mark done with a photo",
   photoAndDone: "Photo and done",
   uploading: "Uploading…",
-  photoFailed: "That photo didn't upload. Try again.",
+  photoFailed: "That photo didn’t upload. Try again.",
   undo: "Undo",
   useImmunity: "Use immunity",
   spendIt: "Spend it",
@@ -176,8 +179,8 @@ export const JOHN_COPY = {
   standsIn: (when: string) => `Stands ${when} unless someone disputes it.`,
   disputed: (reason: string) => `Disputed: “${reason}”`,
   votes: (uphold: number, reject: number, closes: string) => `${uphold} say not done, ${reject} say fine · closes ${closes}`,
-  dueBeforeYouGo: (was: string) => `Due before you go: it was due ${was}, while you're away.`,
-  dueBeforeTheyGo: (owner: string, was: string) => `Due before ${owner} goes: it was due ${was}, while they're away.`,
+  dueBeforeYouGo: (was: string) => `Due before you go: it was due ${was}, while you’re away.`,
+  dueBeforeTheyGo: (owner: string, was: string) => `Due before ${owner} goes: it was due ${was}, while they’re away.`,
 } as const;
 
 /** Before there is anything to do this week. */
@@ -227,7 +230,7 @@ export const DISPUTE_COPY = {
   title: (john: string) => `Was ${john} really done?`,
   body: (owner: string) => `${owner}’s tick goes to a house vote. If the house agrees with you, the John opens again.`,
   label: "What’s wrong with it",
-  placeholder: "The hob's still greasy",
+  placeholder: "The hob’s still greasy",
   send: "Put it to the house",
   sending: "Sending…",
   fine: "It’s fine",
@@ -327,10 +330,10 @@ export const TABLE_COPY = {
   /** Where you stand against your share, in a sentence. */
   shareLine: (balance: number, weeksToEven: number) =>
     balance <= -0.5
-      ? `Points behind your share. The next weeks hand you a little extra, never more than half a week's worth, for about ${weeksToEven} ${weeksToEven === 1 ? "week" : "weeks"}.`
+      ? `Points behind your share. The next weeks hand you a little extra, never more than half a week’s worth, for about ${weeksToEven} ${weeksToEven === 1 ? "week" : "weeks"}.`
       : balance >= 0.5
         ? "Points ahead of your share, so the next weeks go a little easier on you."
-        : "You've done your share.",
+        : "You’ve done your share.",
 } as const;
 
 /** The Stake: this month so far, settling up, and the ledger. Money arrives already formatted. */
@@ -354,7 +357,7 @@ export const STAKE_COPY = {
   kind: {
     forfeit: "Forfeit",
     cap_refund: "Over the stake, returned",
-    share: "Share of the month's forfeits",
+    share: "Share of the month’s forfeits",
     payment: "Payment",
   } as Record<string, string>,
   /** A payment's other side: "to Ben" for the one who paid, "from Ava" for the one paid. */
@@ -410,7 +413,7 @@ export const JOHN_LIST_COPY = {
 
 /** Handing out the week: the first time it starts the house; afterwards it re-deals an unticked week. */
 export const DEAL_COPY = {
-  first: "Hand out this week's Johns",
+  first: "Hand out this week’s Johns",
   again: "Re-deal this week",
   dealing: "Dealing…",
   firstBody: "When the list is ready and the house has joined, hand out the first week.",
@@ -422,7 +425,7 @@ export const DEAL_COPY = {
 export const RULES_COPY = {
   name: "House name",
   timezone: "Time zone",
-  timezoneHint: "Weeks and due times follow the house's time zone, wherever each of you is.",
+  timezoneHint: "Weeks and due times follow the house’s time zone, wherever each of you is.",
   phoneZone: (zone: string) => `Use this phone’s: ${zone.replaceAll("_", " ")}`,
   weekStarts: "Week starts",
   currency: "Currency",
@@ -434,9 +437,9 @@ export const RULES_COPY = {
   away: "Time away is made up",
   awayNote: "Nobody is handed a John due while they’re away.",
   makeupHint: {
-    100: "Their share still counts, so they do a little extra each week when they're back until it evens out.",
-    50: "Half their share still counts and is made up when they're back; the rest falls to whoever is home.",
-    0: "Their share falls to whoever is home, and there's nothing to make up.",
+    100: "Their share still counts, so they do a little extra each week when they’re back until it evens out.",
+    50: "Half their share still counts and is made up when they’re back; the rest falls to whoever is home.",
+    0: "Their share falls to whoever is home, and there’s nothing to make up.",
   } as Record<number, string>,
   badAmount: "Amounts are numbers like 20 or 2.50.",
   check: "Check the settings and try again.",
@@ -476,7 +479,7 @@ export const REMINDERS_COPY = {
   off: "Turn reminders off on this device",
   unsupported: "Reminders need a browser that supports notifications. On iPhone, add Johns to your home screen first.",
   blocked: "Notifications are blocked for this site in your browser settings.",
-  failed: "Couldn't turn reminders on. Try again.",
+  failed: "Couldn’t turn reminders on. Try again.",
   turnedOn: "Reminders on for this device",
 } as const;
 
@@ -528,18 +531,18 @@ export const AWAY_COPY = {
   booking: "Booking…",
   /** What booking moved: the one consequence the calendar can't show. */
   moved: (n: number) =>
-    `${n} of your Johns ${n === 1 ? "falls" : "fall"} due while you're away, so ${n === 1 ? "it's" : "they're"} now due before you go.`,
-  back: "I'm back",
+    `${n} of your Johns ${n === 1 ? "falls" : "fall"} due while you’re away, so ${n === 1 ? "it’s" : "they’re"} now due before you go.`,
+  back: "I’m back",
   cancel: "Cancel",
   nextMonth: "Next month",
   today: "Today",
   thisWeek: "Away this week",
   /** Today's banner: when, and what your share does meanwhile (houses.away_makeup). */
-  banner: (range: string, now: boolean) => (now ? `You're away until ${range}.` : `You're away ${range}.`),
+  banner: (range: string, now: boolean) => (now ? `You’re away until ${range}.` : `You’re away ${range}.`),
   bannerBody: (makeup: number) =>
     `Nobody hands you a John due while you’re gone${
       makeup > 0
-        ? `, but ${makeup === 100 ? "your share" : "half your share"} still counts: you catch up a little each week when you're back.`
+        ? `, but ${makeup === 100 ? "your share" : "half your share"} still counts: you catch up a little each week when you’re back.`
         : "."
     }`,
   change: "Change",
@@ -569,6 +572,9 @@ export const NEXT_UP_COPY = {
   excused: "skipped with immunity",
   clear: (day: string) => `You’re clear until ${day}`,
   clearBody: "New Johns are dealt then.",
+  /** None of yours to do, but a tick of yours is disputed. */
+  voting: "The house is voting on your tick",
+  votingBody: (john: string) => `If it says ${john} wasn’t done, it’s yours to do again.`,
   nothingYours: "Nothing on your list this week.",
   away: (day: string) => `You’re away until ${day}`,
   /** A trip of yours starting within a fortnight: "You’re away 28–31 Oct". */
@@ -646,9 +652,15 @@ export const JOHN_SHEET_COPY = {
   standsIn: (when: string) => `stands ${when}`,
   standsSoon: "stands any minute",
   disputedBy: (name: string) => `Disputed by ${name}`,
+  byYou: "you",
   /** The vote so far, in the buttons' order: fine, then not done. */
   tally: (fine: number, notDone: number, closes: string) => `${fine} fine · ${notDone} not done · ${closes}`,
   yourTick: "The house is voting on your tick.",
+  /** Undoing a tick after its due time, before it's undone. */
+  undoTitle: (john: string) => `Undo ${john}?`,
+  undoLate: (late: string | null) =>
+    `It’s past its due time, so it’s overdue as soon as it’s undone, and ticking it again counts as late${late ? `: ${late}` : ""}.`,
+  undoIt: "Undo it",
   voted: "Vote counted. You can change it on Week.",
   theirs: (owner: string) => `It’s ${owner}’s this week.`,
   doneOnTime: (who: string, when: string | null) => `${who} did it on time${when ? `, ${when}` : ""}.`,
@@ -677,7 +689,7 @@ export const WEEK_SUMMARY_COPY = {
   part: (count: number, label: string) => `${count} ${label}`,
   showOnly: "Shows only these Johns. Press again to show them all.",
   swapReady: "Swap ready",
-  /** A person's header: "1 of 3 done · 6 pts", and under it "away 29 Oct – 1 Nov". */
+  /** A person's header: "1 of 3 done · 6 pts", and under it "away 29 Oct–1 Nov". */
   doneOf: (done: number, total: number) => `${done} of ${total} done`,
   away: (days: string) => `away ${days}`,
   awayAllWeek: "away all week",
@@ -715,7 +727,6 @@ export const WEEK_SUMMARY_COPY = {
   redealt: "This week’s Johns were dealt again.",
   /** Before the deal. */
   notDealt: "This week hasn’t been dealt yet",
-  deal: "Deal this week",
   notDealtBody: "Johns are shared so the effort evens out.",
 } as const;
 
@@ -737,23 +748,21 @@ export const HOUSE_PAGE_COPY = {
   sharedOut: (day: string) => `shared out ${day}`,
   /** The meta line when the Lead has already said nothing was forfeited. */
   sharedOutAlone: (day: string) => `Forfeits are shared out ${day}`,
-  owesYou: (name: string, amount: string) => `${name} owes you ${amount}`,
-  youOwe: (name: string, amount: string) => `You owe ${name} ${amount}`,
-  /** Which closed months a debt is from: "From September". */
-  from: (months: string) => `From ${months}`,
-  howYouLike: "paid however you like",
-  /** The same, alone on the meta line, when no month can be named. */
+  /** A debt from closed months, with the months it's from when they can be named: "Tom owes you £4.01 for September". */
+  owesYou: (name: string, amount: string, months = "") => `${name} owes you ${amount}${months ? ` for ${months}` : ""}`,
+  youOwe: (name: string, amount: string, months = "") => `You owe ${name} ${amount}${months ? ` for ${months}` : ""}`,
+  /** What happens next, on the meta line: owed to you, it's paid however you like; yours, it waits on them. */
   paidHowYouLike: "Paid however you like",
   /** Two or more months in a row of words: "August and September". */
   and: "and",
   waitingFor: (name: string) => `Waiting for ${name} to confirm`,
-  /** The same after the month it's from: "From September · waiting for Priya to confirm". */
-  waiting: (name: string) => `waiting for ${name} to confirm`,
   /** A settle-up with someone who has left: the database only lets a housemate's payment be marked. */
   gone: "They’ve left, so it can’t be marked here",
   /** Someone who has left, mid-sentence: "You owe a former housemate £2", "Sam paid a former housemate". */
   formerHousemate: "a former housemate",
   markReceived: (amount: string) => `Mark ${amount} received`,
+  /** The same button, to a screen reader, which hears it away from its row: "Mark Tom’s £4.01 received". */
+  markReceivedFrom: (name: string, amount: string) => `Mark ${name}’s ${amount} received`,
   marking: "Saving…",
   history: "Stake history",
   stakeUnreadable: "Couldn’t read the Stake. Check the connection.",
@@ -836,10 +845,7 @@ export const PERSON_COPY = {
   sharedOut: (day: string) => `Shared out ${day}`,
   net: "Net so far",
   ifNow: "If the month ended now",
-  /** A debt from closed months between two housemates: "Tom owes Priya £5.34". */
-  owes: (from: string, to: string, amount: string) => `${from} owes ${to} ${amount}`,
-  owesMeta: (months: string | null) => (months ? `From ${months} · not paid yet` : "Not paid yet"),
-  /** What's owed from closed months, apart from the month so far. */
+  /** What's owed from closed months between them and you, apart from the month so far. */
   settling: "Settling up",
   away: "Time away",
   awayNow: "Away now",
@@ -915,7 +921,7 @@ export const WALL_FEED_COPY = {
   // "Priya’s", "your" or "a former housemate’s".
   ticked: (who: string, john: string) => `${who} ticked ${john}`,
   missed: (who: string, john: string) => `${who} missed ${john}`,
-  disputed: (who: string, whose: string, john: string) => `${who} disputed ${whose} ${john}`,
+  disputed: (who: string, whose: string, john: string) => `${who} disputed ${whose} tick on ${john}`,
   struckOut: (whose: string, john: string) => `${whose} ${john} was struck out`,
   stands: (whose: string, john: string) => `${whose} ${john} stands`,
   earnedImmunity: (who: string) => `${who} earned immunity`,
@@ -938,6 +944,8 @@ export const WALL_FEED_COPY = {
   struck: "Struck out",
   onTime: "On time",
   late: "Late",
+  /** A miss's meta words: it has no tick to tell about. */
+  missedWord: "Missed",
   voted: "The house voted",
   clean: (weeks: number) => `${weeks} clean ${weeks === 1 ? "week" : "weeks"} in a row`,
   swapEarned: "Earned a swap",
@@ -986,6 +994,7 @@ export const HOUSE_LOWER_COPY = {
   nobodyAway: "Nobody’s away",
   awayValue: (who: string, range: string) => `${who}, ${range}`,
   noGroups: "None",
+  groupsValue: (n: number) => `${n} ${n === 1 ? "group" : "groups"}`,
   // You.
   name: "Name",
   rename: "Change your name",
@@ -1004,6 +1013,10 @@ export const HOUSE_LOWER_COPY = {
   owesYou: (who: string, amount: string) => `${who} still owes you ${amount}`,
   youOwe: (whom: string, amount: string) => `you still owe ${whom} ${amount}`,
   costsNothing: "You’re square with everyone, so it costs you nothing.",
+  /** The only admin, with others still in the house: the database won't let them go yet. */
+  lastAdmin: "You’re the only admin, so you can’t leave yet. Make someone else an admin first, from their page.",
+  /** The last one out, after what it costs. */
+  lastOne: "Nobody will be left in the house, and its invite will stop working.",
   /** Until the Stake is read, and if it can't be. */
   costReading: "Working out what leaving costs you…",
   costUnread: "Couldn’t read the Stake, so this can’t say what leaving costs you.",

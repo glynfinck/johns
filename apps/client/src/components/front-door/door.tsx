@@ -5,7 +5,7 @@ import { Pressable, ScrollView, StyleSheet, View, useWindowDimensions } from 're
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { Card } from '@/components/card';
-import { HazardTape } from '@/components/hazard-tape';
+import { HazardTape, SIGN_TAPE } from '@/components/hazard-tape';
 import { Body, Heading, Meta } from '@/components/text';
 import { Wordmark } from '@/components/wordmark';
 import { GUTTER, INSET, SECTION_GAP, SPACE, TAP, useTheme, WIDE } from '@/theme';
@@ -15,9 +15,6 @@ import { GUTTER, INSET, SECTION_GAP, SPACE, TAP, useTheme, WIDE } from '@/theme'
  * invite. Wide enough on a laptop for a new house's defaults line in full.
  */
 const FORM_MAX = 520;
-
-/** The tape's height across the top of a Sign. */
-const TAPE = 8;
 
 /**
  * A page from before you have a house: the pavement, the boxed wordmark on
@@ -77,7 +74,7 @@ export function Sign({ children, testID }: { children: ReactNode; testID?: strin
   return (
     <Card style={styles.sign} testID={testID}>
       <View style={styles.tape}>
-        <HazardTape height={TAPE} />
+        <HazardTape />
       </View>
       {children}
     </Card>
@@ -127,7 +124,7 @@ const styles = StyleSheet.create({
   },
   // The wordmark's link is a thumb tall, like every other control.
   home: { alignSelf: 'flex-start', minHeight: TAP, justifyContent: 'center' },
-  sign: { paddingTop: TAPE + SPACE.xl, gap: SPACE.xl },
+  sign: { paddingTop: SIGN_TAPE + SPACE.xl, gap: SPACE.xl },
   tape: { position: 'absolute', top: 0, left: 0, right: 0 },
   heading: { gap: SPACE.sm },
   foot: { paddingHorizontal: INSET, alignItems: 'flex-start' },

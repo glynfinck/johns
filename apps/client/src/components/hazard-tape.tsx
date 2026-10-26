@@ -6,6 +6,9 @@ import { useTheme } from '@/theme';
 
 type Size = number | `${number}%`;
 
+/** The tape's height across the top of a brand page's sign or the invite sheet. */
+export const SIGN_TAPE = 8;
+
 /**
  * Hazard tape: marks what is late or missed, the way a cone would. A strip of
  * amber and ink: along the top by default, or down a side with a narrow
@@ -14,7 +17,7 @@ type Size = number | `${number}%`;
  * two jobs there; the amber tape is for the brand screens.
  */
 export function HazardTape({
-  height = 8,
+  height = SIGN_TAPE,
   width = '100%',
   tone = 'hivis',
 }: {

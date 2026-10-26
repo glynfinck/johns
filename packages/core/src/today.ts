@@ -2,10 +2,10 @@ import { tz } from "@date-fns/tz";
 import { differenceInCalendarDays, format } from "date-fns";
 
 import { currentOrNext, type AwayPeriod } from "./away";
-import { isOpen, TODAY_ORDER, type BoardItem, type DisputeView, type WeekBoard } from "./board";
+import { byDoneLatest, isOpen, TODAY_ORDER, type BoardItem, type DisputeView, type WeekBoard } from "./board";
 import { FOCUS_SHELL_COPY, JOHN_SHEET_COPY, NEXT_UP_COPY } from "./copy";
 import type { Currency, HouseRules } from "./domain";
-import { dateRange, dueInLine, firstName, pointsLabel, relative, sinceLabel } from "./format";
+import { dateRange, dueInLine, firstName, pointsLabel, relative, sinceLabel, STATUS_LABEL, STATUS_MARK } from "./format";
 import { johnKind } from "./john-row";
 import { formatMoney } from "./money";
 import type { LiveStatus } from "./outcome";
@@ -58,14 +58,14 @@ export function nextUp(mine: readonly BoardItem[]): BoardItem | null {
  * The rest of your week beside the John that Next up shows (`shownId`):
  * what's still going (to do, being checked, disputed, and a missed John,
  * which keeps its hazard in view) in Today's order, and what's finished,
- * for the "Done (n)" fold.
+ * for the "Done (n)" fold, the latest done first, as Week folds it.
  */
 export function restOfWeek(
   mine: readonly BoardItem[],
   shownId: string | null,
 ): { going: BoardItem[]; finished: BoardItem[] } {
   const others = inTodayOrder(mine).filter((i) => i.id !== shownId);
-  return { going: others.filter((i) => !FOLDED.has(i.status)), finished: others.filter((i) => FOLDED.has(i.status)) };
+  return { going: others.filter((i) => !FOLDED.has(i.status)), finished: others.filter((i) => FOLDED.has(i.status)).sort(byDoneLatest) };
 }
 
 /**
@@ -109,6 +109,8 @@ export type NextUpState =
   /** You're away today, until this local date (the last day away). */
   | { kind: "away"; until: string }
   | { kind: "john"; item: BoardItem }
+  /** Nothing of yours to do, but the house is voting on a tick of yours: it may come back. */
+  | { kind: "voting"; item: BoardItem }
   /** Nothing of yours left to do; new Johns come when the week turns over, at `until`. */
   | { kind: "clear"; until: Date; nothingYours: boolean };
 
@@ -141,12 +143,21 @@ export function nextUpState(input: {
   if (input.awayUntil) return { kind: "away", until: input.awayUntil };
   const item = nextUp(mine);
   if (item) return { kind: "john", item };
+  // Not clear yet while the house might say a tick of yours wasn't done.
+  const disputed = mine.find((i) => i.status === "disputed");
+  if (disputed) return { kind: "voting", item: disputed };
   return { kind: "clear", until: board.week.endsAt, nothingYours: mine.length === 0 };
 }
 
-/** "You're clear until Wed": the day the week turns over, in the house's zone. */
-export function clearUntil(until: Date, zone: string): string {
-  return NEXT_UP_COPY.clear(format(until, "EEE", { in: tz(zone) }));
+/**
+ * "You're clear until Wed": the day the week turns over, in the house's
+ * zone, with its date when the day alone could be read as today or this
+ * week's ("until Mon 2 Nov", on a Monday or six days out).
+ */
+export function clearUntil(until: Date, zone: string, now: Date): string {
+  const inZone = tz(zone);
+  const days = differenceInCalendarDays(until, now, { in: inZone });
+  return NEXT_UP_COPY.clear(format(until, days >= 6 || days % 7 === 0 ? "EEE d MMM" : "EEE", { in: inZone }));
 }
 
 /**
@@ -375,7 +386,8 @@ export function sheetWhen(
     return { sign: "overdue", text };
   }
   if (item.status === "disputed" && item.dispute) {
-    return { sign: "disputed", text: JOHN_SHEET_COPY.disputedBy(called(people, item.dispute.raisedBy)) };
+    const raiser = item.dispute.raisedBy === viewerId ? JOHN_SHEET_COPY.byYou : called(people, item.dispute.raisedBy);
+    return { sign: "disputed", text: JOHN_SHEET_COPY.disputedBy(raiser) };
   }
   const due = JOHN_SHEET_COPY.due(dueInLine(item.dueAt, now, zone));
   if (!isOpen(item.status)) return { sign: null, text: due };
@@ -454,6 +466,17 @@ export function cantOptions(
   return { immunity: Math.max(0, me.immunityTokens), swapFor };
 }
 
+/**
+ * Whether a swap token can be spent this week, the "Swap ready" tag: you
+ * hold one, and the swap has something to trade (cantOptions' rule: one of
+ * your Johns still open, and a housemate's).
+ */
+export function canSwap(board: WeekBoard, me: { userId: string; swapTokens: number } | null): boolean {
+  if (!me || me.swapTokens <= 0) return false;
+  const swapOnly = { userId: me.userId, swapTokens: me.swapTokens, immunityTokens: 0 };
+  return board.items.some((item) => (cantOptions(item, board, swapOnly)?.swapFor.length ?? 0) > 0);
+}
+
 /** A housemate's open John as the swap lists it: "Tom · today 21:00 · 3 pts", or "Tom · was due Sun · 1 pt" overdue. */
 export function swapMeta(item: BoardItem, people: readonly Person[], rules: HouseRules, now: Date): string {
   const due =
@@ -461,6 +484,39 @@ export function swapMeta(item: BoardItem, people: readonly Person[], rules: Hous
       ? NEXT_UP_COPY.wasDue(sinceLabel(item.dueAt, now, rules.timezone))
       : dueInLine(item.dueAt, now, rules.timezone);
   return [firstNameIn(people, item.userId), due, pointsLabel(item.points)].join(" · ");
+}
+
+/**
+ * One of the swap's choices: its meta line, and what a screen reader hears.
+ * Its status's word (overdue, due soon) is always said, and leads the meta
+ * once it's picked, when the tick takes its mark's place.
+ */
+export function swapChoice(
+  item: BoardItem,
+  people: readonly Person[],
+  rules: HouseRules,
+  now: Date,
+  chosen: boolean,
+): { meta: string; label: string } {
+  const meta = swapMeta(item, people, rules, now);
+  const word = STATUS_MARK[item.status].tone === "none" ? null : STATUS_LABEL[item.status];
+  return {
+    meta: chosen && word ? `${word} · ${meta}` : meta,
+    label: [item.name, word, meta].filter(Boolean).join(", "),
+  };
+}
+
+/**
+ * What undoing a tick of yours costs, before it's undone: nothing before
+ * the John's due time, or when the tick was late already. After it, the
+ * John is overdue at once and ticking it again counts as late, so this says
+ * so, and what late costs (capped at `room`, what's left of your stake).
+ * Null when an undo costs nothing.
+ */
+export function undoWarning(item: Pick<BoardItem, "dueAt" | "doneAt">, rules: HouseRules, now: Date, room: number | null = null): string | null {
+  if (now.getTime() <= item.dueAt.getTime()) return null;
+  if (item.doneAt && item.doneAt.getTime() > item.dueAt.getTime()) return null;
+  return JOHN_SHEET_COPY.undoLate(forfeits(rules, room).late);
 }
 
 /** Everything Today shows, shaped from what the screen reads. */

@@ -34,10 +34,10 @@ describe('apiPost', () => {
   });
 
   it("passes on the API's sentence and status when it refuses", async () => {
-    fetchMock.mockResolvedValue(reply(404, { error: "That isn't in your house." }));
+    fetchMock.mockResolvedValue(reply(404, { error: "That isn’t in your house." }));
     const refusal = await apiPost('/api/fresh', {}, FreshResponse).catch((e: unknown) => e);
     expect(refusal).toBeInstanceOf(ApiRequestError);
-    expect(refusal).toMatchObject({ message: "That isn't in your house.", status: 404 });
+    expect(refusal).toMatchObject({ message: "That isn’t in your house.", status: 404 });
   });
 
   it('says something general when a refusal has no sentence', async () => {

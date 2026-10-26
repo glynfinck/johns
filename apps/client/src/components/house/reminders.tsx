@@ -71,14 +71,11 @@ export function Reminders({ userId, labelled = true }: { userId: string; labelle
       {labelled ? <SectionLabel>{ME_COPY.reminders}</SectionLabel> : null}
       {support === 'unsupported' ? (
         <Meta>{REMINDERS_COPY.unsupported}</Meta>
-      ) : on === null ? null : (
-        <View style={styles.start}>
-          {on ? (
-            <Button variant="outline" icon={BellOffIcon} label={REMINDERS_COPY.off} disabled={busy} onPress={() => void disable()} />
-          ) : (
-            <Button icon={BellIcon} label={REMINDERS_COPY.on} disabled={busy} onPress={() => void enable()} testID="enable-push" />
-          )}
-        </View>
+      ) : on === null ? null : on ? (
+        // Across the sheet, as every sheet's buttons are.
+        <Button variant="outline" icon={BellOffIcon} label={REMINDERS_COPY.off} disabled={busy} onPress={() => void disable()} />
+      ) : (
+        <Button icon={BellIcon} label={REMINDERS_COPY.on} disabled={busy} onPress={() => void enable()} testID="enable-push" />
       )}
       {problem ? <Alert message={problem} /> : null}
       <View accessibilityLiveRegion="polite">{notice ? <Meta>{notice}</Meta> : null}</View>
@@ -88,5 +85,4 @@ export function Reminders({ userId, labelled = true }: { userId: string; labelle
 
 const styles = StyleSheet.create({
   stack: { gap: SPACE.sm },
-  start: { alignItems: 'flex-start' },
 });

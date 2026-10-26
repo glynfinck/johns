@@ -1,4 +1,4 @@
-import { DOOR, FRONT_DOOR_COPY, inviteCode, NO_HOUSE_COPY, SIGN_IN_COPY } from '@app/core';
+import { DOOR, FRONT_DOOR_COPY, inviteCode, NO_HOUSE_COPY, PAGE_TITLE, SIGN_IN_COPY } from '@app/core';
 import { router } from 'expo-router';
 import { LogOutIcon } from 'lucide-react-native';
 import { useState } from 'react';
@@ -32,7 +32,7 @@ export default function Welcome() {
 
   return (
     <Door testID="welcome-screen">
-      <PageTitle />
+      <PageTitle page={PAGE_TITLE.welcome} />
       <Sign>
         <SignHeading title={NO_HOUSE_COPY.heading} body={FRONT_DOOR_COPY.welcome} />
         <Field

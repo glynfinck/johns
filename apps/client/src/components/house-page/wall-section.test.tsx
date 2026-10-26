@@ -107,12 +107,12 @@ it('tells each in one sentence with first names, and a meta line with when', asy
   await open();
   const [bath, dispute, hob, joined] = await rows();
   expect(bath).toHaveTextContent(/Sam ticked Clean the bath.*Checking · 3h/);
-  expect(dispute).toHaveTextContent(/Sam disputed your Wipe the hob.*“Still greasy round the back of the rings” · 4h/);
+  expect(dispute).toHaveTextContent(/Sam disputed your tick on Wipe the hob.*“Still greasy round the back of the rings” · 4h/);
   expect(hob).toHaveTextContent(/You ticked Wipe the hob/);
   expect(joined).toHaveTextContent(/Sam moved in.*New housemate/);
   expect(target(bath)).toHaveAccessibleName('Sam ticked Clean the bath, Checking · 3h');
   // A sentence gets two lines before it's cut short.
-  expect(within(dispute).getByText('Sam disputed your Wipe the hob')).toHaveProp('numberOfLines', 2);
+  expect(within(dispute).getByText('Sam disputed your tick on Wipe the hob')).toHaveProp('numberOfLines', 2);
 });
 
 it("gives a housemate's tick its Nice one, selected once it's yours, and takes it back", async () => {
@@ -224,7 +224,7 @@ it('puts a reaction back and says why under the row it was made on, until anothe
   expect(alert).toHaveTextContent("You can't react to that.");
   // Straight after the bath's row, before the dispute's.
   const order = within(screen.getByTestId('wall-section')).getAllByText(/Sam ticked Clean the bath|You can't react|Sam disputed/);
-  expect(order.map((t) => t.props.children)).toEqual(['Sam ticked Clean the bath', "You can't react to that.", 'Sam disputed your Wipe the hob']);
+  expect(order.map((t) => t.props.children)).toEqual(['Sam ticked Clean the bath', "You can't react to that.", 'Sam disputed your tick on Wipe the hob']);
   await waitFor(() => expect(within(bath).getByTestId('nice-one')).toBeSelected());
   await fireEvent.press(within(joined).getByRole('button'));
   expect(screen.queryByRole('alert')).toBeNull();

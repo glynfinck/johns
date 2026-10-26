@@ -42,6 +42,12 @@ export const RADIUS = BIN_NIGHT.radius;
 /** Width from which the web layout spreads out (Tailwind's `lg`): the rail instead of the tabs. */
 export const WIDE = 1024;
 
+/** Below this window width (a small phone) a few controls tighten so their words aren't cut short. */
+export const NARROW = 360;
+
+/** The rail's width down the window's left, from WIDE. */
+export const RAIL = 232;
+
 // Focus's layout, in points. A group or card starts GUTTER in from the page's
 // edge and its content INSET further in, so everything readable lines up on
 // one leading edge (32 on a phone): titles, section labels, rows' leading

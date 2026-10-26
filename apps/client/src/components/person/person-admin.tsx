@@ -1,23 +1,25 @@
 import { firstName, PERSON_COPY } from '@app/core';
 import { ShieldCheckIcon, ShieldOffIcon, UserMinusIcon } from 'lucide-react-native';
 import { useState } from 'react';
-import { View } from 'react-native';
+import { StyleSheet, View } from 'react-native';
 
 import type { Housemate } from '@/api/board';
 import { removeMember, setRole } from '@/api/settings';
 import { Alert } from '@/components/alert';
 import { ConfirmSheet } from '@/components/confirm-sheet';
-import { GroupItem } from '@/components/group';
+import { Group, GroupItem } from '@/components/group';
 import { Row, RowIcon } from '@/components/row';
 import { Section } from '@/components/section';
 import { useMove } from '@/hooks/use-move';
-import { useTheme } from '@/theme';
+import { SECTION_GAP, useTheme } from '@/theme';
 
 /**
  * What an admin can do about a housemate, on their page: make them an admin
  * (or a housemate again) at once, and remove them from the house in hazard
- * words, after a confirm. Each goes through the calls House's members list
- * uses, and the database decides; a refusal is a sentence where it was made.
+ * words, after a confirm. Remove sits in a group of its own under Admin,
+ * as Leave does on House, so it can't be taken for its neighbour. Each goes
+ * through the calls House's members list uses, and the database decides; a
+ * refusal is a sentence where it was made.
  */
 export function PersonAdmin({ houseId, person }: { houseId: string; person: Housemate }) {
   const { colors } = useTheme();
@@ -28,8 +30,8 @@ export function PersonAdmin({ houseId, person }: { houseId: string; person: Hous
   const admin = person.role === 'admin';
 
   return (
-    <View>
-      <Section label={PERSON_COPY.admin} testID="person-admin">
+    <View testID="person-admin" style={styles.stack}>
+      <Section label={PERSON_COPY.admin}>
         <Row
           leading={<RowIcon icon={admin ? ShieldOffIcon : ShieldCheckIcon} />}
           title={admin ? PERSON_COPY.makeHousemate : PERSON_COPY.makeAdmin}
@@ -43,14 +45,18 @@ export function PersonAdmin({ houseId, person }: { houseId: string; person: Hous
             <Alert message={role.problem} />
           </GroupItem>
         ) : null}
+      </Section>
+      <Group>
         <Row
           leading={<UserMinusIcon size={24} color={colors.hazard} aria-hidden />}
           title={PERSON_COPY.remove(name)}
+          // "Remove Tom from the house" says whole on the narrowest phone.
+          titleLines={2}
           tone="hazard"
           onPress={() => setConfirming(true)}
           testID="remove-person"
         />
-      </Section>
+      </Group>
       <ConfirmSheet
         visible={confirming}
         title={PERSON_COPY.removeTitle(name)}
@@ -70,3 +76,7 @@ export function PersonAdmin({ houseId, person }: { houseId: string; person: Hous
     </View>
   );
 }
+
+const styles = StyleSheet.create({
+  stack: { gap: SECTION_GAP },
+});

@@ -109,7 +109,7 @@ describe('turnRemindersOn', () => {
 
   it("throws when the database won't keep it", async () => {
     mockInsert = { error: { code: '42501', message: 'denied' } };
-    await expect(load().turnRemindersOn('ava')).rejects.toThrow("You can't do that.");
+    await expect(load().turnRemindersOn('ava')).rejects.toThrow("You can’t do that.");
   });
 });
 

@@ -1,4 +1,4 @@
-import { BIN_NIGHT, DEAL_COPY } from '@app/core';
+import { BIN_NIGHT, DEAL_COPY, NEXT_UP_COPY } from '@app/core';
 import { QueryClientProvider } from '@tanstack/react-query';
 import { fireEvent, render, screen } from '@testing-library/react-native';
 import type { ReactNode } from 'react';
@@ -22,9 +22,9 @@ beforeEach(() => {
   deal.mockResolvedValue(undefined);
 });
 
-it('starts the house in amber, at its own width on the leading edge, and deals the week', async () => {
+it('starts the house in amber, "Deal week 1" as on every screen, at its own width on the leading edge, and deals the week', async () => {
   await render(<DealButton houseId="h1" />, { wrapper: House });
-  const button = screen.getByRole('button', { name: DEAL_COPY.first });
+  const button = screen.getByRole('button', { name: NEXT_UP_COPY.dealWeek1 });
   expect(button).toHaveStyle({ backgroundColor: light.hivis });
   expect(button.parent).toHaveStyle({ alignItems: 'flex-start' });
   await fireEvent.press(button);

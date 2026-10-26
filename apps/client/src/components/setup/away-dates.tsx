@@ -62,7 +62,8 @@ export function AwayDates({
           disabled={from === 0}
           onPress={() => setFrom((was) => Math.max(0, was - STEP))}
         />
-        <Text style={[type.rowTitle, styles.span]} numberOfLines={1} accessibilityLiveRegion="polite">
+        {/* Two lines where a small phone can't fit "December 2026–January 2027" on one. */}
+        <Text style={[type.rowTitle, styles.span]} numberOfLines={2} accessibilityLiveRegion="polite">
           {span}
         </Text>
         <Button variant="ghost" icon={ChevronRightIcon} label={SETUP_COPY.later} iconOnly onPress={() => setFrom((was) => was + STEP)} />
@@ -97,14 +98,14 @@ export function AwayDates({
                   end && { backgroundColor: colors.foreground },
                   inside && { backgroundColor: colors.secondary },
                   date === today && !end && { borderColor: colors.foreground, borderWidth: 2 },
-                  past && styles.past,
                 ]}
               >
                 {/* The 1st of a month says which month it starts, over its number. */}
                 {date.endsWith('-01') ? (
                   <Text style={[type.sectionLabel, styles.month, { color: ink }]}>{monthLabel(date.slice(0, 7)).slice(0, 3)}</Text>
                 ) : null}
-                <Text style={[type.body, styles.date, { color: ink }]}>{Number(date.slice(8))}</Text>
+                {/* A day gone by stays readable, muted and in a lighter weight, not faded. */}
+                <Text style={[type.body, styles.date, past && styles.pastDate, { color: ink }]}>{Number(date.slice(8))}</Text>
               </Pressable>
             );
           })}
@@ -123,5 +124,5 @@ const styles = StyleSheet.create({
   day: { flex: 1, minHeight: TAP, alignItems: 'center', justifyContent: 'center', borderRadius: RADIUS },
   month: { position: 'absolute', top: 0 },
   date: { fontFamily: FONT.bold },
-  past: { opacity: 0.4 },
+  pastDate: { fontFamily: FONT.regular },
 });

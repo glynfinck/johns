@@ -124,7 +124,7 @@ export function describeEvent(e: WallEvent, nameOf: (userId: string | null) => s
   const who = nameOf(e.userId);
   const john = String(e.data.name ?? "a John");
   const against = nameOf((e.data.against as string) ?? null);
-  const possessive = (name: string) => (name === "You" ? "your" : `${name}'s`);
+  const possessive = (name: string) => (name === "You" ? "your" : `${name}’s`);
   const b = (text: string): Part => ({ text, bold: true });
   const t = (text: string): Part => ({ text });
   switch (e.kind) {

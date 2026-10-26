@@ -75,7 +75,7 @@ describe("POST /api/disputes", () => {
     const { house, john, owner } = await tickedHouse(["Ava", "Ben"]);
     const res = await dispute(someoneElse(house, owner.userId), { assignmentId: john.id, reason: "   " });
     expect(res.status).toBe(400);
-    expect(await res.json()).toEqual({ error: "Say what's wrong with it." });
+    expect(await res.json()).toEqual({ error: "Say what’s wrong with it." });
     expect((await stateOf(john.id)).disputes).toEqual([]);
   });
 
@@ -108,7 +108,7 @@ describe("POST /api/disputes", () => {
     const stranger = await signedInUser("Zed");
     const outsider = await dispute(stranger, { assignmentId: john.id, reason: "Who?" });
     expect(outsider.status).toBe(403);
-    expect(await outsider.json()).toEqual({ error: "That isn't in your house." });
+    expect(await outsider.json()).toEqual({ error: "That isn’t in your house." });
     expect((await stateOf(john.id)).disputes).toEqual([]);
   });
 
@@ -118,7 +118,7 @@ describe("POST /api/disputes", () => {
     expect((await dispute(first, { assignmentId: john.id, reason: "Still full" })).status).toBe(200);
     const second = await dispute(voterIn(house, owner.userId, first.userId), { assignmentId: john.id, reason: "Me too" });
     expect(second.status).toBe(409);
-    expect(await second.json()).toEqual({ error: "Someone's already disputing that tick." });
+    expect(await second.json()).toEqual({ error: "Someone’s already disputing that tick." });
   });
 
   it("answers a preflight from the app's web build", async () => {
@@ -151,7 +151,7 @@ describe("POST /api/disputes/:id/votes", () => {
     const { owner, disputeId, john } = await openDispute();
     const res = await castVote(owner, disputeId, { uphold: false });
     expect(res.status).toBe(403);
-    expect(await res.json()).toEqual({ error: "You can't vote on your own John." });
+    expect(await res.json()).toEqual({ error: "You can’t vote on your own John." });
     expect((await stateOf(john.id)).disputes[0].resolution).toBeNull();
   });
 

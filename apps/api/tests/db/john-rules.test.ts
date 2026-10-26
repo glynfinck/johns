@@ -181,6 +181,7 @@ describe("confirm_payment", () => {
   it("lets only the person owed say they were paid, and never more than owed", async () => {
     const house = await makeHouse(["Ava", "Ben"]);
     const [ava, ben] = house.everyone;
+    await adminClient().from("month_closes").insert({ house_id: house.id, month: "2026-09" });
     await adminClient().from("ledger").insert([
       { house_id: house.id, user_id: ben.userId, kind: "share", amount_minor: -300, month: "2026-09" },
       { house_id: house.id, user_id: ava.userId, kind: "share", amount_minor: 300, month: "2026-09" },
@@ -191,6 +192,22 @@ describe("confirm_payment", () => {
     const { data } = await adminClient().from("ledger").select("user_id, amount_minor").eq("house_id", house.id);
     const sum = (id: string) => data!.filter((r) => r.user_id === id).reduce((s, r) => s + r.amount_minor, 0);
     expect([sum(ava.userId), sum(ben.userId)]).toEqual([0, 0]);
+  });
+
+  it("counts what the app offers: closed months and payments, not this month's forfeits, which aren't shared out yet", async () => {
+    const house = await makeHouse(["Ava", "Ben"]);
+    const [ava, ben] = house.everyone;
+    await adminClient().from("month_closes").insert({ house_id: house.id, month: "2026-09" });
+    await adminClient().from("ledger").insert([
+      { house_id: house.id, user_id: ben.userId, kind: "share", amount_minor: -401, month: "2026-09" },
+      { house_id: house.id, user_id: ava.userId, kind: "share", amount_minor: 401, month: "2026-09" },
+      // Ava was late this month, still open: her whole ledger says 301.
+      { house_id: house.id, user_id: ava.userId, kind: "forfeit", amount_minor: -100, month: "2099-01" },
+    ]);
+    expectOk(await ava.db.rpc("confirm_payment", { p_house: house.id, p_from: ben.userId, p_amount: 401 }));
+    // And an open month's entries never make a debt of their own.
+    await adminClient().from("ledger").insert({ house_id: house.id, user_id: ben.userId, kind: "forfeit", amount_minor: -300, month: "2099-01" });
+    expectRule(await ava.db.rpc("confirm_payment", { p_house: house.id, p_from: ben.userId, p_amount: 1 }), "more_than_owed");
   });
 });
 
