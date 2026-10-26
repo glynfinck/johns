@@ -921,10 +921,134 @@ export const STAKE_HISTORY_COPY = {
 
 /** House, the lower half: the whole Wall, by day. */
 export const WALL_FEED_COPY = {
+  /** House's way to the whole Wall, and what it says to a screen reader. */
+  seeAll: "See all",
+  seeAllOf: (wall: string) => `See all of ${wall}`,
+  emptyTitle: "Nothing on the Wall yet",
+  reading: "Reading the Wall",
+  unreadable: "Couldn’t read the Wall. Check the connection.",
+  loadOlder: "Load older",
+  /** Under the oldest event there is. */
+  everything: "That’s everything.",
+  today: "Today",
+  yesterday: "Yesterday",
+  /** How long ago, after the meta line's words: "Checking · 3h". */
+  justNow: "just now",
+  minutes: (n: number) => `${n} min`,
+  hours: (n: number) => `${n}h`,
+  days: (n: number) => `${n} ${n === 1 ? "day" : "days"}`,
+  /** Who did it, when the event says nobody. */
+  someone: "Someone",
+  /** The viewer, as a sentence's subject, its object, and an owner. */
+  you: "You",
+  youObject: "you",
+  your: "your",
+  /** A John the event doesn't name. */
+  aJohn: "a John",
+  theJohn: "the John",
+  // Each event as a row's one sentence, with first names. `whose` arrives as
+  // "Priya’s", "your" or "a former housemate’s".
+  ticked: (who: string, john: string) => `${who} ticked ${john}`,
+  missed: (who: string, john: string) => `${who} missed ${john}`,
+  disputed: (who: string, whose: string, john: string) => `${who} disputed ${whose} ${john}`,
+  struckOut: (whose: string, john: string) => `${whose} ${john} was struck out`,
+  stands: (whose: string, john: string) => `${whose} ${john} stands`,
+  earnedImmunity: (who: string) => `${who} earned immunity`,
+  toppedWeek: (who: string) => `${who} topped the week`,
+  skipped: (who: string, john: string) => `${who} skipped ${john}`,
+  swapped: (who: string, gave: string, whose: string, took: string) => `${who} swapped ${gave} for ${whose} ${took}`,
+  away: (who: string, range: string) => `${who} is away ${range}`,
+  youAway: (range: string) => `You’re away ${range}`,
+  joined: (who: string) => `${who} moved in`,
+  /** `month` is null for an event that doesn't say which. */
+  monthClosed: (month: string | null) => (month ? `${month} is closed` : "The month is closed"),
+  /** A payment, to the two people in it: the amount. */
+  paidYou: (who: string, amount: string) => `${who} paid you ${amount}`,
+  youPaid: (whom: string, amount: string) => `You paid ${whom} ${amount}`,
+  /** A payment, to everyone else: only that it was settled. */
+  paid: (who: string, whom: string) => `${who} paid ${whom}`,
+  // The meta line's words before the time.
+  checking: "Checking",
+  disputedTick: "Disputed",
+  struck: "Struck out",
+  onTime: "On time",
+  late: "Late",
+  voted: "The house voted",
+  clean: (weeks: number) => `${weeks} clean ${weeks === 1 ? "week" : "weeks"} in a row`,
+  swapEarned: "Earned a swap",
+  immunityUsed: "Immunity used",
+  swap: "Swap",
+  timeAway: "Time away",
+  dueBefore: (n: number, you: boolean) =>
+    `${n} ${n === 1 ? "John" : "Johns"} due before ${you ? "you go" : "they go"}`,
+  newHousemate: "New housemate",
+  sharedOut: "The Stake is shared out",
+  settled: "Settled up",
+  // Several in a row by one person, folded into one.
+  tickedMany: (who: string, n: number) => `${who} ticked ${n} Johns`,
+  missedMany: (who: string, n: number) => `${who} missed ${n} Johns`,
+  /** The meta line: its words, if any, then the time. */
+  meta: (detail: string | null, when: string) => (detail ? `${detail} · ${when}` : when),
+  /** When, in full, in an event's sheet: "Today, 09:39", "Sat 24 Oct, 18:40". */
+  stamp: (day: string, clock: string) => `${day}, ${clock}`,
+  /** A row, to a screen reader: the sentence, then its meta line. */
+  row: (title: string, meta: string) => `${title}, ${meta}`,
+  // Reactions.
+  reactions: "Reactions",
+  /** The way to all four reactions on a row that has none yet. */
+  react: "React",
+  /** A reaction and how many gave it, to a screen reader: "Nice one, 2". */
+  tally: (label: string, count: number) => `${label}, ${count}`,
+  /** A reaction's button in an event's sheet: "Nice one · 2". */
+  reactionCount: (label: string, count: number) => (count > 0 ? `${label} · ${count}` : label),
 } as const;
 
 /** House, the lower half: the Wall's latest, House setup's rows, You, and leaving. */
 export const HOUSE_LOWER_COPY = {
+  /** House setup's note on the right: changing these changes the house. */
+  setupNote: "Affects everyone",
+  johns: "Johns",
+  rules: "Rules",
+  away: "Time away",
+  groups: "Groups",
+  // Each setup row's value.
+  noJohns: "None yet",
+  johnsValue: (count: number, perWeek: string) => `${count} · ${perWeek}`,
+  perWeek: (points: number) =>
+    points < 1 ? "less than 1 pt a week" : `about ${points} ${points === 1 ? "pt" : "pts"} a week`,
+  /** `stake` is null for a house that stakes nothing. */
+  rulesValue: (stake: string | null, late: string, missed: string) =>
+    `${stake ? `${stake} stake` : "No stake"} · ${late} late · ${missed} missed`,
+  nobodyAway: "Nobody’s away",
+  awayValue: (who: string, range: string) => `${who}, ${range}`,
+  noGroups: "None",
+  // You.
+  name: "Name",
+  rename: "Change your name",
+  save: "Save",
+  reminders: "Reminders",
+  on: "On",
+  off: "Off",
+  look: "Look",
+  signOut: "Sign out",
+  // Leaving, and what it costs.
+  leave: (house: string) => `Leave ${house}`,
+  leaveAsk: (house: string) => `Leave ${house}?`,
+  leaveConfirm: "Leave the house",
+  loseShare: (amount: string, month: string | null) =>
+    `you’ll lose your ${amount} share of ${month ? `${month}’s` : "this month’s"} stake so far`,
+  owesYou: (who: string, amount: string) => `${who} still owes you ${amount}`,
+  youOwe: (whom: string, amount: string) => `you still owe ${whom} ${amount}`,
+  costsNothing: "You’re square with everyone, so it costs you nothing.",
+  /** Until the Stake is read, and if it can't be. */
+  costReading: "Working out what leaving costs you…",
+  costUnread: "Couldn’t read the Stake, so this can’t say what leaving costs you.",
+  /** "a, b, and c": the clauses of what leaving costs. */
+  list: (clauses: readonly string[]) =>
+    clauses.length < 2 ? clauses.join("") : `${clauses.slice(0, -1).join(", ")}, and ${clauses[clauses.length - 1]}`,
+  // The foot of House.
+  noMoney: "Johns never moves money.",
+  privacy: "Privacy",
 } as const;
 
 /** Setup track: the Johns, Rules, Time away and Groups pages. */

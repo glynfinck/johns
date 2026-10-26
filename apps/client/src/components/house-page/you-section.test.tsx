@@ -1,0 +1,137 @@
+import { HOUSE_COPY, HOUSE_LOWER_COPY, ME_COPY } from '@app/core';
+import { fireEvent, screen, waitFor, within } from 'expo-router/testing-library';
+
+import { signOut } from '@/api/auth';
+import { loadHouse } from '@/api/board';
+import { renameMe } from '@/api/profile';
+import { reminderSupport, remindersOn } from '@/api/push';
+import { authStorage } from '@/api/storage';
+import { useHouse } from '@/hooks/use-house';
+import { snapshot } from '@/testing/house';
+import { renderPages } from '@/testing/pages';
+
+import { YouSection } from './you-section';
+
+jest.mock('@/api/auth', () => ({ signOut: jest.fn() }));
+jest.mock('@/api/board', () => ({ loadHouse: jest.fn() }));
+jest.mock('@/api/house', () => ({ catchUp: jest.fn() }));
+jest.mock('@/api/profile', () => ({ renameMe: jest.fn() }));
+jest.mock('@/api/push', () => ({
+  reminderSupport: jest.fn(),
+  remindersOn: jest.fn(),
+  turnRemindersOn: jest.fn(),
+  turnRemindersOff: jest.fn(),
+}));
+jest.mock('@/api/supabase', () => ({ supabase: {} }));
+
+/** You on its own, once the house is read. */
+async function open() {
+  function Host() {
+    const { view } = useHouse('h1', 'priya');
+    return view ? <YouSection houseId="h1" userId="priya" view={view} /> : null;
+  }
+  await renderPages({ 'house/index': Host }, '/house');
+  await screen.findByTestId('you-section');
+}
+
+beforeEach(() => {
+  jest.clearAllMocks();
+  authStorage!.clear();
+  (loadHouse as jest.Mock).mockResolvedValue(snapshot());
+  (reminderSupport as jest.Mock).mockReturnValue('none');
+  (remindersOn as jest.Mock).mockResolvedValue(false);
+  for (const move of [renameMe, signOut]) (move as jest.Mock).mockResolvedValue(undefined);
+});
+
+it('shows your name, and changes it in a sheet', async () => {
+  await open();
+  expect(screen.getByRole('header', { name: HOUSE_COPY.you })).toBeOnTheScreen();
+  expect(screen.getByTestId('to-name')).toHaveTextContent(/Name.*Priya/);
+  await fireEvent.press(within(screen.getByTestId('to-name')).getByRole('button'));
+  const sheet = within(screen.getByTestId('name-sheet'));
+  expect(sheet.getByRole('header', { name: HOUSE_LOWER_COPY.rename })).toBeOnTheScreen();
+  // Nothing to save until the name is different.
+  expect(sheet.getByTestId('save-name')).toBeDisabled();
+  await fireEvent.changeText(sheet.getByLabelText(ME_COPY.name), 'Pri');
+  await fireEvent.press(sheet.getByTestId('save-name'));
+  expect(renameMe).toHaveBeenCalledWith('priya', 'Pri');
+  await waitFor(() => expect(screen.queryByTestId('name-sheet')).toBeNull());
+  // Saved, the house is read again for the new name.
+  await waitFor(() => expect(loadHouse).toHaveBeenCalledTimes(2));
+});
+
+it('saves once from the keyboard, and not at all while the name is unchanged', async () => {
+  let answer: () => void = () => undefined;
+  (renameMe as jest.Mock).mockReturnValue(new Promise<void>((resolve) => (answer = resolve)));
+  await open();
+  await fireEvent.press(within(screen.getByTestId('to-name')).getByRole('button'));
+  const field = within(screen.getByTestId('name-sheet')).getByLabelText(ME_COPY.name);
+  await fireEvent(field, 'submitEditing');
+  expect(renameMe).not.toHaveBeenCalled();
+  await fireEvent.changeText(field, 'Pri');
+  await fireEvent(field, 'submitEditing');
+  await fireEvent(field, 'submitEditing');
+  expect(renameMe).toHaveBeenCalledTimes(1);
+  answer();
+  await waitFor(() => expect(screen.queryByTestId('name-sheet')).toBeNull());
+});
+
+it("says why the name didn't save, in the sheet, and keeps it open", async () => {
+  (renameMe as jest.Mock).mockRejectedValue(new Error('Your name needs a letter or two.'));
+  await open();
+  await fireEvent.press(within(screen.getByTestId('to-name')).getByRole('button'));
+  const sheet = within(screen.getByTestId('name-sheet'));
+  await fireEvent.changeText(sheet.getByLabelText(ME_COPY.name), '  ');
+  await fireEvent.press(sheet.getByTestId('save-name'));
+  expect(await sheet.findByRole('alert')).toHaveTextContent('Your name needs a letter or two.');
+  expect(screen.getByTestId('name-sheet')).toBeOnTheScreen();
+});
+
+it('starts the sheet from your name each time it opens', async () => {
+  await open();
+  await fireEvent.press(within(screen.getByTestId('to-name')).getByRole('button'));
+  await fireEvent.changeText(screen.getByLabelText(ME_COPY.name), 'Half typed');
+  await fireEvent.press(screen.getByTestId('sheet-close'));
+  await fireEvent.press(within(screen.getByTestId('to-name')).getByRole('button'));
+  expect(screen.getByLabelText(ME_COPY.name)).toHaveDisplayValue('Priya');
+});
+
+it('leaves out reminders where this device has none to offer', async () => {
+  await open();
+  expect(screen.queryByTestId('to-reminders')).toBeNull();
+});
+
+it("says whether this device's reminders are on, and holds their switch in a sheet", async () => {
+  (reminderSupport as jest.Mock).mockReturnValue('ready');
+  (remindersOn as jest.Mock).mockResolvedValue(true);
+  await open();
+  await waitFor(() => expect(screen.getByTestId('to-reminders')).toHaveTextContent(/Reminders.*On/));
+  await fireEvent.press(within(screen.getByTestId('to-reminders')).getByRole('button'));
+  const sheet = within(screen.getByTestId('reminders-sheet'));
+  // The control heads itself: the sheet doesn't say Reminders twice.
+  expect(sheet.getAllByText(new RegExp(`^${HOUSE_LOWER_COPY.reminders}$`, 'i'))).toHaveLength(1);
+  expect(sheet.getByTestId('reminders')).toBeOnTheScreen();
+});
+
+it("is as tall before it knows whether reminders are on as after, so nothing below moves", async () => {
+  (reminderSupport as jest.Mock).mockReturnValue('ready');
+  (remindersOn as jest.Mock).mockReturnValue(new Promise(() => undefined));
+  await open();
+  expect(screen.getByTestId('to-reminders')).toHaveStyle({ minHeight: 64 });
+  expect(screen.getByTestId('to-reminders')).not.toHaveTextContent(/On|Off/);
+});
+
+it('chooses the look in the row itself', async () => {
+  await open();
+  const look = within(screen.getByTestId('look'));
+  expect(look.getByRole('radio', { name: 'Auto' })).toBeChecked();
+  await fireEvent.press(look.getByRole('radio', { name: 'Day' }));
+  expect(look.getByRole('radio', { name: 'Day' })).toBeChecked();
+  expect(look.getByRole('radio', { name: 'Auto' })).not.toBeChecked();
+});
+
+it('signs you out', async () => {
+  await open();
+  await fireEvent.press(within(screen.getByTestId('sign-out')).getByRole('button', { name: HOUSE_LOWER_COPY.signOut }));
+  expect(signOut).toHaveBeenCalledTimes(1);
+});
