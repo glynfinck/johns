@@ -6,7 +6,7 @@ import { StyleSheet, View } from 'react-native';
 import { reminderSupport, remindersOn, turnRemindersOff, turnRemindersOn } from '@/api/push';
 import { Alert } from '@/components/alert';
 import { Button } from '@/components/button';
-import { Body, Eyebrow } from '@/components/text';
+import { Meta, SectionLabel } from '@/components/text';
 import { SPACE } from '@/theme';
 
 /**
@@ -66,11 +66,9 @@ export function Reminders({ userId }: { userId: string }) {
 
   return (
     <View style={styles.stack} testID="reminders">
-      <Eyebrow>{ME_COPY.reminders}</Eyebrow>
+      <SectionLabel>{ME_COPY.reminders}</SectionLabel>
       {support === 'unsupported' ? (
-        <Body muted style={styles.small}>
-          {REMINDERS_COPY.unsupported}
-        </Body>
+        <Meta>{REMINDERS_COPY.unsupported}</Meta>
       ) : on === null ? null : (
         <View style={styles.start}>
           {on ? (
@@ -81,7 +79,7 @@ export function Reminders({ userId }: { userId: string }) {
         </View>
       )}
       {problem ? <Alert message={problem} /> : null}
-      <View accessibilityLiveRegion="polite">{notice ? <Body muted style={styles.small}>{notice}</Body> : null}</View>
+      <View accessibilityLiveRegion="polite">{notice ? <Meta>{notice}</Meta> : null}</View>
     </View>
   );
 }
@@ -89,5 +87,4 @@ export function Reminders({ userId }: { userId: string }) {
 const styles = StyleSheet.create({
   stack: { gap: SPACE.sm },
   start: { alignItems: 'flex-start' },
-  small: { fontSize: 13, lineHeight: 18 },
 });

@@ -12,7 +12,7 @@ import { Button } from '@/components/button';
 import { Choice } from '@/components/choice';
 import { Field } from '@/components/field';
 import { Reminders } from '@/components/house/reminders';
-import { Body } from '@/components/text';
+import { Meta } from '@/components/text';
 import { houseKey } from '@/hooks/keys';
 import { useLook } from '@/hooks/look';
 import { useMembership } from '@/hooks/use-membership';
@@ -104,7 +104,7 @@ export function MeCard({
           testID="save-name"
         />
       </View>
-      <View accessibilityLiveRegion="polite">{saved ? <Body muted>{ME_COPY.saved}</Body> : null}</View>
+      <View accessibilityLiveRegion="polite">{saved ? <Meta>{ME_COPY.saved}</Meta> : null}</View>
       {wrong ? <Alert message={wrong} /> : null}
       <Reminders userId={userId} />
       <Choice label={ME_COPY.look} options={LOOK_OPTIONS} value={look} onChange={setLook} />

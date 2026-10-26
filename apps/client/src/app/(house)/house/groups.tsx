@@ -1,16 +1,16 @@
 import { PAGE_TITLE } from '@app/core';
 
-import { Group, GroupItem } from '@/components/group';
+import type { JohnList } from '@/api/settings';
 import { GroupsList } from '@/components/house/groups-list';
 import { HousePage } from '@/components/house/house-page';
-import { useHouse } from '@/hooks/use-house';
+import { useHouse, type HouseView } from '@/hooks/use-house';
 import { useJohnList } from '@/hooks/use-john-list';
 import { useMembership } from '@/hooks/use-membership';
 import { usePull, useReadOnFocus } from '@/hooks/use-refresh';
 
 /**
- * Groups, pushed from House: the parts of the house only some of you share.
- * For now the old House panel; the Setup track rebuilds it.
+ * Groups, pushed from House: the parts of the house only some of you share,
+ * each with who's in it. Admins make and change them.
  */
 export default function GroupsScreen() {
   const { session, house } = useMembership();
@@ -35,19 +35,19 @@ function GroupsFor({ houseId, userId }: { houseId: string; userId: string }) {
       refreshing={refreshing}
       onRefresh={pull}
     >
-      {() => (
-        <Group testID="groups-panel">
-          <GroupItem>
-            <GroupsList
-              houseId={houseId}
-              groups={list.data!.groups}
-              people={view!.snapshot.members}
-              me={userId}
-              editable={view!.me?.role === 'admin'}
-            />
-          </GroupItem>
-        </Group>
-      )}
+      {() => <GroupsPage houseId={houseId} userId={userId} view={view!} list={list.data!} />}
     </HousePage>
+  );
+}
+
+function GroupsPage({ houseId, userId, view, list }: { houseId: string; userId: string; view: HouseView; list: JohnList }) {
+  return (
+    <GroupsList
+      houseId={houseId}
+      groups={list.groups}
+      people={view.snapshot.members}
+      me={userId}
+      editable={view.me?.role === 'admin'}
+    />
   );
 }

@@ -1,18 +1,17 @@
-import { AWAY_COPY, PAGE_TITLE } from '@app/core';
+import { AWAY_COPY, myTrips, PAGE_TITLE, SETUP_COPY } from '@app/core';
 
-import { Group, GroupItem } from '@/components/group';
+import type { AwayView } from '@/api/away';
 import { HousePage } from '@/components/house/house-page';
 import { AwayCalendar, AwayForm, MyTrips } from '@/components/house/time-away';
 import { Section } from '@/components/section';
-import { Body } from '@/components/text';
 import { useAway } from '@/hooks/use-away';
-import { useHouse } from '@/hooks/use-house';
+import { useHouse, type HouseView } from '@/hooks/use-house';
 import { useMembership } from '@/hooks/use-membership';
 import { usePull, useReadOnFocus } from '@/hooks/use-refresh';
 
 /**
- * Time away, pushed from House: who's away when, your own trips, and
- * booking one. For now the old House panel; the Setup track rebuilds it.
+ * Time away, pushed from House: your own trips (cancel one, or say you're
+ * back), who else in the house is away when, and booking a trip.
  */
 export default function AwayScreen() {
   const { session, house } = useMembership();
@@ -37,36 +36,28 @@ function AwayFor({ houseId, userId }: { houseId: string; userId: string }) {
       refreshing={refreshing}
       onRefresh={pull}
     >
-      {() => {
-        const { snapshot } = view!;
-        const { periods, today } = away.data!;
-        return (
-          <>
-            <Group testID="away-panel">
-              <GroupItem>
-                <AwayCalendar
-                  periods={periods}
-                  people={snapshot.members}
-                  me={userId}
-                  today={today}
-                  weekStarts={snapshot.rules.weekStarts}
-                />
-              </GroupItem>
-            </Group>
-            <Section label={AWAY_COPY.yours}>
-              <GroupItem>
-                <MyTrips
-                  houseId={houseId}
-                  periods={periods.filter((p) => p.userId === userId && p.endsOn >= today)}
-                  today={today}
-                />
-                <Body muted>{AWAY_COPY.howItWorks}</Body>
-                <AwayForm houseId={houseId} today={today} weekStarts={snapshot.rules.weekStarts} />
-              </GroupItem>
-            </Section>
-          </>
-        );
-      }}
+      {() => <AwayPage houseId={houseId} userId={userId} view={view!} away={away.data!} />}
     </HousePage>
+  );
+}
+
+function AwayPage({ houseId, userId, view, away }: { houseId: string; userId: string; view: HouseView; away: AwayView }) {
+  const { snapshot } = view;
+  const { periods, today } = away;
+  const mine = myTrips(periods, userId, today);
+  return (
+    <>
+      {mine.length > 0 ? (
+        <Section label={AWAY_COPY.yours} testID="my-trips">
+          <MyTrips houseId={houseId} periods={mine} today={today} />
+        </Section>
+      ) : null}
+      <Section label={SETUP_COPY.whosAway} testID="away-panel">
+        <AwayCalendar periods={periods} people={snapshot.members} me={userId} today={today} weekStarts={snapshot.rules.weekStarts} />
+      </Section>
+      <Section label={AWAY_COPY.book}>
+        <AwayForm houseId={houseId} today={today} weekStarts={snapshot.rules.weekStarts} />
+      </Section>
+    </>
   );
 }

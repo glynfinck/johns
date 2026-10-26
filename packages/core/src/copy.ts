@@ -663,6 +663,75 @@ export const HOUSE_LOWER_COPY = {
 
 /** Setup track: the Johns, Rules, Time away and Groups pages. */
 export const SETUP_COPY = {
+  /** A kind of John as a section of the John list: "Kitchen · 3". */
+  kind: (label: string, count: number) => `${label} · ${count}`,
+  /** In a John's meta line: the tick needs a photo. */
+  photo: "photo",
+  /** How often, for a gap the list doesn't name. */
+  everyWeeks: (weeks: number) => `Every ${weeks} weeks`,
+  noJohns: "No Johns yet",
+  noJohnsBody: "Start with the ones that cause arguments: bins, the bathroom, the kitchen.",
+  /** An empty list, to a housemate who can't add to it: who will. */
+  johnsComing: (names: string) => `${names} will add the Johns.`,
+  johnsComingAdmin: "An admin will add the Johns.",
+  /** The John list's re-deal, asked first. */
+  redealTitle: "Re-deal this week?",
+  redealBody: "Everyone’s Johns will be dealt again from the list as it is now.",
+  redealt: "This week’s Johns were dealt again.",
+  /** A John, read by someone who can't change it. */
+  kindLabel: "Kind",
+  photoLabel: "Photo",
+  /** Under "Needs a photo" in the John form, on one line. */
+  photoMeta: "A tick only counts with a photo.",
+  photoNeeded: "Needed to tick it",
+  photoNot: "Not needed",
+  /** The house rules, read out. */
+  stake: "Stake",
+  perMonth: (amount: string) => `${amount} a month`,
+  noStake: "None",
+  late: "Late John",
+  missed: "Missed John",
+  nothing: "Nothing",
+  disputes: "Disputes",
+  disputeWindow: (hours: number) => (hours === 0 ? "Not allowed" : `within ${hours} ${hours === 1 ? "hour" : "hours"}`),
+  /** How long a tick can be disputed, as a value in the form: "24 hours". */
+  disputeShort: (hours: number) => (hours === 0 ? "None" : `${hours} ${hours === 1 ? "hour" : "hours"}`),
+  away: "Time away",
+  makeup: { 100: "made up in full", 50: "half made up", 0: "not made up" } as Record<number, string>,
+  /** A make-up rate the house has no words for. */
+  makeupPercent: (percent: number) => `${percent}% made up`,
+  weekStarts: "Weeks start",
+  weekStartsAt: (day: string, place: string) => `${day}, ${place} time`,
+  you: "You",
+  /** The last two names in a list: "Sam, Priya and Tom". */
+  and: "and",
+  /** The rules' read-out, with Edit beside it for an admin. */
+  rules: "Rules",
+  /** Under the rules: who can change them. */
+  canChange: (names: string, count: number) => `${names} (${count === 1 ? "admin" : "admins"}) can change these.`,
+  youCanChange: "You can change these.",
+  adminsNobody: "Only admins can change these.",
+  edit: "Edit",
+  /** The rules form's three sections. */
+  money: "Money",
+  fairness: "Fairness",
+  house: "House",
+  cancel: "Cancel",
+  saved: "House rules saved",
+  /** Time away. */
+  whosAway: "Who’s away",
+  /** Who's away, when your own trips are listed above it. */
+  nobodyElse: "Nobody else has booked any time away.",
+  nextWeeks: (range: string) => `The next four weeks, ${range}`,
+  awayNow: "Away now",
+  /** The booking calendar's way back and on, a few weeks at a time. */
+  earlier: "Earlier weeks",
+  later: "Later weeks",
+  book: "Book",
+  /** Groups. */
+  noGroups: "No groups yet",
+  addGroup: "Add a group",
+  groupsNote: "A John that belongs to a group is only handed to the people in it.",
 } as const;
 
 /** Front door track: the front door, starting a house, welcome and privacy. */
