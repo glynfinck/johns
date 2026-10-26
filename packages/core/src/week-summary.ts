@@ -1,20 +1,18 @@
 import { tz } from "@date-fns/tz";
-import { differenceInCalendarDays, format } from "date-fns";
+import { format } from "date-fns";
 
 import { awayDays, currentOrNext, type AwayPeriod } from "./away";
-import { isOpen, type BoardItem } from "./board";
+import type { BoardItem } from "./board";
 import { FOCUS_SHELL_COPY, TABLE_COPY, WEEK_COPY, WEEK_SUMMARY_COPY } from "./copy";
 import { MAKEUP_LABEL } from "./deal";
-import { CATEGORY_LABEL } from "./domain";
-import { dateRange, dueLabel, firstName, formatBalance, pointsLabel, relative, STATUS_LABEL, STATUS_MARK, weekRange } from "./format";
+import { dateRange, firstName, formatBalance, pointsLabel, STATUS_LABEL, STATUS_MARK, weekRange } from "./format";
 import type { LiveStatus } from "./outcome";
-import { pointsEarned } from "./points";
 import { addDaysTo, localDate } from "./week";
 
 // Week: the whole house's week at a glance. A summary whose parts add up to
 // the week's Johns and filter the list, one group per person with finished
-// Johns folded away, each row's meta line and what it can do, and the
-// deal's fairness in a sentence. Pure: every function takes what it needs,
+// Johns folded away, and the deal's fairness in a sentence. Each John's row
+// is john-row.ts's, as on Today. Pure: every function takes what it needs,
 // `now` included.
 
 /** The summary's parts, in the bar's order. Every John is in exactly one. */
@@ -174,12 +172,6 @@ export function weekPersonMeta(p: { done: number; total: number; points: number 
   return `${WEEK_SUMMARY_COPY.doneOf(p.done, p.total)} · ${pointsLabel(p.points)}`;
 }
 
-/** A person's fold: "Done (2)", and how many of those were late ("1 late", in hazard), or null for none. */
-export function weekFold(folded: readonly { status: LiveStatus }[]): { count: number; late: string | null } {
-  const late = folded.filter((i) => i.status === "late").length;
-  return { count: folded.length, late: late > 0 ? WEEK_SUMMARY_COPY.late(late) : null };
-}
-
 /**
  * Someone's time away, as their header says it: the time away that falls in
  * this week (even if it's over), or else their next, if it starts within a
@@ -239,65 +231,6 @@ export function weekRangeLine(startsAt: Date, endsAt: Date, now: Date, zone: str
   return WEEK_SUMMARY_COPY.range(days, ends);
 }
 
-/** What a John's row on Week shows and does, by whose it is and where it has got to. */
-export interface WeekRowPlan {
-  /** The leading circle (excused shows a shield instead). */
-  circle: "open" | "checking" | "done" | "disputed" | "excused";
-  /** What the circle says when it's a picture rather than a checkbox. */
-  circleLabel: string;
-  /** The circle ticks it: yours, and still to do. */
-  ticks: boolean;
-  /**
-   * The one trailing item: the status mark, the points (upcoming, which has
-   * no mark, and done or excused, which the circle already says), Undo (your
-   * tick being checked), or Vote (a dispute waiting for your vote).
-   */
-  trailing: "status" | "points" | "undo" | "vote";
-  /** Its points: what it's worth while it's still to do, what it earned once it's settled. */
-  points: number;
-  /** What the John sheet opens on: a housemate's fresh tick to dispute, a dispute's vote. */
-  focus: "dispute" | "vote" | null;
-  /** The 4pt hazard edge of an overdue or missed John. */
-  hazardEdge: boolean;
-}
-
-/** A dispute on a housemate's John that you haven't voted on yet. */
-function waitsForYourVote(item: Pick<BoardItem, "userId" | "status" | "dispute">, viewerId: string): boolean {
-  return item.userId !== viewerId && item.status === "disputed" && item.dispute !== null && item.dispute.myVote === null;
-}
-
-export function weekRowPlan(item: Pick<BoardItem, "userId" | "status" | "dispute" | "points">, viewerId: string): WeekRowPlan {
-  const { status } = item;
-  const mine = item.userId === viewerId;
-  const open = status === "upcoming" || status === "due-soon" || status === "overdue";
-  const circle: WeekRowPlan["circle"] =
-    status === "checking" || status === "disputed"
-      ? status
-      : status === "done" || status === "late"
-        ? "done"
-        : status === "excused"
-          ? "excused"
-          : "open";
-  const waitingForMe = waitsForYourVote(item, viewerId);
-  return {
-    circle,
-    circleLabel: open || status === "missed" ? WEEK_SUMMARY_COPY.notDone : STATUS_LABEL[status],
-    ticks: mine && open,
-    trailing:
-      mine && status === "checking"
-        ? "undo"
-        : waitingForMe
-          ? "vote"
-          : STATUS_MARK[status].tone === "none" || status === "done" || status === "excused"
-            ? "points"
-            : "status",
-    points: isOpen(status) ? item.points : pointsEarned(status, item.points),
-    // Everyone but the ticker votes, so your own dispute opens on nothing in particular.
-    focus: status === "disputed" && !mine ? "vote" : status === "checking" && !mine ? "dispute" : null,
-    hazardEdge: status === "overdue" || status === "missed",
-  };
-}
-
 /** Someone by first name mid-sentence, or "a former housemate" once they've left (no name). */
 function called(name: string | null): string {
   return name ? firstName(name) : WEEK_SUMMARY_COPY.someoneGone;
@@ -311,92 +244,8 @@ export function weekWho(userId: string, viewerId: string, nameOf: (userId: strin
 }
 
 /**
- * A John's kind as its row says it: the category's own word, up to any "&"
- * ("Bins & recycling" is "Bins"), so the meta line keeps room for when.
- * "Everything else" stays whole, as the John sheet says it.
- */
-export function weekKind(category: string): string {
-  const label = (CATEGORY_LABEL as Partial<Record<string, string>>)[category];
-  return label ? label.split(" & ")[0] : category;
-}
-
-/** "today 21:00", "tomorrow 07:30", "Thu 21:00", "Mon 6 Oct": a due label mid-sentence. */
-function inLine(label: string): string {
-  return label.replace(/^(Today|Tomorrow|Yesterday)/, (word) => word.toLowerCase());
-}
-
-/**
- * When an overdue John was due, as short as a row beside its mark needs:
- * the time today, the weekday within the week, the date before that.
- */
-function wasDue(due: Date, now: Date, zone: string): string {
-  const inZone = tz(zone);
-  const days = differenceInCalendarDays(now, due, { in: inZone });
-  return format(due, days <= 0 ? "HH:mm" : days < 7 ? "EEE" : "EEE d MMM", { in: inZone });
-}
-
-/**
- * A John's meta line on Week, and whether its lid dot leads it. Its kind,
- * short, then where it has got to: "Bathroom · today 21:00", "Everything
- * else · due Tue" (overdue), "Kitchen · stands in 21h" ("checking, 21h
- * left" on your own, whose Undo takes the Checking mark's place), or, for a
- * dispute and with no dot, "Disputed by Megan · 17h left" beside the Vote
- * button of a dispute waiting for you, and just "By Megan · 17h left" beside
- * the Disputed mark, which says the rest.
- */
-export function weekRowMeta(
-  item: Pick<BoardItem, "userId" | "category" | "status" | "dueAt" | "movedFrom" | "doneAt" | "standsAt" | "dispute">,
-  viewerId: string,
-  now: Date,
-  zone: string,
-  /** Anyone's full name, or null for someone who has left. */
-  nameOf: (userId: string) => string | null,
-): { text: string; lid: boolean } {
-  const mine = item.userId === viewerId;
-  const kind = weekKind(item.category);
-  const line = (...parts: string[]) => ({ text: [kind, ...parts].join(" · "), lid: true });
-  const due = inLine(dueLabel(item.dueAt, now, zone));
-
-  switch (item.status) {
-    case "disputed": {
-      const dispute = item.dispute;
-      if (!dispute) return { text: STATUS_LABEL.disputed, lid: false };
-      const by =
-        dispute.raisedBy === null
-          ? WEEK_SUMMARY_COPY.someoneGone
-          : dispute.raisedBy === viewerId
-            ? WEEK_SUMMARY_COPY.byYou
-            : called(nameOf(dispute.raisedBy));
-      const left =
-        dispute.closesAt > now ? WEEK_SUMMARY_COPY.left(relative(dispute.closesAt, now).replace(/^in /, "")) : WEEK_SUMMARY_COPY.closing;
-      return { text: `${waitsForYourVote(item, viewerId) ? WEEK_SUMMARY_COPY.disputedBy(by) : WEEK_SUMMARY_COPY.raisedBy(by)} · ${left}`, lid: false };
-    }
-    case "checking": {
-      if (!item.standsAt) return line();
-      const when = relative(item.standsAt, now);
-      return line(mine ? WEEK_SUMMARY_COPY.checkingLeft(when.replace(/^in /, "")) : WEEK_SUMMARY_COPY.standsIn(when));
-    }
-    case "overdue":
-    case "missed":
-      return line(WEEK_SUMMARY_COPY.wasDue(wasDue(item.dueAt, now, zone)));
-    case "done":
-    case "late":
-      return line(item.doneAt ? WEEK_SUMMARY_COPY.ticked(inLine(dueLabel(item.doneAt, now, zone))) : due);
-    case "excused":
-      return line(WEEK_SUMMARY_COPY.immunityUsed);
-    default:
-      // Pulled forward by someone's time away: say so.
-      if (item.movedFrom) {
-        const before = mine ? WEEK_SUMMARY_COPY.beforeYouGo : WEEK_SUMMARY_COPY.beforeTheyGo(called(nameOf(item.userId)));
-        return line(`${due}, ${before}`);
-      }
-      return line(due);
-  }
-}
-
-/**
  * A John's row on the laptop's table, to a screen reader, which can't see
- * the columns: "Descale the kettle, Kitchen · due Sun, Tom, 1 pt, Overdue".
+ * the columns: "Descale the kettle, Kitchen · was due Sun, Tom, 1 pt, Overdue".
  * Upcoming says nothing for its status, as its row shows none.
  */
 export function weekSpokenRow(

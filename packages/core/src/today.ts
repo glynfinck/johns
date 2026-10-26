@@ -4,8 +4,9 @@ import { differenceInCalendarDays, format } from "date-fns";
 import { currentOrNext, type AwayPeriod } from "./away";
 import { isOpen, TODAY_ORDER, type BoardItem, type DisputeView, type WeekBoard } from "./board";
 import { FOCUS_SHELL_COPY, JOHN_SHEET_COPY, NEXT_UP_COPY } from "./copy";
-import { CATEGORY_LABEL, type Category, type Currency, type HouseRules } from "./domain";
-import { dateRange, dueLabel, firstName, pointsLabel, relative } from "./format";
+import type { Currency, HouseRules } from "./domain";
+import { dateRange, dueInLine, firstName, pointsLabel, relative, sinceLabel } from "./format";
+import { johnKind } from "./john-row";
 import { formatMoney } from "./money";
 import type { LiveStatus } from "./outcome";
 import type { TableRow } from "./points";
@@ -24,21 +25,6 @@ import { addDaysTo, monthOf } from "./week";
 interface Person {
   userId: string;
   name: string;
-}
-
-/** A John's kind in words; anything unknown is "Everything else". */
-function kindOf(category: string): string {
-  return CATEGORY_LABEL[category as Category] ?? CATEGORY_LABEL.other;
-}
-
-/** A John's kind, short, for a row's meta line beside its trailing item: "Bins", "Floors". */
-function shortKindOf(category: string): string {
-  return NEXT_UP_COPY.kinds[category] ?? NEXT_UP_COPY.kinds.other;
-}
-
-/** "today 21:00", "tomorrow 07:30", "Thu 21:00": a due label mid-sentence. */
-function when(at: Date, now: Date, zone: string): string {
-  return dueLabel(at, now, zone).replace(/^(Today|Tomorrow|Yesterday)/, (w) => w.toLowerCase());
 }
 
 /** A first name to start a sentence with: "Priya", or "A former housemate" for someone who has left. */
@@ -126,6 +112,16 @@ export type NextUpState =
   /** Nothing of yours left to do; new Johns come when the week turns over, at `until`. */
   | { kind: "clear"; until: Date; nothingYours: boolean };
 
+/**
+ * Who deals, as "Sam will deal it soon." names them on Today and Week: the
+ * first admin to have joined (`members` in the order they joined), by first
+ * name.
+ */
+export function whoDeals(members: readonly (Person & { role: string })[]): string {
+  const admin = members.find((m) => m.role === "admin");
+  return admin ? firstName(admin.name) : NEXT_UP_COPY.anAdmin;
+}
+
 /** Which of Today's card states shows, from the week, your Johns, who deals and your time away. */
 export function nextUpState(input: {
   board: WeekBoard;
@@ -139,8 +135,7 @@ export function nextUpState(input: {
   const { board, mine, members } = input;
   if (board.notStarted) {
     if (members.some((m) => m.userId === input.userId && m.role === "admin")) return { kind: "setup" };
-    const admin = members.find((m) => m.role === "admin");
-    return { kind: "waiting", admin: admin ? firstName(admin.name) : NEXT_UP_COPY.anAdmin };
+    return { kind: "waiting", admin: whoDeals(members) };
   }
   if (!board.week) return { kind: "undealt" };
   if (input.awayUntil) return { kind: "away", until: input.awayUntil };
@@ -152,15 +147,6 @@ export function nextUpState(input: {
 /** "You're clear until Wed": the day the week turns over, in the house's zone. */
 export function clearUntil(until: Date, zone: string): string {
   return NEXT_UP_COPY.clear(format(until, "EEE", { in: tz(zone) }));
-}
-
-/** When an overdue John fell due: its time today, its day this week, its date before that. */
-function since(due: Date, now: Date, zone: string): string {
-  const inZone = tz(zone);
-  const days = differenceInCalendarDays(now, due, { in: inZone });
-  if (days <= 0) return format(due, "HH:mm", { in: inZone });
-  if (days < 7) return format(due, "EEE", { in: inZone });
-  return format(due, "EEE d MMM", { in: inZone });
 }
 
 /**
@@ -216,93 +202,18 @@ export interface NextUpMeta {
  */
 export function nextUpMeta(item: BoardItem, rules: HouseRules, now: Date, room: number | null = null): NextUpMeta {
   const zone = rules.timezone;
-  const kind = kindOf(item.category);
+  const kind = johnKind(item.category);
   if (item.status === "overdue") {
     return {
       kind,
       due: null,
-      overdue: { since: NEXT_UP_COPY.overdueSince(since(item.dueAt, now, zone)), cost: overdueCost(rules, room) },
+      overdue: { since: NEXT_UP_COPY.overdueSince(sinceLabel(item.dueAt, now, zone)), cost: overdueCost(rules, room) },
     };
   }
-  const due = NEXT_UP_COPY.due(when(item.dueAt, now, zone)) + (item.movedFrom ? `, ${NEXT_UP_COPY.beforeYouGo}` : "");
+  const due = NEXT_UP_COPY.due(dueInLine(item.dueAt, now, zone)) + (item.movedFrom ? `, ${NEXT_UP_COPY.beforeYouGo}` : "");
   const { late, missed } = forfeits(rules, room);
   const cost = late ? NEXT_UP_COPY.ifLate(late) : missed ? NEXT_UP_COPY.ifMissed(missed) : null;
   return { kind, due: [due, cost].filter(Boolean).join(" · "), overdue: null };
-}
-
-/** One of your Johns as a row on Today: what it shows and what it does. */
-export interface MyJohnRow {
-  /** The meta line: its kind, short, then where it has got to. */
-  meta: string;
-  /** Whether the lid dot leads the meta line (a dispute's line says who raised it instead). */
-  lid: boolean;
-  /** The leading slot: a circle that ticks it (still to do), the circle's other faces, or the immunity shield. */
-  circle: "tick" | "checking" | "done" | "disputed" | "open" | "excused";
-  /** What the circle says: the move for a circle that ticks, otherwise where the John is. */
-  circleLabel: string;
-  /** The one trailing item: Undo (your tick being checked), the points, the status mark, or nothing. */
-  trailing: "undo" | "points" | "status" | null;
-  /** The 4pt hazard edge of an overdue or missed John. */
-  hazardEdge: boolean;
-}
-
-/**
- * A row in the rest of your week, by where the John has got to. Its meta
- * line never repeats what the trailing item says, so the useful part fits
- * beside it: "Kitchen · today 21:00", "Bins · stands in 21h" (beside Undo),
- * "Disputed by Megan · 17h left", "Floors · done Wed 21:00" (beside its
- * points), "Other · was due Tue" (beside the Overdue mark).
- */
-export function myJohnRow(item: BoardItem, people: readonly Person[], rules: HouseRules, now: Date): MyJohnRow {
-  const zone = rules.timezone;
-  const kind = shortKindOf(item.category);
-  const line = (...parts: (string | null)[]) => [kind, ...parts].filter(Boolean).join(" · ");
-  const row = (meta: string, circle: MyJohnRow["circle"], trailing: MyJohnRow["trailing"], label?: string): MyJohnRow => ({
-    meta,
-    lid: true,
-    circle,
-    circleLabel: label ?? NEXT_UP_COPY.stateLabel[circle === "tick" ? "open" : circle],
-    trailing,
-    hazardEdge: item.status === "overdue" || item.status === "missed",
-  });
-  const tick = item.needsPhoto ? NEXT_UP_COPY.tickWithPhoto(item.name) : NEXT_UP_COPY.tick(item.name);
-
-  switch (item.status) {
-    case "upcoming":
-    case "due-soon": {
-      const due = when(item.dueAt, now, zone) + (item.movedFrom ? `, ${NEXT_UP_COPY.beforeYouGo}` : "");
-      return row(line(due), "tick", item.status === "upcoming" ? "points" : "status", tick);
-    }
-    case "overdue":
-      return row(line(NEXT_UP_COPY.wasDue(since(item.dueAt, now, zone))), "tick", "status", tick);
-    case "missed":
-      return row(line(NEXT_UP_COPY.wasDue(since(item.dueAt, now, zone))), "open", "status", NEXT_UP_COPY.stateLabel.missed);
-    case "checking":
-      return row(
-        line(
-          item.standsAt === null
-            ? null
-            : item.standsAt.getTime() > now.getTime()
-              ? JOHN_SHEET_COPY.standsIn(relative(item.standsAt, now))
-              : JOHN_SHEET_COPY.standsSoon,
-        ),
-        "checking",
-        "undo",
-      );
-    case "disputed": {
-      if (!item.dispute) return row(kind, "disputed", "points");
-      const closes = item.dispute.closesAt;
-      const left =
-        closes.getTime() > now.getTime() ? NEXT_UP_COPY.left(relative(closes, now).replace(/^in /, "")) : NEXT_UP_COPY.closingNow;
-      return { ...row(`${JOHN_SHEET_COPY.disputedBy(called(people, item.dispute.raisedBy))} · ${left}`, "disputed", "points"), lid: false };
-    }
-    case "done":
-      return row(line(item.doneAt ? NEXT_UP_COPY.done(when(item.doneAt, now, zone)) : null), "done", "points");
-    case "late":
-      return row(line(item.doneAt ? NEXT_UP_COPY.done(when(item.doneAt, now, zone)) : null), "done", "status");
-    case "excused":
-      return row(line(NEXT_UP_COPY.excused), "excused", null);
-  }
 }
 
 /** "1st", "2nd", "3rd", "4th", "11th", "22nd". */
@@ -416,24 +327,15 @@ export function johnSheetMode(item: Pick<BoardItem, "userId" | "status">, viewer
   return yours ? "yours-open" : "theirs-open";
 }
 
-/** The sheet's first line: "Bathroom · Upstairs bathroom · 1 pt · every week" (the group and how often when known). */
-export function sheetKind(item: BoardItem, everyWeeks: number | null): string {
-  return [kindOf(item.category), item.groupName, pointsLabel(item.points), everyWeeks ? JOHN_SHEET_COPY.every(everyWeeks) : null]
+/**
+ * The sheet's first line: "Bathroom · Upstairs bathroom · 1 pt · every
+ * week" (the group when it has one; how often while its John is still on
+ * the list).
+ */
+export function sheetKind(item: Pick<BoardItem, "category" | "groupName" | "points" | "everyWeeks">): string {
+  return [johnKind(item.category), item.groupName, pointsLabel(item.points), item.everyWeeks ? JOHN_SHEET_COPY.every(item.everyWeeks) : null]
     .filter(Boolean)
     .join(" · ");
-}
-
-/**
- * How often a John comes round, from the house's list: the one John there
- * with the same name and kind. Null when there's none (renamed since the
- * deal, or taken off the list) or more than one.
- */
-export function sheetCadence(
-  item: Pick<BoardItem, "name" | "category">,
-  list: readonly { name: string; category: string; everyWeeks: number }[],
-): number | null {
-  const same = list.filter((j) => j.name === item.name && j.category === item.category);
-  return same.length === 1 ? same[0].everyWeeks : null;
 }
 
 /** What lateness costs, for the sheet: "late costs £1, missed £3". Null when both are free. */
@@ -446,29 +348,36 @@ function lateCosts(rules: HouseRules, room: number | null): string | null {
 }
 
 /**
- * The sheet's when line: "Due today 21:00 · late costs £1, missed £3" while
- * it's to do; "Overdue since Tue · £1 now, £3 if missed" once overdue and
- * "Disputed by Megan" while the house votes, each said in ink after a hazard
- * sign (`sign`), since the sheet is pavement; and just when it was due once
- * it has been ticked. `room` caps the costs at what's left of the owner's
- * stake (forfeitRoom).
+ * The sheet's when line. While it's to do, when it's due and what lateness
+ * costs: "Due today 21:00 · late costs £1, missed £3"; once overdue, "Overdue
+ * since Tue · £1 now, £3 if missed". While the house checks a tick, just
+ * when it was due; while it votes, "Disputed by Megan". Once settled, what
+ * happened (settledLine) in place of any cost. Overdue, disputed, late and
+ * missed are said in ink after a hazard sign (`sign`, the status they
+ * are), since the sheet is pavement. `room` caps the costs at what's left
+ * of the owner's stake (forfeitRoom).
  */
 export function sheetWhen(
   item: BoardItem,
   people: readonly Person[],
+  viewerId: string,
   rules: HouseRules,
   now: Date,
   room: number | null = null,
-): { sign: "overdue" | "disputed" | null; text: string } {
+): { sign: "overdue" | "disputed" | "late" | "missed" | null; text: string } {
   const zone = rules.timezone;
+  if (SETTLED.has(item.status)) {
+    const sign = item.status === "late" || item.status === "missed" ? item.status : null;
+    return { sign, text: settledLine(item, people, viewerId, rules, now) };
+  }
   if (item.status === "overdue") {
-    const text = [NEXT_UP_COPY.overdueSince(since(item.dueAt, now, zone)), overdueCost(rules, room)].filter(Boolean).join(" · ");
+    const text = [NEXT_UP_COPY.overdueSince(sinceLabel(item.dueAt, now, zone)), overdueCost(rules, room)].filter(Boolean).join(" · ");
     return { sign: "overdue", text };
   }
   if (item.status === "disputed" && item.dispute) {
     return { sign: "disputed", text: JOHN_SHEET_COPY.disputedBy(called(people, item.dispute.raisedBy)) };
   }
-  const due = JOHN_SHEET_COPY.due(when(item.dueAt, now, zone));
+  const due = JOHN_SHEET_COPY.due(dueInLine(item.dueAt, now, zone));
   if (!isOpen(item.status)) return { sign: null, text: due };
   return {
     sign: null,
@@ -499,7 +408,10 @@ export function tickedLine(item: BoardItem, people: readonly Person[], viewerId:
   return [ticked, stands].filter(Boolean).join(" · ");
 }
 
-/** What happened to a settled John, in a sentence: who did it and when, and what it cost. */
+/**
+ * What happened to a settled John, in a sentence: who did it and when. What
+ * lateness costs is said only while it's to do; the Stake has what it cost.
+ */
 export function settledLine(item: BoardItem, people: readonly Person[], viewerId: string, rules: HouseRules, now: Date): string {
   const who = item.userId === viewerId ? JOHN_SHEET_COPY.you : firstNameIn(people, item.userId);
   const ticked = item.doneAt ? tickedAt(item.doneAt, now, rules.timezone) : null;
@@ -507,15 +419,11 @@ export function settledLine(item: BoardItem, people: readonly Person[], viewerId
     case "done":
       return JOHN_SHEET_COPY.doneOnTime(who, ticked);
     case "late":
-      return JOHN_SHEET_COPY.doneLate(
-        who,
-        ticked,
-        rules.lateForfeitMinor > 0 ? formatMoney(rules.lateForfeitMinor, rules.currency) : null,
-      );
+      return JOHN_SHEET_COPY.doneLate(who, ticked);
     case "excused":
       return JOHN_SHEET_COPY.excused(who);
     case "missed":
-      return JOHN_SHEET_COPY.missed(rules.missedForfeitMinor > 0 ? formatMoney(rules.missedForfeitMinor, rules.currency) : null);
+      return JOHN_SHEET_COPY.missed;
     default:
       return "";
   }
@@ -550,8 +458,8 @@ export function cantOptions(
 export function swapMeta(item: BoardItem, people: readonly Person[], rules: HouseRules, now: Date): string {
   const due =
     item.status === "overdue"
-      ? NEXT_UP_COPY.wasDue(since(item.dueAt, now, rules.timezone))
-      : when(item.dueAt, now, rules.timezone);
+      ? NEXT_UP_COPY.wasDue(sinceLabel(item.dueAt, now, rules.timezone))
+      : dueInLine(item.dueAt, now, rules.timezone);
   return [firstNameIn(people, item.userId), due, pointsLabel(item.points)].join(" · ");
 }
 

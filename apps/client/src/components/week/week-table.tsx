@@ -1,17 +1,15 @@
-import { FOCUS_SHELL_COPY, WEEK_COPY, weekFold, weekSpokenRow, weekWho, withAlpha, type BoardItem } from '@app/core';
+import { FOCUS_SHELL_COPY, WEEK_COPY, weekSpokenRow, weekWho, withAlpha, type BoardItem } from '@app/core';
 import { useState } from 'react';
 import { Pressable, StyleSheet, Text, View, type StyleProp, type TextStyle } from 'react-native';
 
 import { Alert } from '@/components/alert';
 import { Avatar } from '@/components/avatar';
-import { Fold } from '@/components/fold';
 import { Group, GroupItem, Hairline, useRowInset } from '@/components/group';
 import { HazardTape } from '@/components/hazard-tape';
+import { DoneFold, useJohnRow, type JohnRowContext } from '@/components/john-row';
 import { LidDot } from '@/components/lid';
 import { Body, Meta, RowTitle } from '@/components/text';
 import { LEADING, ROW_GAP, SPACE, TABULAR, TAP, useTheme } from '@/theme';
-
-import { useWeekJohn, type WeekContext } from './john-row';
 
 /** The fixed columns; the John's takes what's left. */
 const WHO = 112;
@@ -30,9 +28,7 @@ const TWO_LINES = 64;
  * The column names are only for the eye: each row says all of its columns
  * to a screen reader.
  */
-export function WeekTable({ rows, folded, context }: { rows: BoardItem[]; folded: BoardItem[]; context: WeekContext }) {
-  const { colors } = useTheme();
-  const fold = weekFold(folded);
+export function WeekTable({ rows, folded, context }: { rows: BoardItem[]; folded: BoardItem[]; context: JohnRowContext }) {
   return (
     <View testID="week-table">
       <Group>
@@ -40,17 +36,11 @@ export function WeekTable({ rows, folded, context }: { rows: BoardItem[]; folded
         {rows.map((item) => (
           <TableRow key={item.id} item={item} context={context} />
         ))}
-        {fold.count > 0 ? (
-          <Fold
-            label={FOCUS_SHELL_COPY.done(fold.count)}
-            meta={fold.late ? <Text style={{ color: colors.hazard }}>{fold.late}</Text> : undefined}
-            testID="done-fold"
-          >
-            {folded.map((item) => (
-              <TableRow key={item.id} item={item} context={context} />
-            ))}
-          </Fold>
-        ) : null}
+        <DoneFold items={folded}>
+          {folded.map((item) => (
+            <TableRow key={item.id} item={item} context={context} />
+          ))}
+        </DoneFold>
       </Group>
     </View>
   );
@@ -78,10 +68,10 @@ function HeadRow() {
 }
 
 /** One John across the table's columns. */
-function TableRow({ item, context }: { item: BoardItem; context: WeekContext }) {
+function TableRow({ item, context }: { item: BoardItem; context: JohnRowContext }) {
   const { colors } = useTheme();
   const inset = useRowInset();
-  const john = useWeekJohn(item, context);
+  const john = useJohnRow(item, context);
   const [pressed, setPressed] = useState(false);
   const mine = item.userId === context.userId;
   const name = context.nameOf(item.userId) ?? FOCUS_SHELL_COPY.formerHousemate;
@@ -103,7 +93,7 @@ function TableRow({ item, context }: { item: BoardItem; context: WeekContext }) 
         {john.plan.ticks ? leading : null}
         <Pressable
           accessibilityRole="button"
-          accessibilityLabel={weekSpokenRow(item, john.meta.text, who, john.plan.points)}
+          accessibilityLabel={weekSpokenRow(item, john.plan.meta, who, john.plan.points)}
           onPress={john.open}
           onPressIn={() => setPressed(true)}
           onPressOut={() => setPressed(false)}
@@ -113,9 +103,9 @@ function TableRow({ item, context }: { item: BoardItem; context: WeekContext }) 
           <View style={styles.john}>
             <RowTitle numberOfLines={1}>{item.name}</RowTitle>
             <View style={styles.metaLine}>
-              {john.meta.lid ? <LidDot category={item.category} /> : null}
+              {john.plan.lid ? <LidDot category={item.category} /> : null}
               <Meta numberOfLines={1} style={styles.shrink}>
-                {john.meta.text}
+                {john.plan.meta}
               </Meta>
             </View>
           </View>
@@ -129,6 +119,7 @@ function TableRow({ item, context }: { item: BoardItem; context: WeekContext }) 
             {String(john.plan.points)}
           </Body>
         </Pressable>
+        {/* Its points have their own column, so this cell is for anything else. */}
         <View style={[styles.status, styles.cell]}>{john.plan.trailing === 'points' ? null : john.trailing}</View>
       </View>
       {john.problem ? (

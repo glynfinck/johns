@@ -160,6 +160,18 @@ describe("buildWeekBoard", () => {
     });
   });
 
+  it("says which John on the list each was dealt from, and how often that comes round, when the read has them", () => {
+    const [embedded, deleted, bare] = board([
+      john("embedded", { john_id: "j1", johns: { every_weeks: 2 }, due_at: at(1) }),
+      john("deleted", { john_id: null, johns: null, due_at: at(2) }),
+      // The web's read takes the John's id but not the list's row.
+      john("bare", { john_id: "j3", due_at: at(3) }),
+    ]).items;
+    expect(embedded).toMatchObject({ johnId: "j1", everyWeeks: 2 });
+    expect(deleted).toMatchObject({ johnId: null, everyWeeks: null });
+    expect(bare).toMatchObject({ johnId: "j3", everyWeeks: null });
+  });
+
   it("says when a tick stands, only while it can still be disputed", () => {
     const [ticked, settled] = board([
       john("ticked", { done_at: at(-3) }),

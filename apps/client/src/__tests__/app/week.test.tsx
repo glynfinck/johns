@@ -1,4 +1,4 @@
-import { FOCUS_SHELL_COPY, NOT_DEALT_COPY, PAGE_TITLE, TABLE_COPY, WEEK_COPY, WEEK_SUMMARY_COPY } from '@app/core';
+import { FOCUS_SHELL_COPY, NEXT_UP_COPY, NOT_DEALT_COPY, PAGE_TITLE, TABLE_COPY, WEEK_COPY, WEEK_SUMMARY_COPY } from '@app/core';
 import { QueryClientProvider, type QueryClient } from '@tanstack/react-query';
 import { Slot } from 'expo-router';
 import { act, fireEvent, renderRouter, screen, waitFor, within } from 'expo-router/testing-library';
@@ -222,7 +222,8 @@ describe('on a phone', () => {
     );
     await open();
     const fold = within(screen.getByTestId('person-priya')).getByRole('button', { name: /Done \(1\)/ });
-    expect(fold).toHaveTextContent('Done (1) · 1 late');
+    expect(within(fold).getByText('Done (1) ·')).toBeOnTheScreen();
+    expect(within(fold).getByText('1 late')).toBeOnTheScreen();
     expect(fold).not.toBeExpanded();
     expect(screen.queryByText('Wipe the hob')).toBeNull();
     await fireEvent.press(fold);
@@ -241,26 +242,26 @@ describe('on a phone', () => {
     );
     (pickPhoto as jest.Mock).mockResolvedValue(null);
     await open();
-    const tick = screen.getByRole('checkbox', { name: WEEK_SUMMARY_COPY.markDone('Bins out') });
+    const tick = screen.getByRole('checkbox', { name: NEXT_UP_COPY.tick('Bins out') });
     expect(tick).not.toBeChecked();
     await fireEvent.press(tick);
     expect(markDone).toHaveBeenCalledWith('a1');
-    await fireEvent.press(screen.getByRole('checkbox', { name: WEEK_SUMMARY_COPY.markDone('Hoover the stairs') }));
+    await fireEvent.press(screen.getByRole('checkbox', { name: NEXT_UP_COPY.tickWithPhoto('Hoover the stairs') }));
     expect(pickPhoto).toHaveBeenCalledWith('camera');
   });
 
   it("says why when the database refuses a tick, under the John's row", async () => {
     (markDone as jest.Mock).mockRejectedValue(new Error('This week has closed.'));
     await open();
-    await fireEvent.press(screen.getByRole('checkbox', { name: WEEK_SUMMARY_COPY.markDone('Bins out') }));
+    await fireEvent.press(screen.getByRole('checkbox', { name: NEXT_UP_COPY.tick('Bins out') }));
     expect(await within(screen.getByTestId('person-priya')).findByText('This week has closed.')).toBeOnTheScreen();
   });
 
-  it("never ticks a housemate's John: its circle is only a picture", async () => {
+  it("never ticks a housemate's John: its circle is only a picture, saying what Today's would", async () => {
     await open();
     const sam = screen.getByTestId('person-sam');
     expect(within(sam).queryByRole('checkbox')).toBeNull();
-    expect(within(sam).getByRole('image', { name: 'Done, being checked' })).toBeOnTheScreen();
+    expect(within(sam).getByRole('image', { name: NEXT_UP_COPY.stateLabel.checking })).toBeOnTheScreen();
   });
 
   it('offers Undo on your tick while the house checks it', async () => {
@@ -273,7 +274,7 @@ describe('on a phone', () => {
       }),
     );
     await open();
-    await fireEvent.press(screen.getByRole('button', { name: WEEK_SUMMARY_COPY.undo('Hoover the stairs') }));
+    await fireEvent.press(screen.getByRole('button', { name: NEXT_UP_COPY.undo('Hoover the stairs') }));
     expect(undoDone).toHaveBeenCalledWith('a2');
   });
 
@@ -359,12 +360,13 @@ describe('on a phone', () => {
     expect(within(hob).queryByTestId('status-done')).toBeNull();
   });
 
-  it('says your own tick is being checked, as Undo takes the mark\'s place', async () => {
+  it('says when a tick stands, yours (with Undo in place of the mark) or a housemate\'s, as Today does', async () => {
     read.mockResolvedValue(
       busyWeek({ assignments: busyWeek().assignments.map((a) => (a.id === 'a2' ? { ...a, done_at: at(-1) } : a)) }),
     );
     await open();
-    expect(within(row('Hoover the stairs')).getByText(/^Floors · checking, \d+h left$/)).toBeOnTheScreen();
+    expect(within(row('Hoover the stairs')).getByText(/^Floors · stands in \d+h$/)).toBeOnTheScreen();
+    expect(within(row('Hoover the stairs')).getByRole('button', { name: NEXT_UP_COPY.undo('Hoover the stairs') })).toBeOnTheScreen();
     expect(within(row('Clean the bath')).getByText(/^Bathroom · stands in /)).toBeOnTheScreen();
   });
 
@@ -376,9 +378,10 @@ describe('on a phone', () => {
     );
     await open();
     const mop = row('Mop the floor');
-    // The Disputed mark says the word, so the meta line doesn't say it again.
-    expect(within(mop).getByText('By a former housemate · 5h left')).toBeOnTheScreen();
-    expect(within(mop).getByTestId('status-disputed')).toBeOnTheScreen();
+    // The flag on its circle and the meta line say it's disputed; its points trail, as on Today.
+    expect(within(mop).getByText('Disputed by a former housemate · 5h left')).toBeOnTheScreen();
+    expect(within(mop).queryByTestId('status-disputed')).toBeNull();
+    expect(within(mop).getByText('2 pts')).toBeOnTheScreen();
     await fireEvent.press(within(mop).getByRole('button'));
     expect(mockOpen).toHaveBeenLastCalledWith('a5', undefined);
   });
@@ -452,7 +455,7 @@ describe('before the deal', () => {
     mockViewer.id = 'sam';
     read.mockResolvedValue(notDealt());
     await open();
-    expect(screen.getByText(WEEK_SUMMARY_COPY.waitingFor('Priya'))).toBeOnTheScreen();
+    expect(screen.getByText(NEXT_UP_COPY.waiting('Priya'))).toBeOnTheScreen();
     expect(screen.queryByTestId('deal-week')).toBeNull();
   });
 

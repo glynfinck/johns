@@ -1,4 +1,4 @@
-import { buildStake, FOCUS_SHELL_COPY, type HistoryRow, HOUSE_PAGE_COPY, SECTION_LABEL, STAKE_COPY, STAKE_HISTORY_COPY } from '@app/core';
+import { buildStake, FOCUS_SHELL_COPY, type HistoryRow, HOUSE_PAGE_COPY, SECTION_LABEL, STAKE_HISTORY_COPY } from '@app/core';
 import { fireEvent, screen, waitFor, within } from 'expo-router/testing-library';
 
 import { loadHouse } from '@/api/board';
@@ -75,7 +75,7 @@ it('names the page and the stake, with the way back to House', async () => {
   await open();
   const bar = within(screen.getByTestId('title-bar'));
   expect(bar.getByRole('header', { name: STAKE_HISTORY_COPY.title })).toBeOnTheScreen();
-  expect(bar.getByText(STAKE_COPY.eyebrow('£20'))).toBeOnTheScreen();
+  expect(bar.getByText(STAKE_HISTORY_COPY.sub('£20'))).toBeOnTheScreen();
   expect(bar.getByRole('button', { name: FOCUS_SHELL_COPY.backTo(SECTION_LABEL.house) })).toBeOnTheScreen();
 });
 

@@ -8,7 +8,7 @@ import { useHouse } from '@/hooks/use-house';
 import { JohnSheetBody, type JohnSheetContext, type JohnSheetFocus } from './body';
 import { useCached } from './cached';
 
-export { JohnSheetBody, JohnSheetHeader, type JohnSheetContext, type JohnSheetFocus } from './body';
+export type { JohnSheetFocus } from './body';
 
 interface JohnSheetApi {
   /** Open the sheet on one John (an assignment's id), optionally at what it was opened for. */

@@ -1,8 +1,4 @@
 import { BIN_NIGHT, type BinNightScheme, type Look } from '@app/core';
-// Each weight from its own path: the package's index pulls in all eighteen
-// weights and italics, and the bundle would carry every one.
-import { Overpass_500Medium } from '@expo-google-fonts/overpass/500Medium';
-import { Overpass_600SemiBold } from '@expo-google-fonts/overpass/600SemiBold';
 import { createContext, useContext } from 'react';
 import { useColorScheme, type TextStyle } from 'react-native';
 
@@ -18,23 +14,18 @@ import { useColorScheme, type TextStyle } from 'react-native';
  */
 export const FONT = {
   regular: 'Overpass_400Regular',
-  medium: 'Overpass_500Medium',
-  semibold: 'Overpass_600SemiBold',
   bold: 'Overpass_700Bold',
   extrabold: 'Overpass_800ExtraBold',
   black: 'Overpass_900Black',
 } as const;
 
 /**
- * The font files, keyed by family, for `useFonts`. The four weights Focus sets
- * are the app's own copies (assets/fonts), whose middle dot keeps its width so
- * " · " has a space on both sides; the README there says what changed. Medium
- * and SemiBold are the package's, for the older pieces that still name them.
+ * The font files, keyed by family, for `useFonts`: the app's own copies of
+ * the four weights (assets/fonts), whose middle dot keeps its width so " · "
+ * has a space on both sides; the README there says what changed.
  */
 export const FONT_FILES = {
   [FONT.regular]: require('../assets/fonts/Overpass_400Regular.ttf'),
-  [FONT.medium]: Overpass_500Medium,
-  [FONT.semibold]: Overpass_600SemiBold,
   [FONT.bold]: require('../assets/fonts/Overpass_700Bold.ttf'),
   [FONT.extrabold]: require('../assets/fonts/Overpass_800ExtraBold.ttf'),
   [FONT.black]: require('../assets/fonts/Overpass_900Black.ttf'),
@@ -108,12 +99,11 @@ export interface Theme {
     initials: TextStyle;
 
     // Bin Night's older roles, kept for the brand screens (the front door,
-    // sign-in, joining) and for screens Focus hasn't rebuilt yet.
+    // sign-in, joining) and the pages for a missing link or a screen that
+    // failed to draw.
 
     /** Uppercase Overpass, council-sign heavy. `level` 1 is the page title. */
     heading: (level: 1 | 2 | 3) => TextStyle;
-    /** Small uppercase label with sign spacing (the web's `eyebrow`). */
-    eyebrow: TextStyle;
     /** The quieter grey, for running text (the same as `meta`). */
     muted: TextStyle;
   };
@@ -168,13 +158,6 @@ export function themeFor(scheme: string | null | undefined): Theme {
         textTransform: 'uppercase',
         color: colors.foreground,
       }),
-      eyebrow: {
-        fontFamily: FONT.extrabold,
-        fontSize: 11,
-        letterSpacing: 1.3,
-        textTransform: 'uppercase',
-        color: colors.mutedForeground,
-      },
       muted: { fontFamily: FONT.regular, fontSize: 14, lineHeight: 20, color: colors.mutedForeground },
     },
   };

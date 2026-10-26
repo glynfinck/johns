@@ -41,6 +41,16 @@ export async function loadWall(houseId: string, userId: string, limit = 60, befo
   return { events, photos, older };
 }
 
+/**
+ * One receipt's link, signed for an hour: a settled John's sheet shows its
+ * photo with it, whatever the Wall has read.
+ */
+export async function signPhoto(path: string): Promise<string> {
+  const { data, error } = await supabase.storage.from('proofs').createSignedUrl(path, PHOTO_SECONDS);
+  if (error) throw error;
+  return data.signedUrl;
+}
+
 /** The latest few of the house's events, with no photos signed: House's Wall never shows them. */
 export async function loadWallEvents(houseId: string, userId: string, limit: number): Promise<Wall> {
   return { ...(await readEvents(houseId, userId, limit)), photos: {} };

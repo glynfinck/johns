@@ -21,7 +21,10 @@ export * from "./stake";
 export * from "./streak";
 export * from "./wall";
 export * from "./week";
-// The Focus tracks' modules, made empty so that no two tracks write here.
+// What the Expo app's Focus screens show, shaped: a John's row on Today and
+// Week, Today and the John sheet, Week, House's two halves, the setup pages
+// and the front door.
+export * from "./john-row";
 export * from "./today";
 export * from "./week-summary";
 export * from "./house-page";

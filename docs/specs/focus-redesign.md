@@ -227,17 +227,17 @@ field. Privacy gets headed sections and Back.
 
 ## Done when
 
-- [ ] The house has three tabs (Today, Week, House) on a phone and a
+- [x] The house has three tabs (Today, Week, House) on a phone and a
       three-item rail from `WIDE`; `/wall`, `/stake` and `/table` redirect.
-- [ ] Today fits one phone screen in the seeded house: Next up, Needs you,
+- [x] Today fits one phone screen in the seeded house: Next up, Needs you,
       the rest of your week, the standing line.
 - [ ] Every John action works from the John sheet on Today, Week and House.
-- [ ] Week shows a summary that adds up, one group per person and folds.
-- [ ] House shows the month and settle-up, the Table with Week | month, the
+- [x] Week shows a summary that adds up, one group per person and folds.
+- [x] House shows the month and settle-up, the Table with Week | month, the
       Wall's latest and See all, setup rows and You, and Leave at the bottom.
-- [ ] Each housemate has a page; admins can make admin and remove there.
-- [ ] Each setup page opens its existing editor; non-admins read the rules.
-- [ ] Only one amber button per screen; no inline font sizes or colours.
+- [x] Each housemate has a page; admins can make admin and remove there.
+- [x] Each setup page opens its existing editor; non-admins read the rules.
+- [x] Only one amber button per screen; no inline font sizes or colours.
 - [ ] `npm run typecheck && npm run lint && npm test` and the client e2e pass.
 - [ ] Checked on the web build at phone and laptop widths, light and dark;
       iOS and Android checks wait with the device checks (Phase 12).

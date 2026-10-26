@@ -56,7 +56,8 @@ export async function loadHouse(houseId: string, now: Date): Promise<HouseSnapsh
 
   const [assignments, disputes] = week
     ? await Promise.all([
-        supabase.from('assignments').select('*').eq('week_id', week.id).order('due_at'),
+        // With how often each comes round, from the John it was dealt from (the John sheet says so).
+        supabase.from('assignments').select('*, johns(every_weeks)').eq('week_id', week.id).order('due_at'),
         supabase
           .from('disputes')
           .select('id, assignment_id, raised_by, reason, closes_at, dispute_votes(user_id, uphold)')

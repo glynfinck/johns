@@ -8,8 +8,9 @@ import { FONT, LEADING, ROW_GAP, ROW_MIN, SPACE, useTheme } from '@/theme';
 /**
  * Finished things, folded away inside a group: a row that says what it holds
  * ("Done (2)", from FOCUS_SHELL_COPY.done) and shows its rows under it when
- * opened. `meta` follows the label on the same line (" · 1 late", which the
- * caller may colour). `aria-expanded` says whether it's open.
+ * opened. `meta` follows the label on the same line, after a " · " ("1 late"
+ * with its hazard mark, or a time), and keeps its room while a long label
+ * gives way. `aria-expanded` says whether it's open.
  */
 export function Fold({
   label,
@@ -44,11 +45,12 @@ export function Fold({
         <View style={styles.leading}>
           <Chevron size={20} color={colors.mutedForeground} aria-hidden />
         </View>
-        <Text numberOfLines={1} style={[type.body, styles.label]}>
-          {label}
-          {meta != null ? <Text>{' · '}</Text> : null}
-          {meta}
-        </Text>
+        <View style={styles.line}>
+          <Text numberOfLines={1} style={[type.body, styles.label]}>
+            {meta != null ? `${label} ·` : label}
+          </Text>
+          {meta != null ? <View style={styles.meta}>{meta}</View> : null}
+        </View>
       </Pressable>
       {open ? children : null}
     </>
@@ -64,5 +66,8 @@ const styles = StyleSheet.create({
     paddingVertical: SPACE.sm,
   },
   leading: { width: LEADING, alignItems: 'center' },
-  label: { flex: 1, fontFamily: FONT.bold },
+  // The gap stands in for the space after the separator, which a line drops at its end.
+  line: { flex: 1, minWidth: 0, flexDirection: 'row', alignItems: 'center', gap: SPACE.xs },
+  label: { flexShrink: 1, fontFamily: FONT.bold },
+  meta: { flexShrink: 0 },
 });

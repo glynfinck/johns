@@ -1,4 +1,4 @@
-import { formatMoney, HOUSE_PAGE_COPY, SECTION_LABEL, STAKE_COPY, STAKE_HISTORY_COPY, stakeHistory } from '@app/core';
+import { formatMoney, HOUSE_PAGE_COPY, SECTION_LABEL, STAKE_HISTORY_COPY, stakeHistory } from '@app/core';
 import { CoinsIcon } from 'lucide-react-native';
 import { useState } from 'react';
 import { StyleSheet, View } from 'react-native';
@@ -53,7 +53,7 @@ function StakeFor({ houseId, userId }: { houseId: string; userId: string }) {
       bar={
         <TitleBar
           title={STAKE_HISTORY_COPY.title}
-          sub={rules ? STAKE_COPY.eyebrow(formatMoney(rules.stakeMinor, rules.currency)) : undefined}
+          sub={rules ? STAKE_HISTORY_COPY.sub(formatMoney(rules.stakeMinor, rules.currency)) : undefined}
           back="/house"
           backLabel={SECTION_LABEL.house}
         />

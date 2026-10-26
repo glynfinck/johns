@@ -10,6 +10,7 @@ import {
   NEXT_UP_COPY,
   NOT_DEALT_COPY,
   PAGE_TITLE,
+  WEEK_SUMMARY_COPY,
   type DisputeRow,
 } from '@app/core';
 import { QueryClientProvider } from '@tanstack/react-query';
@@ -138,7 +139,7 @@ describe('Next up', () => {
     const card = await open();
     expect(within(card).getByText(NEXT_UP_COPY.label)).toBeOnTheScreen();
     expect(within(card).getByText('Bins out')).toBeOnTheScreen();
-    expect(screen.getByTestId('next-up-meta')).toHaveTextContent(/^Bins & recycling · due .+ · £1 if late$/);
+    expect(screen.getByTestId('next-up-meta')).toHaveTextContent(/^Bins · due .+ · £1 if late$/);
     expect(within(card).getByRole('button', { name: JOHN_COPY.markDone })).toBeOnTheScreen();
     expect(within(card).getByRole('button', { name: NEXT_UP_COPY.photo })).toBeOnTheScreen();
     // Not overdue, and no token to spend: no hazard, no way to skip.
@@ -189,7 +190,7 @@ describe('Next up', () => {
     read.mockResolvedValue(snapshot({ assignments: [assignment({ due_at: at(-3) })] }));
     await open();
     expect(screen.getByTestId('overdue-edge', { includeHiddenElements: true })).toBeOnTheScreen();
-    expect(screen.getByTestId('next-up-meta')).toHaveTextContent(/^Bins & recycling$/);
+    expect(screen.getByTestId('next-up-meta')).toHaveTextContent(/^Bins$/);
     expect(screen.getByTestId('next-up-overdue')).toHaveTextContent(/^Overdue since .+ · £1 now, £3 if missed$/);
   });
 
@@ -476,6 +477,22 @@ describe('the rest of your week', () => {
     expect(hob).toHaveTextContent(/^Wipe the hobKitchen · skipped with immunity$/);
     // Never spoken as "Not done".
     expect(within(hob).queryByLabelText(NEXT_UP_COPY.stateLabel.open)).toBeNull();
+  });
+
+  it('says how many of the folded ones were late, as Week does', async () => {
+    read.mockResolvedValue(
+      snapshot({
+        assignments: [
+          assignment(),
+          assignment({ id: 'a2', name: 'Hoover the stairs', category: 'floors', due_at: at(-30), done_at: at(-20), outcome: 'late' }),
+          assignment({ id: 'a3', name: 'Wipe the hob', category: 'kitchen', due_at: at(-30), done_at: at(-40), outcome: 'done' }),
+        ],
+      }),
+    );
+    await open();
+    const fold = within(screen.getByTestId('done-fold'));
+    expect(fold.getByText(`${FOCUS_SHELL_COPY.done(2)} ·`)).toBeOnTheScreen();
+    expect(fold.getByText(WEEK_SUMMARY_COPY.late(1))).toBeOnTheScreen();
   });
 
   it('offers Undo while the house checks your tick', async () => {

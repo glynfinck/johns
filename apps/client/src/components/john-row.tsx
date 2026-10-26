@@ -1,28 +1,33 @@
 import {
+  doneFold,
   JOHN_COPY,
+  johnRow,
+  NEXT_UP_COPY,
   pointsLabel,
   WEEK_SUMMARY_COPY,
-  weekRowMeta,
-  weekRowPlan,
   type BoardItem,
-  type WeekRowPlan,
+  type JohnRowPlan,
 } from '@app/core';
-import { ShieldIcon } from 'lucide-react-native';
+import { ClockIcon, ShieldIcon } from 'lucide-react-native';
 import type { ReactNode } from 'react';
+import { StyleSheet, View } from 'react-native';
 
 import { undoDone } from '@/api/johns';
 import { Alert } from '@/components/alert';
+import { Fold } from '@/components/fold';
 import { GroupItem } from '@/components/group';
 import { useJohnSheet } from '@/components/john-sheet';
 import { Row, RowIcon } from '@/components/row';
 import { StatusMark } from '@/components/status-mark';
+import { Body } from '@/components/text';
 import { TextButton } from '@/components/text-button';
 import { TickCircle } from '@/components/tick-circle';
 import { useMove } from '@/hooks/use-move';
 import { useTick } from '@/hooks/use-tick';
+import { FONT, SPACE, useTheme } from '@/theme';
 
-/** Who's looking at the week, and how to name everyone in it: what every John on Week needs. */
-export interface WeekContext {
+/** Who's looking, and how to name everyone: what every John's row needs. */
+export interface JohnRowContext {
   houseId: string;
   userId: string;
   zone: string;
@@ -32,24 +37,24 @@ export interface WeekContext {
 }
 
 /**
- * One John on Week, as both widths draw it: its plan from core (what the
- * circle shows and whether it ticks, the one trailing item, what the sheet
- * opens on), its meta line, the circle, the trailing item, and opening its
- * John sheet. `problem` is the refusal of a tick or an undo made here.
+ * One John as a row, wherever it's drawn (Today, Week's groups and its
+ * table): its plan from core's johnRow (what the circle shows and whether
+ * it ticks, the meta line, the one trailing item, what the sheet opens on),
+ * the circle, the trailing item, and opening its John sheet. `problem` is
+ * the refusal of a tick or an undo made here.
  */
-export function useWeekJohn(item: BoardItem, context: WeekContext) {
+export function useJohnRow(item: BoardItem, context: JohnRowContext) {
   const sheet = useJohnSheet();
   const tick = useTick(context.houseId, item.id);
   const undo = useMove(context.houseId);
-  const plan = weekRowPlan(item, context.userId);
-  const meta = weekRowMeta(item, context.userId, context.now, context.zone, context.nameOf);
+  const plan = johnRow(item, context.userId, context.now, context.zone, context.nameOf);
   const open = () => sheet.open(item.id, plan.focus ?? undefined);
 
   // A photo John's circle goes to the camera (the file chooser, on the web) first.
   const leading = plan.ticks ? (
     <TickCircle
       state={tick.busy ? 'busy' : 'open'}
-      label={WEEK_SUMMARY_COPY.markDone(item.name)}
+      label={plan.circleLabel}
       onPress={() => void (item.needsPhoto ? tick.tickWithPhoto('camera') : tick.tick())}
     />
   ) : plan.circle === 'excused' ? (
@@ -60,7 +65,6 @@ export function useWeekJohn(item: BoardItem, context: WeekContext) {
 
   return {
     plan,
-    meta,
     open,
     leading,
     trailing: trailingFor(plan, item, {
@@ -74,7 +78,7 @@ export function useWeekJohn(item: BoardItem, context: WeekContext) {
 
 /** The row's one trailing item, from its plan. */
 function trailingFor(
-  plan: WeekRowPlan,
+  plan: JohnRowPlan,
   item: BoardItem,
   moves: { undo: () => void; undoing: boolean; vote: () => void },
 ): ReactNode {
@@ -84,7 +88,7 @@ function trailingFor(
         <TextButton
           label={JOHN_COPY.undo}
           align="end"
-          accessibilityLabel={WEEK_SUMMARY_COPY.undo(item.name)}
+          accessibilityLabel={NEXT_UP_COPY.undo(item.name)}
           disabled={moves.undoing}
           onPress={moves.undo}
         />
@@ -101,30 +105,32 @@ function trailingFor(
       );
     case 'points':
       return pointsLabel(plan.points);
-    default:
+    case 'status':
       return <StatusMark status={item.status} />;
+    default:
+      return null;
   }
 }
 
 /**
- * A John as a row in its owner's group: the circle (yours ticks from it),
- * the name, the meta line, and one trailing item; the 4pt hazard edge when
- * it's overdue or missed. Tapping it opens the John sheet. A refusal shows
- * under it, where the move was made.
+ * A John as a row: the circle (yours ticks from it), the name, the meta
+ * line, and one trailing item; the 4pt hazard edge when it's overdue or
+ * missed. Tapping it opens the John sheet. A refusal shows under it, where
+ * the move was made.
  */
-export function WeekJohnRow({ item, context }: { item: BoardItem; context: WeekContext }) {
-  const john = useWeekJohn(item, context);
+export function JohnRow({ item, context, testID }: { item: BoardItem; context: JohnRowContext; testID: string }) {
+  const john = useJohnRow(item, context);
   return (
     <>
       <Row
         title={item.name}
-        meta={john.meta.text}
-        lid={john.meta.lid ? item.category : undefined}
+        meta={john.plan.meta}
+        lid={john.plan.lid ? item.category : undefined}
         leading={john.leading}
         trailing={john.trailing}
         hazardEdge={john.plan.hazardEdge}
         onPress={john.open}
-        testID="week-row"
+        testID={testID}
       />
       {john.problem ? (
         <GroupItem>
@@ -134,3 +140,37 @@ export function WeekJohnRow({ item, context }: { item: BoardItem; context: WeekC
     </>
   );
 }
+
+/**
+ * Finished Johns, folded away at the end of a group: "Done (2)", then how
+ * many of those were late in hazard words after late's clock. Nothing when
+ * there are none.
+ */
+export function DoneFold({ items, children }: { items: readonly BoardItem[]; children: ReactNode }) {
+  const { colors } = useTheme();
+  if (items.length === 0) return null;
+  const fold = doneFold(items);
+  return (
+    <Fold
+      label={fold.label}
+      meta={
+        fold.late ? (
+          <View style={styles.late}>
+            <ClockIcon size={16} color={colors.hazard} aria-hidden />
+            <Body numberOfLines={1} style={[styles.lateWords, { color: colors.hazard }]}>
+              {fold.late}
+            </Body>
+          </View>
+        ) : undefined
+      }
+      testID="done-fold"
+    >
+      {children}
+    </Fold>
+  );
+}
+
+const styles = StyleSheet.create({
+  late: { flexDirection: 'row', alignItems: 'center', gap: SPACE.xs },
+  lateWords: { fontFamily: FONT.bold },
+});

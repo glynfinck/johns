@@ -20,6 +20,21 @@ export function dueLabel(due: Date, now: Date, zone: string): string {
   return format(due, "EEE d MMM", { in: inZone });
 }
 
+/** "today 21:00", "tomorrow 07:30", "Thu 21:00", "Mon 6 Oct": a due label mid-sentence. */
+export function dueInLine(due: Date, now: Date, zone: string): string {
+  return dueLabel(due, now, zone).replace(/^(Today|Tomorrow|Yesterday)/, (word) => word.toLowerCase());
+}
+
+/**
+ * When something already past fell due, as short as a line beside a mark
+ * needs: the time today, the weekday within the week, the date before that.
+ */
+export function sinceLabel(at: Date, now: Date, zone: string): string {
+  const inZone = tz(zone);
+  const days = differenceInCalendarDays(now, at, { in: inZone });
+  return format(at, days <= 0 ? "HH:mm" : days < 7 ? "EEE" : "EEE d MMM", { in: inZone });
+}
+
 /** "in 3h", "in 2 days", "3h ago" — for the line under a John. */
 export function relative(target: Date, now: Date): string {
   const ms = target.getTime() - now.getTime();

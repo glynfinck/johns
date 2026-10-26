@@ -2,25 +2,22 @@ import {
   forfeitRoom,
   johnSheetMode,
   monthOf,
-  sheetCadence,
   sheetKind,
   sheetWhen,
+  STATUS_MARK,
   type BoardItem,
   type HouseRules,
   type StakeView,
   type WeekBoard,
 } from '@app/core';
-import { FlagIcon, TriangleAlertIcon } from 'lucide-react-native';
 import { StyleSheet, Text, View } from 'react-native';
 
 import type { Housemate } from '@/api/board';
-import type { JohnList } from '@/api/settings';
 import { LidDot } from '@/components/lid';
+import { STATUS_ICON } from '@/components/status-mark';
 import { Lead, Meta } from '@/components/text';
-import { listKey } from '@/hooks/keys';
 import { INSET, SPACE, useTheme } from '@/theme';
 
-import { useCached } from './cached';
 import { TheirsChecking, YoursChecking } from './checking';
 import { TheirsOpen, YoursOpen } from './open';
 import { Settled } from './settled';
@@ -68,13 +65,12 @@ export interface JohnSheetContext {
  * johnSheetMode). Yours and open: the tick, and "If you can't" while you
  * hold a token. Being checked: when it stands, and Undo for yours or
  * Dispute for a housemate's. Disputed: the reason, the tally and the vote.
- * Settled: what happened, and the photo.
+ * Settled: the photo, if it had one (the header says what happened).
  */
 export function JohnSheetBody({ item, context }: { item: BoardItem; context: JohnSheetContext }) {
-  const everyWeeks = useCadence(context.houseId, item);
   return (
     <View testID="john-sheet-body">
-      <JohnSheetHeader item={item} context={context} everyWeeks={everyWeeks} />
+      <JohnSheetHeader item={item} context={context} />
       <ModeContent item={item} context={context} />
     </View>
   );
@@ -98,38 +94,27 @@ function ModeContent({ item, context }: { item: BoardItem; context: JohnSheetCon
   }
 }
 
-/** How often the John comes round, from the house's list when a screen has read it (Today does). */
-function useCadence(houseId: string, item: BoardItem): number | null {
-  const list = useCached<JohnList>(listKey(houseId));
-  return list ? sheetCadence(item, list.johns) : null;
-}
-
 /**
  * The sheet's head: the lid dot before the kind, then the group, the
- * points and how often; the John's name in full as the Lead; when it's due
- * and what lateness costs its owner (capped at what's left of their stake,
- * once the Stake is read). The sheet sits on the pavement, so overdue and
- * disputed are said in ink after a hazard sign, never in hazard words.
+ * points and how often; the John's name in full as the Lead; then, while
+ * it's to do, when it's due and what lateness costs its owner (capped at
+ * what's left of their stake, once the Stake is read), and once it's
+ * settled, what happened. The sheet sits on the pavement, so overdue,
+ * disputed, late and missed are said in ink after their status's icon in
+ * hazard, never in hazard words.
  */
-export function JohnSheetHeader({
-  item,
-  context,
-  everyWeeks = null,
-}: {
-  item: BoardItem;
-  context: JohnSheetContext;
-  everyWeeks?: number | null;
-}) {
+function JohnSheetHeader({ item, context }: { item: BoardItem; context: JohnSheetContext }) {
   const { colors, type } = useTheme();
   const room = forfeitRoom(context.stake, item.userId, monthOf(item.dueAt, context.zone));
-  const when = sheetWhen(item, context.members, context.rules, context.now, room);
-  const Sign = when.sign === 'overdue' ? TriangleAlertIcon : when.sign === 'disputed' ? FlagIcon : null;
+  const when = sheetWhen(item, context.members, context.userId, context.rules, context.now, room);
+  const icon = when.sign ? STATUS_MARK[when.sign].icon : null;
+  const Sign = icon ? STATUS_ICON[icon] : null;
   return (
     <View style={styles.header}>
       <View style={styles.line}>
         <LidDot category={item.category} />
         <Meta numberOfLines={1} style={styles.shrink}>
-          {sheetKind(item, everyWeeks)}
+          {sheetKind(item)}
         </Meta>
       </View>
       <Lead header testID="john-sheet-name">

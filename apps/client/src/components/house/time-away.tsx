@@ -24,11 +24,10 @@ import type { Housemate } from '@/api/board';
 import { Alert } from '@/components/alert';
 import { Avatar } from '@/components/avatar';
 import { Button } from '@/components/button';
-import type { DateRange } from '@/components/date-range';
 import { Field } from '@/components/field';
 import { GroupItem } from '@/components/group';
 import { Row, RowIcon } from '@/components/row';
-import { AwayDates } from '@/components/setup/away-dates';
+import { AwayDates, type DateRange } from '@/components/setup/away-dates';
 import { Chip } from '@/components/status-mark';
 import { Body, Meta } from '@/components/text';
 import { TextButton } from '@/components/text-button';
@@ -101,7 +100,7 @@ export function AwayCalendar({
           return (
             <Row
               key={p.id}
-              leading={<Avatar name={who?.name ?? '?'} />}
+              leading={<Avatar name={who?.name ?? FOCUS_SHELL_COPY.formerHousemate} />}
               title={who ? firstName(who.name) : FOCUS_SHELL_COPY.formerHousemate}
               meta={awayMeta(p)}
               trailing={tripStarted(p, today) ? <Chip label={SETUP_COPY.awayNow} icon={PlaneIcon} /> : undefined}

@@ -2,15 +2,15 @@ import { toggled, type ReactionKind } from '@app/core';
 import { useInfiniteQuery, useMutation, useQuery, useQueryClient, type InfiniteData, type QueryKey } from '@tanstack/react-query';
 import { useCallback, useState } from 'react';
 
-import { loadWall, loadWallEvents, setReaction, type Wall, type WallCursor } from '@/api/wall';
-import { wallKey } from '@/hooks/keys';
+import { loadWall, loadWallEvents, setReaction, signPhoto, type Wall, type WallCursor } from '@/api/wall';
+import { photoKey, wallKey } from '@/hooks/keys';
 
 /** How many events the whole Wall reads at a time. */
 export const WALL_PAGE = 40;
 
-/** The house's Wall, read once and kept with the house's other reads. */
-export function useWall(houseId: string, userId: string) {
-  return useQuery({ queryKey: wallKey(houseId), queryFn: () => loadWall(houseId, userId) });
+/** One receipt, signed on its own (a settled John's sheet), whatever the Wall has read. */
+export function usePhoto(houseId: string, path: string) {
+  return useQuery({ queryKey: photoKey(houseId, path), queryFn: () => signPhoto(path) });
 }
 
 /**

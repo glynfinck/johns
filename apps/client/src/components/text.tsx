@@ -104,8 +104,8 @@ export function Meta({ children, numberOfLines, style, testID }: TextProps) {
   );
 }
 
-// Bin Night's older roles: the brand screens (front door, sign-in, joining)
-// and the screens Focus hasn't rebuilt yet.
+// Bin Night's older role: the brand screens (front door, sign-in, joining)
+// and the pages for a missing link or a screen that failed to draw.
 
 /** A heading: uppercase Overpass, so screens never repeat the style. Level 1 is the page title. */
 export function Heading({ level = 1, children, style }: { level?: 1 | 2 | 3; children: ReactNode; style?: StyleProp<TextStyle> }) {
@@ -115,10 +115,4 @@ export function Heading({ level = 1, children, style }: { level?: 1 | 2 | 3; chi
       {children}
     </Text>
   );
-}
-
-/** Small uppercase label with council-sign spacing. */
-export function Eyebrow({ children, style }: { children: ReactNode; style?: StyleProp<TextStyle> }) {
-  const { type } = useTheme();
-  return <Text style={[type.eyebrow, style]}>{children}</Text>;
 }

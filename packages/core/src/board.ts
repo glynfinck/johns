@@ -111,7 +111,12 @@ export type AssignmentRow = Pick<
   | "photo_path"
   | "outcome"
   | "excused"
->;
+> & {
+  /** The John on the list it was dealt from: null once that John is deleted, absent when not read. */
+  john_id?: string | null;
+  /** That John as the list has it now (`johns(every_weeks)`), when the read embeds it. */
+  johns?: { every_weeks: number } | null;
+};
 
 /** An open dispute, with its votes: `disputes` and `dispute_votes` as read. */
 export interface DisputeRow {
@@ -137,6 +142,10 @@ export interface DisputeView {
 
 export interface BoardItem {
   id: string;
+  /** The John on the list it was dealt from; null once that John is deleted, or when the read didn't say. */
+  johnId: string | null;
+  /** How often that John comes round, from the list; null when the read didn't embed it or the John is gone. */
+  everyWeeks: number | null;
   userId: string;
   name: string;
   category: string;
@@ -213,6 +222,8 @@ export function buildWeekBoard(input: {
       );
       return {
         id: a.id,
+        johnId: a.john_id ?? null,
+        everyWeeks: a.johns?.every_weeks ?? null,
         userId: a.user_id,
         name: a.name,
         category: a.category,

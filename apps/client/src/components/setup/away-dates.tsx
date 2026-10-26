@@ -3,9 +3,14 @@ import { ChevronLeftIcon, ChevronRightIcon } from 'lucide-react-native';
 import { useState } from 'react';
 import { Platform, Pressable, StyleSheet, Text, View } from 'react-native';
 
-import type { DateRange } from '@/components/date-range';
 import { Button } from '@/components/button';
 import { FONT, RADIUS, SPACE, TAP, useTheme } from '@/theme';
+
+/** A run of days being picked: neither end yet, the first, or both. */
+export interface DateRange {
+  from: string | null;
+  to: string | null;
+}
 
 /** Five weeks at a time, a month or so; moving on keeps the last week in view. */
 const WEEKS = 5;
@@ -16,9 +21,7 @@ const STEP = 4;
  * first you can book, rather than on the 1st of the month: weeks start on
  * the house's first day and run on across months, the 1st of each marked
  * with its month. The first tap is the first day (and the last, for a single
- * day), the next the last day. Nothing before `today` can be picked. It
- * stands in for DateRangePicker, which only opens on a month, and taps the
- * same way.
+ * day), the next the last day. Nothing before `today` can be picked.
  */
 export function AwayDates({
   today,

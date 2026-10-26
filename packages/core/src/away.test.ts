@@ -8,7 +8,6 @@ import {
   currentOrNext,
   datesBetween,
   isoDayOf,
-  monthGrid,
   remaining,
   shiftMonth,
   type AwayPeriod,
@@ -108,29 +107,6 @@ describe("awayThisWeek", () => {
     expect(awayThisWeek([ben("2026-10-26", "2026-10-30")], "ben", week)).toBeNull();
     expect(awayThisWeek([ben("2026-10-21", "2026-10-23")], "ava", week)).toBeNull();
     expect(awayThisWeek([], "ben", week)).toBeNull();
-  });
-});
-
-describe("monthGrid", () => {
-  it("lays a month out in weeks from the house's first day", () => {
-    const grid = monthGrid("2026-10", 1);
-    // 1 October 2026 is a Thursday: three blank days before it.
-    expect(grid[0]).toEqual([null, null, null, "2026-10-01", "2026-10-02", "2026-10-03", "2026-10-04"]);
-    expect(grid.at(-1)).toEqual(["2026-10-26", "2026-10-27", "2026-10-28", "2026-10-29", "2026-10-30", "2026-10-31", null]);
-    expect(grid.flat().filter(Boolean)).toHaveLength(31);
-    expect(grid.every((w) => w.length === 7)).toBe(true);
-  });
-
-  it("starts the week where the house does", () => {
-    expect(monthGrid("2026-10", 7)[0]).toEqual([null, null, null, null, "2026-10-01", "2026-10-02", "2026-10-03"]);
-    expect(monthGrid("2026-11", 7)[0][0]).toBe("2026-11-01");
-  });
-
-  it("knows February, leap years included", () => {
-    expect(monthGrid("2026-02", 1).flat().filter(Boolean)).toHaveLength(28);
-    expect(monthGrid("2028-02", 1).flat().filter(Boolean)).toHaveLength(29);
-    // February 2027 starts on a Monday and fills exactly four weeks.
-    expect(monthGrid("2027-02", 1)).toHaveLength(4);
   });
 });
 

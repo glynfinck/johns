@@ -21,9 +21,6 @@ export const PAGE_TITLE = {
   join: "Join a house",
   today: "Today",
   week: "This week",
-  wall: "The Wall",
-  table: "The Table",
-  stake: "The Stake",
   house: "House",
   privacy: "Privacy",
   notFound: "Nothing here",
@@ -55,6 +52,9 @@ export const ERROR_COPY = {
   title: "Something went wrong",
   body: "It wasn’t you. Try again, and if it keeps happening, tell the house admin.",
   retry: "Try again",
+  /** Your house couldn't be read, so no screen can be chosen yet. */
+  unreachable: "Can’t reach your house",
+  unreachableBody: "Check the connection, then try again.",
 } as const;
 
 export const FRONT_DOOR = {
@@ -113,7 +113,6 @@ export const NEW_HOUSE_COPY = {
   currency: "Currency",
   weekStarts: "The week starts on",
   timezone: "Time zone",
-  timezoneFromPhone: "This phone’s. Change it later from the House screen.",
   submit: "Set up the house",
   busy: "Setting up…",
   joinInstead: "Joining a housemate’s house instead? Open the join link they sent you.",
@@ -139,10 +138,8 @@ export const JOIN_COPY = {
 /** Signed in with no house: the app's way to start one or join by code. */
 export const NO_HOUSE_COPY = {
   heading: "No house yet",
-  body: "Start one and you’ll be its admin, or join a housemate’s with the code from their link.",
   start: "Start a house",
   code: "Join code",
-  codeHint: "Eight letters and numbers, from the end of the link.",
   badCode: "A join code is eight letters and numbers.",
   join: "Join with this code",
 } as const;
@@ -170,7 +167,6 @@ export const JOHN_COPY = {
   ticking: "Ticking…",
   withPhoto: "Mark done with a photo",
   photoAndDone: "Photo and done",
-  choosePhoto: "Choose a photo",
   uploading: "Uploading…",
   photoFailed: "That photo didn't upload. Try again.",
   undo: "Undo",
@@ -274,7 +270,7 @@ const waitingForYourVote = (count: number) => `${count} waiting for your vote`;
 /**
  * Focus's shell: the words of the tabs, the rail, the title bars and the
  * pieces every screen is built from. Each screen's own words live in its
- * own object (the empty ones at the end of this file, one per track).
+ * own object, at the end of this file.
  */
 export const FOCUS_SHELL_COPY = {
   /** A pushed page's way back. */
@@ -285,8 +281,6 @@ export const FOCUS_SHELL_COPY = {
   more: "More",
   /** The tabs, or the rail, to a screen reader. */
   places: "Places",
-  /** Today's badge, spoken: the disputes waiting for your vote. */
-  toVote: waitingForYourVote,
   /** A tab's spoken name, with its badge when it has one: "Today, 1 waiting for your vote". */
   tab: (label: string, toVote: number) => (toVote > 0 ? `${label}, ${waitingForYourVote(toVote)}` : label),
   /** The fold that keeps finished Johns out of the way. */
@@ -421,8 +415,6 @@ export const DEAL_COPY = {
   dealing: "Dealing…",
   firstBody: "When the list is ready and the house has joined, hand out the first week.",
   againBody: "Re-deal this week to include new Johns or housemates. Only works while nothing this week has been ticked.",
-  /** Today's card for an admin before the first deal: where the John list and the deal are. */
-  fromHouse: "The John list, the join link and the first deal are all on House.",
   openHouse: "Open House",
 } as const;
 
@@ -539,7 +531,6 @@ export const AWAY_COPY = {
     `${n} of your Johns ${n === 1 ? "falls" : "fall"} due while you're away, so ${n === 1 ? "it's" : "they're"} now due before you go.`,
   back: "I'm back",
   cancel: "Cancel",
-  previousMonth: "Previous month",
   nextMonth: "Next month",
   today: "Today",
   thisWeek: "Away this week",
@@ -554,7 +545,7 @@ export const AWAY_COPY = {
   change: "Change",
 } as const;
 
-/** Today track: Next up, Needs you, the rest of your week and the standing line. */
+/** Today: Next up, Needs you, the rest of your week and the standing line; a John's row, here and on Week. */
 export const NEXT_UP_COPY = {
   label: "Next up",
   photo: "Photo",
@@ -600,20 +591,12 @@ export const NEXT_UP_COPY = {
   anAdmin: "An admin",
   /** Someone who has left, named mid-sentence. */
   someoneGone: "a former housemate",
-  /** A row's kind, short, beside its trailing item. */
-  kinds: {
-    kitchen: "Kitchen",
-    bathroom: "Bathroom",
-    bins: "Bins",
-    floors: "Floors",
-    errands: "Errands",
-    other: "Other",
-  } as Record<string, string>,
-  /** A row's leading picture, spoken. */
+  /** A John row's circle, spoken (on Today and Week alike), when it isn't a tick. */
   stateLabel: {
     open: "Not done",
     checking: "Ticked, being checked",
     done: "Done",
+    late: "Done late",
     disputed: "Disputed",
     missed: "Missed",
     excused: "Skipped with immunity",
@@ -635,7 +618,7 @@ export const NEXT_UP_COPY = {
   square: (month: string) => `square in ${month}`,
 } as const;
 
-/** Today track: the John sheet's states, from yours to settled. */
+/** The John sheet's states, from yours to settled. */
 export const JOHN_SHEET_COPY = {
   every: (weeks: number) => (weeks === 1 ? "every week" : `every ${weeks} weeks`),
   due: (when: string) => `Due ${when}`,
@@ -669,14 +652,12 @@ export const JOHN_SHEET_COPY = {
   voted: "Vote counted. You can change it on Week.",
   theirs: (owner: string) => `It’s ${owner}’s this week.`,
   doneOnTime: (who: string, when: string | null) => `${who} did it on time${when ? `, ${when}` : ""}.`,
-  doneLate: (who: string, when: string | null, cost: string | null) =>
-    `${who} did it late${when ? `, ${when}` : ""}.${cost ? ` Late costs ${cost}.` : ""}`,
+  doneLate: (who: string, when: string | null) => `${who} did it late${when ? `, ${when}` : ""}.`,
   excused: (who: string) => `${who} skipped it with immunity, so there’s no forfeit.`,
-  missed: (cost: string | null) => `It was missed.${cost ? ` Missed costs ${cost}.` : ""}`,
-  photo: "The photo receipt",
+  missed: "It was missed.",
 } as const;
 
-/** Week track: the summary bar, the person groups, the fair-share footer and the menu. */
+/** Week: the summary bar, the person groups, the fair-share footer and the menu. */
 export const WEEK_SUMMARY_COPY = {
   /** The summary, to a screen reader. */
   soFar: "This week so far",
@@ -705,30 +686,14 @@ export const WEEK_SUMMARY_COPY = {
   nothing: "Nothing this week.",
   /** After a fold's "Done (2)", in hazard: "1 late". */
   late: (count: number) => `${count} late`,
-  /** A John's tick circle, spoken, when it's a picture rather than a checkbox. */
-  notDone: "Not done",
-  markDone: (john: string) => `Mark ${john} done`,
-  undo: (john: string) => `Undo ${john}`,
+  /** An open John's circle that doesn't tick, spoken: Today's word (the client e2e asks for it by this name). */
+  notDone: NEXT_UP_COPY.stateLabel.open,
   vote: "Vote",
   voteOn: (john: string) => `Vote on ${john}`,
   // A row's meta line, after the lid dot and the kind.
-  /** An overdue or missed John: "due Tue", "due 09:00" (today). */
-  wasDue: (when: string) => `due ${when}`,
-  ticked: (when: string) => `ticked ${when}`,
-  standsIn: (when: string) => `stands ${when}`,
-  /** Your own tick, with Undo beside it rather than the Checking mark: "checking, 18h left". */
-  checkingLeft: (time: string) => `checking, ${time} left`,
-  beforeYouGo: "before you go",
   beforeTheyGo: (name: string) => `before ${name} goes`,
-  immunityUsed: "immunity used",
-  /** A dispute's meta line beside its Vote button: "Disputed by Megan · 17h left". */
-  disputedBy: (who: string) => `Disputed by ${who}`,
-  /** Beside the Disputed mark, which already says it: "By Megan · 17h left". */
-  raisedBy: (who: string) => `By ${who}`,
   byYou: "you",
   someoneGone: "a former housemate",
-  left: (time: string) => `${time} left`,
-  closing: "closing now",
   /** On a laptop, a John's row to a screen reader: its name, meta, whose, points and status. */
   spokenRow: (parts: readonly string[]) => parts.join(", "),
   /** The footer: the deal's fairness, from the fair shares. Pressed, it explains them. */
@@ -752,10 +717,9 @@ export const WEEK_SUMMARY_COPY = {
   notDealt: "This week hasn’t been dealt yet",
   deal: "Deal this week",
   notDealtBody: "Johns are shared so the effort evens out.",
-  waitingFor: (admin: string) => `${admin} will deal it soon.`,
 } as const;
 
-/** House, the money half: the month card and settling up, and the Table with its invite and rules sheets. */
+/** House: the month card and settling up, and the Table with its invite and rules sheets. */
 export const HOUSE_PAGE_COPY = {
   /** Under the house's name: "4 housemates · £20 a month each". */
   sub: (housemates: number, stake: string) =>
@@ -837,7 +801,7 @@ export const HOUSE_PAGE_COPY = {
   makeup: { 100: "in full", 50: "by half", 0: "not at all" } as Record<number, string>,
 } as const;
 
-/** House, the money half: a housemate's page. */
+/** A housemate's page. */
 export const PERSON_COPY = {
   /** Under their name: "Admin", or "You · Admin" on your own page. */
   sub: (admin: boolean, you: boolean) => `${you ? "You · " : ""}${admin ? "Admin" : "Housemate"}`,
@@ -880,7 +844,7 @@ export const PERSON_COPY = {
   away: "Time away",
   awayNow: "Away now",
   booked: "Booked",
-  noAway: "No time away booked",
+  noAway: "No time away booked.",
   readingAway: "Reading time away",
   awayUnreadable: "Couldn’t read time away. Check the connection.",
   admin: "Admin",
@@ -895,9 +859,11 @@ export const PERSON_COPY = {
   removeConfirm: (name: string) => `Remove ${name}`,
 } as const;
 
-/** House, the money half: Stake history, the ledger by month. */
+/** Stake history: the ledger by month. */
 export const STAKE_HISTORY_COPY = {
   title: "Stake history",
+  /** Under the title, as under the house's name on House: "£20 a month each". */
+  sub: (stake: string) => `${stake} a month each`,
   /** Whose entries to show. */
   show: "Show",
   mine: "Mine",
@@ -911,7 +877,6 @@ export const STAKE_HISTORY_COPY = {
   capRefund: "Over the stake, returned",
   /** A payment, from whoever is looking: "You paid Priya", "Tom paid you", "Tom paid Priya". */
   paid: (from: string, to: string) => `${from} paid ${to}`,
-  you: "You",
   yourself: "you",
   received: (day: string) => `Marked received ${day}`,
   empty: "Nothing yet",
@@ -919,7 +884,7 @@ export const STAKE_HISTORY_COPY = {
   emptyMine: "Nothing of yours yet. Whole house shows everyone’s.",
 } as const;
 
-/** House, the lower half: the whole Wall, by day. */
+/** The whole Wall, by day. */
 export const WALL_FEED_COPY = {
   /** House's way to the whole Wall, and what it says to a screen reader. */
   seeAll: "See all",
@@ -994,7 +959,6 @@ export const WALL_FEED_COPY = {
   /** A row, to a screen reader: the sentence, then its meta line. */
   row: (title: string, meta: string) => `${title}, ${meta}`,
   // Reactions.
-  reactions: "Reactions",
   /** The way to all four reactions on a row that has none yet. */
   react: "React",
   /** A reaction and how many gave it, to a screen reader: "Nice one, 2". */
@@ -1003,7 +967,7 @@ export const WALL_FEED_COPY = {
   reactionCount: (label: string, count: number) => (count > 0 ? `${label} · ${count}` : label),
 } as const;
 
-/** House, the lower half: the Wall's latest, House setup's rows, You, and leaving. */
+/** House: the Wall's latest, House setup's rows, You, and leaving. */
 export const HOUSE_LOWER_COPY = {
   /** House setup's note on the right: changing these changes the house. */
   setupNote: "Affects everyone",
@@ -1051,7 +1015,7 @@ export const HOUSE_LOWER_COPY = {
   privacy: "Privacy",
 } as const;
 
-/** Setup track: the Johns, Rules, Time away and Groups pages. */
+/** House setup: the Johns, Rules, Time away and Groups pages. */
 export const SETUP_COPY = {
   /** A kind of John as a section of the John list: "Kitchen · 3". */
   kind: (label: string, count: number) => `${label} · ${count}`,
@@ -1124,7 +1088,7 @@ export const SETUP_COPY = {
   groupsNote: "A John that belongs to a group is only handed to the people in it.",
 } as const;
 
-/** Front door track: the front door, starting a house, welcome and privacy. */
+/** The front door, starting a house, welcome and privacy. */
 export const FRONT_DOOR_COPY = {
   /** The front door's three plain sentences, in place of the old feature cards. */
   points: [

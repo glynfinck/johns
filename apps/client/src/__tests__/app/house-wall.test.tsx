@@ -126,7 +126,7 @@ it('folds several ticks by one person in a row into one, and opens it', async ()
   await open();
   const yesterday = day(WALL_FEED_COPY.yesterday);
   const fold = yesterday.getByTestId('wall-fold');
-  expect(fold).toHaveTextContent(/You ticked 2 Johns · 20:00/);
+  expect(fold).toHaveTextContent(/You ticked 2 Johns ·.*20:00/);
   expect(yesterday.getAllByTestId('wall-event')).toHaveLength(1);
   await fireEvent.press(fold);
   expect(fold).toBeExpanded();

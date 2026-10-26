@@ -1,4 +1,4 @@
-import { loadWall, setReaction } from './wall';
+import { loadWall, setReaction, signPhoto } from './wall';
 import { supabase } from './supabase';
 
 // `from` answers every table with what the test sets; the chain records its calls.
@@ -82,6 +82,21 @@ describe('loadWall', () => {
 
     mockAnswer.events = { data: null, error: new Error('offline') };
     await expect(loadWall('h1', 'ava')).rejects.toThrow('offline');
+  });
+});
+
+describe('signPhoto', () => {
+  it('signs one receipt for an hour, and fails when storage says no', async () => {
+    const createSignedUrl = jest
+      .fn()
+      .mockResolvedValueOnce({ data: { signedUrl: 'https://signed/p' }, error: null })
+      .mockResolvedValueOnce({ data: null, error: new Error('Object not found') });
+    storage.from.mockReturnValue({ createSignedUrl });
+
+    await expect(signPhoto('h1/a1/p.jpg')).resolves.toBe('https://signed/p');
+    expect(storage.from).toHaveBeenCalledWith('proofs');
+    expect(createSignedUrl).toHaveBeenCalledWith('h1/a1/p.jpg', 3600);
+    await expect(signPhoto('h1/a1/gone.jpg')).rejects.toThrow('Object not found');
   });
 });
 

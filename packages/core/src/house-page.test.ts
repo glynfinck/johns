@@ -457,9 +457,13 @@ describe("a housemate's page", () => {
     const input = { transfers, members: MEMBERS, currency: "GBP" as const, ledger, closedMonths: ["2026-09"] };
     expect(owingLines({ ...input, personId: "tom", me: "sam" }).map((l) => [l.title, l.meta[0].text])).toEqual([
       ["Tom owes Priya £5.34", "From September · not paid yet"],
-      ["Tom owes you £4.01", "From September · not paid yet"],
+      // Yours to mark received, said as House's settle-up says it.
+      ["Tom owes you £4.01", "From September · paid however you like"],
     ]);
-    expect(owingLines({ ...input, personId: "tom", me: "tom" }).map((l) => l.title)).toEqual(["You owe Priya £5.34", "You owe Sam £4.01"]);
+    expect(owingLines({ ...input, personId: "tom", me: "tom" }).map((l) => [l.title, l.meta[0].text])).toEqual([
+      ["You owe Priya £5.34", "From September · waiting for Priya to confirm"],
+      ["You owe Sam £4.01", "From September · waiting for Sam to confirm"],
+    ]);
     expect(owingLines({ ...input, personId: "megan", me: "sam" })).toEqual([]);
     const left = owingLines({ ...input, transfers: [{ from: "tom", to: "ben", amount: 100 }], personId: "tom", me: "sam" });
     expect(left.map((l) => l.title)).toEqual(["Tom owes a former housemate £1"]);
@@ -478,7 +482,8 @@ describe("a housemate's page", () => {
     ]);
     // The last day away still counts as away.
     expect(awayLines(periods, "megan", "2026-10-28")[0].meta[0].text).toBe("Away now · Cork");
-    expect(awayLines(periods, "sam", "2026-10-26")).toEqual([{ key: "none", title: PERSON_COPY.noAway, meta: [] }]);
+    // None: the page says so in a sentence of its own.
+    expect(awayLines(periods, "sam", "2026-10-26")).toEqual([]);
   });
 });
 

@@ -114,9 +114,11 @@ function Unreachable({ onRetry }: { onRetry: () => Promise<void> }) {
   const { colors } = useTheme();
   return (
     <View style={[styles.unreachable, { backgroundColor: colors.background }]}>
-      <Heading level={2}>Can’t reach your house</Heading>
-      <Body muted>Check the connection, then try again.</Body>
-      <Button label="Try again" icon={RefreshCwIcon} onPress={() => void onRetry()} />
+      <Heading level={2}>{ERROR_COPY.unreachable}</Heading>
+      <Body muted>{ERROR_COPY.unreachableBody}</Body>
+      <View style={styles.start}>
+        <Button label={ERROR_COPY.retry} icon={RefreshCwIcon} onPress={() => void onRetry()} />
+      </View>
     </View>
   );
 }

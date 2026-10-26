@@ -25,6 +25,19 @@ export const CATEGORY_LABEL: Record<Category, string> = {
 };
 
 /**
+ * A kind as a line about one John says it, short enough to leave room for
+ * when: "Bins · today 21:00", "Other · was due Tue".
+ */
+export const CATEGORY_SHORT: Record<Category, string> = {
+  kitchen: "Kitchen",
+  bathroom: "Bathroom",
+  bins: "Bins",
+  floors: "Floors",
+  errands: "Errands",
+  other: "Other",
+};
+
+/**
  * How a John ended, once the house can no longer argue about it.
  * - `done`: ticked by its due time and nobody upheld a dispute.
  * - `late`: ticked after its due time but before the week closed.

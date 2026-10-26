@@ -3,6 +3,7 @@ import { describe, expect, it } from "vitest";
 import {
   dateRange,
   dayLabel,
+  dueInLine,
   dueLabel,
   firstName,
   formatBalance,
@@ -12,6 +13,7 @@ import {
   nameFromParts,
   pointsLabel,
   relative,
+  sinceLabel,
   STATUS_LABEL,
   STATUS_MARK,
   weekRange,
@@ -34,6 +36,30 @@ describe("dueLabel", () => {
   it("counts a late-night UTC time as the next local day", () => {
     // 23:30 UTC on the 8th is 00:30 BST on the 9th.
     expect(dueLabel(new Date("2026-10-08T23:30:00Z"), now, LONDON)).toBe("Tomorrow 00:30");
+  });
+});
+
+describe("dueInLine", () => {
+  it("is the due label mid-sentence: today, tomorrow and yesterday in lower case, days as they are", () => {
+    expect(dueInLine(new Date("2026-10-08T20:00:00Z"), now, LONDON)).toBe("today 21:00");
+    expect(dueInLine(new Date("2026-10-09T06:30:00Z"), now, LONDON)).toBe("tomorrow 07:30");
+    expect(dueInLine(new Date("2026-10-07T17:00:00Z"), now, LONDON)).toBe("yesterday 18:00");
+    expect(dueInLine(new Date("2026-10-11T20:00:00Z"), now, LONDON)).toBe("Sun 21:00");
+    expect(dueInLine(new Date("2026-10-20T17:00:00Z"), now, LONDON)).toBe("Tue 20 Oct");
+  });
+});
+
+describe("sinceLabel", () => {
+  it("is the time today, the weekday within the week, and the date before that", () => {
+    expect(sinceLabel(new Date("2026-10-08T07:00:00Z"), now, LONDON)).toBe("08:00");
+    expect(sinceLabel(new Date("2026-10-06T19:00:00Z"), now, LONDON)).toBe("Tue");
+    expect(sinceLabel(new Date("2026-10-02T19:00:00Z"), now, LONDON)).toBe("Fri");
+    expect(sinceLabel(new Date("2026-10-01T19:00:00Z"), now, LONDON)).toBe("Thu 1 Oct");
+  });
+
+  it("counts days in the house's zone", () => {
+    // 23:30 UTC on the 7th is 00:30 BST on the 8th: today.
+    expect(sinceLabel(new Date("2026-10-07T23:30:00Z"), now, LONDON)).toBe("00:30");
   });
 });
 

@@ -6,7 +6,6 @@ import {
   JOHN_COPY,
   JOHN_SHEET_COPY,
   monthOf,
-  NEW_JOHN,
   NEXT_UP_COPY,
   SWAP_COPY,
   type DisputeRow,
@@ -21,9 +20,9 @@ import { loadHouse } from '@/api/board';
 import { castVote } from '@/api/disputes';
 import { markDone, spendImmunity, spendSwap, undoDone } from '@/api/johns';
 import { pickPhoto } from '@/api/photos';
-import { loadWall } from '@/api/wall';
+import { signPhoto } from '@/api/wall';
 import { ToastProvider } from '@/components/toast';
-import { houseKey, listKey, stakeKey } from '@/hooks/keys';
+import { houseKey, stakeKey } from '@/hooks/keys';
 import { assignment, snapshot } from '@/testing/house';
 import { measureAt, measureNowhere } from '@/testing/layout';
 import { testQueryClient } from '@/testing/query';
@@ -35,7 +34,7 @@ jest.mock('@/api/house', () => ({ catchUp: jest.fn(() => Promise.resolve(false))
 jest.mock('@/api/johns', () => ({ markDone: jest.fn(), undoDone: jest.fn(), spendImmunity: jest.fn(), spendSwap: jest.fn() }));
 jest.mock('@/api/disputes', () => ({ castVote: jest.fn(), raiseDispute: jest.fn() }));
 jest.mock('@/api/photos', () => ({ pickPhoto: jest.fn(), uploadProof: jest.fn() }));
-jest.mock('@/api/wall', () => ({ loadWall: jest.fn(), setReaction: jest.fn() }));
+jest.mock('@/api/wall', () => ({ signPhoto: jest.fn() }));
 jest.mock('@/api/supabase', () => ({ supabase: {} }));
 
 const HOUR = 3_600_000;
@@ -109,7 +108,7 @@ beforeEach(() => {
   (spendSwap as jest.Mock).mockResolvedValue(undefined);
   (castVote as jest.Mock).mockResolvedValue(undefined);
   (pickPhoto as jest.Mock).mockResolvedValue(null);
-  (loadWall as jest.Mock).mockResolvedValue({ events: [], photos: {} });
+  (signPhoto as jest.Mock).mockResolvedValue('https://photos.test/a3.jpg');
 });
 
 describe('the header', () => {
@@ -118,19 +117,15 @@ describe('the header', () => {
     expect(screen.queryByTestId('john-sheet-body')).toBeNull();
     await openOn('Open a1');
     expect(screen.getByRole('header', { name: 'Bins out' })).toBeOnTheScreen();
-    expect(screen.getByText('Bins & recycling · 2 pts')).toBeOnTheScreen();
+    expect(screen.getByText('Bins · 2 pts')).toBeOnTheScreen();
     expect(screen.getByTestId('lid-dot', { includeHiddenElements: true })).toBeOnTheScreen();
     expect(screen.getByTestId('john-sheet-when')).toHaveTextContent(/^Due .+ · late costs £1, missed £3$/);
   });
 
-  it('says how often it comes round, once a screen has read the list', async () => {
-    const client = await show();
-    client.setQueryData(listKey('h1'), {
-      johns: [{ ...NEW_JOHN, id: 'j1', name: 'Bins out', category: 'bins', everyWeeks: 2 }],
-      groups: [],
-    });
+  it('says how often it comes round, from the John on the list it was dealt from', async () => {
+    await show(house([binsOut({ john_id: 'j1', johns: { every_weeks: 2 } })]));
     await openOn('Open a1');
-    expect(screen.getByText('Bins & recycling · 2 pts · every 2 weeks')).toBeOnTheScreen();
+    expect(screen.getByText('Bins · 2 pts · every 2 weeks')).toBeOnTheScreen();
   });
 
   it("says no more than lateness can still cost the John's owner this month, once a screen has read the Stake", async () => {
@@ -446,8 +441,7 @@ describe('a disputed John', () => {
 });
 
 describe('a settled John', () => {
-  it('says it was done on time, with the photo receipt', async () => {
-    (loadWall as jest.Mock).mockResolvedValue({ events: [], photos: { 'h1/a3.jpg': 'https://photos.test/a3.jpg' } });
+  it('says it was done on time, in its header, with the photo receipt signed for it', async () => {
     await show(
       house([
         binsOut(),
@@ -455,20 +449,23 @@ describe('a settled John', () => {
       ]),
     );
     const body = await openOn('Open a3');
-    expect(within(body).getByTestId('settled-line')).toHaveTextContent(/^You did it on time, .+\.$/);
+    expect(within(body).getByTestId('john-sheet-when')).toHaveTextContent(/^You did it on time, .+\.$/);
     const photo = await within(body).findByTestId('sheet-photo');
     expect(photo.props.source).toEqual({ uri: 'https://photos.test/a3.jpg' });
+    expect(signPhoto).toHaveBeenCalledWith('h1/a3.jpg');
     expect(within(body).queryByRole('button')).toBeNull();
   });
 
   it.each([
-    [{ done_at: at(-1), outcome: 'late' as const }, /^Sam did it late, .+\. Late costs £1\.$/],
+    [{ done_at: at(-1), outcome: 'late' as const }, /^Sam did it late, .+\.$/],
     [{ excused: true }, /^Sam skipped it with immunity, so there’s no forfeit\.$/],
-    [{ due_at: at(-30), outcome: 'missed' as const }, /^It was missed\. Missed costs £3\.$/],
-  ])('says what happened: %o', async (how, words) => {
+    [{ due_at: at(-30), outcome: 'missed' as const }, /^It was missed\.$/],
+  ])('says what happened, in place of what lateness would cost: %o', async (how, words) => {
     await show(house([binsOut(), samsBath(how)]));
     const body = await openOn('Open a4');
-    expect(within(body).getByTestId('settled-line')).toHaveTextContent(words);
+    expect(within(body).getByTestId('john-sheet-when')).toHaveTextContent(words);
+    expect(within(body).queryByTestId('sheet-photo')).toBeNull();
+    expect(signPhoto).not.toHaveBeenCalled();
   });
 });
 

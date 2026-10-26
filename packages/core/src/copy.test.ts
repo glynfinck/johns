@@ -10,6 +10,7 @@ import {
   DISPUTE_COPY,
   FRONT_DOOR,
   GROUPS_COPY,
+  HOUSE_PAGE_COPY,
   INVITE_COPY,
   JOHN_COPY,
   JOHN_LIST_COPY,
@@ -32,6 +33,7 @@ import {
   SHELL_COPY,
   SIGN_IN_COPY,
   STAKE_COPY,
+  STAKE_HISTORY_COPY,
   TABLE_COPY,
   TAGLINE,
   TODAY_COPY,
@@ -304,7 +306,6 @@ describe("REMINDERS_COPY", () => {
 
 describe("FOCUS_SHELL_COPY", () => {
   it("speaks Today's badge, and leaves a tab with none as its name", () => {
-    expect(FOCUS_SHELL_COPY.toVote(1)).toBe("1 waiting for your vote");
     expect(FOCUS_SHELL_COPY.tab("Today", 2)).toBe("Today, 2 waiting for your vote");
     expect(FOCUS_SHELL_COPY.tab("Today", 0)).toBe("Today");
     expect(FOCUS_SHELL_COPY.tab("Week", 0)).toBe("Week");
@@ -316,8 +317,15 @@ describe("FOCUS_SHELL_COPY", () => {
   });
 });
 
-describe("the tracks' word objects", () => {
-  const TRACKS = [
+describe("STAKE_HISTORY_COPY", () => {
+  it("says the stake under its title as House says it under the house's name", () => {
+    expect(STAKE_HISTORY_COPY.sub("£20")).toBe("£20 a month each");
+    expect(HOUSE_PAGE_COPY.sub(4, "£20").endsWith(STAKE_HISTORY_COPY.sub("£20"))).toBe(true);
+  });
+});
+
+describe("Focus's word objects", () => {
+  const FOCUS = [
     "NEXT_UP_COPY",
     "JOHN_SHEET_COPY",
     "WEEK_SUMMARY_COPY",
@@ -330,10 +338,10 @@ describe("the tracks' word objects", () => {
     "FRONT_DOOR_COPY",
   ];
 
-  it("are in place, in order, for each track to fill", () => {
+  it("sit together in the order of the app, one per part of it", () => {
     // Vitest keeps the module's exports in the order they're written.
-    const names = Object.keys(copy).filter((name) => TRACKS.includes(name));
-    expect(names).toEqual(TRACKS);
+    const names = Object.keys(copy).filter((name) => FOCUS.includes(name));
+    expect(names).toEqual(FOCUS);
     for (const name of names) expect(typeof copy[name as keyof typeof copy]).toBe("object");
   });
 });

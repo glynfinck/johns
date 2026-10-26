@@ -34,7 +34,7 @@ function TodayFor({ houseId, userId }: { houseId: string; userId: string }) {
   const { query, view } = useHouse(houseId, userId);
   const away = useAway(houseId, query.data);
   const stake = useStake(houseId, query.data);
-  // The setup checklist counts the list; the John sheet reads how often a John comes round from it.
+  // The setup checklist counts the list.
   const list = useJohnList(houseId);
   // Time away isn't followed live: read it again whenever Today comes back into view.
   useReadOnFocus(away.refetch, { skipFirst: true });
@@ -81,6 +81,7 @@ function TodayView({
   const { house, rules, members } = snapshot;
   const userId = me?.userId ?? '';
   const page = todayPage({ board, mine: today.mine, userId, me, members, rules, away, stake });
+  const nameOf = (id: string) => members.find((m) => m.userId === id)?.name ?? null;
 
   return (
     <>
@@ -104,7 +105,11 @@ function TodayView({
         />
       )}
       <NeedsYou items={today.toVote} members={members} now={now} />
-      <RestOfWeek houseId={house.id} going={page.going} finished={page.finished} members={members} rules={rules} now={now} />
+      <RestOfWeek
+        going={page.going}
+        finished={page.finished}
+        context={{ houseId: house.id, userId, zone: rules.timezone, now, nameOf }}
+      />
       {page.standing || page.away ? (
         // The page's quiet lines sit together, under the week.
         <PageLines>

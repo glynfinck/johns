@@ -3,7 +3,7 @@ import { useCallback, useSyncExternalStore } from 'react';
 
 /**
  * What a screen has already read under `key`, from the cache alone, and
- * followed as it's read again (the John list, the Stake). The sheet never
+ * followed as it's read again (the Stake). The sheet never
  * asks the network for it, nor holds a query of its own that a move would
  * have React Query read again.
  */

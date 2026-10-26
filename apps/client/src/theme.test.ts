@@ -68,7 +68,8 @@ describe("Focus's type", () => {
 describe('Overpass', () => {
   const FILES = ['Overpass_400Regular', 'Overpass_700Bold', 'Overpass_800ExtraBold', 'Overpass_900Black'];
 
-  it("loads the app's own copies of the four weights Focus sets, under the same families", () => {
+  it("loads the app's own copies of the four weights Focus sets, under the same families, and no others", () => {
+    expect(Object.keys(FONT_FILES)).toHaveLength(4);
     expect(FONT_FILES).toMatchObject({
       [FONT.regular]: 'app 400',
       [FONT.bold]: 'app 700',

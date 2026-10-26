@@ -114,7 +114,9 @@ it('shows the month’s money, and apart from it what they owe from a closed mon
   const settling = within(screen.getByTestId('person-settling'));
   expect(settling.getByRole('header', { name: PERSON_COPY.settling })).toBeOnTheScreen();
   expect(settling.getByTestId('person-owing')).toHaveTextContent(
-    new RegExp(`${PERSON_COPY.owes('Sam', HOUSE_PAGE_COPY.you.toLowerCase(), '£4')}${PERSON_COPY.owesMeta('September')}`),
+    new RegExp(
+      `${PERSON_COPY.owes('Sam', HOUSE_PAGE_COPY.you.toLowerCase(), '£4')}${HOUSE_PAGE_COPY.from('September')} · ${HOUSE_PAGE_COPY.howYouLike}`,
+    ),
   );
 });
 
@@ -138,6 +140,14 @@ it('shows their streak and tokens, and their time away', async () => {
   await open('sam');
   expect(within(screen.getByTestId('person-perks')).getByText(PERSON_COPY.noStreak)).toBeOnTheScreen();
   expect(screen.getByTestId('person-away')).toHaveTextContent(/28–31 Oct/);
+});
+
+it('says so in a sentence when they have no time away booked, as an empty group does anywhere', async () => {
+  (loadAway as jest.Mock).mockResolvedValue({ today: '2026-10-26', periods: [] });
+  await open('sam');
+  const away = within(screen.getByTestId('person-away'));
+  expect(away.getByText(PERSON_COPY.noAway)).toBeOnTheScreen();
+  expect(away.queryByRole('button')).toBeNull();
 });
 
 it('lets an admin make them an admin, and says why a change was refused', async () => {

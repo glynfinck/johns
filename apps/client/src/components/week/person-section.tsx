@@ -1,24 +1,12 @@
-import {
-  FOCUS_SHELL_COPY,
-  WEEK_SUMMARY_COPY,
-  weekFold,
-  weekPersonMeta,
-  weekWho,
-  type BoardItem,
-  type WeekPerson,
-} from '@app/core';
+import { FOCUS_SHELL_COPY, WEEK_SUMMARY_COPY, weekPersonMeta, weekWho, type BoardItem, type WeekPerson } from '@app/core';
 import { RepeatIcon } from 'lucide-react-native';
-import { Text } from 'react-native';
 
 import { Avatar } from '@/components/avatar';
-import { Fold } from '@/components/fold';
 import { GroupItem } from '@/components/group';
+import { DoneFold, JohnRow, type JohnRowContext } from '@/components/john-row';
 import { Section } from '@/components/section';
 import { Chip } from '@/components/status-mark';
 import { Body } from '@/components/text';
-import { useTheme } from '@/theme';
-
-import { WeekJohnRow, type WeekContext } from './john-row';
 
 /**
  * One person's week, as a Section: a header with their 24pt avatar, their
@@ -35,17 +23,15 @@ export function PersonSection({
   swapReady = false,
 }: {
   person: WeekPerson<BoardItem>;
-  context: WeekContext;
+  context: JohnRowContext;
   /** Their points this week, as the Table counts them. */
   points: number;
   /** "away 29 Oct – 1 Nov", from core's weekAwayNote: a line of its own under the counts. */
   away: string | null;
   swapReady?: boolean;
 }) {
-  const { colors } = useTheme();
   const mine = person.userId === context.userId;
   const name = context.nameOf(person.userId) ?? FOCUS_SHELL_COPY.formerHousemate;
-  const fold = weekFold(person.folded);
   const counts = weekPersonMeta({ done: person.done, total: person.total, points });
   return (
     <Section
@@ -57,19 +43,13 @@ export function PersonSection({
       testID={`person-${person.userId}`}
     >
       {person.rows.map((item) => (
-        <WeekJohnRow key={item.id} item={item} context={context} />
+        <JohnRow key={item.id} item={item} context={context} testID="week-row" />
       ))}
-      {fold.count > 0 ? (
-        <Fold
-          label={FOCUS_SHELL_COPY.done(fold.count)}
-          meta={fold.late ? <Text style={{ color: colors.hazard }}>{fold.late}</Text> : undefined}
-          testID="done-fold"
-        >
-          {person.folded.map((item) => (
-            <WeekJohnRow key={item.id} item={item} context={context} />
-          ))}
-        </Fold>
-      ) : null}
+      <DoneFold items={person.folded}>
+        {person.folded.map((item) => (
+          <JohnRow key={item.id} item={item} context={context} testID="week-row" />
+        ))}
+      </DoneFold>
       {person.total === 0 ? (
         <GroupItem>
           <Body>{WEEK_SUMMARY_COPY.nothing}</Body>

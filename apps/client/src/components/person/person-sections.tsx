@@ -20,6 +20,7 @@ import { GroupItem } from '@/components/group';
 import { PersonLines } from '@/components/person/person-lines';
 import { Reading, ReadFailed } from '@/components/read-state';
 import { Section } from '@/components/section';
+import { Body } from '@/components/text';
 import type { HouseView } from '@/hooks/use-house';
 
 /** A section's rows once what they need is read, or the read on its way, or why it failed. */
@@ -27,6 +28,17 @@ function Pending({ query, label, unreadable }: { query: UseQueryResult<unknown>;
   return (
     <GroupItem>
       {query.isError ? <ReadFailed message={unreadable} onRetry={() => void query.refetch()} /> : <Reading label={label} />}
+    </GroupItem>
+  );
+}
+
+/** Their time away from today on, or a sentence saying there's none (as an empty group says it anywhere). */
+function AwayLines({ away, personId }: { away: AwayView; personId: string }) {
+  const lines = awayLines(away.periods, personId, away.today);
+  if (lines.length > 0) return <PersonLines lines={lines} />;
+  return (
+    <GroupItem>
+      <Body>{PERSON_COPY.noAway}</Body>
     </GroupItem>
   );
 }
@@ -121,7 +133,7 @@ export function PersonSections({
 
       <Section label={PERSON_COPY.away} testID="person-away">
         {away.data ? (
-          <PersonLines lines={awayLines(away.data.periods, person.userId, away.data.today)} />
+          <AwayLines away={away.data} personId={person.userId} />
         ) : (
           <Pending query={away} label={PERSON_COPY.readingAway} unreadable={PERSON_COPY.awayUnreadable} />
         )}

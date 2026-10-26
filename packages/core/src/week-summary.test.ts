@@ -2,7 +2,6 @@ import { describe, expect, it } from "vitest";
 
 import type { AwayPeriod } from "./away";
 import type { BoardItem, DisputeView } from "./board";
-import { CATEGORIES } from "./domain";
 import type { LiveStatus } from "./outcome";
 import {
   liveWeekFilter,
@@ -12,15 +11,11 @@ import {
   weekAwayNote,
   weekFairness,
   weekFinished,
-  weekFold,
-  weekKind,
   weekList,
   weekPart,
   weekPeople,
   weekPersonMeta,
   weekRangeLine,
-  weekRowMeta,
-  weekRowPlan,
   weekShareRows,
   weekSpokenRow,
   weekSummary,
@@ -40,6 +35,8 @@ const nameOf = (id: string): string | null => NAMES[id] ?? null;
 function item(id: string, overrides: Partial<BoardItem> = {}): BoardItem {
   return {
     id,
+    johnId: `j-${id}`,
+    everyWeeks: 1,
     userId: "sam",
     name: id,
     category: "kitchen",
@@ -233,14 +230,6 @@ describe("weekPersonMeta", () => {
   });
 });
 
-describe("weekFold", () => {
-  it("counts what's folded and how many of those were late", () => {
-    expect(weekFold([{ status: "late" }, { status: "done" }, { status: "late" }])).toEqual({ count: 3, late: "2 late" });
-    expect(weekFold([{ status: "done" }, { status: "excused" }])).toEqual({ count: 2, late: null });
-    expect(weekFold([])).toEqual({ count: 0, late: null });
-  });
-});
-
 describe("weekAwayNote", () => {
   const away = (userId: string, startsOn: string, endsOn: string): AwayPeriod => ({
     id: `${userId}-${startsOn}`,
@@ -334,150 +323,10 @@ describe("weekRangeLine", () => {
   });
 });
 
-describe("weekRowPlan", () => {
-  it("ticks your own open John from its circle, overdue included, with its mark or its points after it", () => {
-    expect(weekRowPlan(item("a", { status: "due-soon" }), "sam")).toEqual({
-      circle: "open",
-      circleLabel: "Not done",
-      ticks: true,
-      trailing: "status",
-      points: 2,
-      focus: null,
-      hazardEdge: false,
-    });
-    expect(weekRowPlan(item("a", { status: "upcoming" }), "sam")).toMatchObject({ ticks: true, trailing: "points" });
-    expect(weekRowPlan(item("a", { status: "overdue" }), "sam")).toMatchObject({ ticks: true, trailing: "status", hazardEdge: true });
-  });
-
-  it("never ticks a housemate's John, a finished one or a missed one", () => {
-    expect(weekRowPlan(item("a", { userId: "tom", status: "overdue" }), "sam")).toMatchObject({ ticks: false, hazardEdge: true });
-    for (const status of ["checking", "disputed", "done", "late", "missed", "excused"] as const) {
-      expect(weekRowPlan(item("a", { status }), "sam").ticks).toBe(false);
-    }
-    expect(weekRowPlan(item("a", { status: "missed" }), "sam")).toMatchObject({ circle: "open", hazardEdge: true, trailing: "status" });
-  });
-
-  it("offers Undo on your tick being checked, and a housemate's tick opens on Dispute", () => {
-    expect(weekRowPlan(item("a", { status: "checking" }), "sam")).toMatchObject({ circle: "checking", trailing: "undo", focus: null });
-    expect(weekRowPlan(item("a", { userId: "megan", status: "checking" }), "sam")).toMatchObject({
-      circle: "checking",
-      circleLabel: "Done, being checked",
-      trailing: "status",
-      focus: "dispute",
-    });
-  });
-
-  it("asks for your vote on a dispute until you've given it, and opens on the vote", () => {
-    const waiting = item("a", { userId: "priya", status: "disputed", dispute: dispute() });
-    expect(weekRowPlan(waiting, "sam")).toMatchObject({ circle: "disputed", trailing: "vote", focus: "vote" });
-    const voted = item("a", { userId: "priya", status: "disputed", dispute: dispute({ myVote: false }) });
-    expect(weekRowPlan(voted, "sam")).toMatchObject({ trailing: "status", focus: "vote" });
-    // Your own disputed John: you can't vote on it, so the sheet opens on nothing in particular.
-    expect(weekRowPlan(item("a", { status: "disputed", dispute: dispute() }), "sam")).toMatchObject({ trailing: "status", focus: null });
-  });
-
-  it("shows finished Johns as done, and an excused one as excused rather than green", () => {
-    expect(weekRowPlan(item("a", { status: "late" }), "sam")).toMatchObject({ circle: "done", circleLabel: "Done late" });
-    expect(weekRowPlan(item("a", { status: "excused" }), "sam")).toMatchObject({ circle: "excused", circleLabel: "Excused" });
-  });
-
-  it("ends a finished row with what it earned, not a mark the circle already shows; late keeps its mark", () => {
-    expect(weekRowPlan(item("a", { status: "done", points: 3 }), "sam")).toMatchObject({ trailing: "points", points: 3 });
-    expect(weekRowPlan(item("a", { status: "excused", points: 3 }), "sam")).toMatchObject({ trailing: "points", points: 0 });
-    // Half, rounded down, for a late one.
-    expect(weekRowPlan(item("a", { status: "late", points: 3 }), "sam")).toMatchObject({ trailing: "status", points: 1 });
-  });
-
-  it("counts a John's points while it's still to do or being decided, and nothing once it's missed", () => {
-    for (const status of ["upcoming", "due-soon", "overdue", "checking", "disputed"] as const) {
-      expect(weekRowPlan(item("a", { status, points: 4 }), "sam").points).toBe(4);
-    }
-    expect(weekRowPlan(item("a", { status: "missed", points: 4 }), "sam").points).toBe(0);
-    expect(weekRowPlan(item("a", { status: "upcoming", points: 0 }), "sam").points).toBe(0);
-  });
-});
-
-describe("weekKind", () => {
-  it("is the category's word up to any &, and Everything else in full", () => {
-    expect(weekKind("bins")).toBe("Bins");
-    expect(weekKind("floors")).toBe("Floors");
-    expect(weekKind("errands")).toBe("Errands");
-    expect(weekKind("other")).toBe("Everything else");
-    expect(weekKind("kitchen")).toBe("Kitchen");
-  });
-
-  it("has a word for every category, and falls back to the slug for one it doesn't know", () => {
-    for (const category of CATEGORIES) expect(weekKind(category)).toMatch(/^[A-Z]/);
-    expect(weekKind("something new")).toBe("something new");
-  });
-});
-
-describe("weekRowMeta", () => {
-  const meta = (overrides: Partial<BoardItem>, viewer = "sam") => weekRowMeta(item("a", overrides), viewer, now, ZONE, nameOf);
-
-  it("leads with the kind, then when it's due, mid-sentence", () => {
-    expect(meta({ category: "bathroom", status: "due-soon", dueAt: new Date("2026-10-22T20:00:00Z") })).toEqual({
-      text: "Bathroom · today 21:00",
-      lid: true,
-    });
-    expect(meta({ category: "floors", dueAt: new Date("2026-10-23T06:30:00Z") }).text).toBe("Floors · tomorrow 07:30");
-  });
-
-  it("says when an overdue or missed John was due, short enough to sit beside its mark", () => {
-    expect(meta({ category: "other", status: "overdue", dueAt: new Date("2026-10-20T20:00:00Z") }).text).toBe("Everything else · due Tue");
-    expect(meta({ status: "missed", dueAt: new Date("2026-10-21T22:30:00Z") }).text).toBe("Kitchen · due Wed");
-    expect(meta({ status: "overdue", dueAt: new Date("2026-10-22T08:00:00Z") }).text).toBe("Kitchen · due 09:00");
-    // A week or more back, the date too.
-    expect(meta({ status: "missed", dueAt: new Date("2026-10-15T08:00:00Z") }).text).toBe("Kitchen · due Thu 15 Oct");
-  });
-
-  it("says when a tick stands, and on your own that it's being checked, as Undo takes the mark's place", () => {
-    expect(meta({ userId: "megan", status: "checking", standsAt: at(21) }).text).toBe("Kitchen · stands in 21h");
-    expect(meta({ status: "checking", standsAt: at(18) }).text).toBe("Kitchen · checking, 18h left");
-    expect(meta({ status: "checking", standsAt: null }).text).toBe("Kitchen");
-  });
-
-  it("says who disputed it and how long is left, with no lid dot, beside the Vote it waits for", () => {
-    expect(meta({ userId: "priya", status: "disputed", dispute: dispute() })).toEqual({
-      text: "Disputed by Megan · 17h left",
-      lid: false,
-    });
-    // Raised by someone who has since left the house.
-    expect(meta({ userId: "priya", status: "disputed", dispute: dispute({ raisedBy: "cal" }) }).text).toBe(
-      "Disputed by a former housemate · 17h left",
-    );
-  });
-
-  it("leaves the word to the Disputed mark once there's no vote to give", () => {
-    // Sam raised it, which counts as his vote.
-    expect(meta({ userId: "priya", status: "disputed", dispute: dispute({ raisedBy: "sam", myVote: true }) }).text).toBe(
-      "By you · 17h left",
-    );
-    expect(meta({ userId: "priya", status: "disputed", dispute: dispute({ myVote: false }) }).text).toBe("By Megan · 17h left");
-    // Sam's own John, which he can't vote on.
-    expect(meta({ status: "disputed", dispute: dispute({ raisedBy: null, closesAt: at(-1) }) }).text).toBe(
-      "By a former housemate · closing now",
-    );
-    expect(meta({ status: "disputed", dispute: null })).toEqual({ text: "Disputed", lid: false });
-  });
-
-  it("says when a finished one was ticked, and that immunity excused one", () => {
-    expect(meta({ status: "done", doneAt: new Date("2026-10-21T13:10:00Z") }).text).toBe("Kitchen · ticked yesterday 14:10");
-    expect(meta({ status: "late", doneAt: null, dueAt: new Date("2026-10-22T08:00:00Z") }).text).toBe("Kitchen · today 09:00");
-    expect(meta({ status: "excused" }).text).toBe("Kitchen · immunity used");
-  });
-
-  it("says a John pulled forward by time away is due before they go", () => {
-    const moved = { status: "due-soon" as const, dueAt: new Date("2026-10-22T22:59:00Z"), movedFrom: at(48) };
-    expect(meta(moved).text).toBe("Kitchen · today 23:59, before you go");
-    expect(meta({ ...moved, userId: "megan" }).text).toBe("Kitchen · today 23:59, before Megan goes");
-  });
-});
-
 describe("weekSpokenRow", () => {
   it("says every column in a sentence: name, meta, whose, points and status", () => {
-    expect(weekSpokenRow({ name: "Descale the kettle", status: "overdue" }, "Kitchen · due Sun", "Tom", 1)).toBe(
-      "Descale the kettle, Kitchen · due Sun, Tom, 1 pt, Overdue",
+    expect(weekSpokenRow({ name: "Descale the kettle", status: "overdue" }, "Kitchen · was due Sun", "Tom", 1)).toBe(
+      "Descale the kettle, Kitchen · was due Sun, Tom, 1 pt, Overdue",
     );
     expect(weekSpokenRow({ name: "Bins out", status: "checking" }, "Bins · stands in 21h", "You", 0)).toBe(
       "Bins out, Bins · stands in 21h, You, 0 pts, Done, being checked",

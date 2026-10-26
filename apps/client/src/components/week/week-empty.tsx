@@ -1,4 +1,4 @@
-import { NOT_DEALT_COPY, WEEK_SUMMARY_COPY } from '@app/core';
+import { NEXT_UP_COPY, NOT_DEALT_COPY, WEEK_SUMMARY_COPY } from '@app/core';
 import { CalendarDaysIcon, ShuffleIcon } from 'lucide-react-native';
 
 import { EmptyState } from '@/components/empty-state';
@@ -20,7 +20,7 @@ export function WeekEmpty({
   /** Nothing has ever been dealt in this house. */
   notStarted: boolean;
   isAdmin: boolean;
-  /** An admin's first name, for "Sam will deal it soon." */
+  /** Who deals (core's whoDeals), for "Sam will deal it soon.", as Today says it. */
   adminName: string;
 }) {
   if (!notStarted) {
@@ -37,7 +37,7 @@ export function WeekEmpty({
     <EmptyState
       icon={ShuffleIcon}
       title={WEEK_SUMMARY_COPY.notDealt}
-      body={isAdmin ? WEEK_SUMMARY_COPY.notDealtBody : WEEK_SUMMARY_COPY.waitingFor(adminName)}
+      body={isAdmin ? WEEK_SUMMARY_COPY.notDealtBody : NEXT_UP_COPY.waiting(adminName)}
       action={isAdmin ? <DealButton houseId={houseId} label={WEEK_SUMMARY_COPY.deal} /> : undefined}
       testID="week-not-dealt"
     />

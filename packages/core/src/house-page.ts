@@ -196,6 +196,22 @@ export interface SettleRow {
 }
 
 /**
+ * What's left to do about a debt from closed months, as its meta line says
+ * it wherever it shows (House's settle-up, a housemate's page), after the
+ * months it's from when they can be named: owed to you, it's paid however
+ * you like; yours, it waits for them to confirm; between two others, it's
+ * not paid yet.
+ */
+function settleMeta(t: Transfer, me: string, members: readonly Named[], months: string): string {
+  if (t.to === me) return months ? [HOUSE_PAGE_COPY.from(months), HOUSE_PAGE_COPY.howYouLike].join(DOT) : HOUSE_PAGE_COPY.paidHowYouLike;
+  if (t.from === me) {
+    const name = firstNameMid(members, t.to);
+    return months ? [HOUSE_PAGE_COPY.from(months), HOUSE_PAGE_COPY.waiting(name)].join(DOT) : HOUSE_PAGE_COPY.waitingFor(name);
+  }
+  return PERSON_COPY.owesMeta(months || null);
+}
+
+/**
  * Each settle-up between you and a housemate, from your side: what's owed to
  * you first (each with its button, the first one amber), then what you owe.
  * Nothing when you're square. Someone who has left gets no button: the
@@ -224,11 +240,7 @@ export function settleRows(input: {
         owedToYou: true,
         amount: t.amount,
         title: HOUSE_PAGE_COPY.owesYou(firstNameIn(members, t.from), amount),
-        meta: !here(t.from)
-          ? HOUSE_PAGE_COPY.gone
-          : months
-            ? [HOUSE_PAGE_COPY.from(months), HOUSE_PAGE_COPY.howYouLike].join(DOT)
-            : HOUSE_PAGE_COPY.paidHowYouLike,
+        meta: here(t.from) ? settleMeta(t, me, members, months) : HOUSE_PAGE_COPY.gone,
         action: here(t.from) ? HOUSE_PAGE_COPY.markReceived(amount) : null,
         primary: false,
       };
@@ -247,11 +259,7 @@ export function settleRows(input: {
         owedToYou: false,
         amount: t.amount,
         title: HOUSE_PAGE_COPY.youOwe(name, formatMoney(t.amount, currency)),
-        meta: !here(t.to)
-          ? HOUSE_PAGE_COPY.gone
-          : months
-            ? [HOUSE_PAGE_COPY.from(months), HOUSE_PAGE_COPY.waiting(name)].join(DOT)
-            : HOUSE_PAGE_COPY.waitingFor(name),
+        meta: here(t.to) ? settleMeta(t, me, members, months) : HOUSE_PAGE_COPY.gone,
         action: null,
         primary: false,
       };
@@ -492,7 +500,7 @@ export function moneyLines(input: {
   ];
 }
 
-/** What a housemate owes or is owed from closed months, said from whoever is looking. */
+/** What a housemate owes or is owed from closed months, said from whoever is looking, as House's settle-up says it. */
 export function owingLines(input: {
   transfers: readonly Transfer[];
   personId: string;
@@ -514,16 +522,15 @@ export function owingLines(input: {
             ? HOUSE_PAGE_COPY.owesYou(firstNameIn(members, t.from), amount)
             : PERSON_COPY.owes(firstNameIn(members, t.from), firstNameMid(members, t.to), amount);
       const months = monthsInWords(owedMonths(input.ledger, input.closedMonths, t.from));
-      return { key: `${t.from}-${t.to}`, title, meta: [{ text: PERSON_COPY.owesMeta(months || null) }] };
+      return { key: `${t.from}-${t.to}`, title, meta: [{ text: settleMeta(t, me, members, months) }] };
     });
 }
 
-/** Their time away from today on, soonest first, or one line saying there's none. */
+/** Their time away from today on, soonest first; none at all when there is none (the page says so). */
 export function awayLines(periods: readonly AwayPeriod[], personId: string, today: string): PersonLine[] {
   const theirs = periods
     .filter((p) => p.userId === personId && p.endsOn >= today)
     .sort((a, b) => a.startsOn.localeCompare(b.startsOn));
-  if (theirs.length === 0) return [{ key: "none", title: PERSON_COPY.noAway, meta: [] }];
   return theirs.map((p) => ({
     key: p.id,
     title: dateRange(p.startsOn, p.endsOn),

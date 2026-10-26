@@ -1,6 +1,4 @@
 import {
-  FOCUS_SHELL_COPY,
-  firstName,
   liveWeekFilter,
   PAGE_TITLE,
   toggleWeekFilter,
@@ -13,19 +11,20 @@ import {
   weekRangeLine,
   weekSummary,
   weekUnticked,
+  whoDeals,
   type WeekPart,
 } from '@app/core';
 import { RepeatIcon } from 'lucide-react-native';
 import { useState } from 'react';
 import { useWindowDimensions } from 'react-native';
 
+import type { JohnRowContext } from '@/components/john-row';
 import { PageTitle } from '@/components/page-title';
 import { Reading, ReadFailed } from '@/components/read-state';
 import { Screen } from '@/components/screen';
 import { Chip } from '@/components/status-mark';
 import { MoreButton, TitleBar } from '@/components/title-bar';
 import { FairnessFooter } from '@/components/week/fair-shares';
-import type { WeekContext } from '@/components/week/john-row';
 import { PersonSection } from '@/components/week/person-section';
 import { WeekSummaryBar } from '@/components/week/summary';
 import { WeekEmpty } from '@/components/week/week-empty';
@@ -111,17 +110,11 @@ function Board({
   const [filter, setFilter] = useState<WeekPart | null>(null);
   const userId = me?.userId ?? '';
   const nameOf = (id: string) => members.find((m) => m.userId === id)?.name ?? null;
-  const context: WeekContext = { houseId: house.id, userId, zone: rules.timezone, now, nameOf };
+  const context: JohnRowContext = { houseId: house.id, userId, zone: rules.timezone, now, nameOf };
 
   if (!board.week || board.items.length === 0) {
-    const admin = members.find((m) => m.role === 'admin');
     return (
-      <WeekEmpty
-        houseId={house.id}
-        notStarted={board.notStarted}
-        isAdmin={me?.role === 'admin'}
-        adminName={admin ? firstName(admin.name) : FOCUS_SHELL_COPY.formerHousemate}
-      />
+      <WeekEmpty houseId={house.id} notStarted={board.notStarted} isAdmin={me?.role === 'admin'} adminName={whoDeals(members)} />
     );
   }
 
