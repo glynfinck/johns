@@ -124,7 +124,8 @@ export const NEW_HOUSE_COPY = {
 /** A join link: the web's /join/[code] and the app's. */
 export const JOIN_COPY = {
   badLink: "That link doesn’t work",
-  badLinkBody: "Ask whoever sent it for a fresh one from their House screen.",
+  /** A mistyped or cut-off code, or a house everyone has left (it closes behind the last one out). */
+  badLinkBody: "It may be mistyped, or everyone has left that house. Ask a housemate for the link on their House screen, or start your own.",
   alreadyIn: (house: string) => `You’re already in ${house}`,
   goToJohns: "Go to your Johns",
   otherHouse: "You’re in another house",
@@ -1015,8 +1016,8 @@ export const HOUSE_LOWER_COPY = {
   costsNothing: "You’re square with everyone, so it costs you nothing.",
   /** The only admin, with others still in the house: the database won't let them go yet. */
   lastAdmin: "You’re the only admin, so you can’t leave yet. Make someone else an admin first, from their page.",
-  /** The last one out, after what it costs. No more than that: the house and its invite stay as they were. */
-  lastOne: "Nobody will be left in the house.",
+  /** The last one out, after what it costs. The house closes behind them: its join link opens nothing. */
+  lastOne: "Nobody will be left, and the house’s join link will stop working.",
   /** Until the Stake is read, and if it can't be. */
   costReading: "Working out what leaving costs you…",
   costUnread: "Couldn’t read the Stake, so this can’t say what leaving costs you.",

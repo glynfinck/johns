@@ -183,12 +183,75 @@ describe("roles", () => {
     expectOk(await house.admin.db.rpc("remove_member", { p_house: house.id, p_user: cal.userId }));
     const { data } = await adminClient().from("members").select("user_id").eq("house_id", house.id);
     expect(data!.map((m) => m.user_id)).toEqual([house.admin.userId]);
-    // The last one out can go too, and that's all that happens: the house stays, empty, its invite as it was
-    // (so Leave's confirm says only that nobody will be left).
+    // The last one out can go too. The house stays, history and all, but closed (below).
     expectOk(await house.admin.db.rpc("remove_member", { p_house: house.id, p_user: house.admin.userId }));
     const { data: left } = await adminClient().from("members").select("user_id").eq("house_id", house.id);
     expect(left).toEqual([]);
     const { data: empty } = await adminClient().from("houses").select("join_code").eq("id", house.id).single();
     expect(empty!.join_code).toBe(house.code);
+  });
+
+  it("closes a house once nobody is left: its code opens nothing, for a newcomer or the last one out", async () => {
+    const house = await makeHouse(["Ava", "Ben"]);
+    const [ben] = house.members;
+    expectOk(await ben.db.rpc("remove_member", { p_house: house.id, p_user: ben.userId }));
+    expectOk(await house.admin.db.rpc("remove_member", { p_house: house.id, p_user: house.admin.userId }));
+
+    const newcomer = await signedInUser("Dee");
+    for (const who of [newcomer, house.admin, ben]) {
+      const { data, error } = await who.db.rpc("house_by_code", { p_code: house.code });
+      expect(error).toBeNull();
+      expect(data, who.name).toEqual([]);
+      expectRule(await who.db.rpc("join_house", { p_code: house.code }), "unknown_code");
+    }
+    const { data: members } = await adminClient().from("members").select("user_id").eq("house_id", house.id);
+    expect(members).toEqual([]);
+    // Closed, not gone: the house and what happened in it are still there.
+    const { data: events } = await adminClient().from("events").select("kind").eq("house_id", house.id);
+    expect(events!.map((e) => e.kind)).toContain("joined");
+  });
+
+  it("never lets a newcomer in alone as the last one leaves", async () => {
+    // A race, run a few times: whichever goes first, the house ends up empty and
+    // closed (the join is refused) or with both in and an admin still there (the
+    // leave is refused). Never the newcomer alone, as a plain member.
+    for (let round = 0; round < 6; round++) {
+      const house = await makeHouse([`Ava ${round}`]);
+      const newcomer = await signedInUser(`Dee ${round}`);
+      const [leave, join] = await Promise.all([
+        house.admin.db.rpc("remove_member", { p_house: house.id, p_user: house.admin.userId }),
+        newcomer.db.rpc("join_house", { p_code: house.code }),
+      ]);
+      const { data: members } = await adminClient().from("members").select("user_id, role").eq("house_id", house.id);
+      if (leave.error) {
+        expectRule(leave, "last_admin");
+        expectOk(join);
+        expect(members).toHaveLength(2);
+        expect(members).toContainEqual({ user_id: house.admin.userId, role: "admin" });
+      } else {
+        expectRule(join, "unknown_code");
+        expect(members).toEqual([]);
+      }
+    }
+  });
+
+  it("keeps an admin when the only two step down at once", async () => {
+    for (let round = 0; round < 6; round++) {
+      const house = await makeHouse([`Ava ${round}`, `Ben ${round}`, `Cal ${round}`]);
+      const [ben] = house.members;
+      expectOk(await house.admin.db.rpc("set_member_role", { p_house: house.id, p_user: ben.userId, p_role: "admin" }));
+      const results = await Promise.all([
+        house.admin.db.rpc("remove_member", { p_house: house.id, p_user: house.admin.userId }),
+        ben.db.rpc("set_member_role", { p_house: house.id, p_user: ben.userId, p_role: "member" }),
+      ]);
+      expect(results.filter((r) => r.error)).toHaveLength(1);
+      for (const r of results.filter((r) => r.error)) expectRule(r, "last_admin");
+      const { data: admins } = await adminClient()
+        .from("members")
+        .select("user_id")
+        .eq("house_id", house.id)
+        .eq("role", "admin");
+      expect(admins).toHaveLength(1);
+    }
   });
 });
