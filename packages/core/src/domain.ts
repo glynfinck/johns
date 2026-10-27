@@ -38,6 +38,16 @@ export const CATEGORY_SHORT: Record<Category, string> = {
 };
 
 /**
+ * When a John needs doing: on a set day each week it comes round, or on call,
+ * whenever someone flags it (the bins when they're full).
+ */
+export const JOHN_WHEN = ["day", "on_call"] as const;
+export type JohnWhen = (typeof JOHN_WHEN)[number];
+
+/** How long whoever is on call has to do a flagged John, in hours. */
+export const RESPOND_HOURS = [2, 4, 8, 12, 24, 48] as const;
+
+/**
  * How a John ended, once the house can no longer argue about it.
  * - `done`: ticked by its due time and nobody upheld a dispute.
  * - `late`: ticked after its due time but before the week closed.

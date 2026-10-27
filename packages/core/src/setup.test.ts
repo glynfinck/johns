@@ -78,6 +78,13 @@ describe("scheduleLine", () => {
   it("says a cadence the list doesn't name", () => {
     expect(scheduleLine(john({ everyWeeks: 6, dueDow: 3, dueTime: "12:00" }))).toBe("Every 6 weeks · Wed 12:00");
   });
+
+  it("says an on-call John's window and how often, not a day", () => {
+    expect(scheduleLine(john({ when: "on_call", respondHours: 12, perWeek: 3 }), "Downstairs")).toBe(
+      "On call · within 12 hours · about 3 times a week · Downstairs",
+    );
+    expect(scheduleLine(john({ when: "on_call", respondHours: 1, perWeek: 1 }))).toBe("On call · within 1 hour · about once a week");
+  });
 });
 
 describe("johnFacts", () => {
@@ -89,6 +96,15 @@ describe("johnFacts", () => {
       { label: "How often", value: "Every 2 weeks" },
       { label: "Due", value: "Friday 18:00" },
       { label: "Photo", value: "Needed to tick it" },
+    ]);
+  });
+
+  it("reads an on-call John's window in place of its day", () => {
+    const facts = johnFacts(john({ when: "on_call", respondHours: 8, perWeek: 4 }), null);
+    expect(facts.slice(3, 6)).toEqual([
+      { label: "When", value: "On call" },
+      { label: "Do it within", value: "8 hours" },
+      { label: "About how often", value: "4 times a week" },
     ]);
   });
 

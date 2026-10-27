@@ -2,6 +2,7 @@ import { describeEvent, REACTABLE, relative, WALL_COPY, type WallIcon } from "@a
 import {
   BadgeCheckIcon,
   BanknoteIcon,
+  BellRingIcon,
   CalendarCheckIcon,
   CheckIcon,
   FlagIcon,
@@ -35,6 +36,7 @@ const ICON: Record<WallIcon, typeof CheckIcon> = {
   "user-plus": UserPlusIcon,
   "calendar-check": CalendarCheckIcon,
   banknote: BanknoteIcon,
+  "bell-ring": BellRingIcon,
   "badge-check": BadgeCheckIcon,
 };
 

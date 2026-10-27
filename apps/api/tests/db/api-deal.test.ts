@@ -118,7 +118,7 @@ describe("POST /api/deal", () => {
 
     const res = await dealAs(house.admin, { houseId: house.id });
     expect(res.status).toBe(409);
-    expect(await res.json()).toEqual({ error: "Someone’s already ticked a John this week, so it can’t be re-dealt." });
+    expect(await res.json()).toEqual({ error: "Someone’s already ticked or flagged a John this week, so it can’t be re-dealt." });
     expect(await dealtIn(house.id)).toEqual(before);
   });
 

@@ -108,6 +108,7 @@ export type WallIcon =
   | "user-plus"
   | "calendar-check"
   | "banknote"
+  | "bell-ring"
   | "badge-check";
 
 export interface WallLine {
@@ -177,6 +178,14 @@ export function describeEvent(e: WallEvent, nameOf: (userId: string | null) => s
         icon: "plane",
         parts: [b(who), t(` ${you ? "are" : "is"} away ${dateRange(String(e.data.starts_on), String(e.data.ends_on))}.${due}`)],
       };
+    }
+    case "flagged": {
+      // Who said it needs doing; null when the clock opened it again after a miss.
+      const by = (e.data.by as string | null | undefined) ?? null;
+      if (by && by === e.userId) return { icon: "bell-ring", parts: [b(who), t(` said ${john} needed doing.`)] };
+      return by
+        ? { icon: "bell-ring", parts: [b(nameOf(by)), t(` flagged ${john} for `), b(who), t(".")] }
+        : { icon: "bell-ring", parts: [t(`${john} still needs doing. It’s with `), b(who), t(" now.")] };
     }
     case "joined":
       return { icon: "user-plus", parts: [b(who), t(" moved in.")] };

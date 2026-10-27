@@ -54,6 +54,7 @@ export function snapshot(overrides: Partial<HouseSnapshot> = {}): HouseSnapshot 
       assignment({ id: 'a4', user_id: 'sam', name: 'Clean the bath', category: 'bathroom' }),
     ],
     disputes: [],
+    onCall: [],
     ...overrides,
   };
 }

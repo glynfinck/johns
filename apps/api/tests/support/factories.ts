@@ -50,6 +50,8 @@ export interface JohnSpec {
   needsPhoto?: boolean;
   /** Only this group shares it. */
   groupId?: string;
+  /** On call: flagged when it needs doing, with this window. */
+  onCall?: { respondHours?: number; perWeek?: number };
 }
 
 export async function addJohns(houseId: string, specs: JohnSpec[], anchor: WeekWindow) {
@@ -67,6 +69,11 @@ export async function addJohns(houseId: string, specs: JohnSpec[], anchor: WeekW
         needs_photo: s.needsPhoto ?? false,
         group_id: s.groupId ?? null,
         anchor_week: weekIndex(anchor.startsOn),
+        // Every row names every column: a bulk insert fills a column one row
+        // leaves out with null, not its default.
+        kind: s.onCall ? "on_call" : "day",
+        respond_hours: s.onCall?.respondHours ?? 12,
+        per_week: s.onCall?.perWeek ?? 2,
       })),
     )
     .select("id, name");

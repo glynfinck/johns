@@ -43,6 +43,8 @@ export type Database = {
           due_at: string
           due_moved_from: string | null
           excused: boolean
+          flagged_at: string | null
+          flagged_by: string | null
           group_name: string | null
           house_id: string
           id: string
@@ -65,6 +67,8 @@ export type Database = {
           due_at: string
           due_moved_from?: string | null
           excused?: boolean
+          flagged_at?: string | null
+          flagged_by?: string | null
           group_name?: string | null
           house_id: string
           id?: string
@@ -87,6 +91,8 @@ export type Database = {
           due_at?: string
           due_moved_from?: string | null
           excused?: boolean
+          flagged_at?: string | null
+          flagged_by?: string | null
           group_name?: string | null
           house_id?: string
           id?: string
@@ -105,6 +111,13 @@ export type Database = {
           {
             foreignKeyName: "assignments_covered_by_fkey"
             columns: ["covered_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "assignments_flagged_by_fkey"
+            columns: ["flagged_by"]
             isOneToOne: false
             referencedRelation: "profiles"
             referencedColumns: ["id"]
@@ -457,9 +470,12 @@ export type Database = {
           group_id: string | null
           house_id: string
           id: string
+          kind: string
           name: string
           needs_photo: boolean
+          per_week: number
           points: number
+          respond_hours: number
         }
         Insert: {
           anchor_week: number
@@ -472,9 +488,12 @@ export type Database = {
           group_id?: string | null
           house_id: string
           id?: string
+          kind?: string
           name: string
           needs_photo?: boolean
+          per_week?: number
           points?: number
+          respond_hours?: number
         }
         Update: {
           anchor_week?: number
@@ -487,9 +506,12 @@ export type Database = {
           group_id?: string | null
           house_id?: string
           id?: string
+          kind?: string
           name?: string
           needs_photo?: boolean
+          per_week?: number
           points?: number
+          respond_hours?: number
         }
         Relationships: [
           {
@@ -640,6 +662,56 @@ export type Database = {
             columns: ["house_id"]
             isOneToOne: false
             referencedRelation: "houses"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      on_call: {
+        Row: {
+          house_id: string
+          john_id: string
+          user_id: string
+          week_id: string
+        }
+        Insert: {
+          house_id: string
+          john_id: string
+          user_id: string
+          week_id: string
+        }
+        Update: {
+          house_id?: string
+          john_id?: string
+          user_id?: string
+          week_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "on_call_house_id_fkey"
+            columns: ["house_id"]
+            isOneToOne: false
+            referencedRelation: "houses"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "on_call_john_id_fkey"
+            columns: ["john_id"]
+            isOneToOne: false
+            referencedRelation: "johns"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "on_call_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "on_call_week_id_fkey"
+            columns: ["week_id"]
+            isOneToOne: false
+            referencedRelation: "weeks"
             referencedColumns: ["id"]
           },
         ]
@@ -858,6 +930,7 @@ export type Database = {
           p_assignments: Json
           p_ends_at: string
           p_house: string
+          p_on_call?: Json
           p_replace?: boolean
           p_shares: Json
           p_starts_at: string
@@ -891,6 +964,8 @@ export type Database = {
           due_at: string
           due_moved_from: string | null
           excused: boolean
+          flagged_at: string | null
+          flagged_by: string | null
           group_name: string | null
           house_id: string
           id: string
@@ -913,11 +988,16 @@ export type Database = {
         }
       }
       new_join_code: { Args: never; Returns: string }
+      open_flag: {
+        Args: { p_at: string; p_by?: string; p_john: string }
+        Returns: string
+      }
       proof_house: { Args: { object_name: string }; Returns: string }
       raise_dispute: {
         Args: { p_assignment: string; p_reason: string }
         Returns: string
       }
+      raise_flag: { Args: { p_john: string }; Returns: string }
       remove_member: {
         Args: { p_house: string; p_user: string }
         Returns: undefined

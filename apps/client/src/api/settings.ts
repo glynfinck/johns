@@ -34,7 +34,7 @@ export async function loadJohnList(houseId: string): Promise<JohnList> {
   const [johns, groups] = await Promise.all([
     supabase
       .from('johns')
-      .select('id, name, category, points, every_weeks, due_dow, due_time, needs_photo, group_id')
+      .select('id, name, category, points, every_weeks, due_dow, due_time, needs_photo, group_id, kind, respond_hours, per_week')
       .eq('house_id', houseId)
       .is('archived_at', null)
       .order('created_at'),
@@ -72,6 +72,9 @@ export async function saveJohn(houseId: string, rules: HouseRules, draft: Omit<J
     due_time: j.dueTime,
     needs_photo: j.needsPhoto,
     group_id: j.groupId,
+    kind: j.when,
+    respond_hours: j.respondHours,
+    per_week: j.perWeek,
   };
   wrote(
     j.id

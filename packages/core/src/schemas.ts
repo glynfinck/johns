@@ -1,6 +1,6 @@
 import { z } from "zod";
 
-import { CATEGORIES, CURRENCIES } from "./domain";
+import { CATEGORIES, CURRENCIES, JOHN_WHEN } from "./domain";
 
 // Shapes the apps and the API agree on. The API validates requests with
 // these and the native app parses responses with them; the web's server
@@ -88,6 +88,11 @@ export const JohnDraft = z.object({
   dueTime: z.string().regex(/^([01]\d|2[0-3]):[0-5]\d$/, "Give a time like 21:00."),
   needsPhoto: z.boolean(),
   groupId: z.uuid().nullable(),
+  // On call (johns.kind): its window and its weight in the deal. A John due on
+  // a day keeps its due day and time for if it goes back to one.
+  when: z.enum(JOHN_WHEN).default("day"),
+  respondHours: z.coerce.number().int().min(1, "Give between 1 and 72 hours.").max(72, "Give between 1 and 72 hours.").default(12),
+  perWeek: z.coerce.number().int().min(1).max(14).default(2),
 });
 export type JohnDraft = z.infer<typeof JohnDraft>;
 
@@ -143,6 +148,14 @@ export type CastVote = z.infer<typeof CastVote>;
 /** POST /api/deal: hand out this week's Johns, or re-deal a week nobody has ticked in. */
 export const DealRequest = z.object({ houseId: z.uuid() });
 export type DealRequest = z.infer<typeof DealRequest>;
+
+/** POST /api/flags: say an on-call John needs doing. */
+export const RaiseFlag = z.object({ johnId: z.uuid() });
+export type RaiseFlag = z.infer<typeof RaiseFlag>;
+
+/** The flag it opened, or the one already open: whoever is on call ticks that. */
+export const FlagResponse = z.object({ ok: z.literal(true), assignmentId: z.uuid() });
+export type FlagResponse = z.infer<typeof FlagResponse>;
 
 /** What a move answers when the database took it. */
 export const MoveResponse = z.object({ ok: z.literal(true) });

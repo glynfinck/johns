@@ -1,6 +1,7 @@
 import {
   canSwap,
   liveWeekFilter,
+  ON_CALL_COPY,
   PAGE_TITLE,
   toggleWeekFilter,
   WEEK_SUMMARY_COPY,
@@ -118,7 +119,8 @@ function Board({
   const nameOf = (id: string) => members.find((m) => m.userId === id)?.name ?? null;
   const context: JohnRowContext = { houseId: house.id, userId, zone: rules.timezone, rules, now, nameOf };
 
-  if (!board.week || board.items.length === 0) {
+  // A week of only on-call Johns has nothing on it until someone flags one, but is dealt.
+  if (!board.week || (board.items.length === 0 && snapshot.onCall.length === 0)) {
     return (
       <WeekEmpty
         houseId={house.id}
@@ -140,6 +142,10 @@ function Board({
   const fairness = shares ? weekFairness(shares.balances, board.items.map((i) => i.points), userId, nameOf) : null;
   const pointsOf = (id: string) => board.table.find((r) => r.userId === id)?.points ?? 0;
   const awayOf = (id: string) => (away ? weekAwayNote(away.periods, id, week.startsOn, away.today) : null);
+  const onCallOf = (id: string) => {
+    const names = snapshot.onCall.filter((r) => r.user_id === id && r.johns).map((r) => r.johns!.name);
+    return names.length > 0 ? ON_CALL_COPY.weekLine(names) : null;
+  };
   const swapReady = canSwap(board, me);
 
   return (
@@ -171,6 +177,7 @@ function Board({
             context={context}
             points={pointsOf(person.userId)}
             away={awayOf(person.userId)}
+            onCall={onCallOf(person.userId)}
             swapReady={person.userId === userId && swapReady}
           />
         ))

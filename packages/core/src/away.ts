@@ -39,6 +39,21 @@ export function awayDays(periods: readonly AwayPeriod[], userId: string, from: s
   return datesBetween(from, to).filter((d) => awayOn(periods, userId, d));
 }
 
+/**
+ * Who can be on call for an on-call John this week: its sharers who are home
+ * for most of it (at least four of its seven days). A flag raised on a day
+ * the holder is away goes to whoever is home then (open_flag decides).
+ */
+export function homeForWeek(
+  periods: readonly AwayPeriod[],
+  sharers: readonly string[],
+  startsOn: string,
+  lastDay: string,
+): string[] {
+  const days = datesBetween(startsOn, lastDay).length;
+  return sharers.filter((id) => awayDays(periods, id, startsOn, lastDay).length * 2 < days);
+}
+
 /** Someone's period that covers today, or else their next one. */
 export function currentOrNext(periods: readonly AwayPeriod[], userId: string, today: string): AwayPeriod | null {
   return (

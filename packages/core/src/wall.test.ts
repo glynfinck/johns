@@ -103,6 +103,15 @@ describe("reactions", () => {
 });
 
 describe("describeEvent", () => {
+  it("tells who flagged an on-call John, and who it went to", () => {
+    expect(line("flagged", { name: "Bins", by: "cal" })).toBe("Cal flagged Bins for Ben.");
+    expect(line("flagged", { name: "Bins", by: "ava" }, "ben")).toBe("You flagged Bins for Ben.");
+    expect(line("flagged", { name: "Bins", by: "ben" })).toBe("Ben said Bins needed doing.");
+    expect(line("flagged", { name: "Bins", by: null })).toBe("Bins still needs doing. It’s with Ben now.");
+    const [event] = wallEvents([row({ kind: "flagged", data: { name: "Bins" } })], "ava");
+    expect(describeEvent(event, nameOf, "GBP").icon).toBe("bell-ring");
+  });
+
   it("tells a tick, a late one and a miss", () => {
     expect(line("done", { name: "Bins" })).toBe("Ben did Bins.");
     expect(line("late", { name: "Bins" })).toBe("Ben did Bins, late.");
