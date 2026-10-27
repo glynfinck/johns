@@ -52,6 +52,9 @@ const PEOPLE = [
 function item(id: string, overrides: Partial<BoardItem> = {}): BoardItem {
   return {
     id,
+    flaggedAt: null,
+    flaggedBy: null,
+    carried: false,
     johnId: `j-${id}`,
     everyWeeks: 1,
     userId: ME,
@@ -588,6 +591,15 @@ describe("cantOptions", () => {
     expect(cantOptions(mine, b, me(1, 1))).toEqual({ immunity: 1, swapFor: [theirs[1], theirs[0]] });
     expect(cantOptions(mine, b, me(2, 0))).toEqual({ immunity: 2, swapFor: [] });
     expect(cantOptions(mine, b, me(0, 1))?.immunity).toBe(0);
+  });
+
+  it("never swaps a flag: it stays with whoever was on call", () => {
+    const flagged = { flaggedAt: at(-1), flaggedBy: "priya" };
+    const myFlag = item("my-flag", flagged);
+    const theirFlag = item("their-flag", { ...flagged, userId: "megan", status: "due-soon", dueAt: at(1) });
+    const fb = board([mine, myFlag, theirFlag, ...theirs]);
+    expect(cantOptions(myFlag, fb, me(1, 1))).toEqual({ immunity: 1, swapFor: [] });
+    expect(cantOptions(mine, fb, me(0, 1))?.swapFor).toEqual([theirs[1], theirs[0]]);
   });
 
   it("offers nothing without a token to spend, or a swap with nobody to swap with", () => {

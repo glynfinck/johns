@@ -16,9 +16,25 @@ export interface AssignmentFacts {
   /** A dispute has been raised on the current tick and not yet resolved. */
   disputeOpen: boolean;
   weekEndsAt: Date;
+  /** Set on an on-call John's flag: when it was raised (its due time is this plus the John's window). */
+  flaggedAt?: Date | null;
 }
 
 const HOUR = 3_600_000;
+
+/**
+ * When an open John turns missed. A John due on a day: when its week ends.
+ * A flag: at twice its window (raised at 8pm with 12 hours, missed at 8pm the
+ * next day), or when its week ends if it is overdue by then. A flag never
+ * passes to whoever is on call next week: it stays missed or done by whoever
+ * had it. The database's closes_at says the same.
+ */
+export function flagClosesAt(a: Pick<AssignmentFacts, "dueAt" | "weekEndsAt" | "flaggedAt">): Date {
+  if (!a.flaggedAt) return a.weekEndsAt;
+  const missAt = new Date(a.dueAt.getTime() * 2 - a.flaggedAt.getTime());
+  if (a.dueAt < a.weekEndsAt) return missAt < a.weekEndsAt ? missAt : a.weekEndsAt;
+  return missAt;
+}
 
 export function standsAt(doneAt: Date, disputeHours: number): Date {
   return new Date(doneAt.getTime() + disputeHours * HOUR);
@@ -36,7 +52,7 @@ export function settleOutcome(
     if (now < standsAt(a.doneAt, disputeHours)) return null;
     return a.doneAt <= a.dueAt ? "done" : "late";
   }
-  if (now >= a.weekEndsAt) return "missed";
+  if (now >= flagClosesAt(a)) return "missed";
   return null;
 }
 

@@ -11,8 +11,8 @@ import { Body } from '@/components/text';
 /**
  * One person's week, as a Section: a header with their 24pt avatar, their
  * name ("You" for you), "Swap ready" on yours while you hold a swap token,
- * and on the right how many are done and their points, with any time away on
- * a line under that; then their Johns as rows, with the finished ones folded
+ * and on the right how many are done and their points, with any time away and
+ * what they're on call for on lines under that; then their Johns as rows, with the finished ones folded
  * under "Done (n)", and how many of those were late, in hazard.
  */
 export function PersonSection({
@@ -20,6 +20,7 @@ export function PersonSection({
   context,
   points,
   away,
+  onCall = null,
   swapReady = false,
 }: {
   person: WeekPerson<BoardItem>;
@@ -28,6 +29,8 @@ export function PersonSection({
   points: number;
   /** "away 29 Oct–1 Nov", from core's weekAwayNote: a line of its own under the counts. */
   away: string | null;
+  /** "On call: Bins", from the week's on_call rows: another line under the counts. */
+  onCall?: string | null;
   swapReady?: boolean;
 }) {
   const mine = person.userId === context.userId;
@@ -39,7 +42,7 @@ export function PersonSection({
       leading={<Avatar name={name} me={mine} size={24} />}
       tag={swapReady ? <Chip label={WEEK_SUMMARY_COPY.swapReady} icon={RepeatIcon} testID="swap-ready" /> : undefined}
       // Where the name, its tag and these don't fit on one line, these move under them.
-      right={[counts, away].filter((line): line is string => Boolean(line))}
+      right={[counts, away, onCall].filter((line): line is string => Boolean(line))}
       testID={`person-${person.userId}`}
     >
       {person.rows.map((item) => (

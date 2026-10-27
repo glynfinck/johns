@@ -7,6 +7,7 @@ import {
   johnsByKind,
   NEW_JOHN,
   pointsLabel,
+  RESPOND_HOURS,
   scheduleLine,
   SETUP_COPY,
   weeklyEffort,
@@ -15,6 +16,7 @@ import {
   type HouseRules,
   type IsoDow,
   type JohnDef,
+  type JohnWhen,
 } from '@app/core';
 import { ListTodoIcon, PlusIcon, Trash2Icon } from 'lucide-react-native';
 import { useState } from 'react';
@@ -41,6 +43,12 @@ const KINDS = CATEGORIES.map((c) => ({ value: c, label: CATEGORY_LABEL[c] }));
 const EFFORT = Array.from({ length: 10 }, (_, i) => ({ value: i + 1, label: pointsLabel(i + 1) }));
 const EVERY = [1, 2, 3, 4].map((n) => ({ value: n, label: JOHN_LIST_COPY.every[n] }));
 const DAYS = (Object.entries(DOW_LABEL) as [string, string][]).map(([day, name]) => ({ value: Number(day) as IsoDow, label: name }));
+const WHEN: { value: JohnWhen; label: string }[] = [
+  { value: 'day', label: JOHN_LIST_COPY.onADay },
+  { value: 'on_call', label: JOHN_LIST_COPY.onCall },
+];
+const WITHIN = RESPOND_HOURS.map((h) => ({ value: h as number, label: JOHN_LIST_COPY.respondHours(h) }));
+const TIMES = [1, 2, 3, 4, 5, 6, 7].map((n) => ({ value: n, label: JOHN_LIST_COPY.perWeekLabel(n) }));
 
 /**
  * The house's list of Johns, a section per kind ("Kitchen · 3"), each John a
@@ -142,9 +150,10 @@ export function JohnList({
 
 /**
  * One John's details, in groups of rows: its name; what it is and who shares
- * it, with a line on what sharing means; then how much effort, how often,
- * when it's due and whether the tick needs a photo. Save is the sheet's one
- * amber button.
+ * it, with a line on what sharing means; then how much effort, and when: on
+ * a day (how often, the day and time) or on call (how soon once it's
+ * flagged, and about how often, with a line on what on call means); and
+ * whether the tick needs a photo. Save is the sheet's one amber button.
  */
 function JohnForm({
   houseId,
@@ -200,30 +209,53 @@ function JohnForm({
           </Meta>
         ) : null}
       </View>
-      <Group>
-        <PickRow label={JOHN_LIST_COPY.effort} options={EFFORT} value={v.points} onChange={(points) => set({ points })} />
-        <PickRow label={JOHN_LIST_COPY.often} options={EVERY} value={v.everyWeeks} onChange={(everyWeeks) => set({ everyWeeks })} />
-        <PickRow label={JOHN_LIST_COPY.due} options={DAYS} value={v.dueDow} onChange={(dueDow) => set({ dueDow })} />
-        <GroupItem>
-          <Field
-            label={JOHN_LIST_COPY.by}
-            value={v.dueTime}
-            onChangeText={(dueTime) => set({ dueTime })}
-            placeholder="21:00"
-            maxLength={5}
-            keyboardType="numbers-and-punctuation"
-            testID="john-time"
+      <View style={styles.noted}>
+        <Group>
+          <PickRow label={JOHN_LIST_COPY.effort} options={EFFORT} value={v.points} onChange={(points) => set({ points })} />
+          <PickRow label={JOHN_LIST_COPY.whenLabel} options={WHEN} value={v.when} onChange={(when) => set({ when })} />
+          {v.when === 'on_call' ? (
+            <>
+              <PickRow
+                label={JOHN_LIST_COPY.respond}
+                // A window set outside the list's choices (by an older app) still shows.
+                options={WITHIN.some((o) => o.value === v.respondHours) ? WITHIN : [...WITHIN, { value: v.respondHours, label: JOHN_LIST_COPY.respondHours(v.respondHours) }]}
+                value={v.respondHours}
+                onChange={(respondHours) => set({ respondHours })}
+              />
+              <PickRow label={JOHN_LIST_COPY.timesAWeek} options={TIMES} value={v.perWeek} onChange={(perWeek) => set({ perWeek })} />
+            </>
+          ) : (
+            <>
+              <PickRow label={JOHN_LIST_COPY.often} options={EVERY} value={v.everyWeeks} onChange={(everyWeeks) => set({ everyWeeks })} />
+              <PickRow label={JOHN_LIST_COPY.due} options={DAYS} value={v.dueDow} onChange={(dueDow) => set({ dueDow })} />
+              <GroupItem>
+                <Field
+                  label={JOHN_LIST_COPY.by}
+                  value={v.dueTime}
+                  onChangeText={(dueTime) => set({ dueTime })}
+                  placeholder="21:00"
+                  maxLength={5}
+                  keyboardType="numbers-and-punctuation"
+                  testID="john-time"
+                />
+              </GroupItem>
+            </>
+          )}
+          <ChoiceRow
+            role="checkbox"
+            label={JOHN_LIST_COPY.photo}
+            meta={SETUP_COPY.photoMeta}
+            checked={v.needsPhoto}
+            onPress={() => set({ needsPhoto: !v.needsPhoto })}
+            testID="john-photo"
           />
-        </GroupItem>
-        <ChoiceRow
-          role="checkbox"
-          label={JOHN_LIST_COPY.photo}
-          meta={SETUP_COPY.photoMeta}
-          checked={v.needsPhoto}
-          onPress={() => set({ needsPhoto: !v.needsPhoto })}
-          testID="john-photo"
-        />
-      </Group>
+        </Group>
+        {v.when === 'on_call' ? (
+          <Meta style={styles.note} testID="on-call-note">
+            {JOHN_LIST_COPY.onCallHint}
+          </Meta>
+        ) : null}
+      </View>
       <View style={styles.actions}>
         {move.problem ? <Alert message={move.problem} /> : null}
         <Button

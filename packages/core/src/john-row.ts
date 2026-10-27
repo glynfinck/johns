@@ -1,5 +1,5 @@
 import { isOpen, type BoardItem } from "./board";
-import { FOCUS_SHELL_COPY, JOHN_SHEET_COPY, NEXT_UP_COPY, WEEK_SUMMARY_COPY } from "./copy";
+import { FOCUS_SHELL_COPY, JOHN_SHEET_COPY, NEXT_UP_COPY, ON_CALL_COPY, WEEK_SUMMARY_COPY } from "./copy";
 import { CATEGORY_SHORT } from "./domain";
 import { dueInLine, firstName, relative, sinceLabel, STATUS_LABEL } from "./format";
 import type { LiveStatus } from "./outcome";
@@ -83,7 +83,8 @@ export function johnRow(
   item: Pick<
     BoardItem,
     "userId" | "name" | "category" | "points" | "needsPhoto" | "status" | "dueAt" | "movedFrom" | "doneAt" | "standsAt" | "dispute"
-  >,
+  > &
+    Partial<Pick<BoardItem, "flaggedAt" | "flaggedBy">>,
   viewerId: string,
   now: Date,
   zone: string,
@@ -137,14 +138,25 @@ export function johnRow(
 
 /** The row's meta line, and whether its lid dot leads it. */
 function metaLine(
-  item: Pick<BoardItem, "userId" | "category" | "status" | "dueAt" | "movedFrom" | "doneAt" | "standsAt" | "dispute">,
+  item: Pick<BoardItem, "userId" | "category" | "status" | "dueAt" | "movedFrom" | "doneAt" | "standsAt" | "dispute"> &
+    Partial<Pick<BoardItem, "flaggedAt" | "flaggedBy">>,
   viewerId: string,
   now: Date,
   zone: string,
   nameOf: (userId: string) => string | null,
 ): { meta: string; lid: boolean } {
   const mine = item.userId === viewerId;
-  const line = (...parts: string[]) => ({ meta: [johnKind(item.category), ...parts].join(" · "), lid: true });
+  // An open flag says who flagged it ("flagged by Sam"), or that it's open again after a miss.
+  const flagged =
+    item.flaggedAt && isOpen(item.status)
+      ? item.flaggedBy
+        ? ON_CALL_COPY.flaggedByInline(item.flaggedBy === viewerId ? WEEK_SUMMARY_COPY.byYou : called(nameOf(item.flaggedBy)))
+        : ON_CALL_COPY.flaggedAgainInline
+      : null;
+  const line = (...parts: string[]) => ({
+    meta: [johnKind(item.category), ...(flagged ? [flagged] : []), ...parts].join(" · "),
+    lid: true,
+  });
   const due = dueInLine(item.dueAt, now, zone);
 
   switch (item.status) {

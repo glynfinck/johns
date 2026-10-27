@@ -13,6 +13,7 @@ import {
 import {
   BadgeCheckIcon,
   BanknoteIcon,
+  BellRingIcon,
   CalendarCheckIcon,
   CheckIcon,
   EyeIcon,
@@ -52,6 +53,7 @@ const WALL_ICON: Record<WallIcon, LucideIcon> = {
   'user-plus': UserPlusIcon,
   'calendar-check': CalendarCheckIcon,
   banknote: BanknoteIcon,
+  'bell-ring': BellRingIcon,
   'badge-check': BadgeCheckIcon,
 };
 

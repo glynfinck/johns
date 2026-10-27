@@ -7,6 +7,7 @@ import {
   awayThisWeek,
   currentOrNext,
   datesBetween,
+  homeForWeek,
   isoDayOf,
   remaining,
   shiftMonth,
@@ -69,6 +70,21 @@ describe("time away", () => {
     expect(localDate(new Date("2026-10-13T23:30:00Z"), "Pacific/Auckland")).toBe("2026-10-14");
     expect(localDate(new Date("2026-10-13T23:30:00Z"), "Europe/London")).toBe("2026-10-14");
     expect(localDate(new Date("2026-10-13T22:30:00Z"), "Europe/London")).toBe("2026-10-13");
+  });
+});
+
+describe("homeForWeek", () => {
+  const trip = (userId: string, startsOn: string, endsOn: string): AwayPeriod => ({ id: userId, userId, startsOn, endsOn, note: null });
+
+  it("puts on call only sharers home for most of the week", () => {
+    const periods = [trip("ava", "2026-10-12", "2026-10-15"), trip("ben", "2026-10-12", "2026-10-14"), trip("cal", "2026-10-01", "2026-10-30")];
+    // Ava is away four of seven days, Ben three, Cal all week, Dee none.
+    expect(homeForWeek(periods, ["ava", "ben", "cal", "dee"], "2026-10-12", "2026-10-18")).toEqual(["ben", "dee"]);
+  });
+
+  it("has nobody when nobody who shares it is home", () => {
+    expect(homeForWeek([trip("ava", "2026-10-10", "2026-10-20")], ["ava"], "2026-10-12", "2026-10-18")).toEqual([]);
+    expect(homeForWeek([], [], "2026-10-12", "2026-10-18")).toEqual([]);
   });
 });
 

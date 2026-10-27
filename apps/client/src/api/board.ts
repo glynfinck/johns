@@ -1,4 +1,12 @@
-import { weekWindow, rulesOf, type AssignmentRow, type DisputeRow, type HouseRules, type WeekRow } from '@app/core';
+import {
+  weekWindow,
+  rulesOf,
+  type AssignmentRow,
+  type DisputeRow,
+  type HouseRules,
+  type OnCallRow,
+  type WeekRow,
+} from '@app/core';
 
 import { supabase } from './supabase';
 
@@ -27,8 +35,11 @@ export interface HouseSnapshot {
   rules: HouseRules;
   members: Housemate[];
   week: WeekRow | null;
+  /** This week's Johns, and any flag from last week still open (it stays its holder's). */
   assignments: AssignmentRow[];
   disputes: DisputeRow[];
+  /** Who is on call for each on-call John this week. */
+  onCall: OnCallRow[];
 }
 
 /** One read of a house: its rules and people, and this week's Johns and disputes. */
@@ -54,19 +65,35 @@ export async function loadHouse(houseId: string, now: Date): Promise<HouseSnapsh
     .maybeSingle();
   if (weekError) throw weekError;
 
-  const [assignments, disputes] = week
+  const [assignments, carried, disputes, onCall] = week
     ? await Promise.all([
         // With how often each comes round, from the John it was dealt from (the John sheet says so).
         supabase.from('assignments').select('*, johns(every_weeks)').eq('week_id', week.id).order('due_at'),
+        // A flag raised late last week can still be open: it stays with whoever had it.
+        supabase
+          .from('assignments')
+          .select('*, johns(every_weeks)')
+          .eq('house_id', houseId)
+          .neq('week_id', week.id)
+          .not('flagged_at', 'is', null)
+          .is('outcome', null),
         supabase
           .from('disputes')
           .select('id, assignment_id, raised_by, reason, closes_at, dispute_votes(user_id, uphold)')
           .eq('house_id', houseId)
           .is('resolution', null),
+        supabase.from('on_call').select('john_id, user_id, johns(name, category, needs_photo, archived_at)').eq('week_id', week.id),
       ])
-    : [{ data: [], error: null }, { data: [], error: null }];
+    : [
+        { data: [], error: null },
+        { data: [], error: null },
+        { data: [], error: null },
+        { data: [], error: null },
+      ];
   if (assignments.error) throw assignments.error;
+  if (carried.error) throw carried.error;
   if (disputes.error) throw disputes.error;
+  if (onCall.error) throw onCall.error;
 
   return {
     house: {
@@ -86,7 +113,8 @@ export async function loadHouse(houseId: string, now: Date): Promise<HouseSnapsh
       swapTokens: m.swap_tokens,
     })),
     week: week ?? null,
-    assignments: assignments.data ?? [],
+    assignments: [...(assignments.data ?? []), ...(carried.data ?? [])],
     disputes: disputes.data ?? [],
+    onCall: onCall.data ?? [],
   };
 }

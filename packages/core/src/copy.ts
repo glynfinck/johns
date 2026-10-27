@@ -406,10 +406,53 @@ export const JOHN_LIST_COPY = {
   by: "By",
   photo: "Needs a photo",
   photoHint: "The tick only counts with a photo of the result.",
+  whenLabel: "When",
+  onADay: "On a day",
+  onCall: "On call",
+  onCallHint: "Someone is on call for the week. Anyone can flag it when it needs doing, and they have a set time to do it.",
+  respond: "Do it within",
+  respondHours: (hours: number) => (hours === 1 ? "1 hour" : `${hours} hours`),
+  timesAWeek: "About how often",
+  timesAWeekHint: "Only used to deal it fairly. Every time it’s flagged counts.",
+  perWeekLabel: (n: number) => (n === 1 ? "Once a week" : `${n} times a week`),
+  /** "On call · within 12 hours · about 3 times a week". */
+  onCallWhen: (hours: number, perWeek: number) =>
+    `On call · within ${hours === 1 ? "1 hour" : `${hours} hours`} · about ${perWeek === 1 ? "once" : `${perWeek} times`} a week`,
   save: "Save",
   create: "Add John",
   saving: "Saving…",
   remove: "Remove",
+} as const;
+
+/** On-call Johns on Today, the John sheet and Week: who has them, and flagging them. */
+export const ON_CALL_COPY = {
+  section: "On call",
+  needsDoing: "Needs doing",
+  flagging: "Flagging…",
+  tookItOut: "Done it",
+  youreOnCall: "You’re on call",
+  /** "Alex is on call". */
+  holder: (name: string) => `${name} is on call`,
+  /** "Flagged by Sam · due 9am": the John sheet's and Today's meta line. */
+  flaggedBy: (name: string) => `Flagged by ${name}`,
+  flaggedAgain: "Still needs doing after a miss",
+  /** A row's meta line: "Bins · flagged by Sam · today 21:00". */
+  flaggedByInline: (name: string) => `flagged by ${name}`,
+  flaggedAgainInline: "open again after a miss",
+  /** "Flagged, with Alex": what a housemate sees once it's flagged. */
+  flagged: (name: string) => `Flagged, with ${name}`,
+  flaggedYou: "Flagged, with you",
+  /** "3 times this week". */
+  times: (n: number) => (n === 0 ? "Not yet this week" : n === 1 ? "Once this week" : `${n} times this week`),
+  /** The Week screen's line under someone: "On call: Bins". */
+  weekLine: (names: readonly string[]) => `On call: ${names.join(", ")}`,
+  lastWeek: "From last week",
+  /** The week's push lists it as "Bins (on call)". */
+  dealtAs: (john: string) => `${john} (on call)`,
+  pushTitle: (john: string) => `${john} needs doing`,
+  /** "Sam flagged it. Due today 21:00." */
+  pushBody: (by: string, due: string) => `${by} flagged it. Due ${due}.`,
+  pushAgainBody: (due: string) => `It still needs doing. Due ${due}.`,
 } as const;
 
 /** Handing out the week: the first time it starts the house; afterwards it re-deals an unticked week. */
@@ -627,6 +670,8 @@ export const NEXT_UP_COPY = {
 
 /** The John sheet's states, from yours to settled. */
 export const JOHN_SHEET_COPY = {
+  /** A flag's cadence on the sheet: it comes round when it's flagged. */
+  onCall: "on call",
   every: (weeks: number) => (weeks === 1 ? "every week" : `every ${weeks} weeks`),
   due: (when: string) => `Due ${when}`,
   costs: (late: string, missed: string) => `late costs ${late}, missed ${missed}`,

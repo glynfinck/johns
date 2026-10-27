@@ -26,7 +26,7 @@ const MESSAGES: Record<string, string> = {
   more_than_owed: "That’s more than is owed.",
   bad_payment: "That payment doesn’t add up.",
   no_johns: "Add at least one John first.",
-  week_started: "Someone’s already ticked a John this week, so it can’t be re-dealt.",
+  week_started: "Someone’s already ticked or flagged a John this week, so it can’t be re-dealt.",
   not_in_house: "That isn’t in your house.",
   group_empty: "A group needs at least one housemate in it.",
   not_housemates: "Groups can only hold people who live here.",
@@ -38,6 +38,9 @@ const MESSAGES: Record<string, string> = {
   away_overlaps: "You’re already away for some of those days.",
   away_over: "That time away has already finished.",
   not_yours: "That isn’t yours to change.",
+  not_on_call: "That John isn’t on call, so it can’t be flagged.",
+  not_dealt: "This week hasn’t been handed out yet, so nobody is on call.",
+  nobody_home: "Everyone who shares that John is away today.",
 };
 
 export function humanError(error: { message?: string; code?: string } | null | undefined): string {

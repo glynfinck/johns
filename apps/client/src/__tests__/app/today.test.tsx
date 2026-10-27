@@ -9,6 +9,7 @@ import {
   monthOf,
   NEXT_UP_COPY,
   NOT_DEALT_COPY,
+  ON_CALL_COPY,
   PAGE_TITLE,
   WEEK_SUMMARY_COPY,
   type DisputeRow,
@@ -22,6 +23,7 @@ import { loadAway } from '@/api/away';
 import type { Housemate } from '@/api/board';
 import { loadHouse } from '@/api/board';
 import { castVote } from '@/api/disputes';
+import { raiseFlag } from '@/api/flags';
 import { catchUp } from '@/api/house';
 import { markDone, undoDone } from '@/api/johns';
 import { pickPhoto } from '@/api/photos';
@@ -40,6 +42,7 @@ jest.mock('@/api/settings', () => ({ dealThisWeek: jest.fn(), loadJohnList: jest
 jest.mock('@/api/house', () => ({ catchUp: jest.fn() }));
 jest.mock('@/api/stake', () => ({ loadStake: jest.fn(), confirmPayment: jest.fn() }));
 jest.mock('@/api/disputes', () => ({ castVote: jest.fn(), raiseDispute: jest.fn() }));
+jest.mock('@/api/flags', () => ({ raiseFlag: jest.fn() }));
 jest.mock('@/api/johns', () => ({ markDone: jest.fn(), undoDone: jest.fn(), spendImmunity: jest.fn(), spendSwap: jest.fn() }));
 jest.mock('@/api/photos', () => ({ pickPhoto: jest.fn(), uploadProof: jest.fn() }));
 jest.mock('@/api/wall', () => ({ loadWall: jest.fn(), setReaction: jest.fn() }));
@@ -565,4 +568,55 @@ it("says when it can't read the house, and tries again", async () => {
   expect(await screen.findByRole('alert')).toHaveTextContent(FOCUS_SHELL_COPY.unreadable);
   await fireEvent.press(screen.getByRole('button', { name: FOCUS_SHELL_COPY.retry }));
   expect(await screen.findByTestId('next-up')).toBeOnTheScreen();
+});
+
+describe('On call', () => {
+  const BINS_ON_CALL = { john_id: 'j-bins', user_id: 'sam', johns: { name: 'Empty the bins', category: 'bins' } };
+
+  it('lists each on-call John with who has it, and flags it for them', async () => {
+    (raiseFlag as jest.Mock).mockResolvedValue('f1');
+    read.mockResolvedValue(snapshot({ onCall: [BINS_ON_CALL] }));
+    await open();
+    const section = within(await screen.findByTestId('on-call'));
+    expect(section.getByText('Empty the bins')).toBeOnTheScreen();
+    expect(section.getByText(`${ON_CALL_COPY.holder('Sam')} · ${ON_CALL_COPY.times(0)}`)).toBeOnTheScreen();
+    await fireEvent.press(section.getByTestId('on-call-flag'));
+    await waitFor(() => expect(raiseFlag).toHaveBeenCalledWith('j-bins'));
+    expect(markDone).not.toHaveBeenCalled();
+  });
+
+  it('lets whoever is on call say it is done without waiting to be asked', async () => {
+    (raiseFlag as jest.Mock).mockResolvedValue('f1');
+    read.mockResolvedValue(snapshot({ onCall: [{ ...BINS_ON_CALL, user_id: 'priya' }] }));
+    await open();
+    const section = within(await screen.findByTestId('on-call'));
+    expect(section.getByText(`${ON_CALL_COPY.youreOnCall} · ${ON_CALL_COPY.times(0)}`)).toBeOnTheScreen();
+    await fireEvent.press(section.getByTestId('on-call-done'));
+    await waitFor(() => expect(markDone).toHaveBeenCalledWith('f1'));
+    expect(raiseFlag).toHaveBeenCalledWith('j-bins');
+  });
+
+  it('says who an open flag is with, and opens it rather than flagging it again', async () => {
+    const flag = assignment({
+      id: 'f1',
+      john_id: 'j-bins',
+      week_id: 'w1',
+      user_id: 'sam',
+      name: 'Empty the bins',
+      flagged_at: at(-1),
+      flagged_by: 'priya',
+      due_at: at(11),
+    });
+    read.mockResolvedValue(snapshot({ onCall: [BINS_ON_CALL], assignments: [...snapshot().assignments, flag] }));
+    await open();
+    const section = within(await screen.findByTestId('on-call'));
+    expect(section.getByTestId('on-call-flagged')).toBeOnTheScreen();
+    expect(section.getByText(new RegExp(`^${ON_CALL_COPY.flagged('Sam')} · due `))).toBeOnTheScreen();
+    expect(section.queryByTestId('on-call-flag')).toBeNull();
+  });
+
+  it('shows nothing in a house with no on-call Johns', async () => {
+    await open();
+    expect(screen.queryByTestId('on-call')).toBeNull();
+  });
 });

@@ -20,6 +20,8 @@ jest.mock('./supabase', () => ({
       const builder: Record<string, unknown> = {
         select: record('select'),
         eq: record('eq'),
+        neq: record('neq'),
+        not: record('not'),
         is: record('is'),
         order: record('order'),
         single: () => result(),
@@ -69,6 +71,7 @@ beforeEach(() => {
   mockRows.weeks = { data: WEEK, error: null };
   mockRows.assignments = { data: [{ id: 'a1' }], error: null };
   mockRows.disputes = { data: [{ id: 'd1' }], error: null };
+  mockRows.on_call = { data: [{ john_id: 'j9', user_id: 'u2', johns: { name: 'Bins', category: 'bins' } }], error: null };
 });
 
 it('reads the house, its people and this week in one go', async () => {
@@ -81,8 +84,10 @@ it('reads the house, its people and this week in one go', async () => {
     { userId: 'u2', name: 'Housemate', role: 'member', streak: 0, immunityTokens: 0, swapTokens: 1 },
   ]);
   expect(snapshot.week).toEqual(WEEK);
-  expect(snapshot.assignments).toEqual([{ id: 'a1' }]);
+  // This week's, then any flag from last week still open: the mock answers both reads alike.
+  expect(snapshot.assignments).toEqual([{ id: 'a1' }, { id: 'a1' }]);
   expect(snapshot.disputes).toEqual([{ id: 'd1' }]);
+  expect(snapshot.onCall).toEqual([{ john_id: 'j9', user_id: 'u2', johns: { name: 'Bins', category: 'bins' } }]);
 });
 
 it("asks for the week that holds now in the house's own zone, and only open disputes", async () => {
@@ -92,9 +97,17 @@ it("asks for the week that holds now in the house's own zone, and only open disp
     ['house_id', 'h1'],
     ['starts_on', startsOn],
   ]);
-  expect(calls('assignments', 'eq')).toEqual([['week_id', 'w1']]);
+  expect(calls('assignments', 'eq')).toEqual([
+    ['week_id', 'w1'],
+    ['house_id', 'h1'],
+  ]);
   // How often each John comes round rides along, for the John sheet.
-  expect(calls('assignments', 'select')).toEqual([['*, johns(every_weeks)']]);
+  expect(calls('assignments', 'select')).toEqual([['*, johns(every_weeks)'], ['*, johns(every_weeks)']]);
+  // A flag from an earlier week that hasn't settled stays its holder's.
+  expect(calls('assignments', 'neq')).toEqual([['week_id', 'w1']]);
+  expect(calls('assignments', 'not')).toEqual([['flagged_at', 'is', null]]);
+  expect(calls('assignments', 'is')).toEqual([['outcome', null]]);
+  expect(calls('on_call', 'eq')).toEqual([['week_id', 'w1']]);
   expect(calls('disputes', 'is')).toEqual([['resolution', null]]);
   expect(calls('members', 'order')).toEqual([['joined_at']]);
 });
@@ -103,12 +116,12 @@ it("reads no Johns when this week hasn't been dealt", async () => {
   mockRows.weeks = { data: null, error: null };
   mockRows.houses = { data: { ...HOUSE, first_dealt_at: null }, error: null };
   const snapshot = await loadHouse('h1', NOW);
-  expect(snapshot).toMatchObject({ week: null, assignments: [], disputes: [], house: { everDealt: false } });
+  expect(snapshot).toMatchObject({ week: null, assignments: [], disputes: [], onCall: [], house: { everDealt: false } });
   expect(supabase.from).not.toHaveBeenCalledWith('assignments');
   expect(supabase.from).not.toHaveBeenCalledWith('disputes');
 });
 
-it.each(['houses', 'members', 'weeks', 'assignments', 'disputes'])('fails when %s cannot be read', async (table) => {
+it.each(['houses', 'members', 'weeks', 'assignments', 'disputes', 'on_call'])('fails when %s cannot be read', async (table) => {
   mockRows[table] = { data: null, error: new Error(`${table} offline`) };
   await expect(loadHouse('h1', NOW)).rejects.toThrow(`${table} offline`);
 });

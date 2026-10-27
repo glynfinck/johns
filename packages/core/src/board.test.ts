@@ -10,6 +10,7 @@ import {
   isOpen,
   monthStandings,
   rulesOf,
+  onCallItems,
   TODAY_ORDER,
   todayView,
   type AssignmentRow,
@@ -80,7 +81,30 @@ describe("johnDef", () => {
       dueTime: "21:00",
       needsPhoto: true,
       groupId: null,
+      when: "day",
+      respondHours: 12,
+      perWeek: 2,
     });
+  });
+
+  it("reads an on-call John with its window and how often it needs doing", () => {
+    const row = {
+      id: "j2",
+      name: "Bins",
+      category: "bins",
+      points: 1,
+      every_weeks: 1,
+      due_dow: 7,
+      due_time: "21:00:00",
+      needs_photo: false,
+      group_id: null,
+    };
+    expect(johnDef({ ...row, kind: "on_call", respond_hours: 8, per_week: 4 })).toMatchObject({
+      when: "on_call",
+      respondHours: 8,
+      perWeek: 4,
+    });
+    expect(johnDef({ ...row, kind: "something new" }).when).toBe("day");
   });
 });
 
@@ -107,6 +131,75 @@ describe("weeklyEffort", () => {
     expect(weeklyEffort([])).toBe(0);
     expect(weeklyEffort([{ points: 4, everyWeeks: 1 }])).toBe(4);
     expect(weeklyEffort([{ points: 4, everyWeeks: 2 }, { points: 3, everyWeeks: 3 }])).toBe(3);
+  });
+
+  it("counts an on-call John as often as it needs doing", () => {
+    expect(weeklyEffort([{ points: 1, everyWeeks: 1, when: "on_call", perWeek: 3 }])).toBe(3);
+    expect(weeklyEffort([{ points: 2, everyWeeks: 1, when: "day", perWeek: 3 }])).toBe(2);
+  });
+});
+
+describe("flags on the board", () => {
+  const flag = (id: string, overrides: Partial<AssignmentRow> = {}) =>
+    john(id, { john_id: "bins", week_id: "w1", flagged_at: at(-2), flagged_by: YOU, due_at: at(10), ...overrides });
+
+  it("carries who flagged it and when", () => {
+    const [item] = board([flag("f1")]).items;
+    expect(item).toMatchObject({ flaggedBy: YOU, carried: false, status: "due-soon" });
+    expect(item.flaggedAt).toEqual(new Date(at(-2)));
+    const [plain] = board([john("a1")]).items;
+    expect(plain).toMatchObject({ flaggedAt: null, flaggedBy: null, carried: false });
+  });
+
+  it("keeps last week's open flag with its holder, off this week's Table", () => {
+    // Raised Sunday 8pm, due Monday 8am: still open on Wednesday is long past twice its window.
+    const lastWeek = flag("f0", { week_id: "w0", flagged_at: "2026-10-11T19:00:00Z", due_at: "2026-10-12T07:00:00Z" });
+    const b = board([lastWeek, john("a1", { user_id: YOU })]);
+    const carried = b.items.find((i) => i.id === "f0")!;
+    expect(carried.carried).toBe(true);
+    expect(carried.status).toBe("missed");
+    expect(b.table.find((r) => r.userId === ME)).toMatchObject({ missed: 0, points: 0 });
+  });
+
+  it("shows a carried flag still in its window as open", () => {
+    const sunday = flag("f0", { week_id: "w0", flagged_at: "2026-10-11T22:00:00Z", due_at: "2026-10-14T22:00:00Z" });
+    expect(board([sunday]).items[0].status).toBe("due-soon");
+  });
+});
+
+describe("onCallItems", () => {
+  const rows = [
+    { john_id: "bins", user_id: ME, johns: { name: "Bins", category: "bins" } },
+    { john_id: "recycling", user_id: YOU, johns: { name: "Recycling", category: "bins" } },
+    { john_id: "gone", user_id: YOU, johns: { name: "Gone", category: "other", archived_at: at(-1) } },
+  ];
+  const flag = (id: string, overrides: Partial<AssignmentRow> = {}) =>
+    john(id, { john_id: "bins", week_id: "w1", flagged_at: at(-5), flagged_by: YOU, due_at: at(7), ...overrides });
+
+  it("lists each on-call John with who has it, leaving out deleted ones", () => {
+    const items = onCallItems(rows, board([]));
+    expect(items.map((i) => [i.name, i.holderId, i.openFlag, i.times])).toEqual([
+      ["Bins", ME, null, 0],
+      ["Recycling", YOU, null, 0],
+    ]);
+  });
+
+  it("finds the open flag, the latest one first, and counts this week's", () => {
+    const b = board([
+      flag("done", { flagged_at: at(-30), done_at: at(-28) }),
+      flag("older", { flagged_at: at(-6) }),
+      flag("newest", { flagged_at: at(-1) }),
+      flag("lastweek", { week_id: "w0", flagged_at: at(-60), outcome: "missed" }),
+    ]);
+    const [bins] = onCallItems(rows, b);
+    expect(bins.openFlag?.id).toBe("newest");
+    expect(bins.times).toBe(3);
+  });
+
+  it("has no open flag once it's ticked", () => {
+    const [bins] = onCallItems(rows, board([flag("f1", { done_at: at(-1) })]));
+    expect(bins.openFlag).toBeNull();
+    expect(bins.times).toBe(1);
   });
 });
 

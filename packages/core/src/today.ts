@@ -343,8 +343,12 @@ export function johnSheetMode(item: Pick<BoardItem, "userId" | "status">, viewer
  * week" (the group when it has one; how often while its John is still on
  * the list).
  */
-export function sheetKind(item: Pick<BoardItem, "category" | "groupName" | "points" | "everyWeeks">): string {
-  return [johnKind(item.category), item.groupName, pointsLabel(item.points), item.everyWeeks ? JOHN_SHEET_COPY.every(item.everyWeeks) : null]
+export function sheetKind(
+  item: Pick<BoardItem, "category" | "groupName" | "points" | "everyWeeks"> & Partial<Pick<BoardItem, "flaggedAt">>,
+): string {
+  // A flag comes round when it's flagged, not every N weeks.
+  const often = item.flaggedAt ? JOHN_SHEET_COPY.onCall : item.everyWeeks ? JOHN_SHEET_COPY.every(item.everyWeeks) : null;
+  return [johnKind(item.category), item.groupName, pointsLabel(item.points), often]
     .filter(Boolean)
     .join(" · ");
 }
@@ -456,10 +460,11 @@ export function cantOptions(
   me: { userId: string; immunityTokens: number; swapTokens: number } | null,
 ): CantOptions | null {
   if (!me || item.userId !== me.userId || !isOpen(item.status)) return null;
+  // A flag stays with whoever was on call: only Johns due on a day trade.
   const swapFor =
-    me.swapTokens > 0
+    me.swapTokens > 0 && item.flaggedAt === null
       ? board.items
-          .filter((i) => i.userId !== me.userId && isOpen(i.status))
+          .filter((i) => i.userId !== me.userId && isOpen(i.status) && i.flaggedAt === null)
           .sort((a, b) => a.dueAt.getTime() - b.dueAt.getTime())
       : [];
   if (me.immunityTokens <= 0 && swapFor.length === 0) return null;

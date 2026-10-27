@@ -181,9 +181,22 @@ describe("JohnDraft", () => {
   };
 
   it("takes a new John, and an edit of one", () => {
-    expect(JohnDraft.parse(john)).toEqual({ ...john, name: "Bins" });
+    expect(JohnDraft.parse(john)).toEqual({ ...john, name: "Bins", when: "day", respondHours: 12, perWeek: 2 });
     const id = crypto.randomUUID();
     expect(JohnDraft.parse({ ...john, id, groupId: id })).toMatchObject({ id, groupId: id });
+  });
+
+  it("takes an on-call John, its window kept to between an hour and three days", () => {
+    expect(JohnDraft.parse({ ...john, when: "on_call", respondHours: "8", perWeek: 3 })).toMatchObject({
+      when: "on_call",
+      respondHours: 8,
+      perWeek: 3,
+    });
+    const problem = (patch: object) => JohnDraft.safeParse({ ...john, when: "on_call", ...patch }).error?.issues[0].message;
+    expect(problem({ respondHours: 0 })).toBe("Give between 1 and 72 hours.");
+    expect(problem({ respondHours: 73 })).toBe("Give between 1 and 72 hours.");
+    expect(problem({ perWeek: 15 })).toBeDefined();
+    expect(problem({ when: "sometimes" })).toBeDefined();
   });
 
   it("says what’s wrong in words", () => {

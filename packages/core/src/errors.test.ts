@@ -6,9 +6,11 @@ describe("humanError", () => {
   it("turns the database's short codes into sentences", () => {
     expect(humanError({ message: "admins_only", code: "P0001" })).toBe("Only the house admins can do that.");
     expect(humanError({ message: "week_started" })).toBe(
-      "Someone’s already ticked a John this week, so it can’t be re-dealt.",
+      "Someone’s already ticked or flagged a John this week, so it can’t be re-dealt.",
     );
     expect(humanError({ message: "no_johns" })).toBe("Add at least one John first.");
+    expect(humanError({ message: "nobody_home" })).toBe("Everyone who shares that John is away today.");
+    expect(humanError({ message: "not_on_call" })).toMatch(/can’t be flagged/);
   });
 
   it("finds the code inside a longer message, as the engine wraps it", () => {
@@ -24,7 +26,7 @@ describe("humanError", () => {
   });
 
   it("writes its apostrophes curly, as the rest of the copy does", () => {
-    for (const code of ["own_john", "already_disputed", "week_started", "unknown_timezone", "more_than_owed", "not_yours"]) {
+    for (const code of ["own_john", "already_disputed", "week_started", "unknown_timezone", "more_than_owed", "not_yours", "not_on_call", "not_dealt", "nobody_home"]) {
       expect(humanError({ message: code })).not.toContain("'");
     }
     expect(humanError({ code: "42501" })).not.toContain("'");

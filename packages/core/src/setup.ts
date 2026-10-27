@@ -37,10 +37,15 @@ function cadence(everyWeeks: number): string {
 }
 
 /** A John's meta line on the list: "Every week · Sun 21:00 · photo", then the group that shares it, if one does. */
-export function scheduleLine(john: Pick<JohnDef, "everyWeeks" | "dueDow" | "dueTime" | "needsPhoto">, groupName?: string | null): string {
+export function scheduleLine(
+  john: Pick<JohnDef, "everyWeeks" | "dueDow" | "dueTime" | "needsPhoto"> & Partial<Pick<JohnDef, "when" | "respondHours" | "perWeek">>,
+  groupName?: string | null,
+): string {
+  const onCall = john.when === "on_call";
   return [
-    cadence(john.everyWeeks),
-    `${DOW_LABEL[john.dueDow].slice(0, 3)} ${john.dueTime}`,
+    ...(onCall
+      ? [JOHN_LIST_COPY.onCallWhen(john.respondHours ?? 12, john.perWeek ?? 1)]
+      : [cadence(john.everyWeeks), `${DOW_LABEL[john.dueDow].slice(0, 3)} ${john.dueTime}`]),
     john.needsPhoto ? SETUP_COPY.photo : null,
     groupName || null,
   ]
@@ -54,8 +59,16 @@ export function johnFacts(john: JohnDef, groupName?: string | null): LabelValue[
     { label: SETUP_COPY.kindLabel, value: CATEGORY_LABEL[john.category] },
     { label: JOHN_LIST_COPY.sharedBy, value: groupName || JOHN_LIST_COPY.everyone },
     { label: JOHN_LIST_COPY.effort, value: pointsLabel(john.points) },
-    { label: JOHN_LIST_COPY.often, value: cadence(john.everyWeeks) },
-    { label: JOHN_LIST_COPY.due, value: `${DOW_LABEL[john.dueDow]} ${john.dueTime}` },
+    ...(john.when === "on_call"
+      ? [
+          { label: JOHN_LIST_COPY.whenLabel, value: JOHN_LIST_COPY.onCall },
+          { label: JOHN_LIST_COPY.respond, value: JOHN_LIST_COPY.respondHours(john.respondHours) },
+          { label: JOHN_LIST_COPY.timesAWeek, value: JOHN_LIST_COPY.perWeekLabel(john.perWeek) },
+        ]
+      : [
+          { label: JOHN_LIST_COPY.often, value: cadence(john.everyWeeks) },
+          { label: JOHN_LIST_COPY.due, value: `${DOW_LABEL[john.dueDow]} ${john.dueTime}` },
+        ]),
     { label: SETUP_COPY.photoLabel, value: john.needsPhoto ? SETUP_COPY.photoNeeded : SETUP_COPY.photoNot },
   ];
 }

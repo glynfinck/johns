@@ -77,7 +77,20 @@ describe('loadJohnList', () => {
     const list = await loadJohnList('h1');
     expect(list).toEqual({
       johns: [
-        { id: 'j1', name: 'Bins', category: 'bins', points: 2, everyWeeks: 1, dueDow: 7, dueTime: '21:00', needsPhoto: false, groupId: 'g1' },
+        {
+          id: 'j1',
+          name: 'Bins',
+          category: 'bins',
+          points: 2,
+          everyWeeks: 1,
+          dueDow: 7,
+          dueTime: '21:00',
+          needsPhoto: false,
+          groupId: 'g1',
+          when: 'day',
+          respondHours: 12,
+          perWeek: 2,
+        },
       ],
       groups: [{ id: 'g1', name: 'Upstairs', memberIds: ['ava'] }],
     });
@@ -92,6 +105,12 @@ describe('loadJohnList', () => {
 });
 
 describe('saveJohn', () => {
+  it('writes an on-call John with its window and how often it needs doing', async () => {
+    await saveJohn('h1', RULES, { ...NEW_JOHN, name: 'Bins', when: 'on_call', respondHours: 8, perWeek: 3 }, NOW);
+    const [[row]] = callsOf('johns', 'insert') as [[Record<string, unknown>]];
+    expect(row).toMatchObject({ name: 'Bins', kind: 'on_call', respond_hours: 8, per_week: 3 });
+  });
+
   it("adds a John whose cadence counts from the house's current week", async () => {
     await saveJohn('h1', RULES, { ...NEW_JOHN, name: ' Hob ', dueTime: '18:30' }, NOW);
     const [[row]] = callsOf('johns', 'insert') as [[Record<string, unknown>]];
@@ -104,6 +123,9 @@ describe('saveJohn', () => {
       due_time: '18:30',
       needs_photo: false,
       group_id: null,
+      kind: 'day',
+      respond_hours: 12,
+      per_week: 2,
       house_id: 'h1',
       anchor_week: weekIndex(weekWindow(NOW, 'Europe/London', 1).startsOn),
     });

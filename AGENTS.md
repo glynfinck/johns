@@ -136,7 +136,7 @@ each app's AGENTS.md.
   through named functions (`mark_done`, `undo_done`, `raise_dispute`,
   `cast_vote`, `use_immunity`, `use_swap`, `confirm_payment`,
   `create_house`, `join_house`, `set_member_role`, `remove_member`,
-  `save_group`, `delete_group`, `set_away`, `cancel_away`) or a few column
+  `save_group`, `delete_group`, `set_away`, `cancel_away`, `raise_flag`) or a few column
   grants (house settings and the John list, its group included, for admins;
   your own name, reactions, push subscriptions). Refusals raise `42501` (not
   yours) or `P0001` with a short code that `errors.ts` turns into a sentence.
@@ -165,6 +165,16 @@ already due a day's grace (`graceDue`).
   minus your share over the last 12 weeks; each John goes to whoever, of
   those home on its due day, would be furthest behind. Doing the same John
   twice running costs a small penalty.
+- **On call** (`johns.kind = 'on_call'`, `on_call`): a John that needs
+  doing whenever it needs doing (the bins when they're full). Each deal puts
+  one sharer on call for the week by fair shares, weighing it as points ×
+  `per_week`. Anyone flags it (`raise_flag`) and the flag is an ordinary
+  assignment for whoever is on call (or, if they're away today, the fairest
+  sharer at home), due `respond_hours` later (default 12), adding its points
+  to everyone's share as it's raised. A flag never swaps and never hands over:
+  missed at twice its window (or at week end if it's overdue by then), it is
+  its holder's miss and opens again for whoever is on call now
+  (`open_flag`). Whoever is on call can tick it unasked.
 - **Groups**: named sets of housemates (`groups`, `group_members`); a John
   belongs to everyone or to one group, and only that group is handed it. If
   everyone in a group has left, its Johns go to everyone; if everyone in it
@@ -215,7 +225,9 @@ housemate's share of it) → `assignments` (a snapshot of the John as dealt,
 `group_name`, `due_at`, `due_moved_from`, `done_at`, `photo_path`, `outcome`
 stamped once final); `away` (local first and last dates, inclusive) →
 `disputes` + `dispute_votes`; `ledger` + `month_closes`; `events` +
-`reactions`; `push_subscriptions`. Photos live in the private `proofs` bucket
+`reactions`; `push_subscriptions`. On-call Johns add `johns.kind`, `respond_hours` and
+`per_week`, `on_call` (who holds each one each week), and
+`assignments.flagged_at` and `flagged_by`. Photos live in the private `proofs` bucket
 at `<house>/<assignment>/<file>`.
 
 - Schema changes only through migration files (`supabase migration new

@@ -1,4 +1,4 @@
-import { dayLabel, NEXT_UP_COPY, PAGE_TITLE, todayPage, type StakeView } from '@app/core';
+import { dayLabel, NEXT_UP_COPY, onCallItems, PAGE_TITLE, todayPage, type StakeView } from '@app/core';
 
 import type { AwayView } from '@/api/away';
 import type { JohnList } from '@/api/settings';
@@ -8,6 +8,7 @@ import { Screen } from '@/components/screen';
 import { TitleBar } from '@/components/title-bar';
 import { NeedsYou } from '@/components/today/needs-you';
 import { NextUp } from '@/components/today/next-up';
+import { OnCall } from '@/components/today/on-call';
 import { PageLine, PageLines } from '@/components/today/page-line';
 import { RestOfWeek } from '@/components/today/rest-of-week';
 import { SetupCard } from '@/components/today/setup-card';
@@ -20,7 +21,8 @@ import { useStake } from '@/hooks/use-stake';
 
 /**
  * Today, for doing: your next John in the one card (or what takes its
- * place), the disputes that need your vote, the rest of your week, and one
+ * place), the disputes that need your vote, the on-call Johns anyone can
+ * flag, the rest of your week, and one
  * line on where you stand (with your time away, when a trip is coming).
  * Fits one phone screen.
  */
@@ -105,6 +107,14 @@ function TodayView({
         />
       )}
       <NeedsYou items={today.toVote} members={members} now={now} />
+      <OnCall
+        houseId={house.id}
+        items={onCallItems(snapshot.onCall, board)}
+        members={members}
+        userId={userId}
+        rules={rules}
+        now={now}
+      />
       <RestOfWeek
         going={page.going}
         finished={page.finished}

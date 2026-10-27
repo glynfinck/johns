@@ -1,5 +1,5 @@
 import type { Database } from "./db-types";
-import type { Category, Currency, HouseRules, IsoDow, Outcome } from "./domain";
+import type { Category, Currency, HouseRules, IsoDow, JohnWhen, Outcome } from "./domain";
 import { liveStatus, standsAt, type LiveStatus } from "./outcome";
 import { standings, type TableRow } from "./points";
 
@@ -22,6 +22,12 @@ export interface JohnDef {
   needsPhoto: boolean;
   /** The group that shares it; null means the whole house. */
   groupId: string | null;
+  /** On a set day (`day`), or on call: whenever someone flags it (`johns.kind`). */
+  when: JohnWhen;
+  /** On call: how long whoever is on call has to do it once it's flagged, in hours. */
+  respondHours: number;
+  /** On call: about how many times a week it needs doing, which is what the deal weighs it as. */
+  perWeek: number;
 }
 
 /** Where a new John starts in the editor: a weekly kitchen John, due Sunday night, for the whole house. */
@@ -34,11 +40,15 @@ export const NEW_JOHN: Omit<JohnDef, "id"> = {
   dueTime: "21:00",
   needsPhoto: false,
   groupId: null,
+  when: "day",
+  respondHours: 12,
+  perWeek: 2,
 };
 
-/** A John on the list, from its row. */
+/** A John on the list, from its row (a read without the on-call columns gets a John due on a day). */
 export function johnDef(
-  row: Pick<Row<"johns">, "id" | "name" | "category" | "points" | "every_weeks" | "due_dow" | "due_time" | "needs_photo" | "group_id">,
+  row: Pick<Row<"johns">, "id" | "name" | "category" | "points" | "every_weeks" | "due_dow" | "due_time" | "needs_photo" | "group_id"> &
+    Partial<Pick<Row<"johns">, "kind" | "respond_hours" | "per_week">>,
 ): JohnDef {
   return {
     id: row.id,
@@ -50,6 +60,9 @@ export function johnDef(
     dueTime: row.due_time.slice(0, 5),
     needsPhoto: row.needs_photo,
     groupId: row.group_id,
+    when: row.kind === "on_call" ? "on_call" : "day",
+    respondHours: row.respond_hours ?? NEW_JOHN.respondHours,
+    perWeek: row.per_week ?? NEW_JOHN.perWeek,
   };
 }
 
@@ -65,9 +78,14 @@ export function groupDef(row: Pick<Row<"groups">, "id" | "name"> & { group_membe
   return { id: row.id, name: row.name, memberIds: (row.group_members ?? []).map((m) => m.user_id) };
 }
 
-/** How much effort the list asks of the house in an average week: a fortnightly John counts half. */
-export function weeklyEffort(johns: readonly Pick<JohnDef, "points" | "everyWeeks">[]): number {
-  return johns.reduce((sum, j) => sum + j.points / j.everyWeeks, 0);
+/**
+ * How much effort the list asks of the house in an average week: a
+ * fortnightly John counts half, an on-call one as often as it needs doing.
+ */
+export function weeklyEffort(
+  johns: readonly (Pick<JohnDef, "points" | "everyWeeks"> & Partial<Pick<JohnDef, "when" | "perWeek">>)[],
+): number {
+  return johns.reduce((sum, j) => sum + (j.points * (j.when === "on_call" ? (j.perWeek ?? 1) : 1)) / j.everyWeeks, 0);
 }
 
 /** The house's rules, from its row. */
@@ -116,6 +134,11 @@ export type AssignmentRow = Pick<
   john_id?: string | null;
   /** That John as the list has it now (`johns(every_weeks)`), when the read embeds it. */
   johns?: { every_weeks: number } | null;
+  /** The week it was dealt or flagged in, when read: a flag can outlast its week. */
+  week_id?: string;
+  /** On a flag: when it was raised, and by whom (null: opened again after a miss). */
+  flagged_at?: string | null;
+  flagged_by?: string | null;
 };
 
 /** An open dispute, with its votes: `disputes` and `dispute_votes` as read. */
@@ -163,6 +186,11 @@ export interface BoardItem {
   /** When a tick in the dispute window stands, if nothing changes. */
   standsAt: Date | null;
   dispute: DisputeView | null;
+  /** On a flag (an on-call John someone said needs doing): when, and who said so. */
+  flaggedAt: Date | null;
+  flaggedBy: string | null;
+  /** A flag raised last week that is still open: it stays its holder's, and isn't on this week's Table. */
+  carried: boolean;
 }
 
 export interface WeekBoard {
@@ -215,8 +243,19 @@ export function buildWeekBoard(input: {
       const doneAt = a.done_at ? new Date(a.done_at) : null;
       const outcome = a.outcome as Outcome | null;
       const dueAt = new Date(a.due_at);
+      const flaggedAt = a.flagged_at ? new Date(a.flagged_at) : null;
+      // Weeks follow on from each other, so last week ended when this one started.
+      const carried = a.week_id !== undefined && a.week_id !== week.id;
       const status = liveStatus(
-        { dueAt, doneAt, excused: a.excused, disputeOpen: dispute !== null, weekEndsAt: endsAt, outcome },
+        {
+          dueAt,
+          doneAt,
+          excused: a.excused,
+          disputeOpen: dispute !== null,
+          weekEndsAt: carried ? new Date(week.starts_at) : endsAt,
+          flaggedAt,
+          outcome,
+        },
         now,
         disputeHours,
       );
@@ -238,6 +277,9 @@ export function buildWeekBoard(input: {
         status,
         standsAt: doneAt && !outcome ? standsAt(doneAt, disputeHours) : null,
         dispute,
+        flaggedAt,
+        flaggedBy: a.flagged_by ?? null,
+        carried,
       };
     });
 
@@ -245,11 +287,54 @@ export function buildWeekBoard(input: {
     week: { id: week.id, startsOn: week.starts_on, startsAt: new Date(week.starts_at), endsAt },
     items,
     table: standings(
-      items.map((i) => ({ userId: i.userId, points: i.points, status: i.status })),
+      items.filter((i) => !i.carried).map((i) => ({ userId: i.userId, points: i.points, status: i.status })),
       memberIds,
     ),
     notStarted: false,
   };
+}
+
+/** Who is on call this week, as read: `on_call` with its John's name and kind. */
+export interface OnCallRow {
+  john_id: string;
+  user_id: string;
+  johns: { name: string; category: string; needs_photo?: boolean; archived_at?: string | null } | null;
+}
+
+/** An on-call John this week: who has it, its open flag if it has one, and how often it was flagged. */
+export interface OnCallItem {
+  johnId: string;
+  name: string;
+  category: string;
+  /** Its tick needs a photo. */
+  needsPhoto: boolean;
+  /** Who the deal put on call. An open flag can be with someone else (they were away when it was raised). */
+  holderId: string;
+  /** The flag not yet ticked, if there is one: flagging again changes nothing until it's done. */
+  openFlag: BoardItem | null;
+  /** Flags raised this week. */
+  times: number;
+}
+
+/** The week's on-call Johns, in the list's order, with each one's open flag from the board. */
+export function onCallItems(rows: readonly OnCallRow[], board: WeekBoard): OnCallItem[] {
+  return rows
+    .filter((r) => r.johns && !r.johns.archived_at)
+    .map((r) => {
+      const flags = board.items.filter((i) => i.johnId === r.john_id && i.flaggedAt !== null);
+      const open = flags
+        .filter((i) => i.doneAt === null && i.outcome === null)
+        .sort((a, b) => b.flaggedAt!.getTime() - a.flaggedAt!.getTime());
+      return {
+        johnId: r.john_id,
+        name: r.johns!.name,
+        category: r.johns!.category,
+        needsPhoto: r.johns!.needs_photo ?? false,
+        holderId: r.user_id,
+        openFlag: open[0] ?? null,
+        times: flags.filter((i) => !i.carried).length,
+      };
+    });
 }
 
 /** Still to do: not ticked, not excused, not yet settled. */
@@ -294,6 +379,8 @@ export function todayView(board: WeekBoard, userId: string) {
 /** A month's assignment as read, with its week's end (for when an open John turns missed). */
 export type MonthRow = Pick<Row<"assignments">, "user_id" | "points" | "outcome" | "done_at" | "due_at" | "excused"> & {
   weeks: { ends_at: string } | null;
+  /** On a flag, when it was raised, when the read has it. */
+  flagged_at?: string | null;
 };
 
 /** The month's Table: every John due this month, each at its live status. */
@@ -315,6 +402,7 @@ export function monthStandings(
           disputeOpen: false,
           // A John with no week (never, in practice) counts as ending when it's due.
           weekEndsAt: new Date(a.weeks?.ends_at ?? a.due_at),
+          flaggedAt: a.flagged_at ? new Date(a.flagged_at) : null,
           outcome: a.outcome as Outcome | null,
         },
         now,

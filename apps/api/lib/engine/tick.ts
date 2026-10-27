@@ -2,15 +2,18 @@ import {
   BALANCE_WEEKS,
   awayOn,
   dueAt,
+  dueInLine,
   earnsImmunity,
   fairShares,
   forfeitFor,
   graceDue,
+  homeForWeek,
   isCleanWeek,
   isDueInWeek,
   localDate,
   monthOf,
   monthWindow,
+  ON_CALL_COPY,
   recentBalances,
   rulesOf,
   settleMonth,
@@ -116,7 +119,7 @@ export async function tickHouse(
     summary.dealt = await ensureCurrentWeek(db, house, members, now, notify);
   }
   summary.disputes = await decideDisputes(db, house, members, now);
-  summary.settled = await settleDue(db, house, now);
+  summary.settled = await settleDue(db, house, now, notify);
   summary.weeksClosed = await closeWeeks(db, house, members, now);
   summary.monthsClosed = await closeMonths(db, house, members, now);
   if (notify) summary.reminders = await sendReminders(db, house, now, notify);
@@ -228,45 +231,91 @@ export async function dealWeek(
   }));
 
   const midWeek = now > week.startsAt;
-  const planned = johns.map((j) => {
-    let due = dueAt(week, rules.timezone, rules.weekStarts, j.due_dow as IsoDow, j.due_time.slice(0, 5));
-    if (midWeek) due = graceDue(due, now, week.endsAt);
+  const sharersOf = (j: (typeof johns)[number]) => {
     const group = j.group_id ? groups.find((g) => g.id === j.group_id) : undefined;
     const inGroup = (group?.group_members ?? []).map((m) => m.user_id).filter((id) => memberIds.includes(id));
-    const sharers = inGroup.length > 0 ? inGroup : memberIds;
-    const day = localDate(due, rules.timezone);
-    const deal: DealJohn = {
+    return { sharers: inGroup.length > 0 ? inGroup : memberIds, groupName: inGroup.length > 0 ? group!.name : null };
+  };
+  const planned = johns
+    .filter((j) => j.kind !== "on_call")
+    .map((j) => {
+      let due = dueAt(week, rules.timezone, rules.weekStarts, j.due_dow as IsoDow, j.due_time.slice(0, 5));
+      if (midWeek) due = graceDue(due, now, week.endsAt);
+      const { sharers, groupName } = sharersOf(j);
+      const day = localDate(due, rules.timezone);
+      const deal: DealJohn = {
+        johnId: j.id,
+        points: j.points,
+        lastUserId: lastBy.get(j.id) ?? null,
+        sharers,
+        home: sharers.filter((id) => !awayOn(away, id, day)),
+      };
+      return { john: j, due, groupName, deal };
+    });
+
+  // An on-call John puts someone on call for the week. It weighs in the deal
+  // as often as it needs doing, but adds nothing to the stored shares: each
+  // flag adds its own points when it is raised (open_flag), so what the house
+  // owes follows what it was actually handed.
+  const onCall = johns.filter((j) => j.kind === "on_call");
+  const lastOnCall = new Map<string, string>();
+  if (onCall.length > 0) {
+    const previous = must(
+      await db
+        .from("on_call")
+        .select("john_id, user_id, weeks!inner(starts_on)")
+        .in("john_id", onCall.map((j) => j.id))
+        .lt("weeks.starts_on", week.startsOn)
+        .order("starts_on", { referencedTable: "weeks", ascending: false })
+        .limit(200),
+      "last on call",
+    );
+    for (const r of previous) if (!lastOnCall.has(r.john_id)) lastOnCall.set(r.john_id, r.user_id);
+  }
+  const onCallDeals: DealJohn[] = onCall.map((j) => {
+    const { sharers } = sharersOf(j);
+    return {
       johnId: j.id,
-      points: j.points,
-      lastUserId: lastBy.get(j.id) ?? null,
+      points: j.points * j.per_week,
+      lastUserId: lastOnCall.get(j.id) ?? null,
       sharers,
-      home: sharers.filter((id) => !awayOn(away, id, day)),
+      home: homeForWeek(away, sharers, week.startsOn, lastDay),
     };
-    return { john: j, due, groupName: inGroup.length > 0 ? group!.name : null, deal };
   });
 
-  const deals = planned.map((p) => p.deal);
-  const shares = weekShares(deals, memberIds, house.away_makeup / 100);
+  const dayDeals = planned.map((p) => p.deal);
+  const makeup = house.away_makeup / 100;
+  const shares = weekShares(dayDeals, memberIds, makeup);
+  const weighed = weekShares([...dayDeals, ...onCallDeals], memberIds, makeup);
   const { balances } = await loadBalances(db, house.id, week.startsOn, memberIds);
   const dealt = fairShares(
-    deals,
-    memberIds.map((id) => ({ userId: id, balance: balances.get(id) ?? 0, share: shares.get(id) ?? 0 })),
+    [...dayDeals, ...onCallDeals],
+    memberIds.map((id) => ({ userId: id, balance: balances.get(id) ?? 0, share: weighed.get(id) ?? 0 })),
     `${house.id}:${week.startsOn}`,
   );
 
-  const assignments = dealt.map((d) => {
-    const p = planned.find((x) => x.john.id === d.johnId)!;
+  const assignments = dealt.flatMap((d) => {
+    const p = planned.find((x) => x.john.id === d.johnId);
+    if (!p) return [];
     byUser.set(d.userId, [...(byUser.get(d.userId) ?? []), p.john.name]);
-    return {
-      john_id: p.john.id,
-      user_id: d.userId,
-      name: p.john.name,
-      category: p.john.category,
-      points: p.john.points,
-      needs_photo: p.john.needs_photo,
-      due_at: p.due.toISOString(),
-      group_name: p.groupName,
-    };
+    return [
+      {
+        john_id: p.john.id,
+        user_id: d.userId,
+        name: p.john.name,
+        category: p.john.category,
+        points: p.john.points,
+        needs_photo: p.john.needs_photo,
+        due_at: p.due.toISOString(),
+        group_name: p.groupName,
+      },
+    ];
+  });
+  const onCallRows = dealt.flatMap((d) => {
+    const j = onCall.find((x) => x.id === d.johnId);
+    if (!j) return [];
+    byUser.set(d.userId, [...(byUser.get(d.userId) ?? []), ON_CALL_COPY.dealtAs(j.name)]);
+    return [{ john_id: j.id, user_id: d.userId }];
   });
 
   const weekId = must(
@@ -278,6 +327,7 @@ export async function dealWeek(
       p_assignments: assignments,
       p_shares: memberIds.map((id) => ({ user_id: id, share: Math.round((shares.get(id) ?? 0) * 100) / 100 })),
       p_replace: replace,
+      p_on_call: onCallRows,
     }),
     "deal_week",
   );
@@ -350,12 +400,12 @@ async function decideDisputes(db: Db, house: HouseRow, members: readonly MemberR
 
 // --- Settling outcomes -----------------------------------------------------------
 
-async function settleDue(db: Db, house: HouseRow, now: Date) {
+async function settleDue(db: Db, house: HouseRow, now: Date, notify?: Notify) {
   const rules = rulesOf(house);
   const open = must(
     await db
       .from("assignments")
-      .select("id, due_at, done_at, excused, weeks(ends_at)")
+      .select("id, john_id, due_at, done_at, excused, flagged_at, weeks(ends_at)")
       .eq("house_id", house.id)
       .is("outcome", null),
     "open assignments",
@@ -377,6 +427,7 @@ async function settleDue(db: Db, house: HouseRow, now: Date) {
         excused: a.excused,
         disputeOpen: disputed.has(a.id),
         weekEndsAt: new Date(a.weeks!.ends_at),
+        flaggedAt: a.flagged_at ? new Date(a.flagged_at) : null,
       },
       now,
       rules.disputeHours,
@@ -390,7 +441,33 @@ async function settleDue(db: Db, house: HouseRow, now: Date) {
     });
   }
   if (items.length === 0) return 0;
-  return must(await db.rpc("settle_assignments", { p_items: items }), "settle");
+  const settled = must(await db.rpc("settle_assignments", { p_items: items }), "settle");
+
+  // A missed flag still needs doing: it opens again for whoever is on call
+  // now. The miss stays with whoever had it. open_flag hands back a flag
+  // that's already open, so two ticks racing open one.
+  const missedFlags = new Set(
+    open.filter((a) => a.flagged_at && a.john_id && items.some((i) => i.id === a.id && i.outcome === "missed")).map((a) => a.john_id!),
+  );
+  for (const johnId of missedFlags) await reopenFlag(db, house, johnId, now, notify);
+  return settled;
+}
+
+/** Flag an on-call John again after a miss, and tell whoever it went to. Nobody home, or no week dealt, leaves it. */
+async function reopenFlag(db: Db, house: HouseRow, johnId: string, now: Date, notify?: Notify) {
+  const { data: flagId, error } = await db.rpc("open_flag", { p_john: johnId, p_at: now.toISOString() });
+  if (error || !flagId) return;
+  const flag = must(
+    await db.from("assignments").select("user_id, name, due_at, flagged_by, flagged_at").eq("id", flagId).single(),
+    "reopened flag",
+  );
+  // An older flag already open, from a housemate, was told about when it was raised.
+  if (!notify || flag.flagged_by !== null || !flag.flagged_at || Date.parse(flag.flagged_at) !== now.getTime()) return;
+  await notify([flag.user_id], {
+    title: ON_CALL_COPY.pushTitle(flag.name),
+    body: ON_CALL_COPY.pushAgainBody(dueInLine(new Date(flag.due_at), now, rulesOf(house).timezone)),
+    url: "/today",
+  });
 }
 
 // --- Closing weeks: streaks and perks -----------------------------------------------
