@@ -28,6 +28,7 @@ function item(id: string, overrides: Partial<BoardItem> = {}): BoardItem {
     groupName: null,
     doneAt: null,
     photoPath: null,
+    coveredBy: null,
     outcome: null,
     status: "upcoming",
     standsAt: null,
@@ -211,5 +212,19 @@ describe("doneFold", () => {
   it("says how many are folded, and how many of those were late", () => {
     expect(doneFold([{ status: "late" }, { status: "done" }, { status: "late" }])).toEqual({ label: "Done (3)", late: "2 late" });
     expect(doneFold([{ status: "done" }, { status: "excused" }])).toEqual({ label: "Done (2)", late: null });
+  });
+});
+
+describe("johnRow on a covered John", () => {
+  it("offers the coverer the undo, shows everyone else its mark, and says who covered it", () => {
+    const covered = { userId: "tom", status: "covered" as const, coveredBy: "sam", doneAt: at(-1), standsAt: at(23) };
+    expect(row(covered, "sam")).toMatchObject({ ticks: false, trailing: "undo" });
+    expect(row(covered, "tom")).toMatchObject({ ticks: false, trailing: "status", focus: "dispute" });
+    expect(row(covered, "priya").meta).toContain("covered by Sam");
+  });
+
+  it("shows a settled cover by its mark, with no hazard edge: the John did get done", () => {
+    const settled = row({ userId: "tom", status: "covered", outcome: "covered", coveredBy: "sam", doneAt: at(-30) }, "tom");
+    expect(settled).toMatchObject({ ticks: false, trailing: "status", hazardEdge: false });
   });
 });

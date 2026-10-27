@@ -78,6 +78,37 @@ describe("standings", () => {
   });
 });
 
+describe("standings with covers", () => {
+  it("credits the coverer in full and gives the assignee a miss once it stands", () => {
+    const table = standings(
+      [
+        { userId: "sam", points: 3, status: "covered", coveredBy: "glyn" },
+        { userId: "glyn", points: 2, status: "done" },
+      ],
+      ["glyn", "sam"],
+    );
+    expect(table).toEqual([
+      { userId: "glyn", points: 5, done: 1, late: 0, missed: 0, covered: 1, rank: 1 },
+      { userId: "sam", points: 0, done: 0, late: 0, missed: 1, covered: 0, rank: 2 },
+    ]);
+  });
+
+  it("credits a disputed cover to the coverer provisionally, with no miss yet", () => {
+    const [glyn, sam] = standings([{ userId: "sam", points: 3, status: "disputed", coveredBy: "glyn" }], ["glyn", "sam"]);
+    expect(glyn).toMatchObject({ userId: "glyn", points: 3, covered: 1 });
+    expect(sam).toMatchObject({ userId: "sam", points: 0, missed: 0 });
+  });
+
+  it("still marks the miss when the coverer has left the house", () => {
+    const [sam] = standings([{ userId: "sam", points: 3, status: "covered", coveredBy: "gone" }], ["sam"]);
+    expect(sam).toMatchObject({ points: 0, missed: 1 });
+  });
+
+  it("counts a covered week as not clean", () => {
+    expect(isCleanWeek(["done", "covered"])).toBe(false);
+  });
+});
+
 describe("streaks", () => {
   it("knows a clean week", () => {
     expect(isCleanWeek(["done", "excused"])).toBe(true);

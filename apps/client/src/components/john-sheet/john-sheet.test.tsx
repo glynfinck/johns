@@ -18,7 +18,7 @@ import { Pressable, ScrollView, Text } from 'react-native';
 import type { Housemate, HouseSnapshot } from '@/api/board';
 import { loadHouse } from '@/api/board';
 import { castVote } from '@/api/disputes';
-import { markDone, spendImmunity, spendSwap, undoDone } from '@/api/johns';
+import { coverJohn, markDone, spendImmunity, spendSwap, undoCover, undoDone } from '@/api/johns';
 import { pickPhoto } from '@/api/photos';
 import { signPhoto } from '@/api/wall';
 import { ToastProvider } from '@/components/toast';
@@ -31,7 +31,14 @@ import { JohnSheetProvider, useJohnSheet, type JohnSheetFocus } from '.';
 
 jest.mock('@/api/board', () => ({ loadHouse: jest.fn() }));
 jest.mock('@/api/house', () => ({ catchUp: jest.fn(() => Promise.resolve(false)) }));
-jest.mock('@/api/johns', () => ({ markDone: jest.fn(), undoDone: jest.fn(), spendImmunity: jest.fn(), spendSwap: jest.fn() }));
+jest.mock('@/api/johns', () => ({
+  markDone: jest.fn(),
+  undoDone: jest.fn(),
+  coverJohn: jest.fn(),
+  undoCover: jest.fn(),
+  spendImmunity: jest.fn(),
+  spendSwap: jest.fn(),
+}));
 jest.mock('@/api/disputes', () => ({ castVote: jest.fn(), raiseDispute: jest.fn() }));
 jest.mock('@/api/photos', () => ({ pickPhoto: jest.fn(), uploadProof: jest.fn() }));
 jest.mock('@/api/wall', () => ({ signPhoto: jest.fn() }));
@@ -104,6 +111,8 @@ beforeEach(() => {
   (loadHouse as jest.Mock).mockResolvedValue(house([binsOut(), samsBath({ done_at: at(-1) })]));
   (markDone as jest.Mock).mockResolvedValue(undefined);
   (undoDone as jest.Mock).mockResolvedValue(undefined);
+  (coverJohn as jest.Mock).mockResolvedValue(undefined);
+  (undoCover as jest.Mock).mockResolvedValue(undefined);
   (spendImmunity as jest.Mock).mockResolvedValue(undefined);
   (spendSwap as jest.Mock).mockResolvedValue(undefined);
   (castVote as jest.Mock).mockResolvedValue(undefined);
@@ -377,6 +386,33 @@ describe("a housemate's John", () => {
     const body = await openOn('Open a4 at dispute');
     expect(within(body).queryByTestId('dispute-reason')).toBeNull();
     expect(within(body).getByRole('button', { name: DISPUTE_COPY.open })).toBeOnTheScreen();
+  });
+});
+
+describe("covering a housemate's John", () => {
+  it('offers "I did this" once it is past due and the grace, and covers it', async () => {
+    await show(house([binsOut(), samsBath({ due_at: at(-5) })]));
+    const body = await openOn('Open a4');
+    expect(within(body).getByTestId('cover-body')).toHaveTextContent(/^Sam hasn’t done it\. If you do, it counts as Sam’s miss/);
+    await fireEvent.press(within(body).getByRole('button', { name: JOHN_SHEET_COPY.coverIt }));
+    expect(coverJohn).toHaveBeenCalledWith('a4');
+    expect(markDone).not.toHaveBeenCalled();
+  });
+
+  it('says when covering opens while it is still in the grace', async () => {
+    await show(house([binsOut(), samsBath({ due_at: at(-1) })]));
+    const body = await openOn('Open a4');
+    expect(within(body).getByTestId('cover-soon')).toHaveTextContent(/^It’s still Sam’s to do\. Anyone else can cover it from /);
+    expect(within(body).queryByRole('button', { name: JOHN_SHEET_COPY.coverIt })).toBeNull();
+  });
+
+  it("says who covered it, and lets the coverer take it back", async () => {
+    await show(house([binsOut(), samsBath({ due_at: at(-5), done_at: at(-1), covered_by: 'priya' })]));
+    const body = await openOn('Open a4');
+    expect(within(body).getByTestId('ticked-line')).toHaveTextContent(/^You covered this .+ · stands in 2[23]h$/);
+    await fireEvent.press(within(body).getByRole('button', { name: JOHN_COPY.undo }));
+    expect(undoCover).toHaveBeenCalledWith('a4');
+    expect(undoDone).not.toHaveBeenCalled();
   });
 });
 

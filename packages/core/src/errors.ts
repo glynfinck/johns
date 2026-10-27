@@ -38,6 +38,9 @@ const MESSAGES: Record<string, string> = {
   away_overlaps: "You’re already away for some of those days.",
   away_over: "That time away has already finished.",
   not_yours: "That isn’t yours to change.",
+  tick_it_yourself: "That’s your John. Tick it off instead.",
+  too_soon_to_cover: "It’s still theirs to do. You can cover it once the grace period is up.",
+  john_covered: "A housemate covered this one. Dispute it if it wasn’t done.",
 };
 
 export function humanError(error: { message?: string; code?: string } | null | undefined): string {

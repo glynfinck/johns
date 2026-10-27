@@ -27,6 +27,8 @@ export interface TableRow {
   done: number;
   late: number;
   missed: number;
+  /** Housemates' Johns this person covered. */
+  covered: number;
   rank: number;
 }
 
@@ -34,17 +36,34 @@ export interface TableInput {
   userId: string;
   points: number;
   status: LiveStatus;
+  /** Who covered it, if a housemate did. */
+  coveredBy?: string | null;
 }
 
 /**
  * Standings, highest first. Ties share a rank (1, 2, 2, 4); within one,
  * fewer missed, then fewer late, come first.
+ *
+ * A cover counts for the coverer, full points, from the moment it's made
+ * (like a tick being checked); once it stands, the assignee has a miss.
  */
 export function standings(rows: readonly TableInput[], memberIds: readonly string[]): TableRow[] {
   const by = new Map<string, TableRow>(
-    memberIds.map((id) => [id, { userId: id, points: 0, done: 0, late: 0, missed: 0, rank: 0 }]),
+    memberIds.map((id) => [id, { userId: id, points: 0, done: 0, late: 0, missed: 0, covered: 0, rank: 0 }]),
   );
   for (const r of rows) {
+    if (r.coveredBy && (r.status === "covered" || r.status === "disputed")) {
+      const coverer = by.get(r.coveredBy);
+      if (coverer) {
+        coverer.points += r.points;
+        coverer.covered += 1;
+      }
+      if (r.status === "covered") {
+        const assignee = by.get(r.userId);
+        if (assignee) assignee.missed += 1;
+      }
+      continue;
+    }
     const row = by.get(r.userId);
     if (!row) continue;
     row.points += pointsEarned(r.status, r.points);

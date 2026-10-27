@@ -13,10 +13,14 @@ describe("forfeitFor", () => {
     expect(forfeitFor("done", RULES)).toBe(0);
     expect(forfeitFor("excused", RULES)).toBe(0);
   });
+
+  it("charges a covered John as missed", () => {
+    expect(forfeitFor("covered", RULES)).toBe(300);
+  });
 });
 
 /** The month's whole ledger: forfeits as written during it, plus its close. */
-function monthLedger(ids: string[], stake: number, forfeits: { userId: string; amount: number }[]) {
+function monthLedger(ids: string[], stake: number, forfeits: { userId: string; amount: number; to?: string | null }[]) {
   const s = settleMonth(ids, stake, forfeits);
   const entries: LedgerEntry[] = [
     ...forfeits.map((f) => ({ userId: f.userId, kind: "forfeit" as const, amount: -f.amount })),
@@ -69,6 +73,51 @@ describe("settleMonth", () => {
 
   it("writes nothing for a clean month", () => {
     expect(settleMonth(["a", "b"], 2000, []).entries).toEqual([]);
+  });
+
+  it("pays a covered John's forfeit whole to whoever covered it", () => {
+    const { s, bal } = monthLedger(["glyn", "sam", "alex", "jo"], 2000, [{ userId: "sam", amount: 300, to: "glyn" }]);
+    expect(s.received).toEqual({ glyn: 300, sam: 0, alex: 0, jo: 0 });
+    expect(Object.fromEntries(bal)).toEqual({ glyn: 300, sam: -300 });
+  });
+
+  it("shares the rest of a coverer's payer's forfeits as usual", () => {
+    const { s, bal } = monthLedger(["glyn", "sam", "alex"], 2000, [
+      { userId: "sam", amount: 300, to: "glyn" },
+      { userId: "sam", amount: 100 },
+    ]);
+    expect(s.received).toEqual({ glyn: 350, sam: 0, alex: 50 });
+    expect([...bal.values()].reduce((x, y) => x + y, 0)).toBe(0);
+  });
+
+  it("shrinks covered forfeits in proportion when the cap bites, and still sums to zero", () => {
+    // 2400 forfeited against a 2000 stake: each keeps 5/6.
+    const { s, bal } = monthLedger(["glyn", "sam", "alex"], 2000, [
+      { userId: "sam", amount: 300, to: "glyn" },
+      { userId: "sam", amount: 300, to: "alex" },
+      { userId: "sam", amount: 1800 },
+    ]);
+    expect(s.forfeited.sam).toBe(2000);
+    expect(s.received.glyn).toBe(250 + 750);
+    expect(s.received.alex).toBe(250 + 750);
+    expect([...bal.values()].reduce((x, y) => x + y, 0)).toBe(0);
+  });
+
+  it("rounds a trimmed cover down and shares the odd penny", () => {
+    // 3 × 700 = 2100 against 2000: each cover keeps floor(700 × 2000 / 2100) = 666.
+    const { s, bal } = monthLedger(["glyn", "sam"], 2000, [
+      { userId: "sam", amount: 700, to: "glyn" },
+      { userId: "sam", amount: 700, to: "glyn" },
+      { userId: "sam", amount: 700, to: "glyn" },
+    ]);
+    expect(s.received.glyn).toBe(2000);
+    expect(bal.get("sam")).toBe(-2000);
+    expect([...bal.values()].reduce((x, y) => x + y, 0)).toBe(0);
+  });
+
+  it("shares a cover round the house when the coverer has left", () => {
+    const { s } = monthLedger(["sam", "alex", "jo"], 2000, [{ userId: "sam", amount: 300, to: "gone" }]);
+    expect(s.received).toEqual({ sam: 0, alex: 150, jo: 150 });
   });
 });
 

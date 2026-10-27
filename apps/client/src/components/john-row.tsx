@@ -18,7 +18,7 @@ import { ClockIcon, ShieldIcon, Undo2Icon } from 'lucide-react-native';
 import { useState, type ReactNode } from 'react';
 import { StyleSheet, View } from 'react-native';
 
-import { undoDone } from '@/api/johns';
+import { undoCover, undoDone } from '@/api/johns';
 import { Alert } from '@/components/alert';
 import { ConfirmSheet } from '@/components/confirm-sheet';
 import { Fold } from '@/components/fold';
@@ -75,7 +75,7 @@ export function useJohnRow(item: BoardItem, context: JohnRowContext) {
   // suggests for state that follows other state.)
   if (asking && warning === null) setAsking(false);
   const undoNow = async () => {
-    if (await undo.run(() => undoDone(item.id))) setAsking(false);
+    if (await undo.run(() => (item.coveredBy ? undoCover(item.id) : undoDone(item.id)))) setAsking(false);
   };
 
   // A photo John's circle goes to the camera (the file chooser, on the web) first.

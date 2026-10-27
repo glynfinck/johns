@@ -317,7 +317,7 @@ async function decideDisputes(db: Db, house: HouseRow, members: readonly MemberR
   const open = must(
     await db
       .from("disputes")
-      .select("id, closes_at, assignments(user_id)")
+      .select("id, closes_at, assignments(user_id, covered_by)")
       .eq("house_id", house.id)
       .is("resolution", null),
     "open disputes",
@@ -329,9 +329,10 @@ async function decideDisputes(db: Db, house: HouseRow, members: readonly MemberR
   );
   let decided = 0;
   for (const d of open) {
-    const assignee = d.assignments?.user_id ?? null;
-    const eligible = members.filter((m) => m.user_id !== assignee).length;
-    const mine = votes.filter((v) => v.dispute_id === d.id && v.user_id !== assignee);
+    // Whose tick it is: the coverer's, for a cover. They don't vote on it.
+    const ticker = d.assignments?.covered_by ?? d.assignments?.user_id ?? null;
+    const eligible = members.filter((m) => m.user_id !== ticker).length;
+    const mine = votes.filter((v) => v.dispute_id === d.id && v.user_id !== ticker);
     const result = verdict(
       {
         eligible,
@@ -355,7 +356,7 @@ async function settleDue(db: Db, house: HouseRow, now: Date) {
   const open = must(
     await db
       .from("assignments")
-      .select("id, due_at, done_at, excused, weeks(ends_at)")
+      .select("id, due_at, done_at, excused, covered_by, weeks(ends_at)")
       .eq("house_id", house.id)
       .is("outcome", null),
     "open assignments",
@@ -377,6 +378,7 @@ async function settleDue(db: Db, house: HouseRow, now: Date) {
         excused: a.excused,
         disputeOpen: disputed.has(a.id),
         weekEndsAt: new Date(a.weeks!.ends_at),
+        coveredBy: a.covered_by,
       },
       now,
       rules.disputeHours,
@@ -411,14 +413,14 @@ async function closeWeeks(db: Db, house: HouseRow, members: readonly MemberRow[]
 
   for (const week of due) {
     const rows = must(
-      await db.from("assignments").select("user_id, points, outcome").eq("week_id", week.id),
+      await db.from("assignments").select("user_id, points, outcome, covered_by").eq("week_id", week.id),
       "week assignments",
     );
     // Weeks close in order, so a streak always counts the week before it.
     if (rows.some((r) => r.outcome === null)) break;
 
     const table = standings(
-      rows.map((r) => ({ userId: r.user_id, points: r.points, status: r.outcome as Outcome })),
+      rows.map((r) => ({ userId: r.user_id, points: r.points, status: r.outcome as Outcome, coveredBy: r.covered_by })),
       members.map((m) => m.user_id),
     );
     const winners = new Set(weekWinners(table));
@@ -450,7 +452,7 @@ async function closeMonths(db: Db, house: HouseRow, members: readonly MemberRow[
   const forfeitRows = must(
     await db
       .from("ledger")
-      .select("user_id, amount_minor, month")
+      .select("user_id, amount_minor, month, counterparty")
       .eq("house_id", house.id)
       .eq("kind", "forfeit")
       .lt("month", current),
@@ -480,7 +482,9 @@ async function closeMonths(db: Db, house: HouseRow, members: readonly MemberRow[
     const settlement = settleMonth(
       members.map((m) => m.user_id),
       rules.stakeMinor,
-      forfeitRows.filter((r) => r.month === month).map((r) => ({ userId: r.user_id, amount: -r.amount_minor })),
+      forfeitRows
+        .filter((r) => r.month === month)
+        .map((r) => ({ userId: r.user_id, amount: -r.amount_minor, to: r.counterparty })),
     );
     const applied = must(
       await db.rpc("close_month", {

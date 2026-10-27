@@ -34,6 +34,7 @@ const RULES: HouseRules = {
   lateForfeitMinor: 100,
   missedForfeitMinor: 300,
   disputeHours: 24,
+  coverGraceHours: 3,
 };
 const row = (id: number, user_id: string, kind: string, amount_minor: number, month: string) => ({
   id,

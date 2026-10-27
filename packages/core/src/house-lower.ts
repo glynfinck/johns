@@ -189,6 +189,7 @@ const ICON: Record<string, WallIcon> = {
   done: "check",
   late: "check",
   missed: "x",
+  covered: "check",
   disputed: "flag",
   upheld: "gavel",
   rejected: "gavel",
@@ -232,6 +233,15 @@ export function wallFeedRow(event: WallEvent, scene: WallScene): WallFeedRow {
       ({ detail, mark } = tickDetail(event, scene));
       repeat = `tick:${event.userId}`;
       break;
+    case "covered": {
+      // The John was someone else's: theirs is the miss, the coverer's the tick.
+      const whose = named(text("for") || null, me, members);
+      title = WALL_FEED_COPY.covered(who.subject, whose.possessive, johnName);
+      ({ detail, mark } = tickDetail(event, scene));
+      if (detail === WALL_FEED_COPY.onTime) detail = WALL_FEED_COPY.coveredWord;
+      repeat = `covered:${event.userId}`;
+      break;
+    }
     case "missed":
       title = WALL_FEED_COPY.missed(who.subject, johnName);
       detail = WALL_FEED_COPY.missedWord;
@@ -322,7 +332,7 @@ export function wallFeedRow(event: WallEvent, scene: WallScene): WallFeedRow {
     mark,
     when,
     reactable: REACTABLE.has(event.kind),
-    nice: (event.kind === "done" || event.kind === "late") && event.userId !== me,
+    nice: (event.kind === "done" || event.kind === "late" || event.kind === "covered") && event.userId !== me,
     top: topReaction(event.reactions),
     reactions: event.reactions,
     board:

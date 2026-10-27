@@ -37,6 +37,7 @@ export type Database = {
       assignments: {
         Row: {
           category: string
+          covered_by: string | null
           created_at: string
           done_at: string | null
           due_at: string
@@ -58,6 +59,7 @@ export type Database = {
         }
         Insert: {
           category: string
+          covered_by?: string | null
           created_at?: string
           done_at?: string | null
           due_at: string
@@ -79,6 +81,7 @@ export type Database = {
         }
         Update: {
           category?: string
+          covered_by?: string | null
           created_at?: string
           done_at?: string | null
           due_at?: string
@@ -99,6 +102,13 @@ export type Database = {
           week_id?: string
         }
         Relationships: [
+          {
+            foreignKeyName: "assignments_covered_by_fkey"
+            columns: ["covered_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "assignments_house_id_fkey"
             columns: ["house_id"]
@@ -381,6 +391,7 @@ export type Database = {
       houses: {
         Row: {
           away_makeup: number
+          cover_grace_hours: number
           created_at: string
           created_by: string | null
           currency: string
@@ -398,6 +409,7 @@ export type Database = {
         }
         Insert: {
           away_makeup?: number
+          cover_grace_hours?: number
           created_at?: string
           created_by?: string | null
           currency?: string
@@ -415,6 +427,7 @@ export type Database = {
         }
         Update: {
           away_makeup?: number
+          cover_grace_hours?: number
           created_at?: string
           created_by?: string | null
           currency?: string
@@ -827,6 +840,10 @@ export type Database = {
         Args: { p_amount: number; p_from: string; p_house: string }
         Returns: undefined
       }
+      cover_john: {
+        Args: { p_assignment: string; p_photo_path?: string }
+        Returns: undefined
+      }
       create_house: {
         Args: {
           p_currency: string
@@ -868,6 +885,7 @@ export type Database = {
         Args: { p_assignment: string }
         Returns: {
           category: string
+          covered_by: string | null
           created_at: string
           done_at: string | null
           due_at: string
@@ -929,6 +947,7 @@ export type Database = {
       }
       settle_assignments: { Args: { p_items: Json }; Returns: number }
       shares_house: { Args: { other: string }; Returns: boolean }
+      undo_cover: { Args: { p_assignment: string }; Returns: undefined }
       undo_done: { Args: { p_assignment: string }; Returns: undefined }
       use_immunity: { Args: { p_assignment: string }; Returns: undefined }
       use_swap: {
