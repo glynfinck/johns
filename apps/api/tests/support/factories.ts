@@ -69,9 +69,11 @@ export async function addJohns(houseId: string, specs: JohnSpec[], anchor: WeekW
         needs_photo: s.needsPhoto ?? false,
         group_id: s.groupId ?? null,
         anchor_week: weekIndex(anchor.startsOn),
-        ...(s.onCall
-          ? { kind: "on_call", respond_hours: s.onCall.respondHours ?? 12, per_week: s.onCall.perWeek ?? 2 }
-          : {}),
+        // Every row names every column: a bulk insert fills a column one row
+        // leaves out with null, not its default.
+        kind: s.onCall ? "on_call" : "day",
+        respond_hours: s.onCall?.respondHours ?? 12,
+        per_week: s.onCall?.perWeek ?? 2,
       })),
     )
     .select("id, name");
