@@ -11,7 +11,8 @@ you're working in (`apps/api/AGENTS.md` for the Next.js app).
   **John**. Fair shares are dealt for you, housemates check each other's
   ticks, and late or missed Johns cost a share of a monthly stake. Live at
   johns.glyn.dev.
-- Platforms: the web today, served by `apps/api`. iOS, Android and web from
+- Platforms: the web, served since 27 October 2026 by the Expo app's web
+  build (`apps/client`; `apps/api` keeps the API). iOS, Android and web from
   one Expo app (`apps/client`) as `docs/specs/native-migration.md` lands,
   phase by phase: its scaffold, front door, sign-in, starting or joining a
   house, Today, Week, the Wall, the Table, the Stake and House are in, and

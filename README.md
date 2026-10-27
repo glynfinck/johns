@@ -45,7 +45,7 @@ like `glynfinck/app-template`, on its way to iOS and Android with an Expo app
 ```
 packages/core/                 @app/core, the pure rules: week, deal, outcome, points, streak, stake, dispute;
                                Bin Night's colours and the shared words
-apps/api/                      the Next.js app at johns.glyn.dev
+apps/api/                      the Next.js app and its /api, at api.johns.glyn.dev
   app/(house)/                 today · week · wall · table · stake · house
   app/join/[code]/             the join link
   app/api/cron/tick/           the clock (called by pg_cron)
@@ -54,7 +54,7 @@ apps/api/                      the Next.js app at johns.glyn.dev
   lib/actions/ lib/data/       server actions and loaders
   tests/db/                    the database attacked (the rules' tests sit beside them in core)
   e2e/                         phones and a laptop, end to end
-apps/client/                   the Expo app for iOS, Android and web (so far: the front door)
+apps/client/                   the Expo app for iOS, Android and the web, at johns.glyn.dev
   src/app/                     screens (Expo Router)
   src/components/ src/theme.ts Bin Night in React Native
 supabase/migrations/           schema, RLS, the housemate functions, the cron job
