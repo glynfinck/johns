@@ -10,14 +10,16 @@ The block above is Next.js's. These rules are specific to this app; the root
 AGENTS.md has the project-wide rules (the game, the words, the data, the
 ask-first list).
 
-Next.js 16.2 on Vercel (the `johns` project, Root Directory `apps/api`). It
-serves the web app at johns.glyn.dev, the cron tick, push sending, and later
-the few `/api` routes the native app needs a server for.
+Next.js 16.2 on Vercel (the `johns` project, Root Directory `apps/api`), at
+api.johns.glyn.dev. It serves the `/api` routes (johns.glyn.dev passes
+`/api/*` on to it), the cron tick and push sending. Its pages served
+johns.glyn.dev until the Expo web build took over on 27 October 2026.
 
 **An exception to the template, with an end date.** The app template's API is
 route handlers only, with no pages. This one keeps its pages, components and
-server actions until the Expo web build takes over johns.glyn.dev (Phase 13
-of `docs/specs/native-migration.md`); Phase 14 then removes them. Until then,
+server actions, which no longer serve johns.glyn.dev since the Phase 13
+cutover but stay as the rollback (DEPLOYMENT.md), until Phase 14 removes
+them (`docs/specs/native-migration.md`). Until then,
 fix and extend the web UI here as normal, and make the same change in
 `apps/client`: the Expo web build has every page this app serves.
 `public/`'s manifest, icons and `sw.js` have copies in `apps/client/public`;
