@@ -426,6 +426,26 @@ describe('Needs you', () => {
     await waitFor(() => expect(screen.queryByTestId('john-sheet-body')).toBeNull());
     expect(screen.getByText(JOHN_SHEET_COPY.voted)).toBeOnTheScreen();
   });
+
+  it("lists a housemate's John past due and the grace, to cover, and opens its sheet", async () => {
+    read.mockResolvedValue(
+      snapshot({
+        assignments: [
+          ...snapshot().assignments.slice(0, 3),
+          assignment({ id: 'a4', user_id: 'sam', name: 'Clean the bath', due_at: at(-5) }),
+          assignment({ id: 'a5', user_id: 'sam', name: 'Hoover', due_at: at(-1) }),
+        ],
+      }),
+    );
+    await open();
+    const section = screen.getByTestId('needs-you');
+    const rows = within(section).getAllByTestId('cover-row');
+    expect(rows).toHaveLength(1);
+    expect(within(rows[0]).getByText('Cover Sam’s Clean the bath')).toBeOnTheScreen();
+    await fireEvent.press(rows[0]);
+    const body = await screen.findByTestId('john-sheet-body');
+    expect(within(body).getByRole('button', { name: JOHN_SHEET_COPY.coverIt })).toBeOnTheScreen();
+  });
 });
 
 describe('the rest of your week', () => {

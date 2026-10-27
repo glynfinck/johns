@@ -310,8 +310,8 @@ export const TABLE_COPY = {
   beside: "The Table · this week",
   full: "Full table",
   /** A housemate's week or month in a line: "3 done · 1 late · 1 missed". */
-  record: (r: { done: number; late: number; missed: number }) =>
-    `${r.done} done${r.late ? ` · ${r.late} late` : ""}${r.missed ? ` · ${r.missed} missed` : ""}`,
+  record: (r: { done: number; late: number; missed: number; covered?: number }) =>
+    `${r.done} done${r.late ? ` · ${r.late} late` : ""}${r.missed ? ` · ${r.missed} missed` : ""}${r.covered ? ` · ${r.covered} covered` : ""}`,
   shares: "Fair shares",
   sharesBody: `What each of you was handed over the last ${BALANCE_WEEKS} weeks, against your share. Each deal hands a little more to whoever is behind, never more than half a week extra, until it evens out.`,
   sharesKey: "Below zero is behind, above is ahead. Time away is made up:",
@@ -478,6 +478,9 @@ export const RULES_COPY = {
   missed: (symbol: string) => `Missed forfeit (${symbol})`,
   disputes: "Disputes can be raised for",
   disputeHours: (hours: number) => (hours === 0 ? "No disputes (honour system)" : `${hours} hours after a tick`),
+  /** The grace before anyone else can cover an overdue John, as an option. */
+  coverGrace: (hours: number) =>
+    hours === 0 ? "No grace: anyone can cover it once it’s due" : `${hours} ${hours === 1 ? "hour" : "hours"} after it’s due`,
   away: "Time away is made up",
   awayNote: "Nobody is handed a John due while they’re away.",
   makeupHint: {
@@ -650,8 +653,13 @@ export const NEXT_UP_COPY = {
     disputed: "Disputed",
     missed: "Missed",
     excused: "Skipped with immunity",
+    covered: "Covered by a housemate",
   },
   needsYou: "Needs you",
+  /** A row's meta once a housemate covered it: "covered by Glyn". */
+  coveredBy: (name: string) => `covered by ${name}`,
+  /** A Needs you row's title for a housemate's overdue John you could cover. */
+  coverOn: (owner: string | null, john: string) => (owner ? `Cover ${owner}’s ${john}` : `Cover ${john}`),
   saysNotDone: (name: string) => `${name} says it’s not done`,
   closes: (when: string) => `closes ${when}`,
   closingNow: "closing now",
@@ -713,6 +721,21 @@ export const JOHN_SHEET_COPY = {
   doneLate: (who: string, when: string | null) => `${who} did it late${when ? `, ${when}` : ""}.`,
   excused: (who: string) => `${who} skipped it with immunity, so there’s no forfeit.`,
   missed: "It was missed.",
+  /** A cover being checked: "Glyn covered this at 23:04". */
+  covered: (who: string, when: string) => `${who} covered this ${when}`,
+  /** The sheet's one button on a housemate's John you can cover. */
+  coverIt: "I did this",
+  coverPhoto: "Take a photo: I did this",
+  /** What covering means, before it's done: "Sam hasn’t done it. If you do, it counts as Sam’s miss, and you get 3 pts and £3." */
+  coverBody: (owner: string, points: string, money: string | null) =>
+    `${owner} hasn’t done it. If you do, it counts as ${owner}’s miss, and you get ${points}${money ? ` and ${money}` : ""}.`,
+  /** Overdue, but still inside the house's grace. */
+  coverSoon: (owner: string, when: string) => `It’s still ${owner}’s to do. Anyone else can cover it from ${when}.`,
+  /** A settled cover: "Glyn did it for Sam on Tue at 23:04, so it counts as Sam’s miss." */
+  coveredSettled: (who: string, owner: string, whose: string, when: string | null) =>
+    `${who} did it for ${owner}${when ? ` ${when}` : ""}, so it counts as ${whose} miss.`,
+  coveredWasDue: (when: string) => `Covered · was due ${when}`,
+  your: "your",
 } as const;
 
 /** Week: the summary bar, the person groups, the fair-share footer and the menu. */
@@ -824,6 +847,8 @@ export const HOUSE_PAGE_COPY = {
   lateMissed: (late: number, missed: number) =>
     [late ? `${late} late` : "", missed ? `${missed} missed` : ""].filter(Boolean).join(", "),
   inMonth: (month: string) => ` in ${month}`,
+  /** Housemates' Johns someone covered this month, in a Table row's meta: "2 covered". */
+  covered: (n: number) => `${n} covered`,
   streak: (weeks: number) => `${weeks}-week streak`,
   immunity: (tokens: number) => `${tokens} immunity`,
   swap: "swap ready",
@@ -864,6 +889,8 @@ export const PERSON_COPY = {
   yourRecord: "Your record",
   thisWeek: "This week",
   onTime: (n: number) => `${n} on time`,
+  /** Housemates' Johns they covered: "1 covered for others". */
+  coveredFor: (n: number) => `${n} covered for others`,
   fairShare: "Fair share",
   /** Points against their share: "3.5 points behind their share". */
   behind: (points: string, you: boolean) => `${points} ${points === "1" ? "point" : "points"} behind ${you ? "your" : "their"} share`,
@@ -967,6 +994,8 @@ export const WALL_FEED_COPY = {
   // "Priya’s", "your" or "a former housemate’s".
   ticked: (who: string, john: string) => `${who} ticked ${john}`,
   missed: (who: string, john: string) => `${who} missed ${john}`,
+  covered: (who: string, whose: string, john: string) => `${who} covered ${whose} ${john}`,
+  coveredWord: "Covered",
   disputed: (who: string, whose: string, john: string) => `${who} disputed ${whose} tick on ${john}`,
   struckOut: (whose: string, john: string) => `${whose} ${john} was struck out`,
   stands: (whose: string, john: string) => `${whose} ${john} stands`,
@@ -1109,6 +1138,10 @@ export const SETUP_COPY = {
   disputeWindow: (hours: number) => (hours === 0 ? "Not allowed" : `within ${hours} ${hours === 1 ? "hour" : "hours"}`),
   /** How long a tick can be disputed, as a value in the form: "24 hours". */
   disputeShort: (hours: number) => (hours === 0 ? "None" : `${hours} ${hours === 1 ? "hour" : "hours"}`),
+  cover: "Covering",
+  /** When a housemate can cover an overdue John, as the rules read: "3 hours after it’s due". */
+  coverWindow: (hours: number) => (hours === 0 ? "As soon as it’s due" : `${hours} ${hours === 1 ? "hour" : "hours"} after it’s due`),
+  coverShort: (hours: number) => (hours === 0 ? "None" : `${hours} ${hours === 1 ? "hour" : "hours"}`),
   away: "Time away",
   makeup: { 100: "made up in full", 50: "half made up", 0: "not made up" } as Record<number, string>,
   /** A make-up rate the house has no words for. */

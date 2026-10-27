@@ -106,7 +106,14 @@ function TodayView({
           awayMakeup={house.awayMakeup}
         />
       )}
-      <NeedsYou items={today.toVote} members={members} now={now} />
+      <NeedsYou
+        items={today.toVote}
+        toCover={today.toCover}
+        members={members}
+        userId={userId}
+        zone={rules.timezone}
+        now={now}
+      />
       <OnCall
         houseId={house.id}
         items={onCallItems(snapshot.onCall, board)}

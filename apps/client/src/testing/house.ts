@@ -24,6 +24,7 @@ export function assignment(overrides: Partial<AssignmentRow> = {}): AssignmentRo
     photo_path: null,
     outcome: null,
     excused: false,
+    covered_by: null,
     ...overrides,
   };
 }
@@ -39,6 +40,7 @@ export function snapshot(overrides: Partial<HouseSnapshot> = {}): HouseSnapshot 
       lateForfeitMinor: 100,
       missedForfeitMinor: 300,
       disputeHours: 24,
+      coverGraceHours: 3,
     },
     members: [
       { userId: 'priya', name: 'Priya', role: 'admin', streak: 3, immunityTokens: 0, swapTokens: 0 },

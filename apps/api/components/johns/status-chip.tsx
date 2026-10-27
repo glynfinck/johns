@@ -13,6 +13,7 @@ const STYLE: Record<LiveStatus, string> = {
   late: "bg-hazard/15 text-hazard",
   missed: "bg-hazard text-on-hazard",
   excused: "text-muted-foreground ring-1 ring-inset ring-border",
+  covered: "bg-hazard/15 text-hazard",
 };
 
 const ICON: Partial<Record<LiveStatus, typeof CheckIcon>> = {

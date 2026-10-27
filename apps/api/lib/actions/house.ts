@@ -85,6 +85,7 @@ export async function updateHouse(input: z.input<typeof HouseSettings>): Promise
       late_forfeit_minor: s.lateForfeitMinor,
       missed_forfeit_minor: s.missedForfeitMinor,
       dispute_hours: s.disputeHours,
+      ...(s.coverGraceHours === undefined ? {} : { cover_grace_hours: s.coverGraceHours }),
       away_makeup: s.awayMakeup,
     })
     .eq("id", ctx.house.id);

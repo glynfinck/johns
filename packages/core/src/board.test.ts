@@ -13,6 +13,7 @@ import {
   onCallItems,
   TODAY_ORDER,
   todayView,
+  toCover,
   type AssignmentRow,
   type DisputeRow,
   type MonthRow,
@@ -49,6 +50,7 @@ function john(id: string, overrides: Partial<AssignmentRow> = {}): AssignmentRow
     photo_path: null,
     outcome: null,
     excused: false,
+    covered_by: null,
     ...overrides,
   };
 }
@@ -214,6 +216,7 @@ describe("rulesOf", () => {
         late_forfeit_minor: 200,
         missed_forfeit_minor: 500,
         dispute_hours: 24,
+        cover_grace_hours: 3,
       }),
     ).toEqual({
       timezone: "Europe/London",
@@ -223,6 +226,7 @@ describe("rulesOf", () => {
       lateForfeitMinor: 200,
       missedForfeitMinor: 500,
       disputeHours: 24,
+      coverGraceHours: 3,
     });
   });
 });
@@ -360,7 +364,7 @@ describe("todayView", () => {
   });
 
   it("is empty for someone with nothing this week", () => {
-    expect(todayView(board([]), ME)).toEqual({ mine: [], left: 0, toVote: [] });
+    expect(todayView(board([]), ME)).toEqual({ mine: [], left: 0, toVote: [], toCover: [] });
   });
 });
 
@@ -392,6 +396,7 @@ describe("monthStandings", () => {
     done_at: null,
     due_at: "2026-10-10T19:00:00Z",
     excused: false,
+    covered_by: null,
     weeks: { ends_at: "2026-10-11T23:00:00Z" },
     ...overrides,
   });
@@ -412,8 +417,8 @@ describe("monthStandings", () => {
       NOW,
     );
     expect(table).toEqual([
-      { userId: "ava", points: 6, done: 1, late: 1, missed: 0, rank: 1 },
-      { userId: "ben", points: 4, done: 1, late: 0, missed: 1, rank: 2 },
+      { userId: "ava", points: 6, done: 1, late: 1, missed: 0, covered: 0, rank: 1 },
+      { userId: "ben", points: 4, done: 1, late: 0, missed: 1, covered: 0, rank: 2 },
     ]);
   });
 
@@ -427,5 +432,20 @@ describe("monthStandings", () => {
       ["ava", 0, 1],
       ["ben", 0, 1],
     ]);
+  });
+});
+
+describe("toCover", () => {
+  it("lists housemates' Johns past due plus the grace, most overdue first, never your own", () => {
+    const b = board([
+      john("late-one", { user_id: YOU, due_at: at(-4) }),
+      john("later-one", { user_id: YOU, due_at: at(-10) }),
+      john("in-grace", { user_id: YOU, due_at: at(-1) }),
+      john("mine", { due_at: at(-10) }),
+      john("ticked", { user_id: YOU, due_at: at(-10), done_at: at(-2) }),
+    ]);
+    expect(toCover(b, ME, now, 3).map((i) => i.id)).toEqual(["later-one", "late-one"]);
+    expect(toCover(b, ME, now, 0).map((i) => i.id)).toEqual(["later-one", "late-one", "in-grace"]);
+    expect(todayView(b, ME, { now, graceHours: 3 }).toCover.map((i) => i.id)).toEqual(["later-one", "late-one"]);
   });
 });

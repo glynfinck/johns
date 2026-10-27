@@ -48,9 +48,17 @@ export interface JohnRowPlan {
   hazardEdge: boolean;
 }
 
-/** A dispute on a housemate's John that you haven't voted on yet. */
-function waitsForYourVote(item: Pick<BoardItem, "userId" | "status" | "dispute">, viewerId: string): boolean {
-  return item.userId !== viewerId && item.status === "disputed" && item.dispute !== null && item.dispute.myVote === null;
+/** Whose tick it is: the housemate who covered it, or whoever it was dealt to. */
+function tickerOf(item: Pick<BoardItem, "userId"> & { coveredBy?: string | null }): string {
+  return item.coveredBy ?? item.userId;
+}
+
+/** A dispute on someone else's tick that you haven't voted on yet. */
+function waitsForYourVote(
+  item: Pick<BoardItem, "userId" | "status" | "dispute"> & { coveredBy?: string | null },
+  viewerId: string,
+): boolean {
+  return tickerOf(item) !== viewerId && item.status === "disputed" && item.dispute !== null && item.dispute.myVote === null;
 }
 
 /** What a circle that doesn't tick says: where the John has got to, or just that it isn't done. */
@@ -62,6 +70,7 @@ function circleSays(status: LiveStatus): string {
     case "disputed":
     case "missed":
     case "excused":
+    case "covered":
       return NEXT_UP_COPY.stateLabel[status];
     default:
       return NEXT_UP_COPY.stateLabel.open;
@@ -84,7 +93,7 @@ export function johnRow(
     BoardItem,
     "userId" | "name" | "category" | "points" | "needsPhoto" | "status" | "dueAt" | "movedFrom" | "doneAt" | "standsAt" | "dispute"
   > &
-    Partial<Pick<BoardItem, "flaggedAt" | "flaggedBy">>,
+    Partial<Pick<BoardItem, "flaggedAt" | "flaggedBy" | "coveredBy" | "outcome">>,
   viewerId: string,
   now: Date,
   zone: string,
@@ -95,6 +104,9 @@ export function johnRow(
   const mine = item.userId === viewerId;
   const toDo = status === "upcoming" || status === "due-soon" || status === "overdue";
   const waitingForMe = waitsForYourVote(item, viewerId);
+  // A cover still being checked: the coverer can take it back, anyone else can dispute it.
+  const coverChecking = status === "covered" && !item.outcome;
+  const myTick = tickerOf(item) === viewerId;
   const circle: JohnRowPlan["circle"] =
     status === "checking" || status === "disputed"
       ? status
@@ -116,8 +128,8 @@ export function johnRow(
     meta,
     lid,
     trailing:
-      status === "checking"
-        ? mine
+      status === "checking" || coverChecking
+        ? (coverChecking ? myTick : mine)
           ? "undo"
           : "status"
         : status === "disputed"
@@ -131,7 +143,12 @@ export function johnRow(
               : "status",
     points: isOpen(status) ? item.points : pointsEarned(status, item.points),
     // Everyone but the ticker votes, so your own dispute opens on nothing in particular.
-    focus: status === "disputed" && !mine ? "vote" : status === "checking" && !mine ? "dispute" : null,
+    focus:
+      status === "disputed" && !myTick
+        ? "vote"
+        : (status === "checking" && !mine) || (coverChecking && !myTick)
+          ? "dispute"
+          : null,
     hazardEdge: status === "overdue" || status === "missed",
   };
 }
@@ -139,7 +156,9 @@ export function johnRow(
 /** The row's meta line, and whether its lid dot leads it. */
 function metaLine(
   item: Pick<BoardItem, "userId" | "category" | "status" | "dueAt" | "movedFrom" | "doneAt" | "standsAt" | "dispute"> &
-    Partial<Pick<BoardItem, "flaggedAt" | "flaggedBy">>,
+    Partial<Pick<BoardItem, "flaggedAt" | "flaggedBy">> & {
+    coveredBy?: string | null;
+  },
   viewerId: string,
   now: Date,
   zone: string,
@@ -184,6 +203,11 @@ function metaLine(
       return line(item.doneAt ? NEXT_UP_COPY.done(dueInLine(item.doneAt, now, zone)) : due);
     case "excused":
       return line(NEXT_UP_COPY.excused);
+    case "covered": {
+      const coverer = item.coveredBy ?? null;
+      const by = coverer === viewerId ? WEEK_SUMMARY_COPY.byYou : called(coverer === null ? null : nameOf(coverer));
+      return line(NEXT_UP_COPY.coveredBy(by));
+    }
     default:
       // Pulled forward by someone's time away: say so.
       if (item.movedFrom) {

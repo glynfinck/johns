@@ -1,6 +1,6 @@
 import type { Database } from "./db-types";
 import type { Category, Currency, HouseRules, IsoDow, JohnWhen, Outcome } from "./domain";
-import { liveStatus, standsAt, type LiveStatus } from "./outcome";
+import { canCover, liveStatus, standsAt, type LiveStatus } from "./outcome";
 import { standings, type TableRow } from "./points";
 
 // The week as both apps show it, built from the rows they each read through
@@ -99,6 +99,7 @@ export function rulesOf(
     | "late_forfeit_minor"
     | "missed_forfeit_minor"
     | "dispute_hours"
+    | "cover_grace_hours"
   >,
 ): HouseRules {
   return {
@@ -109,6 +110,7 @@ export function rulesOf(
     lateForfeitMinor: house.late_forfeit_minor,
     missedForfeitMinor: house.missed_forfeit_minor,
     disputeHours: house.dispute_hours,
+    coverGraceHours: house.cover_grace_hours,
   };
 }
 
@@ -129,6 +131,7 @@ export type AssignmentRow = Pick<
   | "photo_path"
   | "outcome"
   | "excused"
+  | "covered_by"
 > & {
   /** The John on the list it was dealt from: null once that John is deleted, absent when not read. */
   john_id?: string | null;
@@ -181,6 +184,8 @@ export interface BoardItem {
   groupName: string | null;
   doneAt: Date | null;
   photoPath: string | null;
+  /** The housemate who covered it, when it was done by someone other than `userId`. */
+  coveredBy: string | null;
   outcome: Outcome | null;
   status: LiveStatus;
   /** When a tick in the dispute window stands, if nothing changes. */
@@ -255,6 +260,7 @@ export function buildWeekBoard(input: {
           weekEndsAt: carried ? new Date(week.starts_at) : endsAt,
           flaggedAt,
           outcome,
+          coveredBy: a.covered_by,
         },
         now,
         disputeHours,
@@ -273,6 +279,7 @@ export function buildWeekBoard(input: {
         groupName: a.group_name,
         doneAt,
         photoPath: a.photo_path,
+        coveredBy: a.covered_by,
         outcome,
         status,
         standsAt: doneAt && !outcome ? standsAt(doneAt, disputeHours) : null,
@@ -287,7 +294,7 @@ export function buildWeekBoard(input: {
     week: { id: week.id, startsOn: week.starts_on, startsAt: new Date(week.starts_at), endsAt },
     items,
     table: standings(
-      items.filter((i) => !i.carried).map((i) => ({ userId: i.userId, points: i.points, status: i.status })),
+      items.filter((i) => !i.carried).map((i) => ({ userId: i.userId, points: i.points, status: i.status, coveredBy: i.coveredBy })),
       memberIds,
     ),
     notStarted: false,
@@ -353,6 +360,7 @@ export const TODAY_ORDER: Record<LiveStatus, number> = {
   done: 6,
   excused: 7,
   missed: 8,
+  covered: 9,
 };
 
 /**
@@ -364,20 +372,39 @@ export function byDoneLatest(a: { doneAt?: Date | null; dueAt: Date }, b: { done
   return (b.doneAt ?? b.dueAt).getTime() - (a.doneAt ?? a.dueAt).getTime();
 }
 
-/** Today for one housemate: their Johns in Today's order, how many are left, and what awaits their vote. */
-export function todayView(board: WeekBoard, userId: string) {
+/**
+ * Today for one housemate: their Johns in Today's order, how many are left,
+ * what awaits their vote (anyone's tick but their own, a cover of their
+ * John included), and, given the moment and the house's grace, housemates'
+ * Johns they could cover.
+ */
+export function todayView(board: WeekBoard, userId: string, cover?: { now: Date; graceHours: number }) {
   const mine = board.items
     .filter((i) => i.userId === userId)
     .sort((a, b) => TODAY_ORDER[a.status] - TODAY_ORDER[b.status] || a.dueAt.getTime() - b.dueAt.getTime());
   return {
     mine,
     left: mine.filter((i) => isOpen(i.status)).length,
-    toVote: board.items.filter((i) => i.dispute && i.userId !== userId && i.dispute.myVote === null),
+    toVote: board.items.filter((i) => i.dispute && (i.coveredBy ?? i.userId) !== userId && i.dispute.myVote === null),
+    toCover: cover ? toCover(board, userId, cover.now, cover.graceHours) : [],
   };
 }
 
+/**
+ * Housemates' Johns the viewer could cover now (outcome.ts canCover), most
+ * overdue first: what Today's "Needs covering" lists.
+ */
+export function toCover(board: WeekBoard, userId: string, now: Date, graceHours: number): BoardItem[] {
+  return board.items
+    .filter((i) => canCover({ ...i, excused: i.status === "excused" }, userId, now, graceHours))
+    .sort((a, b) => a.dueAt.getTime() - b.dueAt.getTime());
+}
+
 /** A month's assignment as read, with its week's end (for when an open John turns missed). */
-export type MonthRow = Pick<Row<"assignments">, "user_id" | "points" | "outcome" | "done_at" | "due_at" | "excused"> & {
+export type MonthRow = Pick<
+  Row<"assignments">,
+  "user_id" | "points" | "outcome" | "done_at" | "due_at" | "excused" | "covered_by"
+> & {
   weeks: { ends_at: string } | null;
   /** On a flag, when it was raised, when the read has it. */
   flagged_at?: string | null;
@@ -404,10 +431,12 @@ export function monthStandings(
           weekEndsAt: new Date(a.weeks?.ends_at ?? a.due_at),
           flaggedAt: a.flagged_at ? new Date(a.flagged_at) : null,
           outcome: a.outcome as Outcome | null,
+          coveredBy: a.covered_by,
         },
         now,
         disputeHours,
       ),
+      coveredBy: a.covered_by,
     })),
     memberIds,
   );

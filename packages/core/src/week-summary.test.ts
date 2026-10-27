@@ -50,6 +50,7 @@ function item(id: string, overrides: Partial<BoardItem> = {}): BoardItem {
     groupName: null,
     doneAt: null,
     photoPath: null,
+    coveredBy: null,
     outcome: null,
     status: "upcoming",
     standsAt: null,

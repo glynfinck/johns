@@ -42,7 +42,8 @@ export function useHouse(houseId: string, userId: string): { query: UseQueryResu
     now,
   });
   const me = snapshot.members.find((m) => m.userId === userId) ?? null;
-  return { query, view: { snapshot, board, today: todayView(board, userId), me, now } };
+  const today = todayView(board, userId, { now, graceHours: snapshot.rules.coverGraceHours });
+  return { query, view: { snapshot, board, today, me, now } };
 }
 
 /**

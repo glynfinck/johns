@@ -47,7 +47,7 @@ export async function getMonthTable(ctx: HouseContext) {
   const window = monthWindow(month, rules.timezone);
   const { data: rows } = await supabase
     .from("assignments")
-    .select("user_id, points, outcome, done_at, due_at, excused, weeks(ends_at)")
+    .select("user_id, points, outcome, done_at, due_at, excused, covered_by, weeks(ends_at)")
     .eq("house_id", house.id)
     .gte("due_at", window.startsAt.toISOString())
     .lt("due_at", window.endsAt.toISOString());

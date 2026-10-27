@@ -166,9 +166,9 @@ describe("STATUS_MARK", () => {
     expect(STATUS_MARK.upcoming).toEqual({ tone: "none", icon: null, label: "Upcoming" });
   });
 
-  it("keeps hazard for late, overdue, missed and disputed", () => {
+  it("keeps hazard for late, overdue, missed, covered and disputed", () => {
     const hazard = statuses.filter((s) => STATUS_MARK[s].tone === "hazard").sort();
-    expect(hazard).toEqual(["disputed", "late", "missed", "overdue"]);
+    expect(hazard).toEqual(["covered", "disputed", "late", "missed", "overdue"]);
     expect(STATUS_MARK.late.label).toBe("Late");
   });
 

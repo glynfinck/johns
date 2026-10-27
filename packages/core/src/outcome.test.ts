@@ -1,6 +1,15 @@
 import { describe, expect, it } from "vitest";
 
-import { flagClosesAt, liveStatus, settleOutcome, standsAt, tickWouldBe, type AssignmentFacts } from "./outcome";
+import {
+  canCover,
+  coverOpensAt,
+  flagClosesAt,
+  liveStatus,
+  settleOutcome,
+  standsAt,
+  tickWouldBe,
+  type AssignmentFacts,
+} from "./outcome";
 
 const due = new Date("2026-10-08T18:00:00Z");
 const weekEnds = new Date("2026-10-11T23:00:00Z");
@@ -124,5 +133,47 @@ describe("flags (on-call Johns)", () => {
   it("settles a ticked flag like any John", () => {
     const ticked = { ...flag, doneAt: at("2026-10-09T09:00:00Z") };
     expect(settleOutcome(ticked, at("2026-10-10T09:00:00Z"), 24)).toBe("late");
+  });
+});
+
+describe("covering", () => {
+  const covered = { ...base, doneAt: at("2026-10-08T22:00:00Z"), coveredBy: "glyn" };
+
+  it("settles a cover as covered once it stands, never done or late", () => {
+    expect(settleOutcome(covered, at("2026-10-09T21:59:00Z"), 24)).toBeNull();
+    expect(settleOutcome(covered, at("2026-10-09T22:00:00Z"), 24)).toBe("covered");
+    expect(settleOutcome(covered, at("2026-10-12T00:00:00Z"), 0)).toBe("covered");
+  });
+
+  it("holds a disputed cover like any tick", () => {
+    expect(settleOutcome({ ...covered, disputeOpen: true }, at("2026-10-20T00:00:00Z"), 24)).toBeNull();
+  });
+
+  it("shows covered from the moment it's covered, and disputed while it's argued", () => {
+    const now = at("2026-10-08T23:00:00Z");
+    expect(liveStatus({ ...covered, outcome: null }, now, 24)).toBe("covered");
+    expect(liveStatus({ ...covered, disputeOpen: true, outcome: null }, now, 24)).toBe("disputed");
+    expect(liveStatus({ ...covered, outcome: "covered" }, now, 24)).toBe("covered");
+  });
+
+  it("opens the grace period after the due time", () => {
+    expect(coverOpensAt(due, 3)).toEqual(at("2026-10-08T21:00:00Z"));
+    expect(coverOpensAt(due, 0)).toEqual(due);
+  });
+
+  it("lets anyone else cover an undone John once the grace is up", () => {
+    const a = { userId: "sam", doneAt: null, outcome: null, dueAt: due };
+    expect(canCover(a, "glyn", at("2026-10-08T20:59:59Z"), 3)).toBe(false);
+    expect(canCover(a, "glyn", at("2026-10-08T21:00:00Z"), 3)).toBe(true);
+    expect(canCover(a, "glyn", due, 0)).toBe(true);
+  });
+
+  it("never offers a cover of your own, a ticked, excused or settled John", () => {
+    const now = at("2026-10-10T00:00:00Z");
+    const a = { userId: "sam", doneAt: null, outcome: null, dueAt: due };
+    expect(canCover(a, "sam", now, 3)).toBe(false);
+    expect(canCover({ ...a, doneAt: at("2026-10-09T00:00:00Z") }, "glyn", now, 3)).toBe(false);
+    expect(canCover({ ...a, excused: true }, "glyn", now, 3)).toBe(false);
+    expect(canCover({ ...a, outcome: "missed" }, "glyn", now, 3)).toBe(false);
   });
 });

@@ -32,6 +32,7 @@ const RULES: HouseRules = {
   lateForfeitMinor: 100,
   missedForfeitMinor: 300,
   disputeHours: 24,
+  coverGraceHours: 3,
 };
 const NOW = new Date('2026-10-21T12:00:00Z');
 

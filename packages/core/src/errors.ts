@@ -41,6 +41,9 @@ const MESSAGES: Record<string, string> = {
   not_on_call: "That John isn’t on call, so it can’t be flagged.",
   not_dealt: "This week hasn’t been handed out yet, so nobody is on call.",
   nobody_home: "Everyone who shares that John is away today.",
+  tick_it_yourself: "That’s your John. Tick it off instead.",
+  too_soon_to_cover: "It’s still theirs to do. You can cover it once the grace period is up.",
+  john_covered: "A housemate covered this one. Dispute it if it wasn’t done.",
 };
 
 export function humanError(error: { message?: string; code?: string } | null | undefined): string {

@@ -8,7 +8,7 @@ import type { Currency, HouseRules } from "./domain";
 import { dateRange, dueInLine, firstName, pointsLabel, relative, sinceLabel, STATUS_LABEL, STATUS_MARK } from "./format";
 import { johnKind } from "./john-row";
 import { formatMoney } from "./money";
-import type { LiveStatus } from "./outcome";
+import { canCover, coverOpensAt, type LiveStatus } from "./outcome";
 import type { TableRow } from "./points";
 import type { StakeView } from "./stake";
 import { addDaysTo, monthOf } from "./week";
@@ -39,8 +39,13 @@ function called(people: readonly Person[], userId: string | null): string {
   return person ? firstName(person.name) : NEXT_UP_COPY.someoneGone;
 }
 
-/** Settled one way or another: nothing more to do or check. */
-const SETTLED: ReadonlySet<LiveStatus> = new Set<LiveStatus>(["done", "late", "excused", "missed"]);
+/** Settled one way or another: nothing more to do or check. A cover is, once its outcome is stamped (johnSheetMode). */
+const SETTLED: ReadonlySet<LiveStatus> = new Set<LiveStatus>(["done", "late", "excused", "missed", "covered"]);
+
+/** Whose tick it is: the housemate who covered it, or else whoever it was dealt to. */
+export function tickerOf(item: Pick<BoardItem, "userId"> & { coveredBy?: string | null }): string {
+  return item.coveredBy ?? item.userId;
+}
 
 /** Settled without a forfeit still to see: what "Done (n)" folds away. A missed John stays out, in hazard. */
 const FOLDED: ReadonlySet<LiveStatus> = new Set<LiveStatus>(["done", "late", "excused"]);
@@ -329,12 +334,21 @@ export type JohnSheetMode =
   | "theirs-disputed"
   | "settled";
 
-/** The sheet's mode for a John and whoever is looking at it. */
-export function johnSheetMode(item: Pick<BoardItem, "userId" | "status">, viewerId: string): JohnSheetMode {
+/**
+ * The sheet's mode for a John and whoever is looking at it. A cover being
+ * checked or disputed is the coverer's tick: "yours" to them, and to
+ * everyone else, the John's owner included, a housemate's.
+ */
+export function johnSheetMode(
+  item: Pick<BoardItem, "userId" | "status"> & Partial<Pick<BoardItem, "coveredBy" | "outcome">>,
+  viewerId: string,
+): JohnSheetMode {
+  const ticks = tickerOf(item) === viewerId;
+  if (item.status === "covered" && !item.outcome) return ticks ? "yours-checking" : "theirs-checking";
   if (SETTLED.has(item.status)) return "settled";
   const yours = item.userId === viewerId;
   if (item.status === "checking") return yours ? "yours-checking" : "theirs-checking";
-  if (item.status === "disputed") return yours ? "yours-disputed" : "theirs-disputed";
+  if (item.status === "disputed") return ticks ? "yours-disputed" : "theirs-disputed";
   return yours ? "yours-open" : "theirs-open";
 }
 
@@ -379,8 +393,12 @@ export function sheetWhen(
   rules: HouseRules,
   now: Date,
   room: number | null = null,
-): { sign: "overdue" | "disputed" | "late" | "missed" | null; text: string } {
+): { sign: "overdue" | "disputed" | "late" | "missed" | "covered" | null; text: string } {
   const zone = rules.timezone;
+  if (item.status === "covered" && !item.outcome) {
+    return { sign: "covered", text: JOHN_SHEET_COPY.coveredWasDue(sinceLabel(item.dueAt, now, zone)) };
+  }
+  if (item.status === "covered") return { sign: "covered", text: settledLine(item, people, viewerId, rules, now) };
   if (SETTLED.has(item.status)) {
     const sign = item.status === "late" || item.status === "missed" ? item.status : null;
     return { sign, text: settledLine(item, people, viewerId, rules, now) };
@@ -411,10 +429,15 @@ function tickedAt(at: Date, now: Date, zone: string): string {
   return JOHN_SHEET_COPY.onAt(format(at, days < 7 ? "EEE" : "EEE d MMM", { in: inZone }), time);
 }
 
-/** A tick being checked: "Megan ticked this at 14:10 · stands in 21h" ("You ticked…" for yours). */
+/**
+ * A tick being checked: "Megan ticked this at 14:10 · stands in 21h" ("You
+ * ticked…" for yours); a cover, "Glyn covered this at 23:04 · …".
+ */
 export function tickedLine(item: BoardItem, people: readonly Person[], viewerId: string, rules: HouseRules, now: Date): string {
-  const who = item.userId === viewerId ? JOHN_SHEET_COPY.you : firstNameIn(people, item.userId);
-  const ticked = item.doneAt ? JOHN_SHEET_COPY.ticked(who, tickedAt(item.doneAt, now, rules.timezone)) : null;
+  const ticker = tickerOf(item);
+  const who = ticker === viewerId ? JOHN_SHEET_COPY.you : firstNameIn(people, ticker);
+  const verb = item.coveredBy ? JOHN_SHEET_COPY.covered : JOHN_SHEET_COPY.ticked;
+  const ticked = item.doneAt ? verb(who, tickedAt(item.doneAt, now, rules.timezone)) : null;
   const stands =
     item.standsAt === null
       ? null
@@ -440,9 +463,51 @@ export function settledLine(item: BoardItem, people: readonly Person[], viewerId
       return JOHN_SHEET_COPY.excused(who);
     case "missed":
       return JOHN_SHEET_COPY.missed;
+    case "covered": {
+      const coverer = item.coveredBy === viewerId ? JOHN_SHEET_COPY.you : firstNameIn(people, item.coveredBy);
+      const yours = item.userId === viewerId;
+      const owner = yours ? JOHN_SHEET_COPY.byYou : called(people, item.userId);
+      return JOHN_SHEET_COPY.coveredSettled(coverer, owner, yours ? JOHN_SHEET_COPY.your : `${owner}’s`, ticked);
+    }
     default:
       return "";
   }
+}
+
+/** What the John sheet says and offers on a housemate's John you might cover. */
+export interface CoverOffer {
+  /** "cover": the button is live; "soon": overdue but still theirs (the grace); null: nothing to say. */
+  kind: "cover" | "soon" | null;
+  text: string | null;
+}
+
+/**
+ * On a housemate's open John: once the grace is up, what covering it means
+ * ("Sam hasn’t done it. If you do, it counts as Sam’s miss, and you get 3
+ * pts and £3."); overdue inside the grace, when it opens to you; nothing
+ * before it's due. The money is the missed forfeit, before any cap.
+ */
+export function coverOffer(item: BoardItem, people: readonly Person[], viewerId: string, rules: HouseRules, now: Date): CoverOffer {
+  const owner = called(people, item.userId);
+  if (canCover(item, viewerId, now, rules.coverGraceHours)) {
+    const money = rules.missedForfeitMinor > 0 ? formatMoney(rules.missedForfeitMinor, rules.currency) : null;
+    return { kind: "cover", text: JOHN_SHEET_COPY.coverBody(upperFirst(owner), pointsLabel(item.points), money) };
+  }
+  if (item.userId !== viewerId && item.status === "overdue") {
+    const opens = coverOpensAt(item.dueAt, rules.coverGraceHours);
+    return { kind: "soon", text: JOHN_SHEET_COPY.coverSoon(upperFirst(owner), dueInLine(opens, now, rules.timezone)) };
+  }
+  return { kind: null, text: null };
+}
+
+/** Needs you's title for a John you could cover: "Cover Sam’s Bins". */
+export function coverTitle(item: Pick<BoardItem, "userId" | "name">, people: readonly Person[]): string {
+  const owner = people.find((p) => p.userId === item.userId);
+  return NEXT_UP_COPY.coverOn(owner ? firstName(owner.name) : null, item.name);
+}
+
+function upperFirst(text: string): string {
+  return text.charAt(0).toUpperCase() + text.slice(1);
 }
 
 /** What "If you can't" offers on one of your open Johns: the immunity you hold, and housemates' open Johns to swap for. */
@@ -518,7 +583,14 @@ export function swapChoice(
  * so, and what late costs (capped at `room`, what's left of your stake).
  * Null when an undo costs nothing.
  */
-export function undoWarning(item: Pick<BoardItem, "dueAt" | "doneAt">, rules: HouseRules, now: Date, room: number | null = null): string | null {
+export function undoWarning(
+  item: Pick<BoardItem, "dueAt" | "doneAt"> & { coveredBy?: string | null },
+  rules: HouseRules,
+  now: Date,
+  room: number | null = null,
+): string | null {
+  // Taking back a cover only hands the John back to its owner: nothing of yours turns late.
+  if (item.coveredBy) return null;
   if (now.getTime() <= item.dueAt.getTime()) return null;
   if (item.doneAt && item.doneAt.getTime() > item.dueAt.getTime()) return null;
   return JOHN_SHEET_COPY.undoLate(forfeits(rules, room).late);

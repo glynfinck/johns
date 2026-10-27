@@ -20,6 +20,19 @@ export function undoDone(assignmentId: string): Promise<void> {
   return call(supabase.rpc('undo_done', { p_assignment: assignmentId }));
 }
 
+/**
+ * Cover a housemate's overdue John: you did it instead. It counts as their
+ * miss, and its points and their missed forfeit come to you once it stands.
+ */
+export function coverJohn(assignmentId: string, photoPath?: string): Promise<void> {
+  return call(supabase.rpc('cover_john', { p_assignment: assignmentId, p_photo_path: photoPath }));
+}
+
+/** Take a cover back while it's still being checked. */
+export function undoCover(assignmentId: string): Promise<void> {
+  return call(supabase.rpc('undo_cover', { p_assignment: assignmentId }));
+}
+
 /** Spend an immunity token: the John is excused, with no forfeit. */
 export function spendImmunity(assignmentId: string): Promise<void> {
   return call(supabase.rpc('use_immunity', { p_assignment: assignmentId }));
