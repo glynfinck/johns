@@ -5,7 +5,7 @@
 const MESSAGES: Record<string, string> = {
   sign_in_required: "Sign in first.",
   already_in_house: "You’re already in a house. Leave it first to join another.",
-  unknown_code: "That join link doesn’t match a house. Ask for a fresh one.",
+  unknown_code: "That join link doesn’t open a house. Ask a housemate for theirs, or start your own.",
   unknown_timezone: "That time zone isn’t one we recognise.",
   admins_only: "Only the house admins can do that.",
   last_admin: "Make someone else an admin first. A house needs at least one.",
