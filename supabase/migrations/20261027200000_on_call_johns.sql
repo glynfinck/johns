@@ -62,11 +62,13 @@ alter table public.assignments add column flagged_at timestamptz;
 create index assignments_open_flags on public.assignments (john_id)
   where flagged_at is not null and outcome is null;
 
+-- 'covered' belongs to covering someone else's John, which ships on its own;
+-- it is listed here too so neither migration drops the other's kind.
 alter table public.events drop constraint events_kind_check;
 alter table public.events add constraint events_kind_check check (kind in (
   'joined', 'done', 'late', 'missed', 'disputed', 'upheld', 'rejected',
   'immunity_earned', 'immunity_used', 'swap_earned', 'swap_used',
-  'week_dealt', 'month_closed', 'paid', 'away', 'flagged'
+  'week_dealt', 'month_closed', 'paid', 'away', 'flagged', 'covered'
 ));
 
 -- When an open John turns missed: its week's end, or for a flag twice its
