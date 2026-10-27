@@ -133,7 +133,8 @@ each app's AGENTS.md.
   a forfeit or a token (tested).
 - **RLS and SECURITY DEFINER functions** (`supabase/migrations`): the only
   real enforcement. Housemates READ through RLS (`is_member`) and WRITE only
-  through named functions (`mark_done`, `undo_done`, `raise_dispute`,
+  through named functions (`mark_done`, `undo_done`, `cover_john`,
+  `undo_cover`, `raise_dispute`,
   `cast_vote`, `use_immunity`, `use_swap`, `confirm_payment`,
   `create_house`, `join_house`, `set_member_role`, `remove_member`,
   `save_group`, `delete_group`, `set_away`, `cancel_away`) or a few column
@@ -186,6 +187,15 @@ already due a day's grace (`graceDue`).
   but the ticker votes; a majority decides at once, otherwise the vote closes
   on time and a tie goes to the tick. Upheld strikes the tick: the John is
   open again, and missed if the week has ended.
+- **Covering**: once a John is past its due time by the house's grace
+  (`houses.cover_grace_hours`, default 3) and still unticked, anyone else
+  can do it instead (`cover_john`, setting `assignments.covered_by`). The
+  first tick wins, so the assignee can still tick it late until someone
+  covers it. A cover is checked like any tick (the coverer is the ticker,
+  so the assignee can dispute it), and when it stands it settles as
+  `covered`: the coverer earns its points, the assignee is treated as having
+  missed it (no points, the missed forfeit, a broken streak), and that
+  forfeit is paid to the coverer at month close instead of being shared.
 - **The Table**: on time earns full points, late half, missed nothing.
 - **Streaks and perks**: a clean week is every John on time or excused.
   Every 4 clean weeks in a row earns an immunity token (cap 2), spent to
@@ -194,7 +204,8 @@ already due a day's grace (`graceDue`).
   week.
 - **The Stake**: everyone stakes the same each month. Late and missed Johns
   forfeit fixed amounts, capped at the stake; at month end the forfeits are
-  shared equally among everyone else. Money is integer minor units in an
+  shared equally among everyone else (a covered John's goes to whoever
+  covered it). Money is integer minor units in an
   append-only ledger, from each person's side; balances are sums, a month
   always sums to zero, and only the payee can confirm a payment. The app
   never moves money.

@@ -12,6 +12,8 @@ import {
   canSwap,
   cantOptions,
   clearUntil,
+  coverOffer,
+  coverTitle,
   forfeitRoom,
   johnSheetMode,
   nextUp,
@@ -65,6 +67,7 @@ function item(id: string, overrides: Partial<BoardItem> = {}): BoardItem {
     groupName: null,
     doneAt: null,
     photoPath: null,
+    coveredBy: null,
     outcome: null,
     status: "due-soon",
     standsAt: null,
@@ -389,7 +392,7 @@ describe("standingPlace", () => {
 });
 
 describe("standingLine", () => {
-  const row = (userId: string, points: number, rank: number): TableRow => ({ userId, points, rank, done: 0, late: 0, missed: 0 });
+  const row = (userId: string, points: number, rank: number): TableRow => ({ userId, points, rank, done: 0, late: 0, missed: 0, covered: 0 });
   const table = [row("priya", 9, 1), row(ME, 6, 2), row("megan", 6, 2), row("tom", 1, 4)];
   const share = (userId: string, net: number) => ({ userId, forfeitedRaw: 0, forfeited: 0, received: 0, net });
   const stake = (net: number, month = "2026-10") => ({ month, projection: [share("priya", -net), share(ME, net)] });
@@ -743,8 +746,8 @@ describe("todayPage", () => {
 
   it("says where you stand once the week is out", () => {
     const table: TableRow[] = [
-      { userId: ME, points: 4, rank: 1, done: 2, late: 0, missed: 0 },
-      { userId: "priya", points: 2, rank: 2, done: 1, late: 0, missed: 0 },
+      { userId: ME, points: 4, rank: 1, done: 2, late: 0, missed: 0, covered: 0 },
+      { userId: "priya", points: 2, rank: 2, done: 1, late: 0, missed: 0, covered: 0 },
     ];
     expect(page({ board: board([], { table }), stake }).standing).toBe("1st this week · square in October");
     expect(page({ board: board([], { week: null, table }), stake }).standing).toBeNull();
@@ -768,6 +771,7 @@ describe("from a real board", () => {
       photo_path: null,
       outcome: null,
       excused: false,
+      covered_by: null,
     });
     const b = buildWeekBoard({
       week,
@@ -784,5 +788,66 @@ describe("from a real board", () => {
       ["later", "upcoming"],
       ["ticked", "checking"],
     ]);
+  });
+});
+
+describe("covering a housemate's John", () => {
+  // Priya's Bins, due 05:00 today: seven hours overdue at noon.
+  const priyas = (overrides: Partial<BoardItem> = {}) =>
+    item("Bins", { userId: "priya", status: "overdue", dueAt: at(-7), points: 3, ...overrides });
+
+  it("offers the cover once the grace is over, and says when it opens before that", () => {
+    expect(coverOffer(priyas(), PEOPLE, ME, RULES, now)).toEqual({
+      kind: "cover",
+      text: "Priya hasn’t done it. If you do, it counts as Priya’s miss, and you get 3 pts and £3.",
+    });
+    expect(coverOffer(priyas(), PEOPLE, ME, { ...RULES, missedForfeitMinor: 0 }, now).text).toBe(
+      "Priya hasn’t done it. If you do, it counts as Priya’s miss, and you get 3 pts.",
+    );
+    expect(coverOffer(priyas({ dueAt: at(-1) }), PEOPLE, ME, RULES, now)).toEqual({
+      kind: "soon",
+      text: "It’s still Priya’s to do. Anyone else can cover it from today 14:00.",
+    });
+  });
+
+  it("offers nothing on your own John, or one that isn't overdue", () => {
+    expect(coverOffer(priyas({ userId: ME }), PEOPLE, ME, RULES, now).kind).toBeNull();
+    expect(coverOffer(priyas({ status: "due-soon", dueAt: at(2) }), PEOPLE, ME, RULES, now).kind).toBeNull();
+    expect(coverOffer(priyas({ status: "checking", doneAt: at(-1) }), PEOPLE, ME, RULES, now).kind).toBeNull();
+  });
+
+  it("names whose John it is on Needs you", () => {
+    expect(coverTitle(priyas(), PEOPLE)).toBe("Cover Priya’s Bins");
+    expect(coverTitle(priyas({ userId: "gone" }), PEOPLE)).toBe("Cover Bins");
+  });
+
+  it("is the coverer's to check and undo while it's live, and settled after", () => {
+    const live = { userId: "priya", status: "covered" as const, coveredBy: ME, outcome: null };
+    expect(johnSheetMode(live, ME)).toBe("yours-checking");
+    expect(johnSheetMode(live, "priya")).toBe("theirs-checking");
+    expect(johnSheetMode(live, "megan")).toBe("theirs-checking");
+    expect(johnSheetMode({ ...live, outcome: "covered" }, ME)).toBe("settled");
+    // Disputed, the cover is the coverer's to answer.
+    expect(johnSheetMode({ ...live, status: "disputed" }, ME)).toBe("yours-disputed");
+    expect(johnSheetMode({ ...live, status: "disputed" }, "priya")).toBe("theirs-disputed");
+  });
+
+  it("says who covered it and when", () => {
+    const covered = priyas({ status: "covered", coveredBy: "megan", doneAt: at(-2), standsAt: at(21) });
+    expect(tickedLine(covered, PEOPLE, ME, RULES, now)).toBe("Megan covered this at 10:00 · stands in 21h");
+    expect(tickedLine({ ...covered, coveredBy: ME }, PEOPLE, ME, RULES, now)).toBe("You covered this at 10:00 · stands in 21h");
+    expect(sheetWhen(covered, PEOPLE, ME, RULES, now)).toEqual({ sign: "covered", text: "Covered · was due 05:00" });
+  });
+
+  it("says, settled, that it counts as the assignee's miss", () => {
+    const settled = priyas({ status: "covered", outcome: "covered", coveredBy: "megan", doneAt: at(-48) });
+    expect(settledLine(settled, PEOPLE, ME, RULES, now)).toBe("Megan did it for Priya on Mon at 12:00, so it counts as Priya’s miss.");
+    expect(settledLine(settled, PEOPLE, "priya", RULES, now)).toBe("Megan did it for you on Mon at 12:00, so it counts as your miss.");
+    expect(settledLine(settled, PEOPLE, "megan", RULES, now)).toBe("You did it for Priya on Mon at 12:00, so it counts as Priya’s miss.");
+    expect(sheetWhen(settled, PEOPLE, ME, RULES, now).sign).toBe("covered");
+  });
+
+  it("leaves the undo warning off a cover", () => {
+    expect(undoWarning(priyas({ status: "covered", coveredBy: ME, doneAt: at(-1) }), RULES, now)).toBeNull();
   });
 });

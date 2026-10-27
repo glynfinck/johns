@@ -81,6 +81,7 @@ export function rulesRows(rules: HouseRules, awayMakeup: number): LabelValue[] {
     { label: SETUP_COPY.late, value: forfeit(rules.lateForfeitMinor, rules.currency) },
     { label: SETUP_COPY.missed, value: forfeit(rules.missedForfeitMinor, rules.currency) },
     { label: SETUP_COPY.disputes, value: SETUP_COPY.disputeWindow(rules.disputeHours) },
+    { label: SETUP_COPY.cover, value: SETUP_COPY.coverWindow(rules.coverGraceHours) },
     { label: SETUP_COPY.away, value: SETUP_COPY.makeup[awayMakeup] ?? MAKEUP_LABEL[awayMakeup] ?? SETUP_COPY.makeupPercent(awayMakeup) },
     { label: SETUP_COPY.weekStarts, value: SETUP_COPY.weekStartsAt(DOW_LABEL[rules.weekStarts], zonePlace(rules.timezone)) },
   ];
@@ -198,6 +199,7 @@ export interface RulesDraft {
   currency: Currency;
   weekStarts: IsoDow;
   disputeHours: number;
+  coverGraceHours: number;
   awayMakeup: number;
   stake: string;
   late: string;
@@ -215,6 +217,7 @@ export function rulesDraft(name: string, rules: HouseRules, awayMakeup: number):
     currency: rules.currency,
     weekStarts: rules.weekStarts,
     disputeHours: rules.disputeHours,
+    coverGraceHours: rules.coverGraceHours,
     awayMakeup,
     stake: moneyInput(rules.stakeMinor),
     late: moneyInput(rules.lateForfeitMinor),
@@ -236,6 +239,7 @@ export function rulesChanged(draft: RulesDraft, from: RulesDraft): boolean {
     draft.currency !== from.currency ||
     draft.weekStarts !== from.weekStarts ||
     draft.disputeHours !== from.disputeHours ||
+    draft.coverGraceHours !== from.coverGraceHours ||
     draft.awayMakeup !== from.awayMakeup ||
     (["stake", "late", "missed"] as const).some((k) => amount(draft[k]) !== amount(from[k]))
   );
@@ -262,6 +266,7 @@ export function checkRules(
     lateForfeitMinor: amounts.late ?? 0,
     missedForfeitMinor: amounts.missed ?? 0,
     disputeHours: draft.disputeHours,
+    coverGraceHours: draft.coverGraceHours,
     awayMakeup: draft.awayMakeup,
   });
   const field: Record<string, RulesField> = {

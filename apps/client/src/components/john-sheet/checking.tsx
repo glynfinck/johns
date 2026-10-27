@@ -13,7 +13,7 @@ import { FlagIcon, Undo2Icon } from 'lucide-react-native';
 import { useState } from 'react';
 import { StyleSheet, View } from 'react-native';
 
-import { undoDone } from '@/api/johns';
+import { undoCover, undoDone } from '@/api/johns';
 import { Alert } from '@/components/alert';
 import { Button } from '@/components/button';
 import { DisputeForm } from '@/components/dispute';
@@ -27,13 +27,15 @@ import { SheetLines } from './parts';
 /**
  * Your tick, being checked: when it stands, and Undo meanwhile. Past the
  * John's due time an undo makes it late, so Undo turns into the sentence
- * that says so, with "Undo it" and "Cancel", in place.
+ * that says so, with "Undo it" and "Cancel", in place. A cover of a
+ * housemate's John is yours to undo too, with nothing to warn about: it
+ * just goes back to them.
  */
 export function YoursChecking({ item, context }: { item: BoardItem; context: JohnSheetContext }) {
   const move = useMove(context.houseId);
   const [asking, setAsking] = useState(false);
   const warning = undoWarning(item, context.rules, context.now, forfeitRoom(context.stake, item.userId, monthOf(item.dueAt, context.zone)));
-  const undo = () => void move.run(() => undoDone(item.id));
+  const undo = () => void move.run(() => (item.coveredBy ? undoCover(item.id) : undoDone(item.id)));
   return (
     <SheetLines>
       <Body testID="ticked-line">{tickedLine(item, context.members, context.userId, context.rules, context.now)}</Body>

@@ -521,3 +521,12 @@ describe("leaveCost", () => {
     );
   });
 });
+
+describe("wallFeedRow for a cover", () => {
+  it("says who covered whose John", () => {
+    const covered = { kind: "covered", user_id: "megan", data: { name: "Bins", for: "tom" } };
+    expect(row(covered).title).toBe("Megan covered Tom’s Bins");
+    expect(row({ ...covered, user_id: "sam" }).title).toBe("You covered Tom’s Bins");
+    expect(row({ ...covered, data: { name: "Bins", for: "sam" } }).title).toBe("Megan covered your Bins");
+  });
+});

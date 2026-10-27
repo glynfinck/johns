@@ -1,5 +1,6 @@
 import {
   cantOptions,
+  coverOffer,
   firstName,
   FOCUS_SHELL_COPY,
   JOHN_COPY,
@@ -284,16 +285,64 @@ function SwapChoice({
   );
 }
 
-/** A housemate's John still to do: whose it is, and nothing to do about it from here. */
+/**
+ * A housemate's John still to do: whose it is. Once it's overdue past the
+ * house's grace, what covering it means and amber "I did this" (with a
+ * photo, for a photo John); overdue inside the grace, when that opens.
+ */
 export function TheirsOpen({ item, context }: { item: BoardItem; context: JohnSheetContext }) {
   const owner = context.members.find((m) => m.userId === item.userId);
+  const offer = coverOffer(item, context.members, context.userId, context.rules, context.now);
   return (
     <SheetLines>
       <View style={styles.owner}>
         <Avatar name={context.nameOf(item.userId)} />
         <Body style={styles.shrink}>{JOHN_SHEET_COPY.theirs(owner ? firstName(owner.name) : FOCUS_SHELL_COPY.formerHousemate)}</Body>
       </View>
+      {offer.kind === 'cover' && offer.text ? (
+        <Cover item={item} context={context} body={offer.text} />
+      ) : offer.text ? (
+        <Body testID="cover-soon">{offer.text}</Body>
+      ) : null}
     </SheetLines>
+  );
+}
+
+/** Covering a housemate's John: what it means, then the sheet's one amber, as ticking your own looks. */
+function Cover({ item, context, body }: { item: BoardItem; context: JohnSheetContext; body: string }) {
+  const tick = useTick(context.houseId, item.id, { cover: true });
+  const working = tick.pending ? JOHN_COPY.ticking : tick.uploading ? JOHN_COPY.uploading : null;
+  return (
+    <>
+      <Body testID="cover-body">{body}</Body>
+      {item.needsPhoto ? (
+        <>
+          <Button
+            icon={CameraIcon}
+            label={working ?? JOHN_SHEET_COPY.coverPhoto}
+            disabled={tick.busy}
+            onPress={() => void tick.tickWithPhoto('camera')}
+            testID="sheet-cover"
+          />
+          <Button
+            variant="outline"
+            icon={ImagesIcon}
+            label={JOHN_SHEET_COPY.fromLibrary}
+            disabled={tick.busy}
+            onPress={() => void tick.tickWithPhoto('library')}
+          />
+        </>
+      ) : (
+        <Button
+          icon={CheckIcon}
+          label={working ?? JOHN_SHEET_COPY.coverIt}
+          disabled={tick.busy}
+          onPress={() => void tick.tick()}
+          testID="sheet-cover"
+        />
+      )}
+      {tick.problem ? <Alert message={tick.problem} /> : null}
+    </>
   );
 }
 

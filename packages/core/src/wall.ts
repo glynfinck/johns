@@ -23,6 +23,7 @@ export const REACTABLE: ReadonlySet<string> = new Set([
   "done",
   "late",
   "missed",
+  "covered",
   "rejected",
   "upheld",
   "immunity_earned",
@@ -76,7 +77,7 @@ export function wallEvents(rows: readonly WallRow[], userId: string): WallEvent[
       assignmentId: e.assignment_id,
       data: (e.data ?? {}) as Record<string, unknown>,
       createdAt: new Date(e.created_at),
-      photoPath: photo && (e.kind === "done" || e.kind === "late") ? photo : null,
+      photoPath: photo && (e.kind === "done" || e.kind === "late" || e.kind === "covered") ? photo : null,
       reactions,
     };
   });
@@ -134,6 +135,12 @@ export function describeEvent(e: WallEvent, nameOf: (userId: string | null) => s
       return { icon: "check", parts: [b(who), t(` did ${john}, late.`)] };
     case "missed":
       return { icon: "x", tone: "hazard", parts: [b(who), t(` missed ${john}.`)] };
+    case "covered":
+      return {
+        icon: "check",
+        tone: "good",
+        parts: [b(who), t(` covered ${possessive(nameOf((e.data.for as string) ?? null))} ${john}.`)],
+      };
     case "disputed":
       return {
         icon: "flag",

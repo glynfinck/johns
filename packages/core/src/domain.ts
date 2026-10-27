@@ -43,8 +43,11 @@ export const CATEGORY_SHORT: Record<Category, string> = {
  * - `late`: ticked after its due time but before the week closed.
  * - `missed`: the week closed without a tick that stood.
  * - `excused`: an immunity token was spent on it.
+ * - `covered`: a housemate did it instead, once it was overdue (see
+ *   outcome.ts). For the assignee it counts as missed; the coverer earns
+ *   its points and the forfeit.
  */
-export const OUTCOMES = ["done", "late", "missed", "excused"] as const;
+export const OUTCOMES = ["done", "late", "missed", "excused", "covered"] as const;
 export type Outcome = (typeof OUTCOMES)[number];
 
 /** The four currencies a house can keep its Stake in. All have 2 decimals. */
@@ -74,6 +77,8 @@ export interface HouseRules {
   missedForfeitMinor: number;
   /** How long a tick can be disputed before it stands. */
   disputeHours: number;
+  /** How long past its due time a John stays the assignee's alone, before a housemate can cover it. */
+  coverGraceHours: number;
 }
 
 export const DEFAULT_RULES: Omit<HouseRules, "timezone" | "currency"> = {
@@ -82,4 +87,5 @@ export const DEFAULT_RULES: Omit<HouseRules, "timezone" | "currency"> = {
   lateForfeitMinor: 100,
   missedForfeitMinor: 300,
   disputeHours: 24,
+  coverGraceHours: 3,
 };

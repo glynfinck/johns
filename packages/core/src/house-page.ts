@@ -345,6 +345,7 @@ export function tableLines(input: {
       record && (record.late || record.missed)
         ? [lateMissedPart(record.late, record.missed), { text: HOUSE_PAGE_COPY.inMonth(monthAbbr(input.month)) }]
         : [],
+      record && record.covered ? [{ text: HOUSE_PAGE_COPY.covered(record.covered) }] : [],
       period ? [{ text: HOUSE_PAGE_COPY.away(dateRange(period.startsOn, period.endsOn)) }] : [],
       member && member.streak > 0 ? [{ text: HOUSE_PAGE_COPY.streak(member.streak) }] : [],
       member && member.immunityTokens > 0 ? [{ text: HOUSE_PAGE_COPY.immunity(member.immunityTokens) }] : [],
@@ -409,7 +410,11 @@ function recordLine(key: string, title: string, row: TableRow): PersonLine {
   return {
     key,
     title,
-    meta: joinParts([[{ text: PERSON_COPY.onTime(row.done) }], row.late || row.missed ? [lateMissedPart(row.late, row.missed)] : []]),
+    meta: joinParts([
+      [{ text: PERSON_COPY.onTime(row.done) }],
+      row.late || row.missed ? [lateMissedPart(row.late, row.missed)] : [],
+      row.covered ? [{ text: PERSON_COPY.coveredFor(row.covered) }] : [],
+    ]),
     value: pointsLabel(row.points),
   };
 }

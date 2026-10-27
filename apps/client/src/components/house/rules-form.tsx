@@ -2,6 +2,7 @@ import {
   AWAY_MAKEUP,
   checkRules,
   CURRENCIES,
+  COVER_GRACE_HOURS,
   CURRENCY_SYMBOL,
   DISPUTE_HOURS,
   DOW_LABEL,
@@ -37,6 +38,7 @@ import { GUTTER, INSET, LABEL_GAP, SPACE, useTheme } from '@/theme';
 const CURRENCY_OPTIONS = CURRENCIES.map((c) => ({ value: c, label: `${CURRENCY_SYMBOL[c]} ${c}` }));
 const DAY_OPTIONS = (Object.entries(DOW_LABEL) as [string, string][]).map(([day, name]) => ({ value: Number(day) as IsoDow, label: name }));
 const DISPUTE_OPTIONS = DISPUTE_HOURS.map((h) => ({ value: h as number, label: RULES_COPY.disputeHours(h), short: SETUP_COPY.disputeShort(h) }));
+const COVER_OPTIONS = COVER_GRACE_HOURS.map((h) => ({ value: h as number, label: RULES_COPY.coverGrace(h), short: SETUP_COPY.coverShort(h) }));
 const MAKEUP_OPTIONS = AWAY_MAKEUP.map((n) => ({ value: n as number, label: MAKEUP_LABEL[n] }));
 
 /** What the form starts from: the house's name, its rules and its make-up rate. */
@@ -141,6 +143,13 @@ export function RulesForm({ form }: { form: RulesFormState }) {
             options={DISPUTE_OPTIONS}
             value={v.disputeHours}
             onChange={(disputeHours) => set({ disputeHours })}
+            disabled={pending}
+          />
+          <PickRow
+            label={SETUP_COPY.cover}
+            options={COVER_OPTIONS}
+            value={v.coverGraceHours}
+            onChange={(coverGraceHours) => set({ coverGraceHours })}
             disabled={pending}
           />
           <PickRow

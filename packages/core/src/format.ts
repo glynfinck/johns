@@ -86,6 +86,7 @@ export const STATUS_LABEL: Record<LiveStatus, string> = {
   late: "Done late",
   missed: "Missed",
   excused: "Excused",
+  covered: "Covered by a housemate",
 };
 
 /** How loud a status is: nothing, a quiet outline, the done green, or hazard. */
@@ -104,7 +105,7 @@ export interface StatusMark {
 /**
  * Focus's one status map, for Today, Week, the John sheet and the Wall alike:
  * upcoming shows nothing (its time is in the meta line), hazard only for
- * what is late, overdue, missed or disputed, green only for done, and every
+ * what is late, overdue, missed, covered or disputed, green only for done, and every
  * mark that shows carries an icon and a word.
  */
 export const STATUS_MARK: Record<LiveStatus, StatusMark> = {
@@ -117,6 +118,8 @@ export const STATUS_MARK: Record<LiveStatus, StatusMark> = {
   missed: { tone: "hazard", icon: "x", label: "Missed" },
   disputed: { tone: "hazard", icon: "flag", label: "Disputed" },
   excused: { tone: "quiet", icon: "shield", label: "Excused" },
+  // Done, but not by the person it was dealt to: for them it counts as missed.
+  covered: { tone: "hazard", icon: "x", label: "Covered" },
 };
 
 /** "Sun 25 Oct": a day in the house's zone, as a title bar shows today's date. */

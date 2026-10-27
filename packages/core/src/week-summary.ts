@@ -21,7 +21,7 @@ export type WeekPart = (typeof WEEK_PARTS)[number];
 
 /**
  * The part a John's status counts towards. Done takes everything finished
- * (late and excused too), and overdue takes missed, so the parts never
+ * (late, excused and covered too), and overdue takes missed, so the parts never
  * overlap and always add up.
  */
 export function weekPart(status: LiveStatus): WeekPart {
@@ -29,6 +29,7 @@ export function weekPart(status: LiveStatus): WeekPart {
     case "done":
     case "late":
     case "excused":
+    case "covered":
       return "done";
     case "checking":
       return "checking";
@@ -42,9 +43,9 @@ export function weekPart(status: LiveStatus): WeekPart {
   }
 }
 
-/** Finished and folded away: done, done late, or excused. */
+/** Finished and folded away: done, done late, excused, or covered by a housemate. */
 export function weekFinished(status: LiveStatus): boolean {
-  return status === "done" || status === "late" || status === "excused";
+  return status === "done" || status === "late" || status === "excused" || status === "covered";
 }
 
 export interface WeekSummary {
@@ -97,6 +98,7 @@ const ROW_ORDER: Record<LiveStatus, number> = {
   done: 5,
   late: 5,
   excused: 5,
+  covered: 5,
 };
 
 /** What needs doing first, then the sooner due. */

@@ -1,16 +1,18 @@
 import { JOHN_COPY } from '@app/core';
 import { useState } from 'react';
 
-import { markDone } from '@/api/johns';
+import { coverJohn, markDone } from '@/api/johns';
 import { pickPhoto, uploadProof } from '@/api/photos';
 import { useMove } from '@/hooks/use-move';
 
 /**
  * Ticking one John: as it is, or with a photo receipt from the camera or the
  * library, uploaded first. `problem` is the sentence to show when the photo
- * or the database said no.
+ * or the database said no. With `cover`, the John is a housemate's and the
+ * tick covers it (cover_john) rather than marking your own done.
  */
-export function useTick(houseId: string, assignmentId: string) {
+export function useTick(houseId: string, assignmentId: string, { cover = false }: { cover?: boolean } = {}) {
+  const done = cover ? coverJohn : markDone;
   const move = useMove(houseId);
   const [uploading, setUploading] = useState(false);
   const [photoProblem, setPhotoProblem] = useState<string | null>(null);
@@ -35,12 +37,12 @@ export function useTick(houseId: string, assignmentId: string) {
     } finally {
       setUploading(false);
     }
-    await move.run(() => markDone(assignmentId, path));
+    await move.run(() => done(assignmentId, path));
   }
 
   function tick() {
     setPhotoProblem(null);
-    return move.run(() => markDone(assignmentId));
+    return move.run(() => done(assignmentId));
   }
 
   return {
