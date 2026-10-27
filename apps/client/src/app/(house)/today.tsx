@@ -1,28 +1,29 @@
-import { isOpen, PAGE_TITLE, TODAY_COPY, weekRange } from '@app/core';
-import { FlameIcon, RefreshCwIcon, RepeatIcon, ShieldIcon } from 'lucide-react-native';
-import { useState } from 'react';
-import { ActivityIndicator, StyleSheet, Text, View } from 'react-native';
+import { dayLabel, NEXT_UP_COPY, PAGE_TITLE, todayPage, type StakeView } from '@app/core';
 
-import { Alert } from '@/components/alert';
-import { AwayBanner } from '@/components/away-banner';
-import { Button } from '@/components/button';
-import { Card } from '@/components/card';
-import { InviteCard } from '@/components/invite-card';
-import { JohnCard } from '@/components/john-card';
-import { NotDealt } from '@/components/not-dealt';
+import type { AwayView } from '@/api/away';
+import type { JohnList } from '@/api/settings';
 import { PageTitle } from '@/components/page-title';
+import { Reading, ReadFailed } from '@/components/read-state';
 import { Screen } from '@/components/screen';
-import { StakeCard } from '@/components/stake-parts';
-import { ShareCard, TableBeside } from '@/components/table-parts';
-import { Body, Eyebrow, Heading } from '@/components/text';
+import { TitleBar } from '@/components/title-bar';
+import { NeedsYou } from '@/components/today/needs-you';
+import { NextUp } from '@/components/today/next-up';
+import { PageLine, PageLines } from '@/components/today/page-line';
+import { RestOfWeek } from '@/components/today/rest-of-week';
+import { SetupCard } from '@/components/today/setup-card';
 import { useAway } from '@/hooks/use-away';
-import { useCatchUp, useHouse, type HouseView } from '@/hooks/use-house';
+import { useHouse, type HouseView } from '@/hooks/use-house';
+import { useJohnList } from '@/hooks/use-john-list';
 import { useMembership } from '@/hooks/use-membership';
+import { usePull, useReadOnFocus } from '@/hooks/use-refresh';
 import { useStake } from '@/hooks/use-stake';
-import { useTable } from '@/hooks/use-table';
-import { FONT, RADIUS, SPACE, useTheme } from '@/theme';
 
-/** Today: your Johns this week, what's left, and the tick, as the web's Today. */
+/**
+ * Today, for doing: your next John in the one card (or what takes its
+ * place), the disputes that need your vote, the rest of your week, and one
+ * line on where you stand (with your time away, when a trip is coming).
+ * Fits one phone screen.
+ */
 export default function Today() {
   const { session, house } = useMembership();
   // The layout's guard only shows Today with a house and a session.
@@ -30,178 +31,99 @@ export default function Today() {
 }
 
 function TodayFor({ houseId, userId }: { houseId: string; userId: string }) {
-  const { colors } = useTheme();
   const { query, view } = useHouse(houseId, userId);
-  const [refreshing, setRefreshing] = useState(false);
-  const freshen = useCatchUp(houseId);
-
-  async function pull() {
-    setRefreshing(true);
-    if (!(await freshen())) await query.refetch();
-    setRefreshing(false);
-  }
+  const away = useAway(houseId, query.data);
+  const stake = useStake(houseId, query.data);
+  // The setup checklist counts the list.
+  const list = useJohnList(houseId);
+  // Time away isn't followed live: read it again whenever Today comes back into view.
+  useReadOnFocus(away.refetch, { skipFirst: true });
+  const { refreshing, pull } = usePull(houseId, () =>
+    Promise.all([query.refetch(), away.refetch(), stake.refetch(), list.refetch()]),
+  );
 
   return (
-    <Screen refreshing={refreshing} onRefresh={() => void pull()}>
+    <Screen
+      bar={
+        <TitleBar
+          title={PAGE_TITLE.today}
+          right={view ? dayLabel(view.now, view.snapshot.rules.timezone) : undefined}
+        />
+      }
+      refreshing={refreshing}
+      onRefresh={pull}
+      testID="today-screen"
+    >
       <PageTitle page={PAGE_TITLE.today} />
-      {!view ? (
-        query.isError ? (
-          <View style={styles.stack}>
-            <Alert message="Couldn't read the house. Check the connection." />
-            <View style={styles.start}>
-              <Button variant="outline" icon={RefreshCwIcon} label="Try again" onPress={() => void query.refetch()} />
-            </View>
-          </View>
-        ) : (
-          <ActivityIndicator color={colors.foreground} accessibilityLabel="Reading the house" style={styles.loading} />
-        )
+      {view ? (
+        <TodayView view={view} away={away.data ?? null} stake={stake.data ?? null} list={list.data ?? null} />
+      ) : query.isError ? (
+        <ReadFailed onRetry={() => void query.refetch()} />
       ) : (
-        <Week view={view} />
+        <Reading />
       )}
     </Screen>
   );
 }
 
-function Week({ view }: { view: HouseView }) {
-  const { colors } = useTheme();
+function TodayView({
+  view,
+  away,
+  stake,
+  list,
+}: {
+  view: HouseView;
+  away: AwayView | null;
+  stake: StakeView | null;
+  list: JohnList | null;
+}) {
   const { snapshot, board, today, me, now } = view;
-  const table = useTable(snapshot.house.id, snapshot);
-  const stake = useStake(snapshot.house.id, snapshot);
-  const away = useAway(snapshot.house.id, snapshot);
-  const myBalance = table.data?.balances.find((b) => b.userId === me?.userId);
-  const { rules, house, members } = snapshot;
-  const admin = members.find((m) => m.role === 'admin');
-  const nameOf = (userId: string) => members.find((m) => m.userId === userId)?.name ?? 'Housemate';
+  const { house, rules, members } = snapshot;
+  const userId = me?.userId ?? '';
+  const page = todayPage({ board, mine: today.mine, userId, me, members, rules, away, stake });
+  const nameOf = (id: string) => members.find((m) => m.userId === id)?.name ?? null;
 
   return (
-    <View style={styles.stack}>
-      <View>
-        <Eyebrow>
-          {board.week ? TODAY_COPY.thisWeekRange(weekRange(board.week.startsAt, board.week.endsAt, rules.timezone)) : TODAY_COPY.thisWeek}
-        </Eyebrow>
-        <Heading style={styles.title}>{TODAY_COPY.title}</Heading>
-      </View>
-
-      {away.data && me ? (
-        <AwayBanner periods={away.data.periods} me={me.userId} today={away.data.today} makeup={house.awayMakeup} />
-      ) : null}
-
-      {!board.week ? (
-        <>
-          <NotDealt houseId={house.id} notStarted={board.notStarted} isAdmin={me?.role === 'admin'} adminName={admin?.name ?? 'An admin'} />
-          <InviteCard code={house.joinCode} houseName={house.name} />
-        </>
+    <>
+      {page.state.kind === 'setup' ? (
+        <SetupCard
+          houseId={house.id}
+          houseName={house.name}
+          joinCode={house.joinCode}
+          johns={list?.johns ?? null}
+          memberCount={members.length}
+        />
       ) : (
-        <>
-          <Card style={[styles.hero, { borderLeftColor: colors.hivis }]}>
-            <Text style={[styles.left, { color: colors.foreground }]} testID="johns-left">
-              {today.left}
-            </Text>
-            <View style={styles.heroText}>
-              <Text style={[styles.heroLabel, { color: colors.foreground }]}>{TODAY_COPY.left(today.left)}</Text>
-              <View style={styles.bars} aria-hidden>
-                {today.mine.map((i) => (
-                  <View
-                    key={i.id}
-                    style={[styles.bar, { backgroundColor: isOpen(i.status) ? colors.secondary : colors.good }]}
-                  />
-                ))}
-              </View>
-            </View>
-            {me ? (
-              <View style={styles.perks}>
-                <View style={[styles.streak, { backgroundColor: colors.hivis }]}>
-                  <FlameIcon size={14} color={colors.onHivis} aria-hidden />
-                  <Text style={[styles.streakText, { color: colors.onHivis }]}>{TODAY_COPY.streak(me.streak)}</Text>
-                </View>
-                {me.immunityTokens > 0 ? (
-                  <View style={styles.perk}>
-                    <ShieldIcon size={14} color={colors.mutedForeground} aria-hidden />
-                    <Body muted style={styles.perkText}>
-                      {TODAY_COPY.immunity(me.immunityTokens)}
-                    </Body>
-                  </View>
-                ) : null}
-                {me.swapTokens > 0 ? (
-                  <View style={styles.perk}>
-                    <RepeatIcon size={14} color={colors.foreground} aria-hidden />
-                    <Body style={styles.perkText}>{TODAY_COPY.swapReady}</Body>
-                  </View>
-                ) : null}
-              </View>
-            ) : null}
-          </Card>
-
-          {today.toVote.length > 0 ? (
-            <View style={styles.stack} testID="to-vote">
-              <Eyebrow>{TODAY_COPY.toVote}</Eyebrow>
-              {today.toVote.map((item) => (
-                <JohnCard
-                  key={item.id}
-                  item={item}
-                  houseId={house.id}
-                  zone={rules.timezone}
-                  now={now}
-                  mine={false}
-                  ownerName={nameOf(item.userId)}
-                  showOwner
-                />
-              ))}
-              <Eyebrow style={styles.yours}>{TODAY_COPY.yours}</Eyebrow>
-            </View>
-          ) : null}
-
-          {today.mine.length === 0 ? (
-            <Card>
-              <Body muted>{TODAY_COPY.nothingYours}</Body>
-            </Card>
-          ) : (
-            today.mine.map((item) => (
-              <JohnCard
-                key={item.id}
-                item={item}
-                houseId={house.id}
-                zone={rules.timezone}
-                now={now}
-                immunityTokens={me?.immunityTokens ?? 0}
-              />
-            ))
-          )}
-
-          <TableBeside rows={board.table} people={{ me: me?.userId ?? '', nameOf }} />
-          {myBalance ? <ShareCard balance={myBalance} /> : null}
-          {stake.data ? <StakeCard stake={stake.data} me={me?.userId ?? ''} currency={rules.currency} /> : null}
-
-          {members.length < 2 ? <InviteCard code={house.joinCode} houseName={house.name} /> : null}
-        </>
+        <NextUp
+          houseId={house.id}
+          state={page.state}
+          rules={rules}
+          now={now}
+          cant={page.cant}
+          room={page.room}
+          awayMakeup={house.awayMakeup}
+        />
       )}
-
-    </View>
+      <NeedsYou items={today.toVote} members={members} now={now} />
+      <RestOfWeek
+        going={page.going}
+        finished={page.finished}
+        context={{ houseId: house.id, userId, zone: rules.timezone, rules, now, nameOf }}
+      />
+      {page.standing || page.away ? (
+        // The page's quiet lines sit together, under the week.
+        <PageLines>
+          {page.standing ? <PageLine text={page.standing} href="/house" testID="standing-line" /> : null}
+          {page.away ? (
+            <PageLine
+              text={page.away}
+              href="/house/away"
+              accessibilityLabel={`${page.away}. ${NEXT_UP_COPY.changeDates}`}
+              testID="away-line"
+            />
+          ) : null}
+        </PageLines>
+      ) : null}
+    </>
   );
 }
-
-const styles = StyleSheet.create({
-  stack: { gap: SPACE.lg },
-  start: { alignItems: 'flex-start' },
-  loading: { marginTop: SPACE.xxl },
-  title: { marginTop: SPACE.xs },
-  yours: { marginTop: SPACE.sm },
-  hero: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: SPACE.lg,
-    padding: SPACE.lg,
-    borderLeftWidth: 10,
-    borderRadius: RADIUS * 1.4,
-  },
-  left: { fontFamily: FONT.black, fontSize: 52, lineHeight: 56 },
-  heroText: { flex: 1, minWidth: 0 },
-  heroLabel: { fontFamily: FONT.extrabold, fontSize: 16 },
-  bars: { flexDirection: 'row', flexWrap: 'wrap', gap: SPACE.xs, marginTop: SPACE.sm },
-  bar: { height: 6, width: 28, borderRadius: 2 },
-  perks: { alignItems: 'flex-end', gap: SPACE.xs },
-  streak: { flexDirection: 'row', alignItems: 'center', gap: SPACE.xs, borderRadius: 4, paddingHorizontal: SPACE.sm, paddingVertical: 4 },
-  streakText: { fontFamily: FONT.black, fontSize: 12, textTransform: 'uppercase', letterSpacing: 0.5 },
-  perk: { flexDirection: 'row', alignItems: 'center', gap: SPACE.xs },
-  perkText: { fontSize: 12 },
-});

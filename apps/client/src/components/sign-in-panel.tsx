@@ -1,25 +1,26 @@
-import { APP_NAME, SIGN_IN_COPY, signInReason, type SignInProvider } from '@app/core';
+import { googleReturn, SIGN_IN_COPY, signInLine, type SignInProvider } from '@app/core';
 import * as AppleAuthentication from 'expo-apple-authentication';
-import { Link } from 'expo-router';
 import { useEffect, useState } from 'react';
-import { Pressable, StyleSheet, View } from 'react-native';
+import { StyleSheet, View } from 'react-native';
 
 import { appleSignInAvailable, signInWithApple, signInWithGoogle, type SignInResult } from '@/api/auth';
 import { Alert } from '@/components/alert';
 import { Button } from '@/components/button';
+import { DoorFoot, Sign, SignHeading } from '@/components/front-door/door';
 import { GoogleIcon } from '@/components/google-icon';
-import { Body, Heading } from '@/components/text';
+import { Meta } from '@/components/text';
 import { TextLink } from '@/components/text-link';
-import { Wordmark } from '@/components/wordmark';
 import { RADIUS, SPACE, TAP, useTheme } from '@/theme';
 
 /**
- * Sign-in: Apple then Google on iOS, Google elsewhere. The sign-in screen is
- * this on its own; a join link shows it in place, so the code survives.
- * `returnTo` is where the web comes back from Google; `failed` says Google
- * already turned the web back once.
+ * Sign-in: Apple then Google on iOS, Google elsewhere, on the page's taped
+ * sign, with the small print under it. The sign-in screen is this on its
+ * own; a join link shows it in place, so the code survives. `next` is where
+ * signing in leads (the front door's choice, or the join link): the line
+ * under the heading names it, and the web comes back from Google carrying it
+ * (core's googleReturn). `failed` says Google already turned the web back once.
  */
-export function SignInPanel({ returnTo, failed: failedBefore = false }: { returnTo?: string; failed?: boolean }) {
+export function SignInPanel({ next, failed: failedBefore = false }: { next?: string; failed?: boolean }) {
   const { scheme } = useTheme();
   const [apple, setApple] = useState(false);
   const [busy, setBusy] = useState<SignInProvider | null>(null);
@@ -51,63 +52,54 @@ export function SignInPanel({ returnTo, failed: failedBefore = false }: { return
   }
 
   return (
-    <View style={styles.panel}>
-      <Link href="/" asChild>
-        <Pressable accessibilityRole="link" accessibilityLabel={APP_NAME} style={styles.home}>
-          <Wordmark size={32} />
-        </Pressable>
-      </Link>
-
-      <View>
-        <Heading level={2}>{SIGN_IN_COPY.heading}</Heading>
-        <Body muted style={styles.reason}>
-          {apple && !returnTo ? SIGN_IN_COPY.eitherAccount : signInReason(returnTo)}
-        </Body>
-      </View>
-
-      {failed ? <Alert message={SIGN_IN_COPY.failed(failed)} /> : null}
-
-      {apple ? (
-        // Apple's own button: its look is Apple's rule, not Bin Night's.
-        <AppleAuthentication.AppleAuthenticationButton
-          buttonType={AppleAuthentication.AppleAuthenticationButtonType.CONTINUE}
-          buttonStyle={
-            scheme === 'dark'
-              ? AppleAuthentication.AppleAuthenticationButtonStyle.WHITE
-              : AppleAuthentication.AppleAuthenticationButtonStyle.BLACK
-          }
-          cornerRadius={RADIUS}
-          style={styles.apple}
-          onPress={() => void attempt('Apple', signInWithApple)}
-          testID="apple-sign-in"
+    <>
+      <Sign testID="sign-in-panel">
+        <SignHeading
+          title={SIGN_IN_COPY.heading}
+          body={signInLine(next, apple)}
         />
-      ) : null}
 
-      <Button
-        variant="outline"
-        icon={GoogleIcon}
-        label={busy === 'Google' ? SIGN_IN_COPY.googleBusy : SIGN_IN_COPY.google}
-        disabled={busy !== null}
-        onPress={() => void attempt('Google', () => signInWithGoogle(returnTo))}
-        testID="google-sign-in"
-      />
+        {failed ? <Alert message={SIGN_IN_COPY.failed(failed)} /> : null}
 
-      {apple ? <Body muted>{SIGN_IN_COPY.sameAccount}</Body> : null}
+        <View style={styles.ways}>
+          {apple ? (
+            // Apple's own button: its look is Apple's rule, not Bin Night's.
+            <AppleAuthentication.AppleAuthenticationButton
+              buttonType={AppleAuthentication.AppleAuthenticationButtonType.CONTINUE}
+              buttonStyle={
+                scheme === 'dark'
+                  ? AppleAuthentication.AppleAuthenticationButtonStyle.WHITE
+                  : AppleAuthentication.AppleAuthenticationButtonStyle.BLACK
+              }
+              cornerRadius={RADIUS}
+              style={styles.apple}
+              onPress={() => void attempt('Apple', signInWithApple)}
+              testID="apple-sign-in"
+            />
+          ) : null}
 
-      <View>
-        <Body muted style={styles.small}>
-          {SIGN_IN_COPY.terms}
-        </Body>
-        <TextLink href="/privacy" label={SIGN_IN_COPY.privacy} muted style={styles.small} />
-      </View>
-    </View>
+          <Button
+            variant="outline"
+            icon={GoogleIcon}
+            label={busy === 'Google' ? SIGN_IN_COPY.googleBusy : SIGN_IN_COPY.google}
+            disabled={busy !== null}
+            onPress={() => void attempt('Google', () => signInWithGoogle(googleReturn(next)))}
+            testID="google-sign-in"
+          />
+
+          {apple ? <Meta>{SIGN_IN_COPY.sameAccount}</Meta> : null}
+        </View>
+      </Sign>
+
+      <DoorFoot>
+        <Meta>{SIGN_IN_COPY.terms}</Meta>
+        <TextLink href="/privacy" label={SIGN_IN_COPY.privacy} muted />
+      </DoorFoot>
+    </>
   );
 }
 
 const styles = StyleSheet.create({
-  panel: { gap: SPACE.xl },
-  home: { alignSelf: 'flex-start' },
-  reason: { marginTop: SPACE.xs },
+  ways: { gap: SPACE.sm },
   apple: { height: TAP, width: '100%' },
-  small: { fontSize: 12, lineHeight: 16 },
 });

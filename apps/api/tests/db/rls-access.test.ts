@@ -183,5 +183,12 @@ describe("roles", () => {
     expectOk(await house.admin.db.rpc("remove_member", { p_house: house.id, p_user: cal.userId }));
     const { data } = await adminClient().from("members").select("user_id").eq("house_id", house.id);
     expect(data!.map((m) => m.user_id)).toEqual([house.admin.userId]);
+    // The last one out can go too, and that's all that happens: the house stays, empty, its invite as it was
+    // (so Leave's confirm says only that nobody will be left).
+    expectOk(await house.admin.db.rpc("remove_member", { p_house: house.id, p_user: house.admin.userId }));
+    const { data: left } = await adminClient().from("members").select("user_id").eq("house_id", house.id);
+    expect(left).toEqual([]);
+    const { data: empty } = await adminClient().from("houses").select("join_code").eq("id", house.id).single();
+    expect(empty!.join_code).toBe(house.code);
   });
 });

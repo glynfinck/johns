@@ -36,7 +36,10 @@ export interface TableInput {
   status: LiveStatus;
 }
 
-/** Standings, highest first. Ties share a rank (1, 2, 2, 4). */
+/**
+ * Standings, highest first. Ties share a rank (1, 2, 2, 4); within one,
+ * fewer missed, then fewer late, come first.
+ */
 export function standings(rows: readonly TableInput[], memberIds: readonly string[]): TableRow[] {
   const by = new Map<string, TableRow>(
     memberIds.map((id) => [id, { userId: id, points: 0, done: 0, late: 0, missed: 0, rank: 0 }]),
@@ -50,7 +53,7 @@ export function standings(rows: readonly TableInput[], memberIds: readonly strin
     if (r.status === "missed") row.missed += 1;
   }
   const sorted = [...by.values()].sort(
-    (a, b) => b.points - a.points || a.missed - b.missed || a.userId.localeCompare(b.userId),
+    (a, b) => b.points - a.points || a.missed - b.missed || a.late - b.late || a.userId.localeCompare(b.userId),
   );
   sorted.forEach((row, i) => {
     row.rank = i > 0 && sorted[i - 1].points === row.points ? sorted[i - 1].rank : i + 1;

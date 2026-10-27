@@ -1,8 +1,9 @@
-import { SIGN_IN_COPY, signInReason } from '@app/core';
+import { FRONT_DOOR_COPY, SIGN_IN_COPY, signInReason } from '@app/core';
 import { act, fireEvent, renderRouter, screen } from 'expo-router/testing-library';
 
 import { appleSignInAvailable, signInWithApple, signInWithGoogle } from '@/api/auth';
 import SignIn from '@/app/signin';
+import { TAP } from '@/theme';
 
 jest.mock('@/api/auth', () => ({
   appleSignInAvailable: jest.fn(),
@@ -75,6 +76,53 @@ describe('sign-in on Android and the web', () => {
     await open('/signin?error=access_denied');
     expect(screen.getByRole('alert')).toHaveTextContent(SIGN_IN_COPY.failed('Google'));
   });
+
+  it('sets the page on the taped sign, with the small print under it', async () => {
+    await open();
+    expect(screen.getByTestId('hazard-tape', { includeHiddenElements: true })).toBeOnTheScreen();
+    expect(screen.getByText(SIGN_IN_COPY.terms)).toBeOnTheScreen();
+    const home = screen.getByRole('link', { name: 'Johns' });
+    expect(home).toHaveProp('href', '/');
+    expect(home).toHaveStyle({ minHeight: TAP });
+  });
+});
+
+describe("the front door's choice", () => {
+  it('says where starting a house leads, and Google brings the web back carrying it', async () => {
+    google.mockResolvedValue('redirected');
+    await open('/signin?next=%2Fhouse%2Fnew');
+    expect(screen.getByText(FRONT_DOOR_COPY.startReason)).toBeOnTheScreen();
+    await fireEvent.press(screen.getByRole('button', { name: SIGN_IN_COPY.google }));
+    expect(google).toHaveBeenCalledWith('/signin?next=%2Fhouse%2Fnew');
+  });
+
+  it('says where an invite leads, and Google brings the web back carrying it', async () => {
+    google.mockResolvedValue('redirected');
+    await open('/signin?next=%2Fwelcome');
+    expect(screen.getByText(FRONT_DOOR_COPY.inviteReason)).toBeOnTheScreen();
+    await fireEvent.press(screen.getByRole('button', { name: SIGN_IN_COPY.google }));
+    expect(google).toHaveBeenCalledWith('/signin?next=%2Fwelcome');
+  });
+
+  it('says so when Google turns the web back, and keeps the choice', async () => {
+    google.mockResolvedValue('redirected');
+    await open('/signin?next=%2Fhouse%2Fnew&error=access_denied&error_description=denied');
+    expect(screen.getByRole('alert')).toHaveTextContent(SIGN_IN_COPY.failed('Google'));
+    expect(screen.getByText(FRONT_DOOR_COPY.startReason)).toBeOnTheScreen();
+    await fireEvent.press(screen.getByRole('button', { name: SIGN_IN_COPY.google }));
+    expect(google).toHaveBeenCalledWith('/signin?next=%2Fhouse%2Fnew');
+  });
+
+  it.each(['%2F%2Fevil.example', 'https%3A%2F%2Fevil.example', '%2Fsignin', '%2Ftoday'])(
+    'never sends the web off the site, or anywhere but sign-in (next=%s)',
+    async (next) => {
+      google.mockResolvedValue('redirected');
+      await open(`/signin?next=${next}`);
+      expect(screen.getByText(signInReason(null))).toBeOnTheScreen();
+      await fireEvent.press(screen.getByRole('button', { name: SIGN_IN_COPY.google }));
+      expect(google).toHaveBeenCalledWith('/signin');
+    },
+  );
 });
 
 describe('sign-in on iOS', () => {
@@ -86,6 +134,13 @@ describe('sign-in on iOS', () => {
     expect(screen.getByText(SIGN_IN_COPY.eitherAccount)).toBeOnTheScreen();
     expect(screen.getByText(SIGN_IN_COPY.sameAccount)).toBeOnTheScreen();
     expect(screen.getByRole('button', { name: SIGN_IN_COPY.google })).toBeOnTheScreen();
+  });
+
+  it('keeps the warning when the front door sent you, since a new house stays with the account chosen', async () => {
+    await open('/signin?next=%2Fhouse%2Fnew');
+    expect(await screen.findByTestId('apple-sign-in')).toBeOnTheScreen();
+    expect(screen.getByText(SIGN_IN_COPY.eitherAccount)).toBeOnTheScreen();
+    expect(screen.queryByText(FRONT_DOOR_COPY.startReason)).not.toBeOnTheScreen();
   });
 
   it('signs in with Apple, and names Apple when it fails', async () => {

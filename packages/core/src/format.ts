@@ -20,6 +20,21 @@ export function dueLabel(due: Date, now: Date, zone: string): string {
   return format(due, "EEE d MMM", { in: inZone });
 }
 
+/** "today 21:00", "tomorrow 07:30", "Thu 21:00", "Mon 6 Oct": a due label mid-sentence. */
+export function dueInLine(due: Date, now: Date, zone: string): string {
+  return dueLabel(due, now, zone).replace(/^(Today|Tomorrow|Yesterday)/, (word) => word.toLowerCase());
+}
+
+/**
+ * When something already past fell due, as short as a line beside a mark
+ * needs: the time today, the weekday within the week, the date before that.
+ */
+export function sinceLabel(at: Date, now: Date, zone: string): string {
+  const inZone = tz(zone);
+  const days = differenceInCalendarDays(now, at, { in: inZone });
+  return format(at, days <= 0 ? "HH:mm" : days < 7 ? "EEE" : "EEE d MMM", { in: inZone });
+}
+
 /** "in 3h", "in 2 days", "3h ago" — for the line under a John. */
 export function relative(target: Date, now: Date): string {
   const ms = target.getTime() - now.getTime();
@@ -37,14 +52,22 @@ export function pointsLabel(points: number): string {
   return `${points} ${points === 1 ? "pt" : "pts"}`;
 }
 
-/** "6–12 Oct", "28 Sep – 4 Oct". The end is the last day, not the instant the week ends. */
+/**
+ * A range's two ends, written one way everywhere, as the mockups write it:
+ * an en dash with no spaces, "6–12 Oct", "29 Oct–1 Nov".
+ */
+export function joinRange(first: string, last: string): string {
+  return `${first}–${last}`;
+}
+
+/** "6–12 Oct", "28 Sep–4 Oct". The end is the last day, not the instant the week ends. */
 export function weekRange(startsAt: Date, endsAt: Date, zone: string): string {
   const inZone = tz(zone);
   const last = new Date(endsAt.getTime() - 1);
   const sameMonth = format(startsAt, "MM", { in: inZone }) === format(last, "MM", { in: inZone });
   return sameMonth
-    ? `${format(startsAt, "d", { in: inZone })}–${format(last, "d MMM", { in: inZone })}`
-    : `${format(startsAt, "d MMM", { in: inZone })} – ${format(last, "d MMM", { in: inZone })}`;
+    ? joinRange(format(startsAt, "d", { in: inZone }), format(last, "d MMM", { in: inZone }))
+    : joinRange(format(startsAt, "d MMM", { in: inZone }), format(last, "d MMM", { in: inZone }));
 }
 
 /** "October 2026" from "2026-10". */
@@ -64,6 +87,42 @@ export const STATUS_LABEL: Record<LiveStatus, string> = {
   missed: "Missed",
   excused: "Excused",
 };
+
+/** How loud a status is: nothing, a quiet outline, the done green, or hazard. */
+export type StatusTone = "none" | "quiet" | "good" | "hazard";
+
+/** The icon a status wears, named for what it shows (each app maps it to a lucide icon). */
+export type StatusIcon = "clock" | "check" | "triangle" | "x" | "flag" | "shield";
+
+export interface StatusMark {
+  tone: StatusTone;
+  icon: StatusIcon | null;
+  /** Sentence case: a chip sets it in caps by style. */
+  label: string;
+}
+
+/**
+ * Focus's one status map, for Today, Week, the John sheet and the Wall alike:
+ * upcoming shows nothing (its time is in the meta line), hazard only for
+ * what is late, overdue, missed or disputed, green only for done, and every
+ * mark that shows carries an icon and a word.
+ */
+export const STATUS_MARK: Record<LiveStatus, StatusMark> = {
+  upcoming: { tone: "none", icon: null, label: "Upcoming" },
+  "due-soon": { tone: "quiet", icon: "clock", label: "Due soon" },
+  checking: { tone: "quiet", icon: "check", label: "Checking" },
+  done: { tone: "good", icon: "check", label: "Done" },
+  late: { tone: "hazard", icon: "clock", label: "Late" },
+  overdue: { tone: "hazard", icon: "triangle", label: "Overdue" },
+  missed: { tone: "hazard", icon: "x", label: "Missed" },
+  disputed: { tone: "hazard", icon: "flag", label: "Disputed" },
+  excused: { tone: "quiet", icon: "shield", label: "Excused" },
+};
+
+/** "Sun 25 Oct": a day in the house's zone, as a title bar shows today's date. */
+export function dayLabel(at: Date, zone: string): string {
+  return format(at, "EEE d MMM", { in: tz(zone) });
+}
 
 /** First letters of up to two words: "Priya Shah" → "PS". */
 export function initials(name: string): string {
@@ -96,7 +155,7 @@ export function firstName(name: string): string {
   return name.trim().split(/\s+/)[0] || name;
 }
 
-/** "14–21 Oct", "28 Oct – 2 Nov", "Fri 16 Oct" for a single day. Local `yyyy-MM-dd` dates. */
+/** "14–21 Oct", "28 Oct–2 Nov", "Fri 16 Oct" for a single day. Local `yyyy-MM-dd` dates. */
 export function dateRange(from: string, to: string): string {
   const day = (d: string) => {
     const [y, m, dd] = d.split("-").map(Number);
@@ -107,9 +166,9 @@ export function dateRange(from: string, to: string): string {
   const utc = tz("UTC");
   if (from === to) return format(a, "EEE d MMM", { in: utc });
   if (format(a, "yyyy-MM", { in: utc }) === format(b, "yyyy-MM", { in: utc })) {
-    return `${format(a, "d", { in: utc })}–${format(b, "d MMM", { in: utc })}`;
+    return joinRange(format(a, "d", { in: utc }), format(b, "d MMM", { in: utc }));
   }
-  return `${format(a, "d MMM", { in: utc })} – ${format(b, "d MMM", { in: utc })}`;
+  return joinRange(format(a, "d MMM", { in: utc }), format(b, "d MMM", { in: utc }));
 }
 
 /** A balance against your share: "+3.5", "−9", "level". */

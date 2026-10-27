@@ -120,10 +120,10 @@ describe("describeEvent", () => {
 
   it("tells a dispute and how the house decided", () => {
     expect(line("disputed", { name: "Bins", against: "cal", reason: "Still full" })).toBe(
-      "Ben disputed Cal's Bins: “Still full”",
+      "Ben disputed Cal’s Bins: “Still full”",
     );
     expect(line("disputed", { name: "Bins", against: "ava", reason: "Hmm" })).toBe("Ben disputed your Bins: “Hmm”");
-    expect(line("upheld", { name: "Bins", against: "cal" }, null)).toBe("The house struck Cal's tick on Bins. It’s open again.");
+    expect(line("upheld", { name: "Bins", against: "cal" }, null)).toBe("The house struck Cal’s tick on Bins. It’s open again.");
     expect(line("rejected", { name: "Bins", against: "ava" }, null)).toBe("The house backed your Bins. The tick stands.");
   });
 
@@ -131,7 +131,7 @@ describe("describeEvent", () => {
     expect(line("immunity_earned", { streak: 4 })).toBe("Ben earned an immunity token: 4 clean weeks in a row.");
     expect(line("swap_earned")).toBe("Ben topped the week and earned a swap.");
     expect(line("immunity_used", { name: "Bins" })).toBe("Ben spent immunity on Bins.");
-    expect(line("swap_used", { gave: "Bins", took: "Hob", with: "cal" })).toBe("Ben swapped Bins for Cal's Hob.");
+    expect(line("swap_used", { gave: "Bins", took: "Hob", with: "cal" })).toBe("Ben swapped Bins for Cal’s Hob.");
   });
 
   it("tells time away, with the Johns it moved", () => {
@@ -144,13 +144,13 @@ describe("describeEvent", () => {
     );
   });
 
-  it("tells the house's comings and the Stake", () => {
+  it("tells the house’s comings and the Stake", () => {
     expect(line("joined")).toBe("Ben moved in.");
     expect(line("month_closed", { month: "2026-10" }, null)).toBe("October 2026 is closed and the Stake is shared out.");
     expect(line("paid", { to: "ava", amount: 250 })).toBe("You got £2.50 from Ben.");
   });
 
-  it("says the kind of anything it doesn't know", () => {
+  it("says the kind of anything it doesn’t know", () => {
     const [event] = wallEvents([row({ kind: "something_new" })], "ava");
     expect(describeEvent(event, nameOf, "GBP")).toEqual({ icon: "badge-check", parts: [{ text: "something_new" }] });
   });

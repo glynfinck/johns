@@ -1,5 +1,6 @@
 // Serves the Expo app's web build for the e2e the way Vercel serves it in
-// production: a file as it is, otherwise the first of apps/client/vercel.json's
+// production: one of apps/client/vercel.json's redirects first (the old /wall
+// goes on to /house/wall), then a file as it is, otherwise the first of its
 // rewrites that matches, so /signin and /today open on a reload (`expo serve`
 // 404s those) and /api/* goes on to apps/api. A rewrite to another origin
 // (apps/api's production name) goes to the local API instead.
@@ -27,10 +28,13 @@ const TYPES = {
 };
 
 // Vercel's `:name*` is a named wildcard; `(.*)` is already a regex group.
-const { rewrites } = JSON.parse(readFileSync(path.join(root, "..", "vercel.json"), "utf8"));
-const rules = rewrites.map(({ source, destination }) => ({
-  pattern: new RegExp(`^${source.replace(/:(\w+)\*/g, "(?<$1>.*)")}$`),
+const { redirects = [], rewrites } = JSON.parse(readFileSync(path.join(root, "..", "vercel.json"), "utf8"));
+const toPattern = (source) => new RegExp(`^${source.replace(/:(\w+)\*/g, "(?<$1>.*)")}$`);
+const rules = rewrites.map(({ source, destination }) => ({ pattern: toPattern(source), destination }));
+const moves = redirects.map(({ source, destination, permanent }) => ({
+  pattern: toPattern(source),
   destination,
+  status: permanent ? 308 : 307,
 }));
 
 /** Where a path that is not a file goes: a file in the build, or a URL elsewhere. */
@@ -63,6 +67,8 @@ createServer((request, response) => {
     response.writeHead(403).end();
     return;
   }
+  const move = moves.find(({ pattern }) => pattern.test(url.pathname));
+  if (move) return response.writeHead(move.status, { location: move.destination + url.search }).end();
   if (isFile(file)) return send(response, file);
 
   const to = rewrite(url.pathname);

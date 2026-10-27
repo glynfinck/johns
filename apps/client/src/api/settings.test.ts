@@ -134,7 +134,7 @@ describe('saveJohn', () => {
 
   it("passes on the database's refusal in words", async () => {
     mockAnswers.johns = { data: null, error: { code: '42501', message: 'permission denied for table johns' } };
-    await expect(saveJohn('h1', RULES, { ...NEW_JOHN, name: 'Hob' }, NOW)).rejects.toThrow("You can't do that.");
+    await expect(saveJohn('h1', RULES, { ...NEW_JOHN, name: 'Hob' }, NOW)).rejects.toThrow("You can’t do that.");
   });
 });
 
@@ -184,13 +184,13 @@ describe('updateHouse', () => {
 
   it('says what is wrong with the rules first', async () => {
     await expect(updateHouse('h1', { ...settings, name: '' })).rejects.toThrow('Give the house a name.');
-    await expect(updateHouse('h1', { ...settings, stakeMinor: -1 })).rejects.toThrow("Amounts can't be negative.");
+    await expect(updateHouse('h1', { ...settings, stakeMinor: -1 })).rejects.toThrow("Amounts can’t be negative.");
     expect(mockCalls).toEqual([]);
   });
 
   it("names the database's refusal: a zone it doesn't know, or someone who isn't an admin", async () => {
     mockAnswers.houses = { data: null, error: { code: '22023', message: 'unknown_timezone' } };
-    await expect(updateHouse('h1', settings)).rejects.toThrow("That time zone isn't one we recognise.");
+    await expect(updateHouse('h1', settings)).rejects.toThrow("That time zone isn’t one we recognise.");
     mockAnswers.houses = { data: [], error: null };
     await expect(updateHouse('h1', settings)).rejects.toThrow('Only the house admins can do that.');
   });
@@ -235,7 +235,7 @@ describe('groups', () => {
     await expect(saveGroup('h1', { name: 'Upstairs', members: [] })).rejects.toThrow('Pick at least one housemate.');
     expect(rpc).not.toHaveBeenCalled();
     rpc.mockResolvedValue({ data: null, error: { code: 'P0001', message: 'group_name_taken' } });
-    await expect(saveGroup('h1', { name: 'Upstairs', members: [ava] })).rejects.toThrow("There's already a group with that name.");
+    await expect(saveGroup('h1', { name: 'Upstairs', members: [ava] })).rejects.toThrow("There’s already a group with that name.");
   });
 
   it('deletes a group through delete_group', async () => {

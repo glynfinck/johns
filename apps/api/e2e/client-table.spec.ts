@@ -1,10 +1,11 @@
-import { SECTION_LABEL, TABLE_COPY } from "@app/core";
+import { HOUSE_PAGE_COPY, JOHN_COPY, monthAbbr, monthOf, NEXT_UP_COPY, PERSON_COPY, pointsLabel, SECTION_LABEL } from "@app/core";
 import { expect, test } from "@playwright/test";
 
 import { admin, CLIENT_URL, cleanUp, dealtHouseInClient } from "./auth";
 
 // The Table in the Expo app's web build: a tick scores at once, for the
-// week and the month, beside everyone's fair share and streak.
+// week, on House's Table, and each housemate's row opens their page, with
+// their fair share and streak.
 test.use({ baseURL: CLIENT_URL });
 
 const made: string[] = [];
@@ -26,23 +27,35 @@ test("a tick scores on the Table at once, beside fair shares and streaks", async
   made.push(userId, ...housemateIds);
   const { data: mine } = await admin().from("assignments").select("name, points").eq("house_id", houseId).eq("user_id", userId);
 
+  // Ava's one John is her Next up.
   const ava = await avaContext.newPage();
   await ava.goto("/today");
-  await ava.getByTestId("john-card").filter({ hasText: mine![0].name }).getByTestId("mark-done").click();
-  await expect(ava.getByText("Done, being checked")).toBeVisible();
+  const today = ava.getByTestId("today-screen");
+  await expect(today.getByTestId("next-up-name")).toHaveText(mine![0].name);
+  await today.getByTestId("next-up").getByRole("button", { name: JOHN_COPY.markDone, exact: true }).click();
+  await expect(today.getByRole("img", { name: NEXT_UP_COPY.stateLabel.checking })).toBeVisible();
 
-  await ava.getByRole("tab", { name: SECTION_LABEL.table }).click();
-  await expect(ava).toHaveURL(/\/table$/);
-  await expect(ava.getByRole("heading", { name: TABLE_COPY.title })).toBeVisible();
-  // Two tables, this week's then this month's, each with everyone on it. This
-  // week Ava leads with her John's points (the month's depends on whether it
+  // The Table is on House: one row per housemate, this week's points first.
+  // Ava leads with her John's points (the month's depends on whether it
   // falls due this month).
-  // (Tabs keep Today mounted underneath, with its own week Table: look on this screen.)
-  const table = ava.getByTestId("table-screen");
+  await ava.getByRole("tab", { name: SECTION_LABEL.house }).click();
+  await expect(ava).toHaveURL(/\/house$/);
+  const table = ava.getByTestId("house-screen").getByTestId("house-table");
+  await expect(table.getByRole("heading", { name: HOUSE_PAGE_COPY.table })).toBeVisible();
   const standings = table.getByTestId("standing");
-  await expect(standings).toHaveCount(4);
-  await expect(standings.first()).toContainText("You");
-  await expect(standings.first()).toContainText(`1 done${mine![0].points}`);
-  await expect(table.getByTestId("fair-share")).toHaveCount(2);
-  await expect(table.getByTestId("streak")).toHaveCount(2);
+  await expect(standings).toHaveCount(2);
+  await expect(standings.first()).toContainText(HOUSE_PAGE_COPY.you);
+  await expect(standings.first()).toContainText(pointsLabel(mine![0].points));
+  await expect(standings.nth(1)).toContainText("Ben");
+  await expect(standings.nth(1)).toContainText(pointsLabel(0));
+  // The month's Table has everyone on it too.
+  await table.getByRole("radio", { name: monthAbbr(monthOf(new Date(), "Europe/London")) }).click();
+  await expect(standings).toHaveCount(2);
+
+  // Ben's row opens his page: his fair share and his streak.
+  await standings.filter({ hasText: "Ben" }).getByRole("link").click();
+  await expect(ava).toHaveURL(new RegExp(`/house/people/${housemateIds[0]}$`));
+  const person = ava.getByTestId("person-screen");
+  await expect(person.getByTestId("person-share")).toContainText(PERSON_COPY.level(false));
+  await expect(person.getByTestId("person-perks")).toContainText(PERSON_COPY.noStreak);
 });

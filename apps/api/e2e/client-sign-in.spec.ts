@@ -1,4 +1,4 @@
-import { FRONT_DOOR, NO_HOUSE_COPY, SIGN_IN_COPY } from "@app/core";
+import { FRONT_DOOR, FRONT_DOOR_COPY, NO_HOUSE_COPY, SIGN_IN_COPY } from "@app/core";
 import { expect, test } from "@playwright/test";
 
 import { CLIENT_URL, cleanUp, signInToClient } from "./auth";
@@ -14,8 +14,10 @@ test.afterAll(async () => cleanUp(made));
 test("the front door leads to Google sign-in through Supabase", async ({ page }) => {
   await page.goto("/");
   await expect(page.getByRole("heading", { name: FRONT_DOOR.headline })).toBeVisible();
-  await page.getByRole("link", { name: FRONT_DOOR.start }).click();
-  await expect(page).toHaveURL(/\/signin$/);
+  // Starting a house goes through sign-in, which carries the choice and says it.
+  await page.getByRole("link", { name: FRONT_DOOR_COPY.start }).click();
+  await expect(page).toHaveURL(/\/signin\?next=%2Fhouse%2Fnew$/);
+  await expect(page.getByText(FRONT_DOOR_COPY.startReason)).toBeVisible();
 
   // The web offers Google alone; Apple is for the iOS app.
   await expect(page.getByText(SIGN_IN_COPY.sameAccount)).toHaveCount(0);
@@ -26,7 +28,8 @@ test("the front door leads to Google sign-in through Supabase", async ({ page })
   await page.getByRole("button", { name: SIGN_IN_COPY.google }).click();
   const url = new URL((await authorize).url());
   expect(url.searchParams.get("provider")).toBe("google");
-  expect(url.searchParams.get("redirect_to")).toBe(`${CLIENT_URL}/signin`);
+  // Google comes back to sign-in, still carrying the choice.
+  expect(url.searchParams.get("redirect_to")).toBe(`${CLIENT_URL}/signin?next=%2Fhouse%2Fnew`);
   // PKCE: the code comes back to the page, never the tokens.
   expect(url.searchParams.get("code_challenge")).toBeTruthy();
   expect(url.searchParams.get("code_challenge_method")).toBe("s256");

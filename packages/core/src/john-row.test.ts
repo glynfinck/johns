@@ -1,0 +1,215 @@
+import { describe, expect, it } from "vitest";
+
+import type { BoardItem, DisputeView } from "./board";
+import { CATEGORIES } from "./domain";
+import { doneFold, johnKind, johnRow } from "./john-row";
+import type { LiveStatus } from "./outcome";
+
+const HOUR = 3_600_000;
+// Thursday 22 Oct 2026, 15:00 in London (BST, an hour ahead of UTC).
+const now = new Date("2026-10-22T14:00:00Z");
+const at = (hours: number) => new Date(now.getTime() + hours * HOUR);
+const ZONE = "Europe/London";
+const NAMES: Record<string, string> = { sam: "Sam Carter", priya: "Priya Shah", tom: "Tom Reilly", megan: "Megan Doyle" };
+const nameOf = (id: string): string | null => NAMES[id] ?? null;
+
+function item(id: string, overrides: Partial<BoardItem> = {}): BoardItem {
+  return {
+    id,
+    johnId: `j-${id}`,
+    everyWeeks: 1,
+    userId: "sam",
+    name: id,
+    category: "kitchen",
+    points: 2,
+    needsPhoto: false,
+    dueAt: at(30),
+    movedFrom: null,
+    groupName: null,
+    doneAt: null,
+    photoPath: null,
+    outcome: null,
+    status: "upcoming",
+    standsAt: null,
+    dispute: null,
+    ...overrides,
+  };
+}
+
+function dispute(overrides: Partial<DisputeView> = {}): DisputeView {
+  return {
+    id: "d1",
+    assignmentId: "a1",
+    raisedBy: "megan",
+    reason: "Still grubby",
+    closesAt: at(17),
+    uphold: 1,
+    reject: 1,
+    myVote: null,
+    ...overrides,
+  };
+}
+
+/** Sam's row for a John. */
+const row = (overrides: Partial<BoardItem>, viewer = "sam") => johnRow(item("a", overrides), viewer, now, ZONE, nameOf);
+
+describe("johnKind", () => {
+  it("is the category's short word, one word for every kind", () => {
+    expect(johnKind("bins")).toBe("Bins");
+    expect(johnKind("floors")).toBe("Floors");
+    expect(johnKind("errands")).toBe("Errands");
+    expect(johnKind("kitchen")).toBe("Kitchen");
+    expect(johnKind("other")).toBe("Other");
+    for (const category of CATEGORIES) expect(johnKind(category)).toMatch(/^[A-Z][a-z]+$/);
+  });
+
+  it("calls a kind it doesn't know Other", () => {
+    expect(johnKind("garden")).toBe("Other");
+  });
+});
+
+describe("johnRow", () => {
+  it("ticks your own open John from its circle, overdue included, and names the move", () => {
+    expect(row({ status: "due-soon" })).toEqual({
+      circle: "open",
+      circleLabel: "Mark a done",
+      ticks: true,
+      meta: "Kitchen · tomorrow 21:00",
+      lid: true,
+      trailing: "status",
+      points: 2,
+      focus: null,
+      hazardEdge: false,
+    });
+    expect(row({ status: "upcoming" })).toMatchObject({ ticks: true, trailing: "points" });
+    expect(row({ status: "overdue", needsPhoto: true })).toMatchObject({
+      ticks: true,
+      circleLabel: "Take a photo of a and mark it done",
+      trailing: "status",
+      hazardEdge: true,
+    });
+  });
+
+  it("never ticks a housemate's John, a finished one or a missed one", () => {
+    expect(row({ userId: "tom", status: "overdue" })).toMatchObject({ ticks: false, circleLabel: "Not done", hazardEdge: true });
+    for (const status of ["checking", "disputed", "done", "late", "missed", "excused"] as const) {
+      expect(row({ status }).ticks).toBe(false);
+    }
+    expect(row({ status: "missed" })).toMatchObject({ circle: "open", circleLabel: "Missed", hazardEdge: true, trailing: "status" });
+  });
+
+  it("offers Undo on your tick being checked, and a housemate's tick shows its mark and opens on Dispute", () => {
+    expect(row({ status: "checking" })).toMatchObject({ circle: "checking", trailing: "undo", focus: null });
+    expect(row({ userId: "megan", status: "checking" })).toMatchObject({
+      circle: "checking",
+      circleLabel: "Ticked, being checked",
+      trailing: "status",
+      focus: "dispute",
+    });
+  });
+
+  it("asks for your vote on a dispute until you've given it; otherwise its flag says it, and the points trail", () => {
+    const waiting = item("a", { userId: "priya", status: "disputed", dispute: dispute() });
+    expect(johnRow(waiting, "sam", now, ZONE, nameOf)).toMatchObject({ circle: "disputed", trailing: "vote", focus: "vote" });
+    expect(row({ userId: "priya", status: "disputed", dispute: dispute({ myVote: false }) })).toMatchObject({
+      trailing: "points",
+      focus: "vote",
+    });
+    // Your own disputed John: you can't vote on it, so the sheet opens on nothing in particular.
+    expect(row({ status: "disputed", dispute: dispute() })).toMatchObject({ trailing: "points", focus: null });
+  });
+
+  it("ends a finished John with what it earned, as the green circle says done; late keeps its mark, excused has nothing", () => {
+    expect(row({ status: "done", points: 3 })).toMatchObject({ circle: "done", circleLabel: "Done", trailing: "points", points: 3 });
+    // Half, rounded down, for a late one.
+    expect(row({ status: "late", points: 3 })).toMatchObject({ circle: "done", circleLabel: "Done late", trailing: "status", points: 1 });
+    expect(row({ status: "excused", points: 3 })).toMatchObject({
+      circle: "excused",
+      circleLabel: "Skipped with immunity",
+      trailing: null,
+      points: 0,
+    });
+  });
+
+  it("counts a John's points while it's still in play, and nothing once it's missed", () => {
+    for (const status of ["upcoming", "due-soon", "overdue", "checking", "disputed"] as const) {
+      expect(row({ status, points: 4 }).points).toBe(4);
+    }
+    expect(row({ status: "missed", points: 4 }).points).toBe(0);
+  });
+
+  it("draws the same John the same for whoever looks, but for the moves that are theirs", () => {
+    const statuses: LiveStatus[] = ["upcoming", "due-soon", "overdue", "checking", "disputed", "done", "late", "missed", "excused"];
+    for (const status of statuses) {
+      const john = item("a", { userId: "tom", status, dispute: status === "disputed" ? dispute({ myVote: false }) : null, standsAt: at(5) });
+      const mine = johnRow(john, "tom", now, ZONE, nameOf);
+      const theirs = johnRow(john, "sam", now, ZONE, nameOf);
+      expect([theirs.circle, theirs.meta, theirs.lid, theirs.points, theirs.hazardEdge]).toEqual([
+        mine.circle,
+        mine.meta,
+        mine.lid,
+        mine.points,
+        mine.hazardEdge,
+      ]);
+    }
+  });
+});
+
+describe("johnRow's meta line", () => {
+  const meta = (overrides: Partial<BoardItem>, viewer = "sam") => row(overrides, viewer).meta;
+
+  it("leads with the kind, then when it's due, mid-sentence", () => {
+    expect(meta({ category: "bathroom", status: "due-soon", dueAt: new Date("2026-10-22T20:00:00Z") })).toBe("Bathroom · today 21:00");
+    expect(meta({ category: "floors", dueAt: new Date("2026-10-23T06:30:00Z") })).toBe("Floors · tomorrow 07:30");
+  });
+
+  it("says when an overdue or missed John was due, short enough to sit beside its mark", () => {
+    expect(meta({ category: "other", status: "overdue", dueAt: new Date("2026-10-20T20:00:00Z") })).toBe("Other · was due Tue");
+    expect(meta({ status: "missed", dueAt: new Date("2026-10-21T22:30:00Z") })).toBe("Kitchen · was due Wed");
+    expect(meta({ status: "overdue", dueAt: new Date("2026-10-22T08:00:00Z") })).toBe("Kitchen · was due 09:00");
+    // A week or more back, the date too.
+    expect(meta({ status: "missed", dueAt: new Date("2026-10-15T08:00:00Z") })).toBe("Kitchen · was due Thu 15 Oct");
+  });
+
+  it("says when a tick stands, yours or a housemate's", () => {
+    expect(meta({ userId: "megan", category: "bins", status: "checking", standsAt: at(21) })).toBe("Bins · stands in 21h");
+    expect(meta({ status: "checking", standsAt: at(0.5) })).toBe("Kitchen · stands in 30 min");
+    expect(meta({ status: "checking", standsAt: at(-1) })).toBe("Kitchen · stands any minute");
+    expect(meta({ status: "checking", standsAt: null })).toBe("Kitchen");
+  });
+
+  it("says who disputed it and how long is left, with no lid dot", () => {
+    expect(row({ userId: "priya", status: "disputed", dispute: dispute() })).toMatchObject({
+      meta: "Disputed by Megan · 17h left",
+      lid: false,
+    });
+    expect(meta({ userId: "priya", status: "disputed", dispute: dispute({ raisedBy: "sam", myVote: true }) })).toBe(
+      "Disputed by you · 17h left",
+    );
+    expect(meta({ status: "disputed", dispute: dispute({ raisedBy: null, closesAt: at(-1) }) })).toBe(
+      "Disputed by a former housemate · closing now",
+    );
+    expect(row({ status: "disputed", dispute: null })).toMatchObject({ meta: "Disputed", lid: false });
+  });
+
+  it("says when a finished one was done, and that immunity excused one", () => {
+    expect(meta({ status: "done", doneAt: new Date("2026-10-21T13:10:00Z") })).toBe("Kitchen · done yesterday 14:10");
+    expect(meta({ status: "late", doneAt: new Date("2026-10-12T13:10:00Z") })).toBe("Kitchen · done Mon 12 Oct");
+    expect(meta({ status: "late", doneAt: null, dueAt: new Date("2026-10-22T08:00:00Z") })).toBe("Kitchen · today 09:00");
+    expect(meta({ status: "excused" })).toBe("Kitchen · skipped with immunity");
+  });
+
+  it("says a John pulled forward by time away is due before they go", () => {
+    const moved = { status: "due-soon" as const, dueAt: new Date("2026-10-22T22:59:00Z"), movedFrom: at(48) };
+    expect(meta(moved)).toBe("Kitchen · today 23:59, before you go");
+    expect(meta({ ...moved, userId: "megan" })).toBe("Kitchen · today 23:59, before Megan goes");
+    expect(meta({ ...moved, userId: "cal" })).toBe("Kitchen · today 23:59, before a former housemate goes");
+  });
+});
+
+describe("doneFold", () => {
+  it("says how many are folded, and how many of those were late", () => {
+    expect(doneFold([{ status: "late" }, { status: "done" }, { status: "late" }])).toEqual({ label: "Done (3)", late: "2 late" });
+    expect(doneFold([{ status: "done" }, { status: "excused" }])).toEqual({ label: "Done (2)", late: null });
+  });
+});

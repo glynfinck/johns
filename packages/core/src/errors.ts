@@ -4,40 +4,40 @@
  */
 const MESSAGES: Record<string, string> = {
   sign_in_required: "Sign in first.",
-  already_in_house: "You're already in a house. Leave it first to join another.",
-  unknown_code: "That join link doesn't match a house. Ask for a fresh one.",
-  unknown_timezone: "That time zone isn't one we recognise.",
+  already_in_house: "You’re already in a house. Leave it first to join another.",
+  unknown_code: "That join link doesn’t match a house. Ask for a fresh one.",
+  unknown_timezone: "That time zone isn’t one we recognise.",
   admins_only: "Only the house admins can do that.",
   last_admin: "Make someone else an admin first. A house needs at least one.",
-  not_your_john: "That John isn't yours.",
+  not_your_john: "That John isn’t yours.",
   already_settled: "That John is already settled.",
   week_closed: "That week has finished.",
-  already_done: "That's already ticked.",
+  already_done: "That’s already ticked.",
   photo_required: "This John needs a photo with the tick.",
-  photo_path: "That photo doesn't belong to this John.",
-  under_dispute: "Someone's disputing this tick, so it can't be undone now.",
-  own_john: "You can't vote on your own John.",
-  not_disputable: "That tick can't be disputed any more.",
-  already_disputed: "Someone's already disputing that tick.",
+  photo_path: "That photo doesn’t belong to this John.",
+  under_dispute: "Someone’s disputing this tick, so it can’t be undone now.",
+  own_john: "You can’t vote on your own John.",
+  not_disputable: "That tick can’t be disputed any more.",
+  already_disputed: "Someone’s already disputing that tick.",
   vote_closed: "Voting on that has closed.",
-  no_immunity: "You don't have an immunity token.",
-  no_swap: "You don't have a swap token.",
+  no_immunity: "You don’t have an immunity token.",
+  no_swap: "You don’t have a swap token.",
   not_swappable: "Only two open Johns from the same week can be swapped.",
-  more_than_owed: "That's more than is owed.",
-  bad_payment: "That payment doesn't add up.",
+  more_than_owed: "That’s more than is owed.",
+  bad_payment: "That payment doesn’t add up.",
   no_johns: "Add at least one John first.",
-  week_started: "Someone's already ticked a John this week, so it can't be re-dealt.",
-  not_in_house: "That isn't in your house.",
+  week_started: "Someone’s already ticked a John this week, so it can’t be re-dealt.",
+  not_in_house: "That isn’t in your house.",
   group_empty: "A group needs at least one housemate in it.",
   not_housemates: "Groups can only hold people who live here.",
-  unknown_group: "That group doesn't exist any more.",
-  group_name_taken: "There's already a group with that name.",
+  unknown_group: "That group doesn’t exist any more.",
+  group_name_taken: "There’s already a group with that name.",
   away_in_past: "Time away can start today at the earliest.",
   away_backwards: "The last day away has to be on or after the first.",
   away_too_long: "Time away can be up to three months at once.",
-  away_overlaps: "You're already away for some of those days.",
+  away_overlaps: "You’re already away for some of those days.",
   away_over: "That time away has already finished.",
-  not_yours: "That isn't yours to change.",
+  not_yours: "That isn’t yours to change.",
 };
 
 export function humanError(error: { message?: string; code?: string } | null | undefined): string {
@@ -45,6 +45,6 @@ export function humanError(error: { message?: string; code?: string } | null | u
   for (const [code, text] of Object.entries(MESSAGES)) {
     if (error.message?.includes(code)) return text;
   }
-  if (error.code === "42501") return "You can't do that.";
+  if (error.code === "42501") return "You can’t do that.";
   return "Something went wrong. Try again.";
 }

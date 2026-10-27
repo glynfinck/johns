@@ -46,9 +46,9 @@ describe("responses", () => {
 
   it("gives every error the same shape", async () => {
     process.env.ALLOWED_ORIGINS = "";
-    const response = error(from(), 404, "That isn't in your house.");
+    const response = error(from(), 404, "That isn’t in your house.");
     expect(response.status).toBe(404);
-    expect(await response.json()).toEqual({ error: "That isn't in your house." });
+    expect(await response.json()).toEqual({ error: "That isn’t in your house." });
     expect(response.headers.get("access-control-allow-origin")).toBeNull();
   });
 
@@ -69,11 +69,11 @@ describe("refused", () => {
   it("says a refusal in words, with what kind it was", async () => {
     const notYours = refused(request, { message: "own_john", code: "42501" });
     expect(notYours.status).toBe(403);
-    expect(await notYours.json()).toEqual({ error: "You can't vote on your own John." });
+    expect(await notYours.json()).toEqual({ error: "You can’t vote on your own John." });
 
     const notNow = refused(request, { message: "already_disputed", code: "P0001" });
     expect(notNow.status).toBe(409);
-    expect(await notNow.json()).toEqual({ error: "Someone's already disputing that tick." });
+    expect(await notNow.json()).toEqual({ error: "Someone’s already disputing that tick." });
   });
 
   it("calls anything else a fault, never repeating the database's own message", async () => {

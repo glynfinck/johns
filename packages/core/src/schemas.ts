@@ -55,7 +55,7 @@ export const MAX_AMOUNT_MINOR = 100_000;
 const amount = z.coerce
   .number()
   .int()
-  .min(0, "Amounts can't be negative.")
+  .min(0, "Amounts can’t be negative.")
   .max(MAX_AMOUNT_MINOR, "Amounts are up to 1,000.");
 
 /** The house rules an admin can change: the houses columns granted to them. */
@@ -98,8 +98,8 @@ const LOCAL_DATE = /^\d{4}-\d{2}-\d{2}$/;
 
 /** Time away you book for yourself: local first and last days, inclusive, and where. set_away decides the rest. */
 export const AwayDraft = z.object({
-  from: z.string().regex(LOCAL_DATE, "Pick the first day you're away."),
-  to: z.string().regex(LOCAL_DATE, "Pick the last day you're away."),
+  from: z.string().regex(LOCAL_DATE, "Pick the first day you’re away."),
+  to: z.string().regex(LOCAL_DATE, "Pick the last day you’re away."),
   note: z.string().trim().max(60).optional(),
 });
 export type AwayDraft = z.infer<typeof AwayDraft>;
@@ -122,7 +122,7 @@ export type FreshResponse = z.infer<typeof FreshResponse>;
 /** POST /api/disputes: say a housemate's tick wasn't really done. */
 export const RaiseDispute = z.object({
   assignmentId: z.uuid(),
-  reason: z.string().trim().min(1, "Say what's wrong with it.").max(280, "Keep it under 280 characters."),
+  reason: z.string().trim().min(1, "Say what’s wrong with it.").max(280, "Keep it under 280 characters."),
 });
 export type RaiseDispute = z.infer<typeof RaiseDispute>;
 

@@ -75,24 +75,6 @@ export function awayThisWeek(periods: readonly AwayPeriod[], userId: string, wee
   return days.length === 7 ? "Away all week" : `Away ${dateRange(days[0], days[days.length - 1])}`;
 }
 
-/**
- * A month as a calendar shows it, for picking days: its weeks, each seven
- * local dates long and starting on the house's first day, with null for
- * the days before the 1st and after the last.
- */
-export function monthGrid(month: string, weekStarts: IsoDow): (string | null)[][] {
-  const first = `${month}-01`;
-  const [y, m] = month.split("-").map(Number);
-  const days = new Date(Date.UTC(y, m, 0)).getUTCDate();
-  const lead = (isoDayOf(first) - weekStarts + 7) % 7;
-  const cells: (string | null)[] = [
-    ...Array.from({ length: lead }, () => null),
-    ...Array.from({ length: days }, (_, i) => addDaysTo(first, i)),
-  ];
-  while (cells.length % 7) cells.push(null);
-  return Array.from({ length: cells.length / 7 }, (_, w) => cells.slice(w * 7, w * 7 + 7));
-}
-
 /** The month after (or, with -1, before) a `yyyy-MM` month. */
 export function shiftMonth(month: string, by: number): string {
   const [y, m] = month.split("-").map(Number);

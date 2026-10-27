@@ -27,7 +27,7 @@ describe("join codes", () => {
     expect(normaliseJoinCode("AB3DEF7H")).toBe("AB3DEF7H");
   });
 
-  it("refuses what can't be a code", () => {
+  it("refuses what can’t be a code", () => {
     expect(normaliseJoinCode("")).toBeNull();
     expect(normaliseJoinCode("AB3DEF7")).toBeNull();
     expect(normaliseJoinCode("AB3DEF7HJ")).toBeNull();
@@ -37,7 +37,7 @@ describe("join codes", () => {
     expect(normaliseJoinCode("AB3D/F7H")).toBeNull();
   });
 
-  it("matches the database's alphabet and length", () => {
+  it("matches the database’s alphabet and length", () => {
     expect(JOIN_CODE_ALPHABET).toBe("ABCDEFGHJKMNPQRSTUVWXYZ23456789");
     expect(JOIN_CODE_LENGTH).toBe(8);
     expect(JoinCode.parse("xyz2-3456")).toBe("XYZ23456");
@@ -48,7 +48,7 @@ describe("join codes", () => {
 describe("CreateHouse", () => {
   const house = { name: "  Flat 3 ", timezone: "Europe/London", currency: "GBP", weekStarts: "1" };
 
-  it("trims the name and reads the week's first day as a number", () => {
+  it("trims the name and reads the week’s first day as a number", () => {
     expect(CreateHouse.parse(house)).toEqual({ name: "Flat 3", timezone: "Europe/London", currency: "GBP", weekStarts: 1 });
   });
 
@@ -67,7 +67,7 @@ describe("CreateHouse", () => {
 });
 
 describe("FreshRequest", () => {
-  it("takes one house's id", () => {
+  it("takes one house’s id", () => {
     const houseId = "8f14e45f-ceea-467f-a8f5-2fbf7c2d9b1a";
     expect(FreshRequest.parse({ houseId })).toEqual({ houseId });
     expect(FreshRequest.safeParse({ houseId: "not-a-uuid" }).success).toBe(false);
@@ -88,20 +88,20 @@ describe("RaiseDispute", () => {
   });
 
   it("asks for a reason, and a short one, in words", () => {
-    expect(message({ assignmentId, reason: "" })).toBe("Say what's wrong with it.");
-    expect(message({ assignmentId, reason: "   " })).toBe("Say what's wrong with it.");
+    expect(message({ assignmentId, reason: "" })).toBe("Say what’s wrong with it.");
+    expect(message({ assignmentId, reason: "   " })).toBe("Say what’s wrong with it.");
     expect(message({ assignmentId, reason: "x".repeat(281) })).toBe("Keep it under 280 characters.");
   });
 
-  it("refuses anything but a John's id", () => {
+  it("refuses anything but a John’s id", () => {
     expect(RaiseDispute.safeParse({ assignmentId: "a1", reason: "Still full" }).success).toBe(false);
     expect(RaiseDispute.safeParse({ reason: "Still full" }).success).toBe(false);
   });
 
-  it("says what's wrong in one sentence, the reason's first", () => {
+  it("says what’s wrong in one sentence, the reason’s first", () => {
     const problem = (input: unknown) => disputeProblem(RaiseDispute.safeParse(input).error!.issues);
-    expect(problem({ assignmentId, reason: "" })).toBe("Say what's wrong with it.");
-    expect(problem({ assignmentId: "a1", reason: "" })).toBe("Say what's wrong with it.");
+    expect(problem({ assignmentId, reason: "" })).toBe("Say what’s wrong with it.");
+    expect(problem({ assignmentId: "a1", reason: "" })).toBe("Say what’s wrong with it.");
     expect(problem({ assignmentId: "a1", reason: "Still full" })).toBe("Say which John to dispute.");
     expect(problem(null)).toBe("Say which John to dispute.");
     expect(disputeProblem([])).toBe("Say which John to dispute.");
@@ -145,16 +145,16 @@ describe("HouseSettings", () => {
     });
   });
 
-  it("says what's wrong in words", () => {
+  it("says what’s wrong in words", () => {
     const problem = (patch: object) => HouseSettings.safeParse({ ...rules, ...patch }).error?.issues[0].message;
     expect(problem({ name: "  " })).toBe("Give the house a name.");
     expect(problem({ timezone: "" })).toBe("Say which time zone the house is in.");
-    expect(problem({ stakeMinor: -1 })).toBe("Amounts can't be negative.");
+    expect(problem({ stakeMinor: -1 })).toBe("Amounts can’t be negative.");
     expect(problem({ missedForfeitMinor: MAX_AMOUNT_MINOR + 1 })).toBe("Amounts are up to 1,000.");
     expect(problem({ stakeMinor: MAX_AMOUNT_MINOR })).toBeUndefined();
   });
 
-  it("refuses rules the house can't have", () => {
+  it("refuses rules the house can’t have", () => {
     for (const patch of [
       { currency: "JPY" },
       { weekStarts: 0 },
@@ -186,7 +186,7 @@ describe("JohnDraft", () => {
     expect(JohnDraft.parse({ ...john, id, groupId: id })).toMatchObject({ id, groupId: id });
   });
 
-  it("says what's wrong in words", () => {
+  it("says what’s wrong in words", () => {
     const problem = (patch: object) => JohnDraft.safeParse({ ...john, ...patch }).error?.issues[0].message;
     expect(problem({ name: "" })).toBe("Name the John.");
     expect(problem({ dueTime: "9pm" })).toBe("Give a time like 21:00.");
@@ -238,7 +238,7 @@ describe("GroupDraft", () => {
     expect(GroupDraft.parse({ name: " Upstairs ", members: [ava] })).toEqual({ name: "Upstairs", members: [ava] });
   });
 
-  it("says what's missing in words", () => {
+  it("says what’s missing in words", () => {
     expect(GroupDraft.safeParse({ name: "", members: [ava] }).error?.issues[0].message).toBe("Name the group.");
     expect(GroupDraft.safeParse({ name: "Upstairs", members: [] }).error?.issues[0].message).toBe("Pick at least one housemate.");
     expect(GroupDraft.safeParse({ name: "x".repeat(41), members: [ava] }).success).toBe(false);
@@ -256,9 +256,9 @@ describe("AwayDraft", () => {
     expect(AwayDraft.parse({ from: "2026-10-26", to: "2026-10-26" })).toEqual({ from: "2026-10-26", to: "2026-10-26" });
   });
 
-  it("asks for each day it's missing", () => {
-    expect(AwayDraft.safeParse({ from: "", to: "2026-10-28" }).error?.issues[0].message).toBe("Pick the first day you're away.");
-    expect(AwayDraft.safeParse({ from: "2026-10-26", to: "28 Oct" }).error?.issues[0].message).toBe("Pick the last day you're away.");
+  it("asks for each day it’s missing", () => {
+    expect(AwayDraft.safeParse({ from: "", to: "2026-10-28" }).error?.issues[0].message).toBe("Pick the first day you’re away.");
+    expect(AwayDraft.safeParse({ from: "2026-10-26", to: "28 Oct" }).error?.issues[0].message).toBe("Pick the last day you’re away.");
     expect(AwayDraft.safeParse({ from: "2026-10-26", to: "2026-10-28", note: "x".repeat(61) }).success).toBe(false);
   });
 });

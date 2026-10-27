@@ -73,7 +73,7 @@ describe("POST /api/fresh", () => {
   it("refuses to catch up someone else's house, and doesn't tick it", async () => {
     const response = await call({ houseId: house.id }, await tokenOf(stranger));
     expect(response.status).toBe(404);
-    expect(await response.json()).toEqual({ error: "That isn't in your house." });
+    expect(await response.json()).toEqual({ error: "That isn’t in your house." });
     expect(await tickedAt(house.id)).toBeNull();
   });
 

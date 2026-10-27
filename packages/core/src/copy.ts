@@ -21,12 +21,14 @@ export const PAGE_TITLE = {
   join: "Join a house",
   today: "Today",
   week: "This week",
-  wall: "The Wall",
-  table: "The Table",
-  stake: "The Stake",
   house: "House",
   privacy: "Privacy",
   notFound: "Nothing here",
+  welcome: "No house yet",
+  johnList: "The John list",
+  rules: "House rules",
+  away: "Time away",
+  groups: "Groups",
 } as const;
 
 /** What Johns keeps, and who sees it. */
@@ -45,12 +47,17 @@ export const NOT_FOUND_COPY = {
   title: "Nothing here",
   body: "That page isn’t on the list.",
   back: "Back to your Johns",
+  /** Signed out, there are no Johns to go back to. */
+  backToDoor: "Back to the front door",
 } as const;
 
 export const ERROR_COPY = {
   title: "Something went wrong",
   body: "It wasn’t you. Try again, and if it keeps happening, tell the house admin.",
   retry: "Try again",
+  /** Your house couldn't be read, so no screen can be chosen yet. */
+  unreachable: "Can’t reach your house",
+  unreachableBody: "Check the connection, then try again.",
 } as const;
 
 export const FRONT_DOOR = {
@@ -68,7 +75,7 @@ export const FRONT_DOOR = {
     {
       key: "stake",
       title: "The Stake",
-      body: "Everyone stakes the same each month. Miss a John and part of yours goes to the people who didn't.",
+      body: "Everyone stakes the same each month. Miss a John and part of yours goes to the people who didn’t.",
     },
     {
       key: "wall",
@@ -92,7 +99,7 @@ export const SIGN_IN_COPY = {
   heading: "Sign in",
   google: "Continue with Google",
   googleBusy: "Opening Google…",
-  eitherAccount: "Your house's Johns are kept with the account you sign in with.",
+  eitherAccount: "Your house’s Johns are kept with the account you sign in with.",
   sameAccount: "Already in a house? Use the account you joined with.",
   terms: "By signing in you agree to the house rules your housemates set.",
   privacy: "Privacy",
@@ -109,7 +116,6 @@ export const NEW_HOUSE_COPY = {
   currency: "Currency",
   weekStarts: "The week starts on",
   timezone: "Time zone",
-  timezoneFromPhone: "This phone’s. Change it later from the House screen.",
   submit: "Set up the house",
   busy: "Setting up…",
   joinInstead: "Joining a housemate’s house instead? Open the join link they sent you.",
@@ -135,10 +141,8 @@ export const JOIN_COPY = {
 /** Signed in with no house: the app's way to start one or join by code. */
 export const NO_HOUSE_COPY = {
   heading: "No house yet",
-  body: "Start one and you’ll be its admin, or join a housemate’s with the code from their link.",
   start: "Start a house",
   code: "Join code",
-  codeHint: "Eight letters and numbers, from the end of the link.",
   badCode: "A join code is eight letters and numbers.",
   join: "Join with this code",
 } as const;
@@ -166,9 +170,8 @@ export const JOHN_COPY = {
   ticking: "Ticking…",
   withPhoto: "Mark done with a photo",
   photoAndDone: "Photo and done",
-  choosePhoto: "Choose a photo",
   uploading: "Uploading…",
-  photoFailed: "That photo didn't upload. Try again.",
+  photoFailed: "That photo didn’t upload. Try again.",
   undo: "Undo",
   useImmunity: "Use immunity",
   spendIt: "Spend it",
@@ -176,8 +179,8 @@ export const JOHN_COPY = {
   standsIn: (when: string) => `Stands ${when} unless someone disputes it.`,
   disputed: (reason: string) => `Disputed: “${reason}”`,
   votes: (uphold: number, reject: number, closes: string) => `${uphold} say not done, ${reject} say fine · closes ${closes}`,
-  dueBeforeYouGo: (was: string) => `Due before you go: it was due ${was}, while you're away.`,
-  dueBeforeTheyGo: (owner: string, was: string) => `Due before ${owner} goes: it was due ${was}, while they're away.`,
+  dueBeforeYouGo: (was: string) => `Due before you go: it was due ${was}, while you’re away.`,
+  dueBeforeTheyGo: (owner: string, was: string) => `Due before ${owner} goes: it was due ${was}, while they’re away.`,
 } as const;
 
 /** Before there is anything to do this week. */
@@ -227,7 +230,7 @@ export const DISPUTE_COPY = {
   title: (john: string) => `Was ${john} really done?`,
   body: (owner: string) => `${owner}’s tick goes to a house vote. If the house agrees with you, the John opens again.`,
   label: "What’s wrong with it",
-  placeholder: "The hob's still greasy",
+  placeholder: "The hob’s still greasy",
   send: "Put it to the house",
   sending: "Sending…",
   fine: "It’s fine",
@@ -265,6 +268,39 @@ export const SHELL_COPY = {
   standing: (streak: number, tokens: number) => `${streak}-week streak · ${tokens} ${tokens === 1 ? "token" : "tokens"}`,
 } as const;
 
+const waitingForYourVote = (count: number) => `${count} waiting for your vote`;
+
+/**
+ * Focus's shell: the words of the tabs, the rail, the title bars and the
+ * pieces every screen is built from. Each screen's own words live in its
+ * own object, at the end of this file.
+ */
+export const FOCUS_SHELL_COPY = {
+  /** A pushed page's way back. */
+  back: "Back",
+  /** The way back, spoken, when it shows the place it goes to ("‹ House"): "Back to House". */
+  backTo: (place: string) => `Back to ${place}`,
+  /** The title bar's "•••" button, which opens the screen's menu. */
+  more: "More",
+  /** The tabs, or the rail, to a screen reader. */
+  places: "Places",
+  /** A tab's spoken name, with its badge when it has one: "Today, 1 waiting for your vote". */
+  tab: (label: string, toVote: number) => (toVote > 0 ? `${label}, ${waitingForYourVote(toVote)}` : label),
+  /** The fold that keeps finished Johns out of the way. */
+  done: (count: number) => `Done (${count})`,
+  reading: "Reading the house",
+  unreadable: "Couldn’t read the house. Check the connection.",
+  retry: "Try again",
+  /** A confirm sheet's way out without doing it. */
+  cancel: "Cancel",
+  /** House's setup pages, as a section: they change the house for everyone. */
+  setup: "House setup",
+  /** A housemate's page for someone who isn't in the house any more. */
+  gone: "They’re not in the house any more.",
+  /** Someone in the house's history who has since left. */
+  formerHousemate: "A former housemate",
+} as const;
+
 /** The Table: effort points for the week and the month, fair shares, streaks and perks. */
 export const TABLE_COPY = {
   eyebrow: "Effort points",
@@ -294,10 +330,10 @@ export const TABLE_COPY = {
   /** Where you stand against your share, in a sentence. */
   shareLine: (balance: number, weeksToEven: number) =>
     balance <= -0.5
-      ? `Points behind your share. The next weeks hand you a little extra, never more than half a week's worth, for about ${weeksToEven} ${weeksToEven === 1 ? "week" : "weeks"}.`
+      ? `Points behind your share. The next weeks hand you a little extra, never more than half a week’s worth, for about ${weeksToEven} ${weeksToEven === 1 ? "week" : "weeks"}.`
       : balance >= 0.5
         ? "Points ahead of your share, so the next weeks go a little easier on you."
-        : "You've done your share.",
+        : "You’ve done your share.",
 } as const;
 
 /** The Stake: this month so far, settling up, and the ledger. Money arrives already formatted. */
@@ -321,7 +357,7 @@ export const STAKE_COPY = {
   kind: {
     forfeit: "Forfeit",
     cap_refund: "Over the stake, returned",
-    share: "Share of the month's forfeits",
+    share: "Share of the month’s forfeits",
     payment: "Payment",
   } as Record<string, string>,
   /** A payment's other side: "to Ben" for the one who paid, "from Ava" for the one paid. */
@@ -377,13 +413,11 @@ export const JOHN_LIST_COPY = {
 
 /** Handing out the week: the first time it starts the house; afterwards it re-deals an unticked week. */
 export const DEAL_COPY = {
-  first: "Hand out this week's Johns",
+  first: "Hand out this week’s Johns",
   again: "Re-deal this week",
   dealing: "Dealing…",
   firstBody: "When the list is ready and the house has joined, hand out the first week.",
   againBody: "Re-deal this week to include new Johns or housemates. Only works while nothing this week has been ticked.",
-  /** Today's card for an admin before the first deal: where the John list and the deal are. */
-  fromHouse: "The John list, the join link and the first deal are all on House.",
   openHouse: "Open House",
 } as const;
 
@@ -391,7 +425,7 @@ export const DEAL_COPY = {
 export const RULES_COPY = {
   name: "House name",
   timezone: "Time zone",
-  timezoneHint: "Weeks and due times follow the house's time zone, wherever each of you is.",
+  timezoneHint: "Weeks and due times follow the house’s time zone, wherever each of you is.",
   phoneZone: (zone: string) => `Use this phone’s: ${zone.replaceAll("_", " ")}`,
   weekStarts: "Week starts",
   currency: "Currency",
@@ -403,9 +437,9 @@ export const RULES_COPY = {
   away: "Time away is made up",
   awayNote: "Nobody is handed a John due while they’re away.",
   makeupHint: {
-    100: "Their share still counts, so they do a little extra each week when they're back until it evens out.",
-    50: "Half their share still counts and is made up when they're back; the rest falls to whoever is home.",
-    0: "Their share falls to whoever is home, and there's nothing to make up.",
+    100: "Their share still counts, so they do a little extra each week when they’re back until it evens out.",
+    50: "Half their share still counts and is made up when they’re back; the rest falls to whoever is home.",
+    0: "Their share falls to whoever is home, and there’s nothing to make up.",
   } as Record<number, string>,
   badAmount: "Amounts are numbers like 20 or 2.50.",
   check: "Check the settings and try again.",
@@ -445,7 +479,7 @@ export const REMINDERS_COPY = {
   off: "Turn reminders off on this device",
   unsupported: "Reminders need a browser that supports notifications. On iPhone, add Johns to your home screen first.",
   blocked: "Notifications are blocked for this site in your browser settings.",
-  failed: "Couldn't turn reminders on. Try again.",
+  failed: "Couldn’t turn reminders on. Try again.",
   turnedOn: "Reminders on for this device",
 } as const;
 
@@ -497,20 +531,632 @@ export const AWAY_COPY = {
   booking: "Booking…",
   /** What booking moved: the one consequence the calendar can't show. */
   moved: (n: number) =>
-    `${n} of your Johns ${n === 1 ? "falls" : "fall"} due while you're away, so ${n === 1 ? "it's" : "they're"} now due before you go.`,
-  back: "I'm back",
+    `${n} of your Johns ${n === 1 ? "falls" : "fall"} due while you’re away, so ${n === 1 ? "it’s" : "they’re"} now due before you go.`,
+  back: "I’m back",
   cancel: "Cancel",
-  previousMonth: "Previous month",
   nextMonth: "Next month",
   today: "Today",
   thisWeek: "Away this week",
   /** Today's banner: when, and what your share does meanwhile (houses.away_makeup). */
-  banner: (range: string, now: boolean) => (now ? `You're away until ${range}.` : `You're away ${range}.`),
+  banner: (range: string, now: boolean) => (now ? `You’re away until ${range}.` : `You’re away ${range}.`),
   bannerBody: (makeup: number) =>
     `Nobody hands you a John due while you’re gone${
       makeup > 0
-        ? `, but ${makeup === 100 ? "your share" : "half your share"} still counts: you catch up a little each week when you're back.`
+        ? `, but ${makeup === 100 ? "your share" : "half your share"} still counts: you catch up a little each week when you’re back.`
         : "."
     }`,
   change: "Change",
+} as const;
+
+/** Today: Next up, Needs you, the rest of your week and the standing line; a John's row, here and on Week. */
+export const NEXT_UP_COPY = {
+  label: "Next up",
+  photo: "Photo",
+  takePhoto: "Take a photo",
+  library: "Library",
+  /** The card's way into the John sheet's "If you can't", by what you hold. */
+  cant: (immunity: boolean, swap: boolean) =>
+    immunity && swap ? "Skip with immunity or swap" : immunity ? "Skip with immunity" : "Swap this John",
+  due: (when: string) => `due ${when}`,
+  beforeYouGo: "before you go",
+  ifLate: (amount: string) => `${amount} if late`,
+  ifMissed: (amount: string) => `${amount} if missed`,
+  /** An overdue John's cost: what doing it now costs. */
+  now: (late: string) => `${late} now`,
+  nowOrMissed: (late: string, missed: string) => `${late} now, ${missed} if missed`,
+  overdueSince: (when: string) => `Overdue since ${when}`,
+  wasDue: (when: string) => `was due ${when}`,
+  /** How long a vote has left, short enough for a row: "17h left". */
+  left: (time: string) => `${time} left`,
+  done: (when: string) => `done ${when}`,
+  excused: "skipped with immunity",
+  clear: (day: string) => `You’re clear until ${day}`,
+  clearBody: "New Johns are dealt then.",
+  /** None of yours to do, but a tick of yours is disputed. */
+  voting: "The house is voting on your tick",
+  votingBody: (john: string) => `If it says ${john} wasn’t done, it’s yours to do again.`,
+  nothingYours: "Nothing on your list this week.",
+  away: (day: string) => `You’re away until ${day}`,
+  /** A trip of yours starting within a fortnight: "You’re away 28–31 Oct". */
+  awaySoon: (range: string) => `You’re away ${range}`,
+  /** How your share catches up after time away, by houses.away_makeup. */
+  awayBody: (makeup: number) =>
+    makeup >= 100
+      ? "Your share catches up a little each week when you’re back."
+      : makeup > 0
+        ? "Half your share catches up a little each week when you’re back."
+        : "Your share goes to whoever’s home, so there’s nothing to catch up.",
+  changeDates: "Change dates",
+  setUp: (house: string) => `Set up ${house}`,
+  addJohns: "Add your Johns",
+  onTheList: (count: number) => (count === 0 ? "Nothing on the list yet" : `${count} on the list`),
+  invite: "Invite housemates",
+  housemates: (count: number) => (count <= 1 ? "Just you so far" : `${count} in the house so far`),
+  dealWeek1: "Deal week 1",
+  waiting: (admin: string) => `${admin} will deal it soon.`,
+  anAdmin: "An admin",
+  /** Someone who has left, named mid-sentence. */
+  someoneGone: "a former housemate",
+  /** A John row's circle, spoken (on Today and Week alike), when it isn't a tick. */
+  stateLabel: {
+    open: "Not done",
+    checking: "Ticked, being checked",
+    done: "Done",
+    late: "Done late",
+    disputed: "Disputed",
+    missed: "Missed",
+    excused: "Skipped with immunity",
+  },
+  needsYou: "Needs you",
+  saysNotDone: (name: string) => `${name} says it’s not done`,
+  closes: (when: string) => `closes ${when}`,
+  closingNow: "closing now",
+  /** A Needs you row's title: whose John the vote is on, and which. */
+  voteOn: (owner: string | null, john: string) => (owner ? `Vote on ${owner}’s ${john}` : `Vote on ${john}`),
+  rest: "The rest of your week",
+  tick: (john: string) => `Mark ${john} done`,
+  tickWithPhoto: (john: string) => `Take a photo of ${john} and mark it done`,
+  undo: (john: string) => `Undo ${john}`,
+  joint: (place: string) => `Joint ${place}`,
+  thisWeek: (place: string) => `${place} this week`,
+  up: (amount: string, month: string) => `up ${amount} in ${month}`,
+  down: (amount: string, month: string) => `down ${amount} in ${month}`,
+  square: (month: string) => `square in ${month}`,
+} as const;
+
+/** The John sheet's states, from yours to settled. */
+export const JOHN_SHEET_COPY = {
+  every: (weeks: number) => (weeks === 1 ? "every week" : `every ${weeks} weeks`),
+  due: (when: string) => `Due ${when}`,
+  costs: (late: string, missed: string) => `late costs ${late}, missed ${missed}`,
+  lateCosts: (late: string) => `late costs ${late}`,
+  missedCosts: (missed: string) => `missed costs ${missed}`,
+  addPhoto: "Add a photo and mark done",
+  fromLibrary: "From your library",
+  cant: "If you can’t",
+  skip: "Skip with immunity",
+  skipMeta: (tokens: number) => `No forfeit · you have ${tokens}`,
+  /** What spending immunity means, before it's spent. */
+  skipSentence: (john: string, left: number) =>
+    `Skip ${john} this week? No forfeit, and ${left <= 0 ? "your immunity is used up" : `you’ll have ${left} left`}.`,
+  skipIt: "Skip it",
+  swap: "Swap this John",
+  swapMeta: "You topped a week · trade it once",
+  swapFor: "Their open Johns",
+  swapBody: (john: string) => `Pick one to take instead. They get ${john}.`,
+  you: "You",
+  at: (time: string) => `at ${time}`,
+  yesterdayAt: (time: string) => `yesterday at ${time}`,
+  onAt: (day: string, time: string) => `on ${day} at ${time}`,
+  ticked: (who: string, when: string) => `${who} ticked this ${when}`,
+  standsIn: (when: string) => `stands ${when}`,
+  standsSoon: "stands any minute",
+  disputedBy: (name: string) => `Disputed by ${name}`,
+  byYou: "you",
+  /** The vote so far, in the buttons' order: fine, then not done. */
+  tally: (fine: number, notDone: number, closes: string) => `${fine} fine · ${notDone} not done · ${closes}`,
+  yourTick: "The house is voting on your tick.",
+  /** Undoing a tick after its due time, before it's undone. */
+  undoTitle: (john: string) => `Undo ${john}?`,
+  undoLate: (late: string | null) =>
+    `It’s past its due time, so it’s overdue as soon as it’s undone, and ticking it again counts as late${late ? `: ${late}` : ""}.`,
+  undoIt: "Undo it",
+  voted: "Vote counted. You can change it on Week.",
+  theirs: (owner: string) => `It’s ${owner}’s this week.`,
+  doneOnTime: (who: string, when: string | null) => `${who} did it on time${when ? `, ${when}` : ""}.`,
+  doneLate: (who: string, when: string | null) => `${who} did it late${when ? `, ${when}` : ""}.`,
+  excused: (who: string) => `${who} skipped it with immunity, so there’s no forfeit.`,
+  missed: "It was missed.",
+} as const;
+
+/** Week: the summary bar, the person groups, the fair-share footer and the menu. */
+export const WEEK_SUMMARY_COPY = {
+  /** The summary, to a screen reader. */
+  soFar: "This week so far",
+  /** The week's days and when it ends: "19–25 Oct · ends tonight". */
+  range: (days: string, ends: string) => `${days} · ${ends}`,
+  endsTonight: "ends tonight",
+  endsTomorrow: "ends tomorrow",
+  /** The week's last day: "ends Sun". */
+  endsOn: (day: string) => `ends ${day}`,
+  ended: "ended",
+  /** The bar's and the legend's parts, which add up to the week's Johns. */
+  parts: { done: "done", checking: "checking", disputed: "disputed", overdue: "overdue", toGo: "to go" },
+  /** The bar, spoken: "11 Johns: 5 done, 2 checking, 2 to go". */
+  bar: (total: number, parts: readonly string[]) =>
+    total === 0 ? "No Johns this week" : `${total} ${total === 1 ? "John" : "Johns"}: ${parts.join(", ")}`,
+  /** A legend part, spoken; pressing it shows only those Johns. */
+  part: (count: number, label: string) => `${count} ${label}`,
+  showOnly: "Shows only these Johns. Press again to show them all.",
+  swapReady: "Swap ready",
+  /** A person's header: "1 of 3 done · 6 pts", and under it "away 29 Oct–1 Nov". */
+  doneOf: (done: number, total: number) => `${done} of ${total} done`,
+  away: (days: string) => `away ${days}`,
+  awayAllWeek: "away all week",
+  /** On a laptop, who's away, under the summary: "Megan is away 28–31 Oct · You’re away all week". */
+  isAway: (who: string, note: string, you: boolean) => `${you ? "You’re" : `${who} is`} ${note}`,
+  nothing: "Nothing this week.",
+  /** After a fold's "Done (2)", in hazard: "1 late". */
+  late: (count: number) => `${count} late`,
+  /** An open John's circle that doesn't tick, spoken: Today's word (the client e2e asks for it by this name). */
+  notDone: NEXT_UP_COPY.stateLabel.open,
+  vote: "Vote",
+  voteOn: (john: string) => `Vote on ${john}`,
+  // A row's meta line, after the lid dot and the kind.
+  beforeTheyGo: (name: string) => `before ${name} goes`,
+  byYou: "you",
+  someoneGone: "a former housemate",
+  /** On a laptop, a John's row to a screen reader: its name, meta, whose, points and status. */
+  spokenRow: (parts: readonly string[]) => parts.join(", "),
+  /** The footer: the deal's fairness, from the fair shares. Pressed, it explains them. */
+  sharesHint: "Shows everyone’s fair share and how the deal evens it out.",
+  /** The fair shares sheet's key: "Below zero is behind, above is ahead. Time away is made up: in full." */
+  sharesKey: (key: string, makeup: string) => `${key} ${makeup.toLowerCase()}.`,
+  fairLevel: "The deal is even: everyone’s on their share.",
+  fairClose: "The deal is even: nobody’s more than half a John off their share.",
+  fairBehind: (who: string, points: string, you: boolean) =>
+    `${you ? "You’re" : `${who} is`} ${points} behind on fair shares, and catching up a little each week.`,
+  fairAhead: (who: string, points: string, you: boolean) =>
+    `${you ? "You’re" : `${who} is`} ${points} ahead on fair shares; the next deals even it out.`,
+  /** The "•••" menu. */
+  awayAction: "I’m away…",
+  editJohns: "Edit the John list",
+  redeal: "Re-deal this week",
+  redealTitle: "Re-deal this week?",
+  redealBody: "Everyone’s Johns will be dealt again.",
+  redealt: "This week’s Johns were dealt again.",
+  /** Before the deal. */
+  notDealt: "This week hasn’t been dealt yet",
+  notDealtBody: "Johns are shared so the effort evens out.",
+} as const;
+
+/** House: the month card and settling up, and the Table with its invite and rules sheets. */
+export const HOUSE_PAGE_COPY = {
+  /** Under the house's name: "4 housemates · £20 a month each". */
+  sub: (housemates: number, stake: string) =>
+    `${housemates} ${housemates === 1 ? "housemate" : "housemates"} · ${stake} a month each`,
+  /** The month card's label: "October so far". */
+  soFar: (month: string) => `${month} so far`,
+  /** The Lead, before the figure: "You’re up £4.01". */
+  up: "You’re up",
+  down: "You’re down",
+  nothingYet: "Nothing forfeited yet",
+  /** Forfeited exactly what came back. */
+  even: "You’re even so far",
+  forfeited: (amount: string) => `${amount} forfeited`,
+  nothingForfeited: "Nothing forfeited",
+  sharedOut: (day: string) => `shared out ${day}`,
+  /** The meta line when the Lead has already said nothing was forfeited. */
+  sharedOutAlone: (day: string) => `Forfeits are shared out ${day}`,
+  /** A debt from closed months, with the months it's from when they can be named: "Tom owes you £4.01 for September". */
+  owesYou: (name: string, amount: string, months = "") => `${name} owes you ${amount}${months ? ` for ${months}` : ""}`,
+  youOwe: (name: string, amount: string, months = "") => `You owe ${name} ${amount}${months ? ` for ${months}` : ""}`,
+  /** What happens next, on the meta line: owed to you, it's paid however you like; yours, it waits on them. */
+  paidHowYouLike: "Paid however you like",
+  /** Two or more months in a row of words: "August and September". */
+  and: "and",
+  waitingFor: (name: string) => `Waiting for ${name} to confirm`,
+  /** A settle-up with someone who has left: the database only lets a housemate's payment be marked. */
+  gone: "They’ve left, so it can’t be marked here",
+  /** Someone who has left, mid-sentence: "You owe a former housemate £2", "Sam paid a former housemate". */
+  formerHousemate: "a former housemate",
+  markReceived: (amount: string) => `Mark ${amount} received`,
+  /** The same button, to a screen reader, which hears it away from its row: "Mark Tom’s £4.01 received". */
+  markReceivedFrom: (name: string, amount: string) => `Mark ${name}’s ${amount} received`,
+  marking: "Saving…",
+  history: "Stake history",
+  stakeUnreadable: "Couldn’t read the Stake. Check the connection.",
+  readingStake: "Reading the Stake",
+  table: "The Table",
+  /** The Table's switch between this week and the month, to a screen reader. */
+  show: "Show",
+  week: "Week",
+  you: "You",
+  tableUnreadable: "Couldn’t read the month’s Table. Check the connection.",
+  readingTable: "Reading the Table",
+  /** Late and missed this month, in a Table row's meta: "7 late, 1 missed". */
+  lateMissed: (late: number, missed: number) =>
+    [late ? `${late} late` : "", missed ? `${missed} missed` : ""].filter(Boolean).join(", "),
+  inMonth: (month: string) => ` in ${month}`,
+  streak: (weeks: number) => `${weeks}-week streak`,
+  immunity: (tokens: number) => `${tokens} immunity`,
+  swap: "swap ready",
+  away: (range: string) => `away ${range}`,
+  /** Money lost, said with the figure: a screen reader hears it as well as the colour shows it. */
+  losing: (amount: string) => `${amount}, losing money`,
+  invite: "Invite housemates",
+  inviteBody: "Send it to the group chat. Anyone with the link joins once they’ve signed in.",
+  code: "Code",
+  shareInvite: "Share invite",
+  copyLink: "Copy link",
+  rules: "How points and the stake work",
+  /** The rules sheet's title: short enough for one line on a phone. */
+  rulesTitle: "Points and the stake",
+  rulesPoints: "Points",
+  rulesPointsBody:
+    "A John done on time earns its points. A late one earns half, and a missed one earns nothing. The Table adds them up for the week and the month.",
+  rulesStake: "The Stake",
+  rulesStakeBody: (stake: string, late: string, missed: string) =>
+    `Everyone puts in ${stake} a month. A late John costs ${late} and a missed one ${missed}, but nobody loses more than ${stake} in a month. On the 1st, what was forfeited is shared out among everyone else. Johns never moves money: pay each other however you like, and whoever is paid marks it received.`,
+  rulesImmunity: "Immunity",
+  rulesImmunityBody: (every: number, cap: number) =>
+    `Every ${every} clean weeks in a row earns an immunity token (you can hold ${cap}). Spend one to skip a John with no forfeit.`,
+  rulesSwap: "Swap",
+  rulesSwapBody: "Top the week and you earn a swap: trade one of your open Johns for a housemate’s open John that week.",
+  rulesShares: "Fair shares",
+  rulesSharesBody: (weeks: number, makeup: string) =>
+    `Johns are dealt so that everyone does their share over the last ${weeks} weeks. Whoever is behind is handed a little more, never more than half as much again. Time away is made up ${makeup}.`,
+  /** How time away is made up, by the house's setting (houses.away_makeup). */
+  makeup: { 100: "in full", 50: "by half", 0: "not at all" } as Record<number, string>,
+} as const;
+
+/** A housemate's page. */
+export const PERSON_COPY = {
+  /** Under their name: "Admin", or "You · Admin" on your own page. */
+  sub: (admin: boolean, you: boolean) => `${you ? "You · " : ""}${admin ? "Admin" : "Housemate"}`,
+  record: "Their record",
+  yourRecord: "Your record",
+  thisWeek: "This week",
+  onTime: (n: number) => `${n} on time`,
+  fairShare: "Fair share",
+  /** Points against their share: "3.5 points behind their share". */
+  behind: (points: string, you: boolean) => `${points} ${points === "1" ? "point" : "points"} behind ${you ? "your" : "their"} share`,
+  ahead: (points: string, you: boolean) => `${points} ${points === "1" ? "point" : "points"} ahead of ${you ? "your" : "their"} share`,
+  level: (you: boolean) => `Level with ${you ? "your" : "their"} share`,
+  catchingUp: (weeks: number) => `Catching up over about ${weeks} ${weeks === 1 ? "week" : "weeks"}`,
+  easier: "The next deals go a little easier",
+  overWeeks: (weeks: number) => `Over the last ${weeks} weeks`,
+  streakAndTokens: "Streak and tokens",
+  streak: (weeks: number) => `${weeks}-week streak`,
+  noStreak: "No streak yet",
+  startsStreak: "A clean week starts one",
+  nextImmunity: (weeks: number) => `Next immunity token in ${weeks} ${weeks === 1 ? "week" : "weeks"}`,
+  fullImmunity: "Holding all the immunity tokens there are",
+  immunity: (n: number) => `${n} immunity ${n === 1 ? "token" : "tokens"}`,
+  immunityMeta: "Skips a John with no forfeit",
+  swap: "Swap ready",
+  swapMeta: "Trades an open John for a housemate’s",
+  noTokens: "No tokens",
+  noTokensMeta: "Clean weeks and topping a week earn them",
+  forfeited: "Forfeited",
+  capped: (stake: string) => `Capped at the ${stake} stake`,
+  noneForfeited: "Nothing late or missed",
+  share: "Share of the others’ forfeits",
+  sharedOut: (day: string) => `Shared out ${day}`,
+  net: "Net so far",
+  ifNow: "If the month ended now",
+  /** What's owed from closed months between them and you, apart from the month so far. */
+  settling: "Settling up",
+  away: "Time away",
+  awayNow: "Away now",
+  booked: "Booked",
+  noAway: "No time away booked.",
+  readingAway: "Reading time away",
+  awayUnreadable: "Couldn’t read time away. Check the connection.",
+  admin: "Admin",
+  makeAdmin: "Make admin",
+  makeAdminMeta: "Can change the rules and the Johns",
+  makeHousemate: "Make housemate",
+  makeHousemateMeta: "Stops being an admin",
+  remove: (name: string) => `Remove ${name} from the house`,
+  removeTitle: (name: string) => `Remove ${name} from the house?`,
+  removeBody: (name: string) =>
+    `${name} won’t be in the house any more. Their history stays on the Wall and in Stake history, and they can join again with an invite.`,
+  removeConfirm: (name: string) => `Remove ${name}`,
+} as const;
+
+/** Stake history: the ledger by month. */
+export const STAKE_HISTORY_COPY = {
+  title: "Stake history",
+  /** Under the title, as under the house's name on House: "£20 a month each". */
+  sub: (stake: string) => `${stake} a month each`,
+  /** Whose entries to show. */
+  show: "Show",
+  mine: "Mine",
+  whole: "Whole house",
+  /** A forfeit whose John can't be read any more. */
+  aJohn: "A John",
+  late: "Late",
+  missed: "Missed",
+  forfeit: "Forfeit",
+  share: "Share of forfeits",
+  capRefund: "Over the stake, returned",
+  /** A payment, from whoever is looking: "You paid Priya", "Tom paid you", "Tom paid Priya". */
+  paid: (from: string, to: string) => `${from} paid ${to}`,
+  yourself: "you",
+  received: (day: string) => `Marked received ${day}`,
+  empty: "Nothing yet",
+  emptyBody: "Forfeits appear here as Johns are settled, and shares when a month closes.",
+  emptyMine: "Nothing of yours yet. Whole house shows everyone’s.",
+} as const;
+
+/** The whole Wall, by day. */
+export const WALL_FEED_COPY = {
+  /** House's way to the whole Wall, and what it says to a screen reader. */
+  seeAll: "See all",
+  seeAllOf: (wall: string) => `See all of ${wall}`,
+  emptyTitle: "Nothing on the Wall yet",
+  reading: "Reading the Wall",
+  unreadable: "Couldn’t read the Wall. Check the connection.",
+  loadOlder: "Load older",
+  /** Under the oldest event there is. */
+  everything: "That’s everything.",
+  today: "Today",
+  yesterday: "Yesterday",
+  /** How long ago, after the meta line's words: "Checking · 3h". */
+  justNow: "just now",
+  minutes: (n: number) => `${n} min`,
+  hours: (n: number) => `${n}h`,
+  days: (n: number) => `${n} ${n === 1 ? "day" : "days"}`,
+  /** Who did it, when the event says nobody. */
+  someone: "Someone",
+  /** The viewer, as a sentence's subject, its object, and an owner. */
+  you: "You",
+  youObject: "you",
+  your: "your",
+  /** A John the event doesn't name. */
+  aJohn: "a John",
+  theJohn: "the John",
+  // Each event as a row's one sentence, with first names. `whose` arrives as
+  // "Priya’s", "your" or "a former housemate’s".
+  ticked: (who: string, john: string) => `${who} ticked ${john}`,
+  missed: (who: string, john: string) => `${who} missed ${john}`,
+  disputed: (who: string, whose: string, john: string) => `${who} disputed ${whose} tick on ${john}`,
+  struckOut: (whose: string, john: string) => `${whose} ${john} was struck out`,
+  stands: (whose: string, john: string) => `${whose} ${john} stands`,
+  earnedImmunity: (who: string) => `${who} earned immunity`,
+  toppedWeek: (who: string) => `${who} topped the week`,
+  skipped: (who: string, john: string) => `${who} skipped ${john}`,
+  swapped: (who: string, gave: string, whose: string, took: string) => `${who} swapped ${gave} for ${whose} ${took}`,
+  away: (who: string, range: string) => `${who} is away ${range}`,
+  youAway: (range: string) => `You’re away ${range}`,
+  joined: (who: string) => `${who} moved in`,
+  /** `month` is null for an event that doesn't say which. */
+  monthClosed: (month: string | null) => (month ? `${month} is closed` : "The month is closed"),
+  /** A payment, to the two people in it: the amount. */
+  paidYou: (who: string, amount: string) => `${who} paid you ${amount}`,
+  youPaid: (whom: string, amount: string) => `You paid ${whom} ${amount}`,
+  /** A payment, to everyone else: only that it was settled. */
+  paid: (who: string, whom: string) => `${who} paid ${whom}`,
+  // The meta line's words before the time.
+  checking: "Checking",
+  disputedTick: "Disputed",
+  struck: "Struck out",
+  onTime: "On time",
+  late: "Late",
+  /** A miss's meta words: it has no tick to tell about. */
+  missedWord: "Missed",
+  voted: "The house voted",
+  clean: (weeks: number) => `${weeks} clean ${weeks === 1 ? "week" : "weeks"} in a row`,
+  swapEarned: "Earned a swap",
+  immunityUsed: "Immunity used",
+  swap: "Swap",
+  timeAway: "Time away",
+  dueBefore: (n: number, you: boolean) =>
+    `${n} ${n === 1 ? "John" : "Johns"} due before ${you ? "you go" : "they go"}`,
+  newHousemate: "New housemate",
+  sharedOut: "The Stake is shared out",
+  settled: "Settled up",
+  // Several in a row by one person, folded into one.
+  tickedMany: (who: string, n: number) => `${who} ticked ${n} Johns`,
+  missedMany: (who: string, n: number) => `${who} missed ${n} Johns`,
+  /** The meta line: its words, if any, then the time. */
+  meta: (detail: string | null, when: string) => (detail ? `${detail} · ${when}` : when),
+  /** When, in full, in an event's sheet: "Today, 09:39", "Sat 24 Oct, 18:40". */
+  stamp: (day: string, clock: string) => `${day}, ${clock}`,
+  /** A row, to a screen reader: the sentence, then its meta line. */
+  row: (title: string, meta: string) => `${title}, ${meta}`,
+  // Reactions.
+  /** The way to all four reactions on a row that has none yet. */
+  react: "React",
+  /** A reaction and how many gave it, to a screen reader: "Nice one, 2". */
+  tally: (label: string, count: number) => `${label}, ${count}`,
+  /** A reaction's button in an event's sheet: "Nice one · 2". */
+  reactionCount: (label: string, count: number) => (count > 0 ? `${label} · ${count}` : label),
+} as const;
+
+/** House: the Wall's latest, House setup's rows, You, and leaving. */
+export const HOUSE_LOWER_COPY = {
+  /** House setup's note on the right: changing these changes the house. */
+  setupNote: "Affects everyone",
+  johns: "Johns",
+  rules: "Rules",
+  away: "Time away",
+  groups: "Groups",
+  // Each setup row's value.
+  noJohns: "None yet",
+  johnsValue: (count: number, perWeek: string) => `${count} · ${perWeek}`,
+  perWeek: (points: number) =>
+    points < 1 ? "less than 1 pt a week" : `about ${points} ${points === 1 ? "pt" : "pts"} a week`,
+  /** `stake` is null for a house that stakes nothing. */
+  rulesValue: (stake: string | null, late: string, missed: string) =>
+    `${stake ? `${stake} stake` : "No stake"} · ${late} late · ${missed} missed`,
+  nobodyAway: "Nobody’s away",
+  awayValue: (who: string, range: string) => `${who}, ${range}`,
+  noGroups: "None",
+  groupsValue: (n: number) => `${n} ${n === 1 ? "group" : "groups"}`,
+  // You.
+  name: "Name",
+  rename: "Change your name",
+  save: "Save",
+  reminders: "Reminders",
+  on: "On",
+  off: "Off",
+  look: "Look",
+  signOut: "Sign out",
+  // Leaving, and what it costs.
+  leave: (house: string) => `Leave ${house}`,
+  leaveAsk: (house: string) => `Leave ${house}?`,
+  leaveConfirm: "Leave the house",
+  loseShare: (amount: string, month: string | null) =>
+    `you’ll lose your ${amount} share of ${month ? `${month}’s` : "this month’s"} stake so far`,
+  owesYou: (who: string, amount: string) => `${who} still owes you ${amount}`,
+  youOwe: (whom: string, amount: string) => `you still owe ${whom} ${amount}`,
+  costsNothing: "You’re square with everyone, so it costs you nothing.",
+  /** The only admin, with others still in the house: the database won't let them go yet. */
+  lastAdmin: "You’re the only admin, so you can’t leave yet. Make someone else an admin first, from their page.",
+  /** The last one out, after what it costs. No more than that: the house and its invite stay as they were. */
+  lastOne: "Nobody will be left in the house.",
+  /** Until the Stake is read, and if it can't be. */
+  costReading: "Working out what leaving costs you…",
+  costUnread: "Couldn’t read the Stake, so this can’t say what leaving costs you.",
+  /** "a, b, and c": the clauses of what leaving costs. */
+  list: (clauses: readonly string[]) =>
+    clauses.length < 2 ? clauses.join("") : `${clauses.slice(0, -1).join(", ")}, and ${clauses[clauses.length - 1]}`,
+  // The foot of House.
+  noMoney: "Johns never moves money.",
+  privacy: "Privacy",
+} as const;
+
+/** House setup: the Johns, Rules, Time away and Groups pages. */
+export const SETUP_COPY = {
+  /** A kind of John as a section of the John list: "Kitchen · 3". */
+  kind: (label: string, count: number) => `${label} · ${count}`,
+  /** In a John's meta line: the tick needs a photo. */
+  photo: "photo",
+  /** How often, for a gap the list doesn't name. */
+  everyWeeks: (weeks: number) => `Every ${weeks} weeks`,
+  noJohns: "No Johns yet",
+  noJohnsBody: "Start with the ones that cause arguments: bins, the bathroom, the kitchen.",
+  /** An empty list, to a housemate who can't add to it: who will. */
+  johnsComing: (names: string) => `${names} will add the Johns.`,
+  johnsComingAdmin: "An admin will add the Johns.",
+  /** The John list's re-deal, asked first. */
+  redealTitle: "Re-deal this week?",
+  redealBody: "Everyone’s Johns will be dealt again from the list as it is now.",
+  redealt: "This week’s Johns were dealt again.",
+  /** A John, read by someone who can't change it. */
+  kindLabel: "Kind",
+  photoLabel: "Photo",
+  /** Under "Needs a photo" in the John form, on one line. */
+  photoMeta: "A tick only counts with a photo.",
+  photoNeeded: "Needed to tick it",
+  photoNot: "Not needed",
+  /** The house rules, read out. */
+  stake: "Stake",
+  perMonth: (amount: string) => `${amount} a month`,
+  noStake: "None",
+  late: "Late John",
+  missed: "Missed John",
+  nothing: "Nothing",
+  disputes: "Disputes",
+  disputeWindow: (hours: number) => (hours === 0 ? "Not allowed" : `within ${hours} ${hours === 1 ? "hour" : "hours"}`),
+  /** How long a tick can be disputed, as a value in the form: "24 hours". */
+  disputeShort: (hours: number) => (hours === 0 ? "None" : `${hours} ${hours === 1 ? "hour" : "hours"}`),
+  away: "Time away",
+  makeup: { 100: "made up in full", 50: "half made up", 0: "not made up" } as Record<number, string>,
+  /** A make-up rate the house has no words for. */
+  makeupPercent: (percent: number) => `${percent}% made up`,
+  weekStarts: "Weeks start",
+  weekStartsAt: (day: string, place: string) => `${day}, ${place} time`,
+  you: "You",
+  /** The last two names in a list: "Sam, Priya and Tom". */
+  and: "and",
+  /** The rules' read-out, with Edit beside it for an admin. */
+  rules: "Rules",
+  /** Under the rules: who can change them. */
+  canChange: (names: string, count: number) => `${names} (${count === 1 ? "admin" : "admins"}) can change these.`,
+  youCanChange: "You can change these.",
+  adminsNobody: "Only admins can change these.",
+  edit: "Edit",
+  /** The rules form's three sections. */
+  money: "Money",
+  fairness: "Fairness",
+  house: "House",
+  cancel: "Cancel",
+  saved: "House rules saved",
+  /** Time away. */
+  whosAway: "Who’s away",
+  /** Who's away, when your own trips are listed above it. */
+  nobodyElse: "Nobody else has booked any time away.",
+  nextWeeks: (range: string) => `The next four weeks, ${range}`,
+  awayNow: "Away now",
+  /** The booking calendar's way back and on, a few weeks at a time. */
+  earlier: "Earlier weeks",
+  later: "Later weeks",
+  book: "Book",
+  /** Groups. */
+  noGroups: "No groups yet",
+  addGroup: "Add a group",
+  groupsNote: "A John that belongs to a group is only handed to the people in it.",
+} as const;
+
+/** The front door, starting a house, welcome and privacy. */
+export const FRONT_DOOR_COPY = {
+  /** The front door's three plain sentences, in place of the old feature cards. */
+  points: [
+    { key: "list", body: "List your house’s chores. We call them Johns." },
+    { key: "share", body: "Each week the app shares them out fairly." },
+    {
+      key: "stake",
+      body: "Everyone puts in the same each month. Miss a John and your share goes to the ones who did theirs.",
+    },
+  ],
+  start: "Start a house",
+  invite: "I’ve got an invite",
+  /** Under "Sign in", when the front door's choice came with it. */
+  startReason: "Sign in to start your house.",
+  inviteReason: "Sign in to use your invite.",
+  // Starting a house: one field, and the defaults in one line with Change for the rest.
+  name: "Name your house",
+  stakeEach: (amount: string) => `${amount} a month each`,
+  weekStarts: (day: string) => `weeks start ${day}`,
+  change: "Change",
+  /** In place of Change while the currency and the week are open. */
+  done: "Done",
+  changeSpoken: "The currency and the day weeks start",
+  zoneNote: (zone: string) => `The time zone is this phone’s, ${zone}. Change it later from House.`,
+  submit: "Start the house",
+  // Welcome: signed in with no house, the fallback.
+  welcome: "Paste the invite a housemate sent you, or start a house of your own.",
+  paste: "Paste your invite link or code",
+  pasteHint: "The whole link, or just the eight letters and numbers at its end.",
+  badInvite: "That isn’t an invite link or code. Check it against the one you were sent.",
+  open: "Open the invite",
+  startInstead: "Start a house instead",
+  // A join link, signed in.
+  join: "Join the house",
+  lookingUp: "Looking up the house",
+  /**
+   * Privacy's words under headings, a paragraph or two each. The reminders
+   * paragraph is split between what's kept and deleting it, so its "it"
+   * names the address.
+   */
+  privacy: [
+    {
+      heading: "What we keep",
+      body: [
+        PRIVACY_COPY.paragraphs[0],
+        "If you turn on reminders, your browser gives us an address to send notifications to.",
+      ],
+    },
+    { heading: "What we don’t", body: [PRIVACY_COPY.paragraphs[2]] },
+    { heading: "Who sees what", body: [PRIVACY_COPY.paragraphs[1]] },
+    {
+      heading: "Deleting your data",
+      body: [
+        "Turning reminders off deletes that address. Leaving a house removes you from it; your past Johns stay in its history.",
+      ],
+    },
+  ],
 } as const;

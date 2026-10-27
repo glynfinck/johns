@@ -1,38 +1,24 @@
 import { PAGE_TITLE } from '@app/core';
 import { useLocalSearchParams } from 'expo-router';
-import { ScrollView, StyleSheet } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
 
+import { Door } from '@/components/front-door/door';
 import { PageTitle } from '@/components/page-title';
 import { SignInPanel } from '@/components/sign-in-panel';
-import { SPACE, useTheme } from '@/theme';
 
 /**
  * Sign in. Once a session exists the root layout's guard moves on by itself:
- * to Today, or to starting or joining a house.
+ * to Today, or to starting or joining a house. `?next=` is the front door's
+ * choice, said under the heading and followed by the guard once you're in;
+ * the web's Google redirect comes back here still carrying it, so a refusal
+ * is said here and the choice isn't lost.
  */
 export default function SignIn() {
-  const { colors } = useTheme();
   // The web build comes back here from Google; a failure arrives as ?error=.
-  const { error } = useLocalSearchParams<{ error?: string }>();
+  const { error, next } = useLocalSearchParams<{ error?: string; next?: string | string[] }>();
   return (
-    <SafeAreaView style={[styles.screen, { backgroundColor: colors.background }]}>
+    <Door testID="signin-screen">
       <PageTitle page={PAGE_TITLE.signIn} />
-      <ScrollView contentContainerStyle={styles.page}>
-        <SignInPanel failed={Boolean(error)} />
-      </ScrollView>
-    </SafeAreaView>
+      <SignInPanel next={typeof next === 'string' ? next : undefined} failed={Boolean(error)} />
+    </Door>
   );
 }
-
-const styles = StyleSheet.create({
-  screen: { flex: 1 },
-  page: {
-    flexGrow: 1,
-    width: '100%',
-    maxWidth: 384,
-    alignSelf: 'center',
-    justifyContent: 'center',
-    padding: SPACE.xl,
-  },
-});

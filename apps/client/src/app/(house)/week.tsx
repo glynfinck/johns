@@ -1,24 +1,52 @@
-import { awayThisWeek, isOpen, PAGE_TITLE, TODAY_COPY, WEEK_COPY, weekRange } from '@app/core';
-import { RefreshCwIcon } from 'lucide-react-native';
+import {
+  canSwap,
+  liveWeekFilter,
+  PAGE_TITLE,
+  toggleWeekFilter,
+  WEEK_SUMMARY_COPY,
+  weekAwayLine,
+  weekAwayNote,
+  weekFairness,
+  weekList,
+  weekPeople,
+  weekRangeLine,
+  weekSummary,
+  weekUnticked,
+  whoDeals,
+  type WeekPart,
+} from '@app/core';
+import { RepeatIcon } from 'lucide-react-native';
 import { useState } from 'react';
-import { ActivityIndicator, StyleSheet, View, useWindowDimensions } from 'react-native';
+import { useWindowDimensions } from 'react-native';
 
-import { Alert } from '@/components/alert';
-import { Button } from '@/components/button';
-import { NotDealt } from '@/components/not-dealt';
+import type { JohnRowContext } from '@/components/john-row';
 import { PageTitle } from '@/components/page-title';
+import { Reading, ReadFailed } from '@/components/read-state';
 import { Screen } from '@/components/screen';
-import { SwapSheet } from '@/components/swap-sheet';
-import { TableBeside } from '@/components/table-parts';
-import { Eyebrow, Heading } from '@/components/text';
-import { DealButton } from '@/components/house/deal-button';
-import { AwayThisWeek, DisputeList, PersonSection, Stats, WeekTable, type BoardContext } from '@/components/week-board';
+import { Chip } from '@/components/status-mark';
+import { MoreButton, TitleBar } from '@/components/title-bar';
+import { FairnessFooter } from '@/components/week/fair-shares';
+import { PersonSection } from '@/components/week/person-section';
+import { WeekSummaryBar } from '@/components/week/summary';
+import { WeekEmpty } from '@/components/week/week-empty';
+import { WeekMenu } from '@/components/week/week-menu';
+import { WeekTable } from '@/components/week/week-table';
 import { useAway } from '@/hooks/use-away';
-import { useCatchUp, useHouse, type HouseView } from '@/hooks/use-house';
+import { useHouse, type HouseView } from '@/hooks/use-house';
+import { useJohnList } from '@/hooks/use-john-list';
 import { useMembership } from '@/hooks/use-membership';
-import { SPACE, useTheme, WIDE } from '@/theme';
+import { usePull, useReadOnFocus } from '@/hooks/use-refresh';
+import { useTable } from '@/hooks/use-table';
+import { WIDE } from '@/theme';
 
-/** The board: the whole house's week, as the web's /week. */
+/**
+ * Week: how the whole house's week is going. The title bar's "•••" holds
+ * time away and, for admins, the John list and re-dealing. Then the summary,
+ * whose legend filters the list; one group per person, you first, finished
+ * Johns folded (from WIDE on the web, one table row per John instead, with
+ * who's away and your swap under the summary); and the deal's fairness in a
+ * sentence, which opens the fair shares. Tapping any John opens its sheet.
+ */
 export default function Week() {
   const { session, house } = useMembership();
   // The layout's guard only shows the house's screens with a house and a session.
@@ -26,128 +54,137 @@ export default function Week() {
 }
 
 function WeekFor({ houseId, userId }: { houseId: string; userId: string }) {
-  const { colors } = useTheme();
   const wide = useWindowDimensions().width >= WIDE;
   const { query, view } = useHouse(houseId, userId);
-  const [refreshing, setRefreshing] = useState(false);
-  const freshen = useCatchUp(houseId);
-
-  async function pull() {
-    setRefreshing(true);
-    if (!(await freshen())) await query.refetch();
-    setRefreshing(false);
-  }
+  // Time away isn't on Realtime: read it again on coming back to Week. A pull reads it and the fair shares too.
+  const away = useAway(houseId, view?.snapshot);
+  const shares = useTable(houseId, view?.snapshot);
+  // Before the first deal an admin's Week offers it as Today's checklist does, which counts the John list.
+  const list = useJohnList(houseId, view?.board.notStarted === true && view.me?.role === 'admin');
+  useReadOnFocus(away.refetch, { skipFirst: true });
+  const { refreshing, pull } = usePull(houseId, () =>
+    Promise.all([query.refetch(), ...(view ? [away.refetch(), shares.refetch()] : [])]),
+  );
+  const [menu, setMenu] = useState(false);
+  const board = view?.board;
 
   return (
-    <Screen maxWidth={wide ? 1280 : 720} refreshing={refreshing} onRefresh={() => void pull()}>
+    <Screen
+      bar={
+        <>
+          <TitleBar title={PAGE_TITLE.week} right={<MoreButton onPress={() => setMenu(true)} />} />
+          <WeekMenu
+            visible={menu}
+            onClose={() => setMenu(false)}
+            houseId={houseId}
+            admin={view?.me?.role === 'admin'}
+            canRedeal={board?.week != null && weekUnticked(board.items)}
+          />
+        </>
+      }
+      refreshing={refreshing}
+      onRefresh={pull}
+      testID="week-screen"
+    >
       <PageTitle page={PAGE_TITLE.week} />
-      {!view ? (
-        query.isError ? (
-          <View style={styles.stack}>
-            <Alert message="Couldn't read the house. Check the connection." />
-            <View style={styles.start}>
-              <Button variant="outline" icon={RefreshCwIcon} label="Try again" onPress={() => void query.refetch()} />
-            </View>
-          </View>
-        ) : (
-          <ActivityIndicator color={colors.foreground} accessibilityLabel="Reading the house" style={styles.loading} />
-        )
+      {view ? (
+        <Board view={view} wide={wide} away={away.data} shares={shares.data} johns={list.data?.johns ?? null} />
+      ) : query.isError ? (
+        <ReadFailed onRetry={() => void query.refetch()} />
       ) : (
-        <Board view={view} wide={wide} />
+        <Reading />
       )}
     </Screen>
   );
 }
 
-function Board({ view, wide }: { view: HouseView; wide: boolean }) {
+function Board({
+  view,
+  wide,
+  away,
+  shares,
+  johns,
+}: {
+  view: HouseView;
+  wide: boolean;
+  away: ReturnType<typeof useAway>['data'];
+  shares: ReturnType<typeof useTable>['data'];
+  johns: readonly unknown[] | null;
+}) {
   const { snapshot, board, me, now } = view;
   const { house, members, rules } = snapshot;
-  const away = useAway(house.id, snapshot).data;
+  const [filter, setFilter] = useState<WeekPart | null>(null);
   const userId = me?.userId ?? '';
-  const nameOf = (id: string) => members.find((m) => m.userId === id)?.name ?? 'Housemate';
-  const context: BoardContext = { houseId: house.id, userId, zone: rules.timezone, now, nameOf };
-  const admin = members.find((m) => m.role === 'admin');
+  const nameOf = (id: string) => members.find((m) => m.userId === id)?.name ?? null;
+  const context: JohnRowContext = { houseId: house.id, userId, zone: rules.timezone, rules, now, nameOf };
 
-  if (!board.week) {
+  if (!board.week || board.items.length === 0) {
     return (
-      <View style={styles.stack}>
-        <View>
-          <Eyebrow>{TODAY_COPY.thisWeek}</Eyebrow>
-          <Heading style={styles.title}>{WEEK_COPY.title}</Heading>
-        </View>
-        <NotDealt houseId={house.id} notStarted={board.notStarted} isAdmin={me?.role === 'admin'} adminName={admin?.name ?? 'An admin'} />
-      </View>
+      <WeekEmpty
+        houseId={house.id}
+        notStarted={board.notStarted}
+        isAdmin={me?.role === 'admin'}
+        adminName={whoDeals(members)}
+        johns={johns}
+        memberCount={members.length}
+      />
     );
   }
 
-  const items = board.items;
-  const myOpen = items.filter((i) => i.userId === userId && isOpen(i.status));
-  const theirOpen = items.filter((i) => i.userId !== userId && isOpen(i.status));
-  const nothingTicked = items.every((i) => !i.doneAt && !i.outcome);
-  const awayLabel = (id: string) => (away ? awayThisWeek(away.periods, id, board.week!.startsOn) : null);
-  // Everyone with a John this week, or away some of it, in the order they joined.
-  const people = members.filter((m) => items.some((i) => i.userId === m.userId) || awayLabel(m.userId));
-  const awayNow = members.map((m) => ({ ...m, label: awayLabel(m.userId) })).filter((m) => m.label !== null);
+  const week = board.week;
+  const summary = weekSummary(board.items);
+  const shown = liveWeekFilter(summary, filter);
+  // A filter whose part has emptied lets go for good, so the part filling up again later doesn't hide the rest.
+  if (filter !== null && shown === null) setFilter(null);
+  const memberIds = members.map((m) => m.userId);
+  const fairness = shares ? weekFairness(shares.balances, board.items.map((i) => i.points), userId, nameOf) : null;
+  const pointsOf = (id: string) => board.table.find((r) => r.userId === id)?.points ?? 0;
+  const awayOf = (id: string) => (away ? weekAwayNote(away.periods, id, week.startsOn, away.today) : null);
+  const swapReady = canSwap(board, me);
 
   return (
-    <View style={styles.stack}>
-      <View style={styles.header}>
-        <View style={styles.headerText}>
-          <Eyebrow>{TODAY_COPY.thisWeekRange(weekRange(board.week.startsAt, board.week.endsAt, rules.timezone))}</Eyebrow>
-          <Heading style={styles.title}>{WEEK_COPY.title}</Heading>
-        </View>
-        {me && me.swapTokens > 0 ? (
-          <SwapSheet
-            houseId={house.id}
-            mine={myOpen.map((i) => ({ id: i.id, name: i.name }))}
-            theirs={theirOpen.map((i) => ({ id: i.id, name: i.name, owner: nameOf(i.userId) }))}
-          />
-        ) : null}
-        {/* As on the web: a week nobody has ticked in can be dealt again. */}
-        {me?.role === 'admin' && nothingTicked ? <DealButton houseId={house.id} started /> : null}
-      </View>
-
-      <Stats items={items} />
-
+    <>
+      <WeekSummaryBar
+        range={weekRangeLine(week.startsAt, week.endsAt, now, rules.timezone)}
+        summary={summary}
+        filter={shown}
+        onFilter={(part) => setFilter(toggleWeekFilter(shown, part))}
+        // The table has no person headers, so what they'd say about time away and your swap goes here.
+        tag={wide && swapReady ? <Chip label={WEEK_SUMMARY_COPY.swapReady} icon={RepeatIcon} testID="swap-ready" /> : undefined}
+        note={
+          wide
+            ? weekAwayLine(
+                weekPeople(board.items, memberIds, userId).map((p) => ({ userId: p.userId, away: awayOf(p.userId) })),
+                userId,
+                nameOf,
+              )
+            : null
+        }
+      />
       {wide ? (
-        <View style={styles.columns}>
-          <View style={styles.main}>
-            <WeekTable context={context} items={items} />
-          </View>
-          <View style={styles.aside}>
-            <DisputeList context={context} items={items} />
-            {awayNow.length > 0 ? <AwayThisWeek people={awayNow} me={userId} /> : null}
-            <TableBeside rows={board.table} people={{ me: userId, nameOf }} />
-          </View>
-        </View>
+        <WeekTable {...weekList(board.items, shown)} context={context} />
       ) : (
-        <>
-          {people.map((p) => (
-            <PersonSection
-              key={p.userId}
-              context={context}
-              userId={p.userId}
-              items={items.filter((i) => i.userId === p.userId)}
-              immunityTokens={me?.immunityTokens ?? 0}
-              away={awayLabel(p.userId)}
-            />
-          ))}
-          {/* On a phone each card carries its own votes, so only the Table follows. */}
-          <TableBeside rows={board.table} people={{ me: userId, nameOf }} />
-        </>
+        weekPeople(board.items, memberIds, userId, shown).map((person) => (
+          <PersonSection
+            key={person.userId}
+            person={person}
+            context={context}
+            points={pointsOf(person.userId)}
+            away={awayOf(person.userId)}
+            swapReady={person.userId === userId && swapReady}
+          />
+        ))
       )}
-    </View>
+      {fairness && shares ? (
+        <FairnessFooter
+          sentence={fairness}
+          balances={shares.balances}
+          memberIds={memberIds}
+          viewerId={userId}
+          nameOf={nameOf}
+          awayMakeup={house.awayMakeup}
+        />
+      ) : null}
+    </>
   );
 }
-
-const styles = StyleSheet.create({
-  stack: { gap: SPACE.xl },
-  start: { alignItems: 'flex-start' },
-  loading: { marginTop: SPACE.xxl },
-  title: { marginTop: SPACE.xs },
-  header: { flexDirection: 'row', flexWrap: 'wrap', alignItems: 'flex-end', justifyContent: 'space-between', gap: SPACE.md },
-  headerText: { flexShrink: 1 },
-  columns: { flexDirection: 'row', alignItems: 'flex-start', gap: SPACE.xl },
-  main: { flex: 1, minWidth: 0 },
-  aside: { width: 320, gap: SPACE.lg },
-});

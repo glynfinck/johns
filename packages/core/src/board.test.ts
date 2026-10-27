@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 
 import {
+  byDoneLatest,
   groupDef,
   johnDef,
   NEW_JOHN,
@@ -160,6 +161,18 @@ describe("buildWeekBoard", () => {
     });
   });
 
+  it("says which John on the list each was dealt from, and how often that comes round, when the read has them", () => {
+    const [embedded, deleted, bare] = board([
+      john("embedded", { john_id: "j1", johns: { every_weeks: 2 }, due_at: at(1) }),
+      john("deleted", { john_id: null, johns: null, due_at: at(2) }),
+      // The web's read takes the John's id but not the list's row.
+      john("bare", { john_id: "j3", due_at: at(3) }),
+    ]).items;
+    expect(embedded).toMatchObject({ johnId: "j1", everyWeeks: 2 });
+    expect(deleted).toMatchObject({ johnId: null, everyWeeks: null });
+    expect(bare).toMatchObject({ johnId: "j3", everyWeeks: null });
+  });
+
   it("says when a tick stands, only while it can still be disputed", () => {
     const [ticked, settled] = board([
       john("ticked", { done_at: at(-3) }),
@@ -262,6 +275,17 @@ describe("isOpen and TODAY_ORDER", () => {
   it("counts only what's still to do as open", () => {
     const open = (Object.keys(TODAY_ORDER) as (keyof typeof TODAY_ORDER)[]).filter(isOpen);
     expect(open.sort()).toEqual(["due-soon", "overdue", "upcoming"]);
+  });
+});
+
+describe("byDoneLatest", () => {
+  it("lists the latest done first, a John skipped with immunity by when it was due", () => {
+    const at = (iso: string) => new Date(iso);
+    const early = { id: "early", doneAt: at("2026-10-20T09:00:00Z"), dueAt: at("2026-10-21T20:00:00Z") };
+    const late = { id: "late", doneAt: at("2026-10-23T18:00:00Z"), dueAt: at("2026-10-22T20:00:00Z") };
+    const skipped = { id: "skipped", doneAt: null, dueAt: at("2026-10-22T08:00:00Z") };
+    expect([early, skipped, late].sort(byDoneLatest).map((i) => i.id)).toEqual(["late", "skipped", "early"]);
+    expect([].sort(byDoneLatest)).toEqual([]);
   });
 });
 

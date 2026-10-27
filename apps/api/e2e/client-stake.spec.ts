@@ -1,10 +1,10 @@
-import { monthOf, SECTION_LABEL, STAKE_COPY } from "@app/core";
+import { formatMoney, HOUSE_PAGE_COPY, monthOf, SECTION_LABEL, STAKE_HISTORY_COPY } from "@app/core";
 import { expect, test } from "@playwright/test";
 
 import { admin, CLIENT_URL, cleanUp, dealtHouseInClient } from "./auth";
 
-// The Stake in the Expo app's web build: what a closed month left owing,
-// and the person paid marking it received.
+// The Stake in the Expo app's web build: what a closed month left owing, on
+// House's month card, and the person paid marking it received there.
 test.use({ baseURL: CLIENT_URL });
 
 const made: string[] = [];
@@ -39,22 +39,41 @@ test("a closed month's debt is settled once the person paid marks it received", 
   expect(error).toBeNull();
   expect((await db.from("month_closes").insert({ house_id: houseId, month })).error).toBeNull();
 
-  // Ben sees what he owes, with nothing to mark.
+  // Ben's own history has the forfeit. The old link still lands on it, now one of House's pages.
+  const four = formatMoney(400, "GBP");
   const benPage = await benContext.newPage();
   await benPage.goto("/stake");
-  const owed = benPage.getByTestId("stake-screen").getByTestId("transfer");
-  await expect(owed).toContainText("You");
-  await expect(owed).toContainText("Ava Stake");
-  await expect(owed).toContainText("£4");
-  await expect(owed.getByRole("button", { name: STAKE_COPY.markReceived })).toHaveCount(0);
+  await expect(benPage).toHaveURL(/\/house\/stake$/);
+  await expect(benPage.getByRole("heading", { name: STAKE_HISTORY_COPY.title })).toBeVisible();
+  await expect(benPage.getByTestId("stake-screen").getByTestId("ledger-entry").filter({ hasText: STAKE_HISTORY_COPY.aJohn })).toContainText(four);
 
-  // Ava, paid, marks it received; the house is square.
+  // Back on House, the month card says what he owes, with nothing to mark.
+  await benPage.getByTestId("stake-screen").getByTestId("back").click();
+  await expect(benPage).toHaveURL(/\/house$/);
+  const owed = benPage.getByTestId("house-screen").getByTestId("month-card").getByTestId("transfer");
+  await expect(owed).toHaveCount(1);
+  await expect(owed).toContainText(HOUSE_PAGE_COPY.youOwe("Ava", four));
+  await expect(owed).toContainText(HOUSE_PAGE_COPY.waitingFor("Ava"));
+  await expect(owed.getByRole("button")).toHaveCount(0);
+
+  // Ava, paid, marks it received from House's month card; the house is square.
   const avaPage = await avaContext.newPage();
   await avaPage.goto("/today");
-  await avaPage.getByRole("tab", { name: SECTION_LABEL.stake }).click();
-  await expect(avaPage).toHaveURL(/\/stake$/);
+  await avaPage.getByRole("tab", { name: SECTION_LABEL.house }).click();
+  const card = avaPage.getByTestId("house-screen").getByTestId("month-card");
+  const due = card.getByTestId("transfer");
+  await expect(due).toContainText(HOUSE_PAGE_COPY.owesYou("Ben", four));
+  await due.getByRole("button", { name: HOUSE_PAGE_COPY.markReceivedFrom("Ben", four) }).click();
+  await expect(due).toHaveCount(0);
+  // Ben's House follows, live.
+  await expect(owed).toHaveCount(0);
+
+  // Stake history says so once, from her side, however it's shown.
+  await card.getByTestId("to-stake").getByRole("link").click();
+  await expect(avaPage).toHaveURL(/\/house\/stake$/);
   const stake = avaPage.getByTestId("stake-screen");
-  await stake.getByTestId("transfer").getByRole("button", { name: STAKE_COPY.markReceived }).click();
-  await expect(stake.getByText(STAKE_COPY.square)).toBeVisible();
-  await expect(stake.getByTestId("ledger-entry").filter({ hasText: "Payment" })).toHaveCount(2);
+  const paid = stake.getByTestId("ledger-entry").filter({ hasText: STAKE_HISTORY_COPY.paid("Ben", STAKE_HISTORY_COPY.yourself) });
+  await expect(paid).toHaveCount(1);
+  await stake.getByRole("radio", { name: STAKE_HISTORY_COPY.whole }).click();
+  await expect(paid).toHaveCount(1);
 });

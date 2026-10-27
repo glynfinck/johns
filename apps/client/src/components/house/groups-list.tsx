@@ -1,24 +1,32 @@
-import { firstName, GROUPS_COPY, type GroupDef } from '@app/core';
-import { CheckIcon, PencilIcon, PlusIcon, Trash2Icon, UsersIcon } from 'lucide-react-native';
+import { firstName, GROUPS_COPY, membersLine, SETUP_COPY, type GroupDef } from '@app/core';
+import { PlusIcon, Trash2Icon, UsersIcon } from 'lucide-react-native';
 import { useState } from 'react';
-import { Pressable, StyleSheet, Text, View } from 'react-native';
+import { StyleSheet, View } from 'react-native';
 
 import type { Housemate } from '@/api/board';
 import { deleteGroup, saveGroup } from '@/api/settings';
 import { Alert } from '@/components/alert';
 import { Avatar } from '@/components/avatar';
 import { Button } from '@/components/button';
+import { EmptyState } from '@/components/empty-state';
 import { Field } from '@/components/field';
+import { Group, GroupItem } from '@/components/group';
+import { Row, RowIcon } from '@/components/row';
+import { Section } from '@/components/section';
+import { ChoiceRow } from '@/components/setup/choice-row';
 import { Sheet } from '@/components/sheet';
-import { Body, Eyebrow } from '@/components/text';
+import { Meta } from '@/components/text';
 import { useMove } from '@/hooks/use-move';
-import { FONT, RADIUS, SPACE, TAP, useTheme } from '@/theme';
+import { INSET, LABEL_GAP, SECTION_GAP, SPACE } from '@/theme';
 
 type Draft = { id?: string; name: string; memberIds: string[] };
 
 /**
- * Groups, as the web's: the parts of the house only some of you share. A
- * John can belong to one, and then only that group is handed it.
+ * Groups: the parts of the house only some of you share. A John can belong
+ * to one, and then only that group is handed it. Each group is a row (its
+ * name, who's in it), which an admin opens to change; with none yet, a
+ * sentence on what a group is for. Several page children, so it goes
+ * straight in a Screen.
  */
 export function GroupsList({
   houseId,
@@ -33,65 +41,47 @@ export function GroupsList({
   me: string;
   editable: boolean;
 }) {
-  const { colors } = useTheme();
   const [editing, setEditing] = useState<Draft | null>(null);
-  const realName = (id: string) => people.find((p) => p.userId === id)?.name ?? '?';
-  const nameOf = (id: string) => (id === me ? 'You' : firstName(realName(id)));
+  const add = () => setEditing({ name: '', memberIds: [] });
 
   return (
-    <View style={styles.stack} testID="groups">
+    <>
       {groups.length === 0 ? (
-        <View style={[styles.empty, { backgroundColor: colors.secondary }]}>
-          <Body>{GROUPS_COPY.empty}</Body>
-        </View>
+        <EmptyState
+          icon={UsersIcon}
+          title={SETUP_COPY.noGroups}
+          body={GROUPS_COPY.empty}
+          action={editable ? <Button icon={PlusIcon} label={SETUP_COPY.addGroup} onPress={add} testID="add-group" /> : undefined}
+          testID="groups"
+        />
       ) : (
-        <View style={styles.list}>
-          {groups.map((g) => (
-            <View key={g.id} testID="group" style={[styles.row, { borderColor: colors.border }]}>
-              <UsersIcon size={16} color={colors.mutedForeground} aria-hidden />
-              <View style={styles.grow}>
-                <Text style={[styles.name, { color: colors.foreground }]}>{g.name}</Text>
-                {g.memberIds.length === 0 ? (
-                  <Text style={[styles.small, { color: colors.mutedForeground }]}>{GROUPS_COPY.nobody}</Text>
-                ) : (
-                  <View style={styles.members}>
-                    {g.memberIds.map((id) => (
-                      <View key={id} style={styles.member}>
-                        <Avatar name={realName(id)} me={id === me} size={20} />
-                        <Text style={[styles.small, { color: colors.mutedForeground }]}>{nameOf(id)}</Text>
-                      </View>
-                    ))}
-                  </View>
-                )}
-              </View>
-              {editable ? (
-                <Button
-                  variant="ghost"
-                  icon={PencilIcon}
-                  label={GROUPS_COPY.edit(g.name)}
-                  iconOnly
-                  onPress={() => setEditing({ id: g.id, name: g.name, memberIds: g.memberIds })}
+        <View style={styles.noted} testID="groups">
+          <Group>
+            {groups.map((g) => {
+              const members = membersLine(g.memberIds, people, me);
+              return (
+                <Row
+                  key={g.id}
+                  leading={<RowIcon icon={UsersIcon} />}
+                  title={g.name}
+                  meta={members}
+                  chevron={editable}
+                  onPress={editable ? () => setEditing({ id: g.id, name: g.name, memberIds: g.memberIds }) : undefined}
+                  accessibilityLabel={editable ? `${GROUPS_COPY.edit(g.name)}, ${members}` : undefined}
+                  testID="group"
                 />
-              ) : null}
-            </View>
-          ))}
+              );
+            })}
+            {editable ? <Row leading={<RowIcon icon={PlusIcon} />} title={SETUP_COPY.addGroup} onPress={add} testID="add-group" /> : null}
+          </Group>
+          <Meta style={styles.note}>{SETUP_COPY.groupsNote}</Meta>
         </View>
       )}
-      {editable ? (
-        <View style={styles.start}>
-          <Button
-            variant="outline"
-            icon={PlusIcon}
-            label={GROUPS_COPY.add}
-            onPress={() => setEditing({ name: '', memberIds: [] })}
-            testID="add-group"
-          />
-        </View>
-      ) : null}
       <Sheet
         visible={editing !== null}
-        title={editing?.id ? GROUPS_COPY.edit(editing.name) : GROUPS_COPY.add}
+        title={editing?.id ? GROUPS_COPY.edit(editing.name) : SETUP_COPY.addGroup}
         description={GROUPS_COPY.hint}
+        flush
         onClose={() => setEditing(null)}
       >
         {editing ? (
@@ -105,10 +95,11 @@ export function GroupsList({
           />
         ) : null}
       </Sheet>
-    </View>
+    </>
   );
 }
 
+/** A group's name and who's in it, a row each to tick by first name, then Save (the sheet's one amber button) and Delete. */
 function GroupForm({
   houseId,
   initial,
@@ -122,7 +113,6 @@ function GroupForm({
   me: string;
   onDone: () => void;
 }) {
-  const { colors } = useTheme();
   const move = useMove(houseId);
   const [name, setName] = useState(initial.name);
   const [picked, setPicked] = useState(() => new Set(initial.memberIds));
@@ -144,52 +134,38 @@ function GroupForm({
 
   return (
     <View style={styles.form} testID="group-form">
-      <Field
-        label={GROUPS_COPY.name}
-        placeholder={GROUPS_COPY.namePlaceholder}
-        value={name}
-        onChangeText={setName}
-        maxLength={40}
-        testID="group-name"
-      />
-      <View style={styles.list}>
-        <Eyebrow>{GROUPS_COPY.who}</Eyebrow>
-        {people.map((p) => {
-          const on = picked.has(p.userId);
-          return (
-            <Pressable
-              key={p.userId}
-              accessibilityRole="checkbox"
-              accessibilityLabel={p.userId === me ? 'You' : p.name}
-              aria-checked={on}
-              onPress={() => toggle(p.userId)}
-              style={[styles.pick, { borderColor: on ? colors.foreground : colors.border }]}
-            >
-              <View
-                aria-hidden
-                style={[
-                  styles.box,
-                  on ? { backgroundColor: colors.foreground, borderColor: colors.foreground } : { borderColor: colors.input },
-                ]}
-              >
-                {on ? <CheckIcon size={14} color={colors.background} strokeWidth={3} /> : null}
-              </View>
-              <Avatar name={p.name} me={p.userId === me} size={24} />
-              <Text style={[styles.name, { color: colors.foreground }]}>{p.userId === me ? 'You' : p.name}</Text>
-            </Pressable>
-          );
-        })}
-      </View>
-      {move.problem ? <Alert message={move.problem} /> : null}
-      <View style={styles.actions}>
-        <View style={styles.grow}>
-          <Button
-            label={move.pending ? GROUPS_COPY.saving : initial.id ? GROUPS_COPY.save : GROUPS_COPY.create}
-            disabled={move.pending || picked.size === 0 || !name.trim()}
-            onPress={() => void save()}
-            testID="save-group"
+      <Group>
+        <GroupItem>
+          <Field
+            label={GROUPS_COPY.name}
+            placeholder={GROUPS_COPY.namePlaceholder}
+            value={name}
+            onChangeText={setName}
+            maxLength={40}
+            testID="group-name"
           />
-        </View>
+        </GroupItem>
+      </Group>
+      <Section label={GROUPS_COPY.who}>
+        {people.map((p) => (
+          <ChoiceRow
+            key={p.userId}
+            role="checkbox"
+            label={p.userId === me ? SETUP_COPY.you : firstName(p.name)}
+            checked={picked.has(p.userId)}
+            leading={<Avatar name={p.name} me={p.userId === me} />}
+            onPress={() => toggle(p.userId)}
+          />
+        ))}
+      </Section>
+      <View style={styles.actions}>
+        {move.problem ? <Alert message={move.problem} /> : null}
+        <Button
+          label={move.pending ? GROUPS_COPY.saving : initial.id ? GROUPS_COPY.save : GROUPS_COPY.create}
+          disabled={move.pending || picked.size === 0 || !name.trim()}
+          onPress={() => void save()}
+          testID="save-group"
+        />
         {initial.id ? (
           <Button variant="hazard" icon={Trash2Icon} label={GROUPS_COPY.remove} disabled={move.pending} onPress={() => void remove()} />
         ) : null}
@@ -199,28 +175,9 @@ function GroupForm({
 }
 
 const styles = StyleSheet.create({
-  stack: { gap: SPACE.md },
-  list: { gap: SPACE.sm },
-  empty: { borderRadius: RADIUS, padding: SPACE.lg },
-  row: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: SPACE.md,
-    borderWidth: 1,
-    borderRadius: RADIUS,
-    paddingVertical: SPACE.sm,
-    paddingLeft: SPACE.md,
-    paddingRight: SPACE.xs,
-    minHeight: 56,
-  },
-  grow: { flex: 1, minWidth: 0 },
-  name: { fontFamily: FONT.bold, fontSize: 15 },
-  small: { fontFamily: FONT.regular, fontSize: 12 },
-  members: { flexDirection: 'row', flexWrap: 'wrap', gap: SPACE.sm, marginTop: SPACE.xs },
-  member: { flexDirection: 'row', alignItems: 'center', gap: SPACE.xs },
-  start: { alignItems: 'flex-start' },
-  form: { gap: SPACE.lg },
-  pick: { minHeight: TAP, flexDirection: 'row', alignItems: 'center', gap: SPACE.md, borderWidth: 1, borderRadius: RADIUS, paddingHorizontal: SPACE.md },
-  box: { width: 20, height: 20, borderRadius: 4, borderWidth: 2, alignItems: 'center', justifyContent: 'center' },
-  actions: { flexDirection: 'row', flexWrap: 'wrap', gap: SPACE.sm },
+  noted: { gap: LABEL_GAP },
+  // A line under a group, on the leading edge.
+  note: { paddingHorizontal: INSET },
+  form: { gap: SECTION_GAP },
+  actions: { paddingHorizontal: INSET, gap: SPACE.sm },
 });

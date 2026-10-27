@@ -3,6 +3,11 @@
   "framework": null,
   "buildCommand": "npm run export:web",
   "outputDirectory": "dist",
+  "redirects": [
+    { "source": "/wall", "destination": "/house/wall", "permanent": false },
+    { "source": "/stake", "destination": "/house/stake", "permanent": false },
+    { "source": "/table", "destination": "/house", "permanent": false }
+  ],
   "rewrites": [
     { "source": "/api/:path*", "destination": "https://api.johns.glyn.dev/api/:path*" },
     { "source": "/(.*)", "destination": "/index.html" }

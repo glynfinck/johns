@@ -1,4 +1,4 @@
-import { loadWall, setReaction } from './wall';
+import { loadWall, setReaction, signPhoto } from './wall';
 import { supabase } from './supabase';
 
 // `from` answers every table with what the test sets; the chain records its calls.
@@ -85,6 +85,21 @@ describe('loadWall', () => {
   });
 });
 
+describe('signPhoto', () => {
+  it('signs one receipt for an hour, and fails when storage says no', async () => {
+    const createSignedUrl = jest
+      .fn()
+      .mockResolvedValueOnce({ data: { signedUrl: 'https://signed/p' }, error: null })
+      .mockResolvedValueOnce({ data: null, error: new Error('Object not found') });
+    storage.from.mockReturnValue({ createSignedUrl });
+
+    await expect(signPhoto('h1/a1/p.jpg')).resolves.toBe('https://signed/p');
+    expect(storage.from).toHaveBeenCalledWith('proofs');
+    expect(createSignedUrl).toHaveBeenCalledWith('h1/a1/p.jpg', 3600);
+    await expect(signPhoto('h1/a1/gone.jpg')).rejects.toThrow('Object not found');
+  });
+});
+
 describe('setReaction', () => {
   it('adds your reaction as your own row', async () => {
     await setReaction('e1', 'ava', 'fire', true);
@@ -108,6 +123,6 @@ describe('setReaction', () => {
     mockAnswer.reactions = { error: { message: 'duplicate key value violates unique constraint' } };
     await expect(setReaction('e1', 'ava', 'fire', true)).resolves.toBeUndefined();
     mockAnswer.reactions = { error: { message: 'permission denied', code: '42501' } };
-    await expect(setReaction('e1', 'ava', 'fire', true)).rejects.toThrow("You can't do that.");
+    await expect(setReaction('e1', 'ava', 'fire', true)).rejects.toThrow("You can’t do that.");
   });
 });

@@ -53,5 +53,5 @@ export function signInReason(next?: string | null): string {
   const target = safeNext(next);
   if (target.startsWith("/join")) return "Sign in to join your house.";
   if (target.startsWith("/stake")) return "Sign in to see who owes what.";
-  return "Your house's Johns are kept with your Google account.";
+  return "Your house’s Johns are kept with your Google account.";
 }

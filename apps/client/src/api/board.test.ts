@@ -93,6 +93,8 @@ it("asks for the week that holds now in the house's own zone, and only open disp
     ['starts_on', startsOn],
   ]);
   expect(calls('assignments', 'eq')).toEqual([['week_id', 'w1']]);
+  // How often each John comes round rides along, for the John sheet.
+  expect(calls('assignments', 'select')).toEqual([['*, johns(every_weeks)']]);
   expect(calls('disputes', 'is')).toEqual([['resolution', null]]);
   expect(calls('members', 'order')).toEqual([['joined_at']]);
 });

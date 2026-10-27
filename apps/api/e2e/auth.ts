@@ -104,14 +104,16 @@ async function clientSession(context: BrowserContext, name: string): Promise<{ i
  * with this week already handed out: they create the house as the app does,
  * any `housemates` join it by its code (each signed in to their own
  * context), its Johns are added as an admin adds them, and the week is dealt
- * through the engine, as "Hand out this week's Johns" does. Alone, every John
- * lands on them; with housemates, the deal shares them out.
+ * through the engine, as "Hand out this week’s Johns" does. Alone, every John
+ * lands on them; with housemates, the deal shares them out. Every John falls
+ * due on Sunday at 21:00 unless it names another time (`dueTime`), so a test
+ * can say which comes first.
  */
 export async function dealtHouseInClient(
   context: BrowserContext,
   name: string,
   houseName: string,
-  johns: { name: string; category?: string; needsPhoto?: boolean }[],
+  johns: { name: string; category?: string; needsPhoto?: boolean; dueTime?: string }[],
   housemates: { context: BrowserContext; name: string }[] = [],
 ): Promise<{ userId: string; houseId: string; housemateIds: string[] }> {
   const { id, client } = await clientSession(context, name);
@@ -143,7 +145,7 @@ export async function dealtHouseInClient(
       points: 2,
       // Sunday night: anything already due when the week is dealt gets a day's grace.
       due_dow: 7,
-      due_time: "21:00",
+      due_time: j.dueTime ?? "21:00",
       every_weeks: 1,
       anchor_week: weekIndex(week.startsOn),
       needs_photo: j.needsPhoto ?? false,

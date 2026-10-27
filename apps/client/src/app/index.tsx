@@ -1,94 +1,82 @@
-import { APP_NAME, FRONT_DOOR, SIGN_IN, TAGLINE, type FrontDoorPoint } from '@app/core';
-import { CoinsIcon, MessagesSquareIcon, ShuffleIcon, type LucideIcon } from 'lucide-react-native';
-import { ScrollView, StyleSheet, View, useWindowDimensions } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { APP_NAME, DOOR, FRONT_DOOR, FRONT_DOOR_COPY, SIGN_IN, SIGN_IN_COPY, signInPath } from '@app/core';
+import { CoinsIcon, ListTodoIcon, ShuffleIcon, type LucideIcon } from 'lucide-react-native';
+import { StyleSheet, View, useWindowDimensions } from 'react-native';
 
 import { Button } from '@/components/button';
-import { Card } from '@/components/card';
-import { HazardTape } from '@/components/hazard-tape';
+import { Door, DoorFoot, Sign } from '@/components/front-door/door';
 import { PageTitle } from '@/components/page-title';
-import { Body, Eyebrow, Heading } from '@/components/text';
+import { Body, Heading, Meta } from '@/components/text';
+import { TextButton } from '@/components/text-button';
 import { TextLink } from '@/components/text-link';
-import { Wordmark } from '@/components/wordmark';
-import { FONT, SPACE, useTheme } from '@/theme';
+import { CONTENT_MAX, LEADING, ROW_GAP, SPACE, useTheme } from '@/theme';
 
-const ICON: Record<FrontDoorPoint, LucideIcon> = {
-  deal: ShuffleIcon,
+type Point = (typeof FRONT_DOOR_COPY.points)[number]['key'];
+
+const ICON: Record<Point, LucideIcon> = {
+  list: ListTodoIcon,
+  share: ShuffleIcon,
   stake: CoinsIcon,
-  wall: MessagesSquareIcon,
 };
 
-/** The front door, signed out. Every way in leads to sign-in, as on the web. */
+/** From this width the two ways in sit side by side. */
+const SIDE_BY_SIDE = 560;
+
+/**
+ * The front door, signed out: the wordmark, the taped sign with the big caps
+ * headline, three plain sentences, and the two ways in. Each way in goes
+ * through sign-in carrying where it leads (`next`), so starting a house lands
+ * on naming it, and an invite on pasting it.
+ */
 export default function FrontDoor() {
   const { colors } = useTheme();
   const { width } = useWindowDimensions();
-  // The web spreads the points into columns from Tailwind's `sm`.
-  const wide = width >= 640;
+  const sideBySide = width >= SIDE_BY_SIDE;
 
   return (
-    <SafeAreaView style={[styles.screen, { backgroundColor: colors.background }]}>
+    <Door
+      home
+      maxWidth={CONTENT_MAX}
+      right={<TextButton href={SIGN_IN} label={FRONT_DOOR.signIn} align="end" testID="sign-in" />}
+      testID="front-door"
+    >
       <PageTitle />
-      <ScrollView contentContainerStyle={styles.page}>
-        <View style={styles.header}>
-          <Wordmark />
-          <TextLink href={SIGN_IN} label={FRONT_DOOR.signIn} style={styles.signIn} />
-        </View>
-
-        <Card style={styles.hero}>
-          <View style={styles.tape}>
-            <HazardTape />
-          </View>
-          <Eyebrow>{FRONT_DOOR.eyebrow}</Eyebrow>
-          <Heading style={[styles.headline, wide && styles.headlineWide]}>{FRONT_DOOR.headline}</Heading>
-          <Body muted style={styles.tagline}>
-            {TAGLINE}
-          </Body>
-          <View style={[styles.actions, wide && styles.actionsWide]}>
-            <Button href={SIGN_IN} label={FRONT_DOOR.start} />
-            <Button href={SIGN_IN} label={FRONT_DOOR.join} variant="outline" />
-          </View>
-        </Card>
-
-        <View style={[styles.points, wide && styles.pointsWide]}>
-          {FRONT_DOOR.points.map(({ key, title, body }) => {
+      <Sign>
+        <Heading>{FRONT_DOOR.headline}</Heading>
+        <View style={styles.points}>
+          {FRONT_DOOR_COPY.points.map(({ key, body }) => {
             const Icon = ICON[key];
             return (
-              <Card key={key} style={wide && styles.pointWide}>
-                <Icon size={24} color={colors.foreground} aria-hidden />
-                <Heading level={3} style={styles.pointTitle}>
-                  {title}
-                </Heading>
-                <Body muted>{body}</Body>
-              </Card>
+              <View key={key} style={styles.point}>
+                <View style={styles.icon}>
+                  <Icon size={24} color={colors.foreground} aria-hidden />
+                </View>
+                <Body style={styles.words}>{body}</Body>
+              </View>
             );
           })}
         </View>
-
-        <View style={styles.footer}>
-          <Body muted>{APP_NAME}</Body>
-          <TextLink href="/privacy" label="Privacy" muted testID="privacy" />
+        <View style={[styles.ways, sideBySide && styles.waysSideBySide]}>
+          <Button href={signInPath(DOOR.start)} label={FRONT_DOOR_COPY.start} testID="start" />
+          <Button href={signInPath(DOOR.invite)} label={FRONT_DOOR_COPY.invite} variant="outline" testID="invite" />
         </View>
-      </ScrollView>
-    </SafeAreaView>
+      </Sign>
+      <DoorFoot>
+        <View style={styles.foot}>
+          <Meta>{APP_NAME}</Meta>
+          <TextLink href="/privacy" label={SIGN_IN_COPY.privacy} muted testID="privacy" />
+        </View>
+      </DoorFoot>
+    </Door>
   );
 }
 
 const styles = StyleSheet.create({
-  screen: { flex: 1 },
-  page: { width: '100%', maxWidth: 1024, alignSelf: 'center', padding: SPACE.xl, gap: SPACE.xl },
-  header: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
-  // The web's header link: small, bold, not underlined.
-  signIn: { fontFamily: FONT.bold, fontSize: 14, textDecorationLine: 'none' },
-  hero: { paddingTop: SPACE.xxl },
-  tape: { position: 'absolute', top: 0, left: 0, right: 0 },
-  headline: { marginTop: SPACE.md },
-  headlineWide: { fontSize: 60, lineHeight: 57 },
-  tagline: { marginTop: SPACE.lg, fontSize: 18, lineHeight: 27 },
-  actions: { marginTop: SPACE.xl, gap: SPACE.md },
-  actionsWide: { flexDirection: 'row' },
   points: { gap: SPACE.lg },
-  pointsWide: { flexDirection: 'row' },
-  pointWide: { flex: 1 },
-  pointTitle: { marginTop: SPACE.md, marginBottom: SPACE.xs, textTransform: 'none' },
-  footer: { flexDirection: 'row', alignItems: 'center', gap: SPACE.lg, paddingTop: SPACE.xxl },
+  point: { flexDirection: 'row', alignItems: 'flex-start', gap: ROW_GAP },
+  // The icon sits on the first line's middle, in the row's leading slot.
+  icon: { width: LEADING, alignItems: 'center' },
+  words: { flex: 1 },
+  ways: { gap: SPACE.sm },
+  waysSideBySide: { flexDirection: 'row', alignItems: 'flex-start' },
+  foot: { flexDirection: 'row', alignItems: 'center', gap: SPACE.lg },
 });

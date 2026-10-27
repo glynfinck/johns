@@ -1,9 +1,20 @@
 import { StyleSheet, TextInput, View, type TextInputProps } from 'react-native';
 
-import { Body } from '@/components/text';
+import { Alert } from '@/components/alert';
+import { Body, Meta } from '@/components/text';
 import { FONT, RADIUS, SPACE, TAP, useTheme } from '@/theme';
 
-/** A labelled text box at least a thumb tall, with an optional hint or problem under it. */
+/** A form control's label: Body Bold, sentence case. Field, Choice and a Segmented in a form use it. */
+export function FieldLabel({ children }: { children: string }) {
+  return <Body style={styles.label}>{children}</Body>;
+}
+
+/**
+ * A labelled text box at least a thumb tall (a multiline one, a few lines
+ * tall): the label in Body Bold and sentence case, the box on the card
+ * colour, then a hint in Meta or a problem to fix (an Alert: ink, a
+ * triangle, never hazard).
+ */
 export function Field({
   label,
   hint,
@@ -13,37 +24,37 @@ export function Field({
   const { colors, type } = useTheme();
   return (
     <View style={styles.field}>
-      <Body style={[type.eyebrow, styles.label]}>{label}</Body>
+      <FieldLabel>{label}</FieldLabel>
       <TextInput
         accessibilityLabel={label}
         placeholderTextColor={colors.mutedForeground}
         {...input}
         style={[
           styles.input,
-          { borderColor: problem ? colors.hazard : colors.input, color: colors.foreground, backgroundColor: colors.background },
+          input.multiline && styles.multiline,
+          // Body's face and size; a line height would set single-line text off centre on iOS.
+          { fontFamily: type.body.fontFamily, fontSize: type.body.fontSize },
+          {
+            borderColor: problem ? colors.foreground : colors.mutedForeground,
+            color: colors.foreground,
+            backgroundColor: colors.card,
+          },
         ]}
       />
-      {problem ? (
-        <Body style={[styles.note, { color: colors.hazard }]}>{problem}</Body>
-      ) : hint ? (
-        <Body muted style={styles.note}>
-          {hint}
-        </Body>
-      ) : null}
+      {problem ? <Alert message={problem} /> : hint ? <Meta>{hint}</Meta> : null}
     </View>
   );
 }
 
 const styles = StyleSheet.create({
-  field: { gap: SPACE.xs },
-  label: { marginBottom: SPACE.xs },
+  field: { gap: SPACE.sm },
+  label: { fontFamily: FONT.bold },
   input: {
     minHeight: TAP,
     borderWidth: 1,
     borderRadius: RADIUS,
     paddingHorizontal: SPACE.md,
-    fontFamily: FONT.regular,
-    fontSize: 16,
   },
-  note: { fontSize: 13, lineHeight: 18 },
+  // Room for a few lines, written from the top, as far in from the edge above as from the sides.
+  multiline: { minHeight: 96, paddingVertical: SPACE.md, textAlignVertical: 'top' },
 });

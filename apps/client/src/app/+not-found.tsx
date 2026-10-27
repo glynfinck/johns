@@ -1,33 +1,24 @@
 import { NOT_FOUND_COPY, PAGE_TITLE } from '@app/core';
-import { StyleSheet, View } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { Button } from '@/components/button';
+import { Door, Sign, SignHeading } from '@/components/front-door/door';
 import { PageTitle } from '@/components/page-title';
-import { Body, Heading } from '@/components/text';
-import { Wordmark } from '@/components/wordmark';
-import { SPACE, useTheme } from '@/theme';
+import { useMembership } from '@/hooks/use-membership';
 
-/** A link to nowhere, as the web's not-found page: say so, and the way back. */
+/**
+ * A link to nowhere, as the web's not-found page, on the front door's
+ * pavement: say so, and the way back. Signed in, that's your Johns; signed
+ * out, there are none yet, so it's the front door.
+ */
 export default function NotFound() {
-  const { colors } = useTheme();
+  const { session } = useMembership();
   return (
-    <SafeAreaView style={[styles.screen, { backgroundColor: colors.background }]}>
+    <Door testID="not-found-screen">
       <PageTitle page={PAGE_TITLE.notFound} />
-      <View style={styles.page}>
-        <Wordmark />
-        <Heading level={2}>{NOT_FOUND_COPY.title}</Heading>
-        <Body muted>{NOT_FOUND_COPY.body}</Body>
-        <View style={styles.start}>
-          <Button href="/" label={NOT_FOUND_COPY.back} />
-        </View>
-      </View>
-    </SafeAreaView>
+      <Sign>
+        <SignHeading title={NOT_FOUND_COPY.title} body={NOT_FOUND_COPY.body} />
+        <Button href="/" label={session ? NOT_FOUND_COPY.back : NOT_FOUND_COPY.backToDoor} />
+      </Sign>
+    </Door>
   );
 }
-
-const styles = StyleSheet.create({
-  screen: { flex: 1 },
-  page: { flex: 1, width: '100%', maxWidth: 384, alignSelf: 'center', justifyContent: 'center', padding: SPACE.xl, gap: SPACE.lg },
-  start: { alignItems: 'flex-start' },
-});

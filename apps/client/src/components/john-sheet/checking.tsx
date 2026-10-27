@@ -1,0 +1,98 @@
+import {
+  DISPUTE_COPY,
+  FOCUS_SHELL_COPY,
+  forfeitRoom,
+  JOHN_COPY,
+  JOHN_SHEET_COPY,
+  monthOf,
+  tickedLine,
+  undoWarning,
+  type BoardItem,
+} from '@app/core';
+import { FlagIcon, Undo2Icon } from 'lucide-react-native';
+import { useState } from 'react';
+import { StyleSheet, View } from 'react-native';
+
+import { undoDone } from '@/api/johns';
+import { Alert } from '@/components/alert';
+import { Button } from '@/components/button';
+import { DisputeForm } from '@/components/dispute';
+import { Body } from '@/components/text';
+import { useMove } from '@/hooks/use-move';
+import { SPACE } from '@/theme';
+
+import type { JohnSheetContext } from './body';
+import { SheetLines } from './parts';
+
+/**
+ * Your tick, being checked: when it stands, and Undo meanwhile. Past the
+ * John's due time an undo makes it late, so Undo turns into the sentence
+ * that says so, with "Undo it" and "Cancel", in place.
+ */
+export function YoursChecking({ item, context }: { item: BoardItem; context: JohnSheetContext }) {
+  const move = useMove(context.houseId);
+  const [asking, setAsking] = useState(false);
+  const warning = undoWarning(item, context.rules, context.now, forfeitRoom(context.stake, item.userId, monthOf(item.dueAt, context.zone)));
+  const undo = () => void move.run(() => undoDone(item.id));
+  return (
+    <SheetLines>
+      <Body testID="ticked-line">{tickedLine(item, context.members, context.userId, context.rules, context.now)}</Body>
+      {asking && warning ? (
+        <View style={styles.asking} testID="undo-warning">
+          <Body>{warning}</Body>
+          <View style={styles.pair}>
+            <View style={styles.half}>
+              <Button
+                variant="hazard"
+                icon={Undo2Icon}
+                label={JOHN_SHEET_COPY.undoIt}
+                disabled={move.pending}
+                onPress={undo}
+                testID="sheet-undo-it"
+              />
+            </View>
+            <View style={styles.half}>
+              <Button variant="ghost" label={FOCUS_SHELL_COPY.cancel} onPress={() => setAsking(false)} />
+            </View>
+          </View>
+        </View>
+      ) : (
+        <Button
+          variant="outline"
+          icon={Undo2Icon}
+          label={JOHN_COPY.undo}
+          disabled={move.pending}
+          onPress={warning ? () => setAsking(true) : undo}
+          testID="sheet-undo"
+        />
+      )}
+      {move.problem ? <Alert message={move.problem} /> : null}
+    </SheetLines>
+  );
+}
+
+/**
+ * A housemate's fresh tick: who ticked it and when it stands, and an
+ * outline Dispute, which opens "What's wrong with it" and "Put it to the
+ * house" in place. Only that press opens the form (and its keyboard), even
+ * when the sheet was opened to dispute: most who look are just looking.
+ */
+export function TheirsChecking({ item, context }: { item: BoardItem; context: JohnSheetContext }) {
+  const [disputing, setDisputing] = useState(false);
+  return (
+    <SheetLines>
+      <Body testID="ticked-line">{tickedLine(item, context.members, context.userId, context.rules, context.now)}</Body>
+      {disputing ? (
+        <DisputeForm houseId={context.houseId} assignmentId={item.id} />
+      ) : (
+        <Button variant="outline" icon={FlagIcon} label={DISPUTE_COPY.open} onPress={() => setDisputing(true)} testID="dispute" />
+      )}
+    </SheetLines>
+  );
+}
+
+const styles = StyleSheet.create({
+  asking: { gap: SPACE.sm },
+  pair: { flexDirection: 'row', gap: SPACE.sm },
+  half: { flex: 1 },
+});

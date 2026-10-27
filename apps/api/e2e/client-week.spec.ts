@@ -1,19 +1,20 @@
-import { DISPUTE_COPY, SECTION_LABEL, WEEK_COPY } from "@app/core";
+import { DISPUTE_COPY, JOHN_COPY, NEXT_UP_COPY, PAGE_TITLE, SECTION_LABEL, WEEK_SUMMARY_COPY } from "@app/core";
 import { expect, test, type Locator, type Page } from "@playwright/test";
 
 import { admin, CLIENT_URL, cleanUp, dealtHouseInClient } from "./auth";
 
 // The board in the Expo app's web build: two housemates, one ticks, the
-// other disputes it, and in a house of two that decides at once. A phone
-// shows each person's cards; a laptop shows the house as a table.
+// other opens it from the board and disputes it in its John sheet, and in a
+// house of two that decides at once. A phone shows a group per person; a
+// laptop shows the house as a table. Either way a John is a `week-row`.
 test.use({ baseURL: CLIENT_URL });
 
 const made: string[] = [];
 test.afterAll(async () => cleanUp(made));
 
-/** Where a John shows on the board: its card on a phone, its row on a laptop. */
+/** Where a John shows on the board: its row in its owner's group on a phone, in the table on a laptop. */
 function onBoard(page: Page, john: string): Locator {
-  return page.locator('[data-testid="john-card"], [data-testid="week-row"]').filter({ hasText: john }).filter({ visible: true });
+  return page.getByTestId("week-screen").getByTestId("week-row").filter({ hasText: john }).filter({ visible: true });
 }
 
 test("dispute a housemate's tick from the board, and the house of two decides at once", async ({ browser }) => {
@@ -34,31 +35,40 @@ test("dispute a housemate's tick from the board, and the house of two decides at
   expect(bens).toHaveLength(1);
   const benJohn = bens![0].name;
 
-  // Ben ticks his.
+  // Ben ticks his, his one John: Next up on his Today.
   const ben = await benContext.newPage();
   await ben.goto("/today");
-  const mine = ben.getByTestId("john-card").filter({ hasText: benJohn });
-  await mine.getByRole("button", { name: "Mark done", exact: true }).click();
-  await expect(mine.getByText("Done, being checked")).toBeVisible();
+  const benToday = ben.getByTestId("today-screen");
+  await expect(benToday.getByTestId("next-up-name")).toHaveText(benJohn);
+  await benToday.getByTestId("next-up").getByRole("button", { name: JOHN_COPY.markDone, exact: true }).click();
+  const mine = benToday.getByTestId("rest-of-week").getByTestId("my-john").filter({ hasText: benJohn });
+  await expect(mine.getByRole("img", { name: NEXT_UP_COPY.stateLabel.checking })).toBeVisible();
 
   // Ava goes from Today to the board by its tab, and sees it being checked.
   const ava = await avaContext.newPage();
   await ava.goto("/today");
   await ava.getByRole("tab", { name: SECTION_LABEL.week }).click();
   await expect(ava).toHaveURL(/\/week$/);
-  await expect(ava.getByRole("heading", { name: WEEK_COPY.title })).toBeVisible();
+  await expect(ava.getByRole("heading", { name: PAGE_TITLE.week })).toBeVisible();
   const theirs = onBoard(ava, benJohn);
-  await expect(theirs.getByText("Done, being checked")).toBeVisible();
+  await expect(theirs.getByRole("img", { name: NEXT_UP_COPY.stateLabel.checking })).toBeVisible();
+  await expect(theirs.getByTestId("status-checking")).toBeVisible();
 
-  // She disputes it. Her vote is already the majority, so it's struck at once.
-  await theirs.getByRole("button", { name: DISPUTE_COPY.open }).click();
-  await ava.getByLabel(DISPUTE_COPY.label).fill("Still greasy");
-  await ava.getByRole("button", { name: DISPUTE_COPY.send }).click();
-  await expect(theirs.getByText("Done, being checked")).toHaveCount(0);
-  await expect(theirs.getByRole("button", { name: DISPUTE_COPY.open })).toHaveCount(0);
+  // The row opens its John sheet, where she disputes it. Her vote is already
+  // the majority, so it's struck at once.
+  await theirs.getByRole("button", { name: benJohn }).click();
+  const sheet = ava.getByTestId("john-sheet");
+  await expect(sheet.getByTestId("john-sheet-name")).toHaveText(benJohn);
+  await sheet.getByRole("button", { name: DISPUTE_COPY.open, exact: true }).click();
+  await sheet.getByLabel(DISPUTE_COPY.label).fill("Still greasy");
+  await sheet.getByRole("button", { name: DISPUTE_COPY.send }).click();
+  await expect(sheet.getByRole("button", { name: DISPUTE_COPY.open, exact: true })).toHaveCount(0);
+  await expect(theirs.getByRole("img", { name: NEXT_UP_COPY.stateLabel.checking })).toHaveCount(0);
+  await expect(theirs.getByRole("img", { name: WEEK_SUMMARY_COPY.notDone })).toBeVisible();
 
-  // Ben's board follows, live: his John is open again.
-  await expect(mine.getByRole("button", { name: "Mark done", exact: true })).toBeVisible();
+  // Ben's Today follows, live: his John is open again.
+  await expect(benToday.getByTestId("next-up").getByRole("button", { name: JOHN_COPY.markDone, exact: true })).toBeVisible();
+  await expect(benToday.getByTestId("next-up-name")).toHaveText(benJohn);
   const { data: struck } = await admin().from("disputes").select("resolution").eq("house_id", houseId);
   expect(struck).toEqual([{ resolution: "upheld" }]);
 });

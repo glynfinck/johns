@@ -6,15 +6,17 @@ import { StyleSheet, View } from 'react-native';
 import { reminderSupport, remindersOn, turnRemindersOff, turnRemindersOn } from '@/api/push';
 import { Alert } from '@/components/alert';
 import { Button } from '@/components/button';
-import { Body, Eyebrow } from '@/components/text';
+import { Meta, SectionLabel } from '@/components/text';
 import { SPACE } from '@/theme';
 
 /**
  * Reminders on this device, as the web's You card has them: a browser's push
  * notifications, on or off. Nothing shows where there's nothing to offer yet
- * (a phone, until native push; a build without the VAPID key).
+ * (a phone, until native push; a build without the VAPID key). It heads
+ * itself with a section label, unless `labelled` is false because something
+ * round it already says Reminders (the You section's sheet, in its title).
  */
-export function Reminders({ userId }: { userId: string }) {
+export function Reminders({ userId, labelled = true }: { userId: string; labelled?: boolean }) {
   const support = reminderSupport();
   const [on, setOn] = useState<boolean | null>(null);
   const [busy, setBusy] = useState(false);
@@ -66,28 +68,21 @@ export function Reminders({ userId }: { userId: string }) {
 
   return (
     <View style={styles.stack} testID="reminders">
-      <Eyebrow>{ME_COPY.reminders}</Eyebrow>
+      {labelled ? <SectionLabel>{ME_COPY.reminders}</SectionLabel> : null}
       {support === 'unsupported' ? (
-        <Body muted style={styles.small}>
-          {REMINDERS_COPY.unsupported}
-        </Body>
-      ) : on === null ? null : (
-        <View style={styles.start}>
-          {on ? (
-            <Button variant="outline" icon={BellOffIcon} label={REMINDERS_COPY.off} disabled={busy} onPress={() => void disable()} />
-          ) : (
-            <Button icon={BellIcon} label={REMINDERS_COPY.on} disabled={busy} onPress={() => void enable()} testID="enable-push" />
-          )}
-        </View>
+        <Meta>{REMINDERS_COPY.unsupported}</Meta>
+      ) : on === null ? null : on ? (
+        // Across the sheet, as every sheet's buttons are.
+        <Button variant="outline" icon={BellOffIcon} label={REMINDERS_COPY.off} disabled={busy} onPress={() => void disable()} />
+      ) : (
+        <Button icon={BellIcon} label={REMINDERS_COPY.on} disabled={busy} onPress={() => void enable()} testID="enable-push" />
       )}
       {problem ? <Alert message={problem} /> : null}
-      <View accessibilityLiveRegion="polite">{notice ? <Body muted style={styles.small}>{notice}</Body> : null}</View>
+      <View accessibilityLiveRegion="polite">{notice ? <Meta>{notice}</Meta> : null}</View>
     </View>
   );
 }
 
 const styles = StyleSheet.create({
   stack: { gap: SPACE.sm },
-  start: { alignItems: 'flex-start' },
-  small: { fontSize: 13, lineHeight: 18 },
 });

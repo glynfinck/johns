@@ -66,7 +66,10 @@ permanent once a store has seen them.
   screen and splits the routes with `Stack.Protected` three ways: signed
   out (front door, sign-in), signed in with no house (`welcome`,
   `house/new`), and in a house (the `(house)` group). Signing in or out, or creating a
-  house, moves you by itself; screens never navigate after auth. A join link
+  house, moves you by itself; screens never navigate after auth. Signing in
+  with no house goes where sign-in's `?next=` was carrying you, when
+  `afterSignIn` (core) allows it: `/house/new`, `/welcome` or a join link,
+  on every platform. A join link
   (`join/[joinCode]`, which is `johns://join/CODE` on a phone) sits outside
   the guards and signs you in in place, so the code survives. So do
   `privacy` and `+not-found` (anything not a route, `/_sitemap` included:
@@ -91,7 +94,8 @@ permanent once a store has seen them.
     `board.ts` (`loadHouse`: one read of a house's rules, people and this
     week's rows), `johns.ts` (ticking, undoing, spending immunity, a swap),
     `disputes.ts` (disputing and voting, through apps/api), `wall.ts` (the
-    Wall's events with their photos signed for an hour, and your reactions),
+    Wall's events with their photos signed for an hour, your reactions, and
+    `signPhoto`: one receipt signed on its own, for a settled John's sheet),
     `table.ts` (the month's Table and the fair shares, summed by core as the
     deal sums them), `stake.ts` (the ledger, built by core's `buildStake`,
     and "Mark received" through `confirm_payment`), `settings.ts` (House:
@@ -116,22 +120,86 @@ permanent once a store has seen them.
   in, read behind the splash screen, with `refresh()` for after creating or
   joining a house. `look.tsx` is the Day/Night/Auto choice for this device
   (`LookProvider` in the root layout, `useLook()`), saved in storage under
-  `theme`, the key the web's next-themes uses. `src/components/`: reusable
-  UI pieces (`PageTitle`, which names the browser tab on the web from core's
-  `pageTitle` and is nothing on a phone, `Field`, `Choice`
-  for the web's selects, `Alert`, `SignInPanel`, `Screen` for a house
-  screen's page, `Sheet` for a form that rises from the bottom, `JohnCard`
-  for anyone's John, `DisputeButton` and `VoteButtons`, `SwapSheet`, the
-  board's pieces in `week-board.tsx`, `Toggle` for an on/off setting,
-  `DateRangePicker` for picking days (no native date module), House's
-  panels in `house/`, and the shell in `shell/`).
-- **A house's screens are tabs** (`src/app/(house)/_layout.tsx`, Expo
-  Router's JS tabs from `expo-router/js-tabs`): `HouseTabBar` draws them in
-  the web's look, along the bottom of a phone and as a sidebar from `WIDE`
-  on the web; `HouseHeader` names the house above each screen on a phone.
-  The layout follows the house live (`useLiveHouse`) once for every tab. A
-  new screen adds its file to the group and a `Tabs.Screen`, with its label
-  from `SECTION_LABEL` in core.
+  `theme`, the key the web's next-themes uses.
+- `src/components/`: the pieces every house screen is built from, Focus's
+  kit: `Screen` (a house screen's page), `TitleBar` (with `MoreButton` for
+  "•••"), `PageTitle` (the browser tab's title on the web from core's
+  `pageTitle`, nothing on a phone), `Section`, `Group`, `Row` (the one row,
+  everywhere), `Fold`, `Card` (at most one stand-alone card a screen),
+  `TickCircle`, `StatusMark` and `Chip` (core's `STATUS_MARK`, drawn),
+  `LidDot`, `Avatar`, `CountBadge`, `Button`, `TextButton`, `TextLink`,
+  `Field`, `Alert`, `Segmented`, `EmptyState`, `Reading` and `ReadFailed`
+  (a first read on its way, or "Try again"), toasts, and the brand pieces
+  (`Wordmark`, `HazardTape`, `SignInPanel`). `john-row.tsx` is a John as a
+  row wherever one is drawn (Today, Week's groups and its table): core's
+  `johnRow` decides the circle, the meta line and the one trailing item for
+  anyone's John and whoever is looking, and `DoneFold` folds the finished
+  ones with how many were late. Then one folder per place:
+  - `today/`: Next up (`NextUp`, or `SetupCard`, an admin's checklist
+    before the first deal), Needs you, the rest of your week and the page's
+    tappable lines (`PageLine`).
+  - `week/`: the summary bar and its legend's filter, one `PersonSection`
+    per housemate, `WeekTable` from `WIDE`, `WeekEmpty`, the "•••" menu
+    (`WeekMenu`) and the fairness footer with its fair shares sheet.
+  - `house-page/`: House's sections, in the page's order: the month card
+    and settling up, the Table with its invite and rules sheets, the Wall's
+    latest, House setup, You, and Leave; and `StakeHistory` and `MetaLine`
+    / `Money` (a row's meta parts and an amount, hazard marks included).
+  - `house/`: the setup pages' editors (`JohnList`, `RulesForm` with its
+    `RulesFoot`, `GroupsList`, time away's `AwayCalendar`, `MyTrips` and
+    `AwayForm`, and `Reminders`), `DealButton`, and `HousePage`, the frame
+    of every page House pushes.
+  - `person/`: a housemate's page (`PersonSections`, `PersonLines`), and
+    for admins Make admin and Remove (`PersonAdmin`).
+  - `wall/`: a Wall row with its reactions control, and `WallEventSheet`,
+    an event in full.
+  - `setup/`: the setup pages' own rows (`PickRow`, a short select that
+    opens in place; `ChoiceRow`, a radio or checkbox row), `AwayDates` (the
+    calendar for booking time away, drawn by the app, no native date
+    module) and `DealFoot`.
+  - `front-door/`: the pages from before you have a house (`Door`, `Sign`,
+    `SignHeading`), and `DefaultsLine`, a new house's defaults with Change.
+  - `shell/`: `HouseTabBar`, the tabs and the rail.
+- **Sheets:** `Sheet` rises from the bottom on a phone and sits in the
+  middle from `WIDE`, over a full scrim; it changes its own content rather
+  than opening a second sheet, and `openAt` opens it scrolled to a
+  `SheetAnchor`. On it: `ConfirmSheet` ("Are you sure?" for a move that
+  costs something), `ActionMenu` (the "•••" menu, which runs its action
+  once it has gone), the invite sheet, the rules sheet, the fair shares, a
+  Wall event, the reminders, and the John sheet.
+- **The John sheet** (`components/john-sheet/`) holds every John action:
+  tick, photo, undo, immunity, swap, dispute and vote. `JohnSheetProvider`
+  is mounted once, in the house layout, and any screen opens it with
+  `useJohnSheet().open(assignmentId, focus?)`, `focus` being what it was
+  opened for (the vote, a dispute, "If you can't", the swap). It reads the
+  John live from the house's board by id, so it follows ticks and votes as
+  they land and puts itself away if the John goes (a re-deal). Its header
+  is the kind, points and how often (the board item's `everyWeeks`, from
+  the John it was dealt from), the name, and while it's to do when it's due
+  and what lateness costs (capped at the stake, once a screen has read the
+  Stake, which `useCached` takes from the cache alone); once settled, what
+  happened. Under it, by whose it is and where it has got to (core's
+  `johnSheetMode`): `open.tsx`, `checking.tsx`, `vote.tsx` and
+  `settled.tsx` (the photo, signed by `usePhoto`).
+- **A house is three places, as tabs** (`src/app/(house)/_layout.tsx`, Expo
+  Router's JS tabs from `expo-router/js-tabs`): Today, Week and House,
+  labelled from `SECTION_LABEL` in core. `HouseTabBar` draws them along the
+  bottom of a phone and as a left rail from `WIDE` on the web. There is no
+  header strip: each screen draws its own `TitleBar`. The layout follows the
+  house live (`useLiveHouse`) once for every tab, and mounts the John sheet
+  and the toasts for all of them. JS tabs makes every file in `(house)` a
+  tab, so nothing else goes there: House is a stack
+  (`(house)/house/_layout.tsx`): the group page (`index.tsx`) and the pages
+  it pushes, `wall`, `stake`, `people/[userId]` (a housemate's page) and
+  the setup pages `johns`, `rules`, `away` and `groups`. A new page goes in
+  `(house)/house/`, built on `HousePage` (whose back goes to `/house`),
+  keeping the tabs; one opened straight from a link still has House under
+  it (the stack's `anchor`). The
+  old `/wall`, `/stake` and `/table` links are the router's redirects in
+  `app.json` (a phone, and links inside the app) and, the same three, the
+  host's in `vercel.json` (a web page opened cold on one, where the router's
+  own redirect screen would leave `/house/house/wall` in the address bar);
+  `vercel.test.ts` keeps the two lists alike.
 - **What a house screen shows comes through React Query**
   (`@tanstack/react-query`; `QueryProvider` in `hooks/query.tsx` wraps the
   root layout). One cache entry per house, `houseKey(id)` from
@@ -143,9 +211,11 @@ permanent once a store has seen them.
 - **A move** goes through `useMove(houseId).run(...)`: it runs, then reads the
   house again, and holds the refusal's sentence in `problem`.
 - **Everything a house's screens read is keyed under `houseKey(id)`**
-  (`hooks/keys.ts`): the Wall (`wallKey`), the Table (`tableKey`) and the
-  Stake (`stakeKey`) sit beneath it, so reading the house again (a move, a Realtime change,
-  catching up) refreshes them too. A reaction (`useReact` in `use-wall.ts`) shows at once and goes back
+  (`hooks/keys.ts`): the Wall (`wallKey`), a receipt signed on its own
+  (`photoKey`), the Table (`tableKey`), the Stake (`stakeKey`), the John
+  list and its groups (`listKey`) and time away (`awayKey`) sit beneath it,
+  so reading the house again (a move, a Realtime change, catching up)
+  refreshes them too. A reaction (`useReact` in `use-wall.ts`) shows at once and goes back
   if the database says no: React Query's optimistic update.
 - **Live:** `useLiveHouse(houseId)` listens on Realtime to what
   `supabase_realtime` publishes (`events`, `assignments`, `disputes`; never
@@ -207,11 +277,26 @@ permanent once a store has seen them.
   web's `globals.css` carries the same values, and a test in `apps/api` fails
   if they drift, so change a token in both places together.
 - **Type:** Overpass, loaded behind the splash screen in `_layout.tsx`. Text
-  goes through `Heading` (uppercase council-sign weight), `Eyebrow` and
-  `Body`. On iOS and Android each weight is its own family, so a style names
-  the family from `FONT`; `fontWeight` alone falls back to the system font.
-- **Signage:** `Wordmark` (the road sign), `HazardTape` on late and missed,
-  a `Lid` per kind of John, `StatusChip` in the web's words. Decoration is
+  goes through six roles (`useTheme().type`, drawn by `components/text.tsx`):
+  `Title` (once per screen, in the title bar), `Lead`, `SectionLabel`,
+  `RowTitle`, `Body` and `Meta`, never an inline size. `Heading` stays for
+  the brand pages (the front door, sign-in, joining) and the pages for a
+  missing link or a screen that failed to draw. On iOS and Android each
+  weight is its own family, so a style names the family from `FONT`;
+  `fontWeight` alone falls back to the system font.
+- **The fonts are patched copies**, in `assets/fonts`: Overpass 400, 700,
+  800 and 900 from `@expo-google-fonts/overpass`, with one change. Overpass
+  calls its middle dot a mark, and a text shaper gives a mark no width, so
+  every meta line's " · " drew its dot on the space after it ("Bathroom
+  ·tomorrow"). In these copies the dot is a base glyph and keeps its
+  width; nothing else differs. The README there has the command that made
+  them (run it again after upgrading the package), and `theme.test.ts`
+  checks the dot in each.
+- **Signage:** `Wordmark` (the road sign) and the full `HazardTape` belong to
+  the brand pages and the invite sheet (`Sheet`'s `tape`, with the code in
+  big caps). Inside the house, tape is otherwise only a row's 4pt edge on an
+  overdue or missed John, a lid colour only a `LidDot` before a John's
+  category, and where a John has got to a `StatusMark`. Decoration is
   `aria-hidden`.
 - **Controls** are at least `TAP` (48) tall; links get the same target
   (`TextLink`, or `Button` with `href`, which is an anchor on the web).
@@ -236,7 +321,8 @@ permanent once a store has seen them.
 - **No emoji**, reactions included: `src/no-emoji.test.ts` scans `src/` and
   `app.json` and fails on any.
 - Responsive: tabs along the bottom on a phone; on web from 1024px (`WIDE`) a
-  sidebar, with the week board as a table, as the web app does now.
+  left rail of the same three, the content capped at 680 (`CONTENT_MAX`) on
+  every tab, and Week as a table.
 
 ### Tests
 
@@ -279,7 +365,7 @@ Prefer those package docs over stale assumptions, and follow deprecation notices
 
 - RNTL 14: `render`, `rerender`, `fireEvent` and `act` are async. Await them.
 - Queries skip `aria-hidden` elements; pass `{ includeHiddenElements: true }`
-  to find decoration such as a `Lid`.
+  to find decoration such as a `LidDot`.
 - `jest.config.js` maps `lucide-react-native` to its CommonJS build, because
   its React Native entry is an ES module Jest can't load.
 - TypeScript 6 no longer loads every `@types` package, so `tsconfig.json`

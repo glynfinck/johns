@@ -66,10 +66,10 @@ describe('setAway', () => {
   });
 
   it("says what's wrong before asking, and the database's refusal after", async () => {
-    await expect(setAway({ from: '', to: '2026-10-28' })).rejects.toThrow("Pick the first day you're away.");
+    await expect(setAway({ from: '', to: '2026-10-28' })).rejects.toThrow("Pick the first day you’re away.");
     expect(rpc).not.toHaveBeenCalled();
     rpc.mockResolvedValue({ data: null, error: { code: 'P0001', message: 'away_overlaps' } });
-    await expect(setAway({ from: '2026-10-26', to: '2026-10-28' })).rejects.toThrow("You're already away for some of those days.");
+    await expect(setAway({ from: '2026-10-26', to: '2026-10-28' })).rejects.toThrow("You’re already away for some of those days.");
   });
 });
 
