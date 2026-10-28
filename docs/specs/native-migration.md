@@ -772,6 +772,9 @@ the pages, components, shadcn, Tailwind and the server actions, and
 `apps/api` becomes route handlers only, as the template intends. The cookie
 e2e suite retires; the Expo web suite carries on.
 
+Done on 28 October 2026. Every path outside `/api` now answers with a 308 to
+the same path on jonz.app, and an unclaimed `/api` path with a JSON 404.
+
 ## Ask-first, in one list
 
 | Phase | What | Who |

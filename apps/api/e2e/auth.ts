@@ -2,7 +2,6 @@ import { randomUUID } from "node:crypto";
 
 import { weekIndex, weekWindow } from "@app/core";
 import type { BrowserContext } from "@playwright/test";
-import { createBrowserClient } from "@supabase/ssr";
 import { createClient, type SupabaseClient } from "@supabase/supabase-js";
 
 import { dealWeek, loadHouse } from "../lib/engine/tick";
@@ -10,7 +9,6 @@ import { dealWeek, loadHouse } from "../lib/engine/tick";
 const SUPABASE_URL = process.env.NEXT_PUBLIC_SUPABASE_URL;
 const ANON_KEY = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
 const SERVICE_ROLE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY;
-const BASE_URL = "http://localhost:3205";
 /** The Expo app's web build, served from its static export (playwright.config.ts). */
 export const CLIENT_URL = "http://localhost:8205";
 
@@ -31,38 +29,13 @@ export function admin() {
 }
 
 /**
- * Put a signed-in housemate into `context`.
+ * Put a signed-in housemate into the Expo app's web build, which keeps its
+ * session where supabase-js does in a browser: localStorage, not cookies.
  *
  * Sign-in is Google-only and a consent screen cannot be driven from CI, so
- * the session is minted out of band: a confirmed user from the admin API,
- * real tokens from a password sign-in, and the cookies handed to the
- * browser. @supabase/ssr serializes them against an in-memory jar, so their
- * names and encoding always match what the app reads back.
- */
-export async function signInAs(context: BrowserContext, name: string): Promise<string> {
-  const { email, id } = await createHousemate(name);
-
-  const jar = new Map<string, string>();
-  const client = createBrowserClient(SUPABASE_URL!, ANON_KEY!, {
-    isSingleton: false,
-    cookies: {
-      getAll: () => [...jar].map(([cookieName, value]) => ({ name: cookieName, value })),
-      setAll: (cookies) => {
-        for (const { name: cookieName, value } of cookies) jar.set(cookieName, value);
-      },
-    },
-  });
-  const { error: signInError } = await client.auth.signInWithPassword({ email, password: PASSWORD });
-  if (signInError) throw signInError;
-  await context.addCookies([...jar].map(([cookieName, value]) => ({ name: cookieName, value, url: BASE_URL })));
-  return id;
-}
-
-/**
- * The same, for the Expo app's web build, which keeps its session where
- * supabase-js does in a browser: localStorage, not cookies. The tokens come
- * from a client with the app's URL and key, so the entry's name is the one the
- * app reads back. It is written before the app's first page load and only
+ * the session is minted out of band: a confirmed user from the admin API and
+ * real tokens from a password sign-in. The tokens come from a client with the
+ * app's URL and key, so the entry's name is the one the app reads back. It is written before the app's first page load and only
  * once per tab, so a test that signs out stays signed out across reloads.
  */
 export async function signInToClient(context: BrowserContext, name: string): Promise<string> {
