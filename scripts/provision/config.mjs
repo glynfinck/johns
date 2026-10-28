@@ -1,8 +1,8 @@
 // What production is, in one place. `npm run provision` makes the accounts
 // match it; nothing here is a secret.
 export const CONFIG = {
-  app: "Johns",
-  domain: "johns.glyn.dev",
+  app: "Jonz",
+  domain: "jonz.app",
   supabase: {
     name: "Johns",
     orgId: "qfabnyoyejsscqklyrmx",
@@ -11,7 +11,7 @@ export const CONFIG = {
     size: "micro",
   },
   vercel: {
-    project: "johns",
+    project: "jonz-api",
     teamId: "team_efHn4CGsL2iT0Xmp3qdWG9d2",
     // Where the Next app lives in the workspace. Set by hand in the
     // project's settings (Build and Deployment); provision only checks it.
@@ -19,13 +19,13 @@ export const CONFIG = {
     // apps/api's own name. `domain` belongs to the web build, which passes
     // /api/* on to this name (apps/client/vercel.json), so the clock's URL
     // and the app's calls stay on `domain`.
-    domain: "api.johns.glyn.dev",
+    domain: "api.jonz.app",
   },
   // The Expo app's web build, which serves `domain` (Phase 13 of
   // docs/specs/native-migration.md). Created by hand, in the same team;
   // provision checks it and gives it its public environment.
   web: {
-    project: "johns-web",
+    project: "jonz-web",
     rootDirectory: "apps/client",
   },
   // Google's native clients for the Expo app (public IDs, from Google Cloud;

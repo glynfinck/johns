@@ -349,7 +349,7 @@ describe('what takes Next up’s place', () => {
       const sheet = within(await screen.findByTestId('invite-sheet'));
       expect(sheet.getByRole('header', { name: HOUSE_PAGE_COPY.invite })).toBeOnTheScreen();
       expect(sheet.getByTestId('invite-code')).toHaveTextContent('AB3DEF7H');
-      expect(sheet.getByTestId('invite-url')).toHaveTextContent('https://johns.glyn.dev/join/AB3DEF7H');
+      expect(sheet.getByTestId('invite-url')).toHaveTextContent('https://jonz.app/join/AB3DEF7H');
       expect(sheet.getByRole('button', { name: HOUSE_PAGE_COPY.shareInvite })).toHaveStyle({
         backgroundColor: BIN_NIGHT.light.hivis,
       });

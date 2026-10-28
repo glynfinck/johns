@@ -4,6 +4,12 @@ Status: **approved 25 October 2026**, with the recommended answer to each
 question at the end. Written against `johns@e17afac` and
 `app-template@f08512d`.
 
+**Renamed 28 October 2026:** the app is now Jonz at jonz.app, with bundle ID
+and Android package `dev.glyn.jonz` and scheme `jonz` (`jonz://**`,
+`jonz://join/CODE`), and the Vercel projects are `jonz-web` and `jonz-api`.
+This plan keeps the names it was written with; read the new ones for them
+(DEPLOYMENT.md, "The move to jonz.app").
+
 ## What this does
 
 Moves Johns onto the shape of `glynfinck/app-template` (an Expo app, a

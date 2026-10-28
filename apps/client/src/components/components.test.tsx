@@ -45,7 +45,7 @@ describe('Bin Night components', () => {
 
   it('labels the wordmark for screen readers', async () => {
     await render(<Wordmark />);
-    expect(screen.getByLabelText('Johns')).toBeOnTheScreen();
+    expect(screen.getByLabelText('Jonz')).toBeOnTheScreen();
   });
 
   it('announces headings as headings', async () => {

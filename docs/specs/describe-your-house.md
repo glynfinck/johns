@@ -75,5 +75,5 @@ and from the empty John list.
 - [x] Starter lists work with no key set, and when Claude fails.
 - [x] Housemates who aren't admins are refused; a house is held to 10
   drafts a day.
-- [ ] `ANTHROPIC_API_KEY` is set on the `johns` Vercel project (by hand,
+- [ ] `ANTHROPIC_API_KEY` is set on the `jonz-api` Vercel project (by hand,
   DEPLOYMENT.md) and a real description drafts a sensible list.

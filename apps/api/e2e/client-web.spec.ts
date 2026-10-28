@@ -16,7 +16,7 @@ test("privacy, and a link to nowhere, open for anyone", async ({ page }) => {
   await page.getByRole("link", { name: SIGN_IN_COPY.privacy }).click();
   await expect(page).toHaveURL(/\/privacy$/);
   await expect(page.getByText(PRIVACY_COPY.paragraphs[2])).toBeVisible();
-  await expect(page).toHaveTitle("Privacy · Johns");
+  await expect(page).toHaveTitle("Privacy · Jonz");
 
   for (const path of ["/nowhere/at-all", "/_sitemap"]) {
     await page.goto(path);
@@ -69,11 +69,11 @@ test("tab titles, the look, and reminders on this device", async ({ browser }) =
 
   const page = await context.newPage();
   await page.goto("/today");
-  await expect(page).toHaveTitle("Today · Johns");
+  await expect(page).toHaveTitle("Today · Jonz");
   await page.getByRole("tab", { name: SECTION_LABEL.week }).click();
-  await expect(page).toHaveTitle("This week · Johns");
+  await expect(page).toHaveTitle("This week · Jonz");
   await page.getByRole("tab", { name: SECTION_LABEL.house }).click();
-  await expect(page).toHaveTitle("House · Johns");
+  await expect(page).toHaveTitle("House · Jonz");
 
   // Night, chosen here, stays chosen on this device.
   const house = page.getByTestId("house-screen");
