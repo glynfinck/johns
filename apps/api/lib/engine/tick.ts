@@ -4,7 +4,7 @@ import {
   dueAt,
   dueInLine,
   earnsImmunity,
-  fairShares,
+  fairSharesExplained,
   forfeitFor,
   graceDue,
   homeForWeek,
@@ -288,7 +288,7 @@ export async function dealWeek(
   const shares = weekShares(dayDeals, memberIds, makeup);
   const weighed = weekShares([...dayDeals, ...onCallDeals], memberIds, makeup);
   const { balances } = await loadBalances(db, house.id, week.startsOn, memberIds);
-  const dealt = fairShares(
+  const dealt = fairSharesExplained(
     [...dayDeals, ...onCallDeals],
     memberIds.map((id) => ({ userId: id, balance: balances.get(id) ?? 0, share: weighed.get(id) ?? 0 })),
     `${house.id}:${week.startsOn}`,
@@ -308,6 +308,7 @@ export async function dealWeek(
         needs_photo: p.john.needs_photo,
         due_at: p.due.toISOString(),
         group_name: p.groupName,
+        dealt: d.why,
       },
     ];
   });

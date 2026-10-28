@@ -1,4 +1,5 @@
-import type { Database } from "./db-types";
+import type { Database, Json } from "./db-types";
+import type { DealWhy } from "./deal";
 import type { Category, Currency, HouseRules, IsoDow, JohnWhen, Outcome } from "./domain";
 import { canCover, closesAt, liveStatus, standsAt, type LiveStatus } from "./outcome";
 import { standings, type TableRow } from "./points";
@@ -146,6 +147,8 @@ export type AssignmentRow = Pick<
   flagged_by?: string | null;
   /** On a John due on a day: when it turns missed (null on one dealt before the late window), when read. */
   closes_at?: string | null;
+  /** Why the deal gave it to whom it did (deal.ts DealWhy), when read; null on a flag or one dealt before the deal kept it. */
+  dealt?: Json | null;
 };
 
 /** An open dispute, with its votes: `disputes` and `dispute_votes` as read. */
@@ -202,6 +205,8 @@ export interface BoardItem {
   closesAt: Date;
   /** A John from last week that is still open (a flag, or one due late on its last day): it stays its holder's, and isn't on this week's Table. */
   carried: boolean;
+  /** Why the deal gave it to whom it did; null on a flag, or a John dealt before the deal kept it. */
+  dealt: DealWhy | null;
 }
 
 export interface WeekBoard {
@@ -290,6 +295,7 @@ export function buildWeekBoard(input: {
         flaggedBy: a.flagged_by ?? null,
         closesAt: closesAt(facts),
         carried,
+        dealt: readDealt(a.dealt),
       };
     });
 
@@ -446,4 +452,26 @@ export function monthStandings(
     })),
     memberIds,
   );
+}
+
+const DEALT_BY: ReadonlySet<string> = new Set(["only", "behind", "fewer", "draw"]);
+
+/** A stored DealWhy, or null when there is none or it isn't one (a shape this build doesn't know). */
+export function readDealt(json: Json | null | undefined): DealWhy | null {
+  if (!json || typeof json !== "object" || Array.isArray(json)) return null;
+  const { to, by, weighed, away } = json;
+  if (typeof to !== "string" || typeof by !== "string" || !DEALT_BY.has(by)) return null;
+  if (!Array.isArray(weighed) || !Array.isArray(away)) return null;
+  const people: DealWhy["weighed"] = [];
+  for (const w of weighed) {
+    if (!w || typeof w !== "object" || Array.isArray(w)) return null;
+    if (typeof w.userId !== "string" || typeof w.standing !== "number") return null;
+    people.push({
+      userId: w.userId,
+      standing: w.standing,
+      ...(w.last === true ? { last: true as const } : {}),
+      ...(w.full === true ? { full: true as const } : {}),
+    });
+  }
+  return { to, by: by as DealWhy["by"], weighed: people, away: away.filter((id): id is string => typeof id === "string") };
 }

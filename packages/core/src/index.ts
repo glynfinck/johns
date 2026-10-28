@@ -26,6 +26,7 @@ export * from "./week";
 // and the front door.
 export * from "./john-row";
 export * from "./today";
+export * from "./why";
 export * from "./week-summary";
 export * from "./house-page";
 export * from "./house-lower";

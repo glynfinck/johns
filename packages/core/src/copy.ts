@@ -756,6 +756,58 @@ export const JOHN_SHEET_COPY = {
   your: "your",
 } as const;
 
+/**
+ * The John sheet's "Why?": why the deal gave the John to whom it did, how
+ * it added up, and what slipping would cost (or, once settled, whose work it
+ * counted as). `who` is "You" or a first name; `whose`, "your" or "Ben’s".
+ */
+export const WHY_COPY = {
+  label: "Why?",
+  only: (who: string, you: boolean) => `${who} ${you ? "were" : "was"} the only one sharing it who’s home that day.`,
+  /** `who` mid-sentence: "you" or a first name. */
+  behind: (who: string) => `It goes to whoever is furthest behind their fair share. When it was dealt, that was ${who}.`,
+  fewer: (who: string) => `It was level on fair shares, so it went to whoever had fewer Johns this week: ${who}.`,
+  draw: (who: string) => `It was level on fair shares and on Johns this week, so it was drawn: ${who}.`,
+  flag: "A flag goes to whoever is on call this week, or, if they’re away, to whoever at home has been handed least.",
+  /** Furthest behind once whoever did it last time is nudged on: it was close. */
+  nudged: (who: string) =>
+    `It goes to whoever is furthest behind their fair share, with a small nudge away from whoever did it last time, so Johns move round. That made it ${who}.`,
+  /** Someone as far behind or further, passed over: they had it last time. */
+  movedOn: (names: string, one: boolean, level: boolean) =>
+    `${names} ${one ? "was" : "were"} ${level ? "level" : "further behind"}, but did it last time.`,
+  /** Someone further behind it skipped: they'd been handed the most extra a week gives. */
+  full: (names: string, one: boolean) =>
+    `${names} ${one ? "was" : "were"} further behind, but had already been handed half a week extra, the most one week catches up.`,
+  /** The winner had it last time too. */
+  again: (who: string, you: boolean) => `${who} did it last time too, but ${you ? "were" : "was"} still furthest behind.`,
+  away: (names: string, one: boolean) => `${names} ${one ? "is" : "are"} away that day.`,
+  /** It changed hands after the deal. */
+  moved: (dealtTo: string, holder: string) => `It was dealt to ${dealtTo}, and came to ${holder} in a swap or while they were away.`,
+  /** Before the deal kept its working. */
+  unknown: "This one was dealt before Jonz kept its working.",
+  addsUp: "How it added up",
+  /** Under the rows: what the figures are. */
+  key: "Work done over recent weeks against each share, with this week’s Johns dealt before it. Below zero is behind.",
+  dealtIt: "Dealt it",
+  hadItLast: "Had it last time",
+  handedMost: "Already handed the most extra",
+  /** What slipping costs, while it's open. */
+  missedBy: (when: string, holder: string) =>
+    `If it isn’t done by ${when}, it’s missed. A miss counts for nobody, so the work comes back to ${holder} in the next deals.`,
+  coverFrom: (when: string) => `From ${when} a housemate can cover it, and then it counts as their work.`,
+  coverNow: "A housemate can cover it now, and then it counts as their work.",
+  /** Once done or settled: whose work it counted as. */
+  counts: (whose: string) => `It counts as ${whose} work.`,
+  coveredCounts: (who: string, whose: string) => `${who} covered it, so it counts as ${whose} work.`,
+  missedCounts: (holder: string) => `It was missed, so it counts for nobody: the work comes back to ${holder} in the next deals.`,
+  excusedCounts: (whose: string) => `It was let off, so it still counts as ${whose}.`,
+  You: "You",
+  you: "you",
+  your: "your",
+  yours: "yours",
+  someoneGone: "a former housemate",
+} as const;
+
 /** Week: the summary bar, the person groups, the fair-share footer and the menu. */
 export const WEEK_SUMMARY_COPY = {
   /** The summary, to a screen reader. */

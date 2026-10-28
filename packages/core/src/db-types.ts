@@ -40,6 +40,7 @@ export type Database = {
           closes_at: string | null
           covered_by: string | null
           created_at: string
+          dealt: Json | null
           done_at: string | null
           due_at: string
           due_moved_from: string | null
@@ -65,6 +66,7 @@ export type Database = {
           closes_at?: string | null
           covered_by?: string | null
           created_at?: string
+          dealt?: Json | null
           done_at?: string | null
           due_at: string
           due_moved_from?: string | null
@@ -90,6 +92,7 @@ export type Database = {
           closes_at?: string | null
           covered_by?: string | null
           created_at?: string
+          dealt?: Json | null
           done_at?: string | null
           due_at?: string
           due_moved_from?: string | null

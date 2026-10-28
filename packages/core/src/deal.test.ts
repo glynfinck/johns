@@ -9,6 +9,7 @@ import {
   catchUpWeeks,
   recentBalances,
   fairShares,
+  fairSharesExplained,
   weekShares,
   type DealAssignment,
   type DealJohn,
@@ -193,6 +194,74 @@ describe("fairShares", () => {
     const six = ["s1", "s2", "s3", "s4", "s5", "s6"].map((id) => john(id, 2, { sharers: ids, home: ids }));
     const out = fairShares(six, members(six, ids, [2, 2, -4]), "w1");
     expect(loads(out, six).get("c")).toBe(6);
+  });
+});
+
+describe("fairSharesExplained", () => {
+  const pair = (extra: Partial<DealJohn> = {}) => [john("bathroom", 4, { sharers: ["a", "b"], home: ["a", "b"], ...extra })];
+
+  it("deals exactly as fairShares does", () => {
+    const m = members(JOHNS, EVERYONE, [2, 0, -1, -3]);
+    expect(fairSharesExplained(JOHNS, m, "w1").map(({ johnId, userId }) => ({ johnId, userId }))).toEqual(
+      fairShares(JOHNS, m, "w1"),
+    );
+  });
+
+  it("keeps where each sharer stood, furthest behind first, and that the furthest behind got it", () => {
+    const johns = pair();
+    const [out] = fairSharesExplained(johns, members(johns, ["a", "b"], [0, -3]), "w1");
+    expect(out.why).toEqual({
+      to: "b",
+      by: "behind",
+      weighed: [
+        { userId: "b", standing: -5 },
+        { userId: "a", standing: -2 },
+      ],
+      away: [],
+    });
+  });
+
+  it("counts the Johns already dealt this week in where each stood", () => {
+    const johns = [john("big", 4, { sharers: ["a", "b"], home: ["a", "b"] }), john("small", 2, { sharers: ["a", "b"], home: ["a", "b"] })];
+    const out = fairSharesExplained(johns, members(johns, ["a", "b"], [0, -1]), "w1");
+    const small = out.find((o) => o.johnId === "small")!;
+    // b took the big one first: 3 shares each, so b stood -1 + 4 - 3 = 0 and
+    // a -3, and b had been handed as much as a week gives (4 of 4.5).
+    expect(small.why.weighed).toEqual([
+      { userId: "a", standing: -3 },
+      { userId: "b", standing: 0, full: true },
+    ]);
+    expect(small.userId).toBe("a");
+  });
+
+  it("says who did it last time", () => {
+    const johns = pair({ lastUserId: "a" });
+    const [out] = fairSharesExplained(johns, members(johns, ["a", "b"]), "w1");
+    expect(out.userId).toBe("b");
+    expect(out.why.weighed.find((w) => w.userId === "a")).toEqual({ userId: "a", standing: -2, last: true });
+  });
+
+  it("says who had already been handed the most extra a week gives", () => {
+    // d is far behind but can take only half a share extra: 6 + 3 = 9 points this week.
+    const out = fairSharesExplained(JOHNS, members(JOHNS, EVERYONE, [4, 4, 4, -12]), "w1");
+    expect(out.some((o) => o.why.weighed.some((w) => w.userId === "d" && w.full))).toBe(true);
+    for (const o of out) expect(o.why.weighed.find((w) => w.userId === o.userId)?.full).toBeUndefined();
+  });
+
+  it("says when only one sharer was home, and who was away", () => {
+    const johns = pair({ home: ["a"] });
+    const [out] = fairSharesExplained(johns, members(johns, ["a", "b"]), "w1");
+    expect(out.why).toEqual({ to: "a", by: "only", weighed: [{ userId: "a", standing: -2 }], away: ["b"] });
+  });
+
+  it("says when a tie went on fewer Johns, or was drawn", () => {
+    const shared = { sharers: ["a", "b"], home: ["a", "b"] };
+    const level = [john("x", 2, shared), john("y", 2, shared)];
+    expect(fairSharesExplained(level, members(level, ["a", "b"]), "w1")[0].why.by).toBe("draw");
+    // Shares of 3 each. a, two behind, takes x (-5 against -3); then both stand at -3, and b has none yet.
+    const three = [john("x", 2, shared), john("y", 2, shared), john("z", 2, shared)];
+    const [, y] = fairSharesExplained(three, members(three, ["a", "b"], [-2, 0]), "w1");
+    expect(y.why).toMatchObject({ to: "b", by: "fewer" });
   });
 });
 

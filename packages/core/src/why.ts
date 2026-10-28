@@ -1,0 +1,143 @@
+/**
+ * The John sheet's "Why?": why the deal gave a John to whom it did, how it
+ * added up, and what slipping would cost, or once it's settled, whose work
+ * it counted as. Read from what the deal kept (BoardItem.dealt), so it says
+ * what the deal did rather than replaying it.
+ */
+import type { BoardItem } from "./board";
+import { isOpen } from "./board";
+import { WHY_COPY } from "./copy";
+import type { HouseRules } from "./domain";
+import { dueInLine, firstName, formatBalance } from "./format";
+import { coverOpensAt } from "./outcome";
+
+interface Person {
+  userId: string;
+  name: string;
+}
+
+export interface WhyRow {
+  userId: string;
+  /** "You", or their first name. */
+  name: string;
+  /** Where they stood against their share: "−2.5", "level", "+1". */
+  value: string;
+  /** "Dealt it", "Had it last time", "Already handed the most extra", joined; null when none. */
+  meta: string | null;
+  /** The one it was dealt to. */
+  chosen: boolean;
+}
+
+export interface WhyView {
+  /** Why it went where it did: a sentence or a few. */
+  answer: string;
+  /** How it added up: each sharer home that day, furthest behind first. Empty when there was nobody to weigh against. */
+  rows: WhyRow[];
+  /** What slipping would cost while it's open; whose work it counts as once it's done. */
+  stakes: string | null;
+}
+
+/** "Ben", "Ben and Cal", "Ben, Cal and Dee". */
+function andList(names: readonly string[]): string {
+  if (names.length <= 1) return names[0] ?? "";
+  return `${names.slice(0, -1).join(", ")} and ${names[names.length - 1]}`;
+}
+
+export function johnWhy(
+  item: BoardItem,
+  people: readonly Person[],
+  viewerId: string,
+  rules: HouseRules,
+  now: Date,
+): WhyView {
+  const name = (id: string) => {
+    const person = people.find((p) => p.userId === id);
+    return person ? firstName(person.name) : WHY_COPY.someoneGone;
+  };
+  /** At the start of a sentence: "You", "Ben". */
+  const Who = (id: string) => (id === viewerId ? WHY_COPY.You : name(id));
+  /** Mid-sentence: "you", "Ben". */
+  const who = (id: string) => (id === viewerId ? WHY_COPY.you : name(id));
+  const whose = (id: string) => (id === viewerId ? WHY_COPY.your : `${name(id)}’s`);
+
+  return { ...dealtPart(item, viewerId, { Who, who }), stakes: stakesLine(item, viewerId, rules, now, { Who, who, whose }) };
+}
+
+function dealtPart(
+  item: BoardItem,
+  viewerId: string,
+  say: { Who: (id: string) => string; who: (id: string) => string },
+): Pick<WhyView, "answer" | "rows"> {
+  if (item.flaggedAt) return { answer: WHY_COPY.flag, rows: [] };
+  const why = item.dealt;
+  if (!why) return { answer: WHY_COPY.unknown, rows: [] };
+
+  const to = why.to;
+  const you = to === viewerId;
+  const chosen = why.weighed.find((w) => w.userId === to);
+  const others = chosen ? why.weighed.filter((w) => w.userId !== to) : [];
+  // Passed over though further behind: handed the most extra a week gives (checked first, in the deal).
+  const full = others.filter((w) => w.full && w.standing < chosen!.standing);
+  // Passed over though as far behind or further: did it last time.
+  const nudged = others.filter((w) => !w.full && w.last && w.standing <= chosen!.standing);
+
+  const lines: string[] = [];
+  if (why.by === "only") lines.push(WHY_COPY.only(say.Who(to), you));
+  else if (why.by === "behind") lines.push(nudged.length ? WHY_COPY.nudged(say.who(to)) : WHY_COPY.behind(say.who(to)));
+  else if (why.by === "fewer") lines.push(WHY_COPY.fewer(say.who(to)));
+  else lines.push(WHY_COPY.draw(say.who(to)));
+
+  /** Starting a sentence: "You and Ben", "Ben and you". */
+  const names = (ids: readonly string[]) => andList(ids.map((id, i) => (i === 0 ? say.Who(id) : say.who(id))));
+  /** One of them, and not you: "was", "is". */
+  const one = (ids: readonly string[]) => ids.length === 1 && ids[0] !== viewerId;
+  if (full.length) lines.push(WHY_COPY.full(names(full.map((w) => w.userId)), one(full.map((w) => w.userId))));
+  if (nudged.length) {
+    const level = nudged.every((w) => w.standing === chosen!.standing);
+    lines.push(WHY_COPY.movedOn(names(nudged.map((w) => w.userId)), one(nudged.map((w) => w.userId)), level));
+  }
+  if (chosen?.last && why.by === "behind" && others.length > 0) lines.push(WHY_COPY.again(say.Who(to), you));
+  if (why.away.length) lines.push(WHY_COPY.away(names(why.away), one(why.away)));
+  if (item.userId !== to) lines.push(WHY_COPY.moved(say.who(to), say.who(item.userId)));
+
+  const rows: WhyRow[] =
+    why.weighed.length > 1
+      ? why.weighed.map((w) => {
+          const meta = [
+            w.userId === to ? WHY_COPY.dealtIt : null,
+            w.last ? WHY_COPY.hadItLast : null,
+            w.full ? WHY_COPY.handedMost : null,
+          ].filter((m) => m !== null);
+          return {
+            userId: w.userId,
+            name: say.Who(w.userId),
+            value: formatBalance(w.standing),
+            meta: meta.length ? meta.join(" · ") : null,
+            chosen: w.userId === to,
+          };
+        })
+      : [];
+  return { answer: lines.join(" "), rows };
+}
+
+function stakesLine(
+  item: BoardItem,
+  viewerId: string,
+  rules: HouseRules,
+  now: Date,
+  say: { Who: (id: string) => string; who: (id: string) => string; whose: (id: string) => string },
+): string | null {
+  const holder = item.userId;
+  if (isOpen(item.status)) {
+    const missed = WHY_COPY.missedBy(dueInLine(item.closesAt, now, rules.timezone), say.who(holder));
+    const opens = coverOpensAt(item.dueAt, rules.coverGraceHours, item.closesAt);
+    const cover = opens.getTime() <= now.getTime() ? WHY_COPY.coverNow : WHY_COPY.coverFrom(dueInLine(opens, now, rules.timezone));
+    return `${missed} ${cover}`;
+  }
+  // Disputed: whose work it is waits on the vote.
+  if (item.status === "disputed") return null;
+  if (item.coveredBy) return WHY_COPY.coveredCounts(say.Who(item.coveredBy), say.whose(item.coveredBy));
+  if (item.status === "missed") return WHY_COPY.missedCounts(say.who(holder));
+  if (item.status === "excused") return WHY_COPY.excusedCounts(holder === viewerId ? WHY_COPY.yours : say.whose(holder));
+  return WHY_COPY.counts(say.whose(holder));
+}
