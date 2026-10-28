@@ -15,6 +15,7 @@ export * from "./format";
 export * from "./money";
 export * from "./outcome";
 export * from "./points";
+export * from "./pass";
 export * from "./proof";
 export * from "./schemas";
 export * from "./stake";

@@ -41,6 +41,9 @@ const HOUSE = {
   join_code: 'AB3DEF7H',
   first_dealt_at: '2026-10-01T09:00:00Z',
   away_makeup: 100,
+  pass_plan: 'trial',
+  pass_until: '2026-11-01T09:00:00Z',
+  pass_buyer: null,
   timezone: 'Europe/London',
   currency: 'GBP',
   week_starts: 1,
@@ -77,7 +80,10 @@ beforeEach(() => {
 it('reads the house, its people and this week in one go', async () => {
   const snapshot = await loadHouse('h1', NOW);
 
-  expect(snapshot.house).toEqual({ id: 'h1', name: 'Flat 3', joinCode: 'AB3DEF7H', everDealt: true, awayMakeup: 100 });
+  expect(snapshot.house).toEqual({ id: 'h1', name: 'Flat 3', joinCode: 'AB3DEF7H', everDealt: true,
+    awayMakeup: 100,
+    pass: { plan: 'trial', until: new Date('2026-11-01T09:00:00Z'), buyerId: null },
+  });
   expect(snapshot.rules).toMatchObject({ timezone: 'Europe/London', currency: 'GBP', weekStarts: 1, disputeHours: 24 });
   expect(snapshot.members).toEqual([
     { userId: 'u1', name: 'Priya', role: 'admin', streak: 3, immunityTokens: 1, swapTokens: 0 },

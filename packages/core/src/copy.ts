@@ -29,6 +29,7 @@ export const PAGE_TITLE = {
   rules: "House rules",
   away: "Time away",
   groups: "Groups",
+  pass: "House Pass",
 } as const;
 
 /** What Johns keeps, and who sees it. */
@@ -1251,4 +1252,50 @@ export const FRONT_DOOR_COPY = {
       ],
     },
   ],
+} as const;
+
+/**
+ * The House Pass: one per house, bought by anyone in it, for everyone in it.
+ * The sentences on its row on House and on its page.
+ */
+export const PASS_COPY = {
+  title: "House Pass",
+  /** Its section on House, and the note on the right. */
+  section: "House Pass",
+  sectionNote: "For everyone here",
+  // The row's value (pass.ts passLine).
+  founding: "Founding house",
+  trialLeft: (days: number) => `Free month · ${days} ${days === 1 ? "day" : "days"} left`,
+  trialEnded: "Free month ended",
+  renews: (plan: string, day: string) => `${plan} · renews ${day}`,
+  ended: (day: string) => `Ended ${day}`,
+  // The page.
+  lead: "One Pass covers the whole house. Anyone can buy it, and everyone gets the extras.",
+  foundingLead: "Your house has the House Pass for life, as one of the first houses on Johns. Thank you.",
+  boughtBy: (name: string) => `Bought by ${name}`,
+  includes: "What the house gets",
+  stake: "The Stake",
+  stakeMeta: "Forfeits for late and missed Johns, shared out each month",
+  table: "The Table and perks",
+  tableMeta: "Points, streaks, immunity and swaps",
+  photos: "Photo receipts",
+  photosMeta: "A photo with a tick, for the Johns that need one",
+  history: "All your history",
+  historyMeta: (weeks: number) => `Every week, not just the last ${weeks}`,
+  plans: "Plans",
+  yearly: "Yearly",
+  monthly: "Monthly",
+  foundingPlan: "Founding house",
+  perYear: (price: string) => `${price} a year`,
+  perMonth: (price: string) => `${price} a month`,
+  once: (price: string) => `${price} once`,
+  perMonthish: (price: string) => `About ${price} a month`,
+  monthlyMeta: "Stop any time",
+  foundingMeta: "The Pass for life, for houses that start at launch",
+  /** Until the stores are set up there is nothing to press. */
+  buyingSoon: "Buying opens with the app store release. Until then every house keeps everything.",
+  free: "Free for every house, always: the deal, the housemate check, reminders, covering and time away. No ads.",
+  /** Where a locked extra was, once the Pass is enforced. */
+  locked: (feature: string) => `${feature} comes with the House Pass`,
+  unlock: "See the House Pass",
 } as const;
