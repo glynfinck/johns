@@ -421,7 +421,7 @@ async function settleDue(db: Db, house: HouseRow, now: Date, notify?: Notify) {
   const open = must(
     await db
       .from("assignments")
-      .select("id, john_id, due_at, done_at, excused, flagged_at, covered_by, weeks(ends_at)")
+      .select("id, john_id, due_at, done_at, excused, flagged_at, closes_at, covered_by, weeks(ends_at)")
       .eq("house_id", house.id)
       .is("outcome", null),
     "open assignments",
@@ -444,6 +444,7 @@ async function settleDue(db: Db, house: HouseRow, now: Date, notify?: Notify) {
         disputeOpen: disputed.has(a.id),
         weekEndsAt: new Date(a.weeks!.ends_at),
         flaggedAt: a.flagged_at ? new Date(a.flagged_at) : null,
+        closesAt: a.closes_at ? new Date(a.closes_at) : null,
         coveredBy: a.covered_by,
       },
       now,

@@ -38,7 +38,7 @@ export async function loadTable(
   const [monthRows, pastWeeks] = await Promise.all([
     supabase
       .from('assignments')
-      .select('user_id, points, outcome, done_at, due_at, excused, covered_by, weeks(ends_at)')
+      .select('user_id, points, outcome, done_at, due_at, excused, covered_by, flagged_at, closes_at, weeks(ends_at)')
       .eq('house_id', houseId)
       .gte('due_at', window.startsAt.toISOString())
       .lt('due_at', window.endsAt.toISOString()),

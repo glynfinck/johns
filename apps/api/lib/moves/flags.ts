@@ -27,7 +27,7 @@ export async function raiseFlag(
   // Read through the caller's own session, so this can only reach their house.
   const { data: flag } = await caller.db
     .from("assignments")
-    .select("user_id, name, due_at, needs_photo, houses(timezone, currency, week_starts, stake_minor, late_forfeit_minor, missed_forfeit_minor, dispute_hours, cover_grace_hours)")
+    .select("user_id, name, due_at, needs_photo, houses(timezone, currency, week_starts, stake_minor, late_forfeit_minor, missed_forfeit_minor, dispute_hours, cover_grace_hours, late_hours)")
     .eq("id", assignmentId)
     .single();
   if (!flag || flag.user_id === caller.userId || !flag.houses) return { assignmentId };

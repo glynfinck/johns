@@ -217,6 +217,7 @@ describe("rulesOf", () => {
         missed_forfeit_minor: 500,
         dispute_hours: 24,
         cover_grace_hours: 3,
+        late_hours: 48,
       }),
     ).toEqual({
       timezone: "Europe/London",
@@ -227,6 +228,7 @@ describe("rulesOf", () => {
       missedForfeitMinor: 500,
       disputeHours: 24,
       coverGraceHours: 3,
+      lateHours: 48,
     });
   });
 });
