@@ -15,7 +15,7 @@ import type { AdminClient } from "@/lib/supabase/admin";
 export function pushNotifier(db: AdminClient): Notify | undefined {
   const publicKey = process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY;
   const privateKey = process.env.VAPID_PRIVATE_KEY;
-  const subject = process.env.VAPID_SUBJECT ?? "mailto:hello@johns.app";
+  const subject = process.env.VAPID_SUBJECT ?? "mailto:hello@jonz.app";
   if (!publicKey || !privateKey) return undefined;
   webpush.setVapidDetails(subject, publicKey, privateKey);
 

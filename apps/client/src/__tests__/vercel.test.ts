@@ -1,7 +1,7 @@
 import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
 
-// vercel.json is how johns.glyn.dev serves the web build (the `johns-web`
+// vercel.json is how jonz.app serves the web build (the `jonz-web`
 // project, Root Directory apps/client). JSON takes no comments, so the why
 // lives here.
 
@@ -22,7 +22,7 @@ const config = JSON.parse(readFileSync(join(__dirname, '../../vercel.json'), 'ut
 };
 const headersFor = (source: string) => config.headers.find((h) => h.source === source)?.headers ?? [];
 
-describe("johns.glyn.dev's web build on Vercel", () => {
+describe("jonz.app's web build on Vercel", () => {
   it('builds the single-page export, with no framework guessed', () => {
     expect(config.framework).toBeNull();
     expect(config.buildCommand).toBe('npm run export:web');
@@ -32,7 +32,7 @@ describe("johns.glyn.dev's web build on Vercel", () => {
   it("passes /api/* on to apps/api before anything else, so the clock's URL and the app's calls stay put", () => {
     expect(config.rewrites[0]).toEqual({
       source: '/api/:path*',
-      destination: 'https://api.johns.glyn.dev/api/:path*',
+      destination: 'https://api.jonz.app/api/:path*',
     });
   });
 

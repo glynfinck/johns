@@ -125,7 +125,7 @@ describe('on a phone', () => {
     for (const gone of [SECTION_LABEL.wall, SECTION_LABEL.table, SECTION_LABEL.stake]) {
       expect(screen.queryByRole('tab', { name: gone })).toBeNull();
     }
-    expect(screen.queryByLabelText('Johns')).toBeNull();
+    expect(screen.queryByLabelText('Jonz')).toBeNull();
   });
 
   it("counts the disputes waiting for your vote on Today's tab, and says so", async () => {

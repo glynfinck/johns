@@ -4,7 +4,7 @@
 
 export const siteUrl = (c) => `https://${c.domain}`;
 
-/** The registrable domain Google's consent screen authorises: glyn.dev for johns.glyn.dev. */
+/** The registrable domain Google's consent screen authorises: jonz.app for jonz.app, glyn.dev for a name like johns.glyn.dev. */
 export const apexDomain = (domain) => domain.split(".").slice(-2).join(".");
 
 /**

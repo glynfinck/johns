@@ -6,10 +6,10 @@ import { IMMUNITY_EVERY } from "./streak";
  * the front door. One copy, so the web and the phone can't tell the house
  * different things.
  */
-export const APP_NAME = "Johns";
+export const APP_NAME = "Jonz";
 export const TAGLINE = "Fair shares of the housework, and a house that keeps score.";
 
-/** A page's title in the browser tab: "Today · Johns", or just the name on the front door. */
+/** A page's title in the browser tab: "Today · Jonz", or just the name on the front door. */
 export function pageTitle(page?: string): string {
   return page ? `${page} · ${APP_NAME}` : APP_NAME;
 }
@@ -31,13 +31,13 @@ export const PAGE_TITLE = {
   groups: "Groups",
 } as const;
 
-/** What Johns keeps, and who sees it. */
+/** What Jonz keeps, and who sees it. */
 export const PRIVACY_COPY = {
   title: "Privacy",
   paragraphs: [
-    "Johns keeps what it needs to share out your house’s Johns and nothing more: your name from Google, the house you belong to, the Johns you were given and when you ticked them, any photos you add, disputes and votes, and the Stake ledger.",
+    "Jonz keeps what it needs to share out your house’s Johns and nothing more: your name from Google, the house you belong to, the Johns you were given and when you ticked them, any photos you add, disputes and votes, and the Stake ledger.",
     "Only people in your house can see any of it. Photos are stored privately and shown to your housemates through links that expire after an hour.",
-    "Johns never moves money. The ledger records what housemates owe each other; you settle up however you like, outside the app.",
+    "Jonz never moves money. The ledger records what housemates owe each other; you settle up however you like, outside the app.",
     "If you turn on reminders, your browser gives us an address to send notifications to. Turning reminders off deletes it. Leaving a house removes you from it; your past Johns stay in its history.",
   ],
 } as const;
@@ -62,7 +62,7 @@ export const ERROR_COPY = {
 
 export const FRONT_DOOR = {
   eyebrow: "For houses that share a bin",
-  headline: "Johns: who’s on what this week.",
+  headline: "Jonz: who’s on what this week.",
   signIn: "Sign in",
   start: "Start your house",
   join: "I have a join link",
@@ -129,7 +129,7 @@ export const JOIN_COPY = {
   alreadyIn: (house: string) => `You’re already in ${house}`,
   goToJohns: "Go to your Johns",
   otherHouse: "You’re in another house",
-  otherHouseBody: "Johns keeps you in one house at a time. Leave your current one from its House screen first.",
+  otherHouseBody: "Jonz keeps you in one house at a time. Leave your current one from its House screen first.",
   yourHouse: "Your house",
   invited: "You’re invited",
   livesHere: (people: number) =>
@@ -205,7 +205,7 @@ export const INVITE_COPY = {
   share: "Share",
   copy: "Copy",
   copied: "Link copied",
-  shareTitle: (house: string) => `Join ${house} on Johns`,
+  shareTitle: (house: string) => `Join ${house} on Jonz`,
 } as const;
 
 /** The week's board: everyone's Johns, and where each has got to. */
@@ -526,7 +526,7 @@ export function lookOf(saved: string | null | undefined): Look {
 export const REMINDERS_COPY = {
   on: "Remind me on this device",
   off: "Turn reminders off on this device",
-  unsupported: "Reminders need a browser that supports notifications. On iPhone, add Johns to your home screen first.",
+  unsupported: "Reminders need a browser that supports notifications. On iPhone, add Jonz to your home screen first.",
   blocked: "Notifications are blocked for this site in your browser settings.",
   failed: "Couldn’t turn reminders on. Try again.",
   turnedOn: "Reminders on for this device",
@@ -886,7 +886,7 @@ export const HOUSE_PAGE_COPY = {
     "A John done on time earns its points. A late one earns half, and a missed one earns nothing. The Table adds them up for the week and the month.",
   rulesStake: "The Stake",
   rulesStakeBody: (stake: string, late: string, missed: string) =>
-    `Everyone puts in ${stake} a month. A late John costs ${late} and a missed one ${missed}, but nobody loses more than ${stake} in a month. On the 1st, what was forfeited is shared out among everyone else. Johns never moves money: pay each other however you like, and whoever is paid marks it received.`,
+    `Everyone puts in ${stake} a month. A late John costs ${late} and a missed one ${missed}, but nobody loses more than ${stake} in a month. On the 1st, what was forfeited is shared out among everyone else. Jonz never moves money: pay each other however you like, and whoever is paid marks it received.`,
   rulesImmunity: "Immunity",
   rulesImmunityBody: (every: number, cap: number) =>
     `Every ${every} clean weeks in a row earns an immunity token (you can hold ${cap}). Spend one to skip a John with no forfeit.`,
@@ -1117,7 +1117,7 @@ export const HOUSE_LOWER_COPY = {
   list: (clauses: readonly string[]) =>
     clauses.length < 2 ? clauses.join("") : `${clauses.slice(0, -1).join(", ")}, and ${clauses[clauses.length - 1]}`,
   // The foot of House.
-  noMoney: "Johns never moves money.",
+  noMoney: "Jonz never moves money.",
   privacy: "Privacy",
 } as const;
 

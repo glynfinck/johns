@@ -94,13 +94,16 @@ describe("inviteCode", () => {
 
   it("reads it out of a whole link, on the web or the phone", () => {
     expect(inviteCode("https://johns.glyn.dev/join/AB3DEF7H")).toBe("AB3DEF7H");
+    expect(inviteCode("https://jonz.app/join/AB3DEF7H")).toBe("AB3DEF7H");
+    expect(inviteCode("jonz://join/ab3def7h")).toBe("AB3DEF7H");
+    // Links shared before the move to jonz.app still work.
     expect(inviteCode("johns://join/ab3def7h")).toBe("AB3DEF7H");
     expect(inviteCode("johns.glyn.dev/join/AB3D-EF7H/")).toBe("AB3DEF7H");
     expect(inviteCode("https://johns.glyn.dev/JOIN/AB3DEF7H?from=chat#top")).toBe("AB3DEF7H");
   });
 
   it("finds the link in the message it was shared in", () => {
-    expect(inviteCode("Join 29 Albert Road on Johns: https://johns.glyn.dev/join/AB3DEF7H")).toBe("AB3DEF7H");
+    expect(inviteCode("Join 29 Albert Road on Jonz: https://jonz.app/join/AB3DEF7H")).toBe("AB3DEF7H");
   });
 
   it("leaves off the punctuation a chat puts round it", () => {
