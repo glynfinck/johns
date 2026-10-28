@@ -181,7 +181,7 @@ export async function loadBalances(
   const [shares, handed] = ids.length
     ? await Promise.all([
         db.from("week_shares").select("week_id, user_id, share").in("week_id", ids),
-        db.from("assignments").select("week_id, user_id, points").in("week_id", ids),
+        db.from("assignments").select("week_id, user_id, points, outcome, covered_by").in("week_id", ids),
       ]).then(([a, b]) => [must(a, "shares"), must(b, "past assignments")] as const)
     : [[], []];
   return recentBalances({ weekIds: ids, shares, handed }, memberIds);
