@@ -532,6 +532,55 @@ export const REMINDERS_COPY = {
   turnedOn: "Reminders on for this device",
 } as const;
 
+/** What the pushes say, their buttons, and the settings for them. */
+export const NOTIFY_COPY = {
+  dueTomorrowTitle: (john: string) => `${john} is due tomorrow`,
+  dueSoonTitle: (john: string) => `${john} is due soon`,
+  dueTomorrowBody: (due: string) => `Due ${due}. Tick it here when it’s done.`,
+  dueSoonBody: (due: string) => `Due ${due}. A few hours left to do it on time.`,
+  needsPhoto: "It needs a photo, so tick it in the app.",
+  dealTitle: "This week’s Johns",
+  disputedTitle: (john: string) => `Your ${john} tick is disputed`,
+  voteTitle: (john: string) => `Vote: was ${john} really done?`,
+  // The buttons. Short: a phone shows a few words at most.
+  done: "Done",
+  held: "It was done",
+  struck: "It wasn’t",
+  // What the notification says once a button worked.
+  ticked: (john: string) => `${john} ticked`,
+  tickedBody: "The house can check it now.",
+  alreadyTicked: (john: string) => `${john} was already ticked`,
+  voted: (john: string) => `Vote counted on ${john}`,
+  votedHeld: "You said it was done.",
+  votedStruck: "You said it wasn’t done.",
+  // Settings.
+  settings: "What to send",
+  kinds: {
+    reminders: "Johns due soon",
+    checks: "Housemate checks",
+    flags: "On-call flags",
+    deal: "The week’s deal",
+  },
+  kindHints: {
+    reminders: "The day before and a few hours before. Tick from the notification.",
+    checks: "A tick of yours disputed, or a vote for you to answer.",
+    flags: "When a housemate flags an on-call John you have.",
+    deal: "Your Johns, when the week is handed out.",
+  },
+  quiet: "Quiet hours",
+  quietHint: "Reminders wait until morning. Anything else arrives without a sound.",
+  on: "On",
+  off: "Off",
+  /** The quiet hours on offer, from and until, on the hour. */
+  quietOptions: [
+    { label: "Off", from: null, until: null },
+    { label: "22:00–07:00", from: 22, until: 7 },
+    { label: "23:00–08:00", from: 23, until: 8 },
+  ],
+  saved: "Saved",
+  failed: "Couldn’t save that. Try again.",
+} as const;
+
 export const ME_COPY = {
   name: "Your name",
   save: "Save",

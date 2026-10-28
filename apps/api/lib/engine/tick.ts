@@ -13,8 +13,11 @@ import {
   localDate,
   monthOf,
   monthWindow,
+  NOTIFY_COPY,
   ON_CALL_COPY,
+  prefsOf,
   recentBalances,
+  reminderFor,
   rulesOf,
   settleMonth,
   settleOutcome,
@@ -29,6 +32,7 @@ import {
   type DealJohn,
   type IsoDow,
   type Outcome,
+  type PushKind,
   type WeekWindow,
 } from "@app/core";
 import type { SupabaseClient } from "@supabase/supabase-js";
@@ -57,6 +61,14 @@ export interface PushMessage {
   title: string;
   body: string;
   url: string;
+  /** Which setting it answers to (@app/core notify.ts). */
+  kind: PushKind;
+  /** The house's zone, for quiet hours saved without one. */
+  zone: string;
+  /** A button to answer it from the notification: tick this John, or vote on this dispute. */
+  act?: { assignmentId: string } | { disputeId: string };
+  /** A later push with the same tag replaces this one, rather than stacking. */
+  tag?: string;
 }
 
 /** Sends a push to some housemates. Absent when nothing should be sent. */
@@ -352,9 +364,12 @@ async function ensureCurrentWeek(
   if (weekId && notify) {
     for (const [userId, names] of byUser) {
       await notify([userId], {
-        title: "This week's Johns",
+        title: NOTIFY_COPY.dealTitle,
         body: names.join(", "),
         url: "/today",
+        kind: "deal",
+        zone: rules.timezone,
+        tag: `deal:${weekId}`,
       });
     }
   }
@@ -461,7 +476,7 @@ async function reopenFlag(db: Db, house: HouseRow, johnId: string, now: Date, no
   const { data: flagId, error } = await db.rpc("open_flag", { p_john: johnId, p_at: now.toISOString() });
   if (error || !flagId) return;
   const flag = must(
-    await db.from("assignments").select("user_id, name, due_at, flagged_by, flagged_at").eq("id", flagId).single(),
+    await db.from("assignments").select("user_id, name, due_at, needs_photo, flagged_by, flagged_at").eq("id", flagId).single(),
     "reopened flag",
   );
   // An older flag already open, from a housemate, was told about when it was raised.
@@ -470,6 +485,10 @@ async function reopenFlag(db: Db, house: HouseRow, johnId: string, now: Date, no
     title: ON_CALL_COPY.pushTitle(flag.name),
     body: ON_CALL_COPY.pushAgainBody(dueInLine(new Date(flag.due_at), now, rulesOf(house).timezone)),
     url: "/today",
+    kind: "flags",
+    zone: rulesOf(house).timezone,
+    ...(flag.needs_photo ? {} : { act: { assignmentId: flagId } }),
+    tag: `john:${flagId}`,
   });
 }
 
@@ -581,11 +600,19 @@ async function closeMonths(db: Db, house: HouseRow, members: readonly MemberRow[
 
 const HOUR = 3_600_000;
 
+/**
+ * The day before a John is due, and again a few hours before, its owner hears
+ * what's due and when, with a Done button unless it needs a photo. Each stage
+ * is sent once (`assignments.reminded`). Someone who turned reminders off is
+ * passed over for good; someone in quiet hours is passed over until a tick
+ * after they end, while there's still time.
+ */
 async function sendReminders(db: Db, house: HouseRow, now: Date, notify: Notify) {
+  const zone = rulesOf(house).timezone;
   const soon = must(
     await db
       .from("assignments")
-      .select("id, user_id, name, due_at, reminded")
+      .select("id, user_id, name, due_at, needs_photo, reminded")
       .eq("house_id", house.id)
       .is("outcome", null)
       .is("done_at", null)
@@ -594,11 +621,21 @@ async function sendReminders(db: Db, house: HouseRow, now: Date, notify: Notify)
       .lte("due_at", new Date(now.getTime() + 24 * HOUR).toISOString()),
     "reminders",
   );
+  if (soon.length === 0) return 0;
+  const prefs = must(
+    await db
+      .from("notification_prefs")
+      .select("user_id, reminders, checks, flags, deal, quiet_from, quiet_until, timezone")
+      .in("user_id", [...new Set(soon.map((a) => a.user_id))]),
+    "notification settings",
+  );
   let sent = 0;
   for (const a of soon) {
     const left = new Date(a.due_at).getTime() - now.getTime();
     const stage = left <= 3 * HOUR ? 2 : 1;
     if (a.reminded >= stage) continue;
+    const when = reminderFor(prefsOf(prefs.find((p) => p.user_id === a.user_id)), now, zone);
+    if (when === "wait") continue;
     // Claim the reminder before sending it, so two ticks never both send.
     const claimed = must(
       await db
@@ -609,11 +646,17 @@ async function sendReminders(db: Db, house: HouseRow, now: Date, notify: Notify)
         .select("id"),
       "claim reminder",
     );
-    if (claimed.length === 0) continue;
+    if (claimed.length === 0 || when === "skip") continue;
+    const due = dueInLine(new Date(a.due_at), now, zone);
+    const body = stage === 2 ? NOTIFY_COPY.dueSoonBody(due) : NOTIFY_COPY.dueTomorrowBody(due);
     await notify([a.user_id], {
-      title: stage === 2 ? `${a.name} is due soon` : `${a.name} is due tomorrow`,
-      body: stage === 2 ? "A few hours left to get it done on time." : "Tick it off when it's done.",
+      title: stage === 2 ? NOTIFY_COPY.dueSoonTitle(a.name) : NOTIFY_COPY.dueTomorrowTitle(a.name),
+      body: a.needs_photo ? `Due ${due}. ${NOTIFY_COPY.needsPhoto}` : body,
       url: "/today",
+      kind: "reminders",
+      zone,
+      ...(a.needs_photo ? {} : { act: { assignmentId: a.id } }),
+      tag: `john:${a.id}`,
     });
     sent += 1;
   }
