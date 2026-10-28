@@ -3,6 +3,7 @@ import {
   checkRules,
   CURRENCIES,
   COVER_GRACE_HOURS,
+  LATE_HOURS,
   CURRENCY_SYMBOL,
   DISPUTE_HOURS,
   DOW_LABEL,
@@ -38,6 +39,7 @@ import { GUTTER, INSET, LABEL_GAP, SPACE, useTheme } from '@/theme';
 const CURRENCY_OPTIONS = CURRENCIES.map((c) => ({ value: c, label: `${CURRENCY_SYMBOL[c]} ${c}` }));
 const DAY_OPTIONS = (Object.entries(DOW_LABEL) as [string, string][]).map(([day, name]) => ({ value: Number(day) as IsoDow, label: name }));
 const DISPUTE_OPTIONS = DISPUTE_HOURS.map((h) => ({ value: h as number, label: RULES_COPY.disputeHours(h), short: SETUP_COPY.disputeShort(h) }));
+const LATE_OPTIONS = LATE_HOURS.map((h) => ({ value: h as number, label: RULES_COPY.lateHours(h), short: SETUP_COPY.lateShort(h) }));
 const COVER_OPTIONS = COVER_GRACE_HOURS.map((h) => ({ value: h as number, label: RULES_COPY.coverGrace(h), short: SETUP_COPY.coverShort(h) }));
 const MAKEUP_OPTIONS = AWAY_MAKEUP.map((n) => ({ value: n as number, label: MAKEUP_LABEL[n] }));
 
@@ -143,6 +145,13 @@ export function RulesForm({ form }: { form: RulesFormState }) {
             options={DISPUTE_OPTIONS}
             value={v.disputeHours}
             onChange={(disputeHours) => set({ disputeHours })}
+            disabled={pending}
+          />
+          <PickRow
+            label={SETUP_COPY.lateWindow}
+            options={LATE_OPTIONS}
+            value={v.lateHours}
+            onChange={(lateHours) => set({ lateHours })}
             disabled={pending}
           />
           <PickRow

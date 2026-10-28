@@ -494,7 +494,7 @@ export function coverOffer(item: BoardItem, people: readonly Person[], viewerId:
     return { kind: "cover", text: JOHN_SHEET_COPY.coverBody(upperFirst(owner), pointsLabel(item.points), money) };
   }
   if (item.userId !== viewerId && item.status === "overdue") {
-    const opens = coverOpensAt(item.dueAt, rules.coverGraceHours);
+    const opens = coverOpensAt(item.dueAt, rules.coverGraceHours, item.closesAt);
     return { kind: "soon", text: JOHN_SHEET_COPY.coverSoon(upperFirst(owner), dueInLine(opens, now, rules.timezone)) };
   }
   return { kind: null, text: null };
