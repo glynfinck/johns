@@ -21,7 +21,8 @@ export type ButtonIcon = ComponentType<{ size?: number; color?: string; 'aria-hi
  * never amber, and says so (`aria-pressed` on the web, `aria-selected`
  * elsewhere). With `href` it is a link dressed as a button (an anchor on
  * the web). `iconOnly` shows just the icon, square, and `label` still names
- * it for screen readers. `spoken` is what a screen reader hears instead of
+ * it for screen readers. `iconAfter` puts the icon after the words, for a
+ * way on (a chevron pointing forward). `spoken` is what a screen reader hears instead of
  * the label, when the label leans on the row beside it.
  */
 export function Button({
@@ -32,6 +33,7 @@ export function Button({
   icon: Icon,
   disabled = false,
   iconOnly = false,
+  iconAfter = false,
   chosen,
   spoken,
   testID,
@@ -43,6 +45,8 @@ export function Button({
   icon?: ButtonIcon;
   disabled?: boolean;
   iconOnly?: boolean;
+  /** The icon after the label rather than before it. */
+  iconAfter?: boolean;
   /** One of a pair to pick from: whether this is the one picked. */
   chosen?: boolean;
   spoken?: string;
@@ -85,8 +89,9 @@ export function Button({
         },
       ])}
     >
-      {Icon ? <Icon size={20} color={look.icon} aria-hidden /> : null}
+      {Icon && !iconAfter ? <Icon size={20} color={look.icon} aria-hidden /> : null}
       {iconOnly ? null : <Text style={[type.rowTitle, { color: look.ink }]}>{label}</Text>}
+      {Icon && iconAfter ? <Icon size={20} color={look.icon} aria-hidden /> : null}
     </Pressable>
   );
   return href ? (

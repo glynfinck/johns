@@ -1,5 +1,5 @@
 // House setup's pages: the rules as label and value, the Johns by category, a John's schedule line and the admins' names.
-import { isoDayOf, type AwayPeriod } from "./away";
+import { isoDayOf, shiftMonth, type AwayPeriod } from "./away";
 import type { BoardItem, JohnDef } from "./board";
 import { FOCUS_SHELL_COPY, GROUPS_COPY, JOHN_LIST_COPY, RULES_COPY, SETUP_COPY } from "./copy";
 import { MAKEUP_LABEL } from "./deal";
@@ -189,6 +189,22 @@ export function bookingWeeks(today: string, weekStarts: IsoDow, from: number, co
   return Array.from({ length: Math.max(0, count) }, (_, w) =>
     Array.from({ length: 7 }, (_, d) => addDaysTo(start, w * 7 + d)),
   );
+}
+
+/**
+ * The weeks a month calendar shows for a `yyyy-MM` month: each starting on
+ * the house's first day, from the week that holds the 1st to the week that
+ * holds the last day, with the months either side filling the ends. Four to
+ * six weeks.
+ */
+export function monthWeeks(month: string, weekStarts: IsoDow): string[][] {
+  const first = `${month}-01`;
+  const last = addDaysTo(`${shiftMonth(month, 1)}-01`, -1);
+  const weeks: string[][] = [];
+  for (let start = addDaysTo(first, -((isoDayOf(first) - weekStarts + 7) % 7)); start <= last; start = addDaysTo(start, 7)) {
+    weeks.push(Array.from({ length: 7 }, (_, d) => addDaysTo(start, d)));
+  }
+  return weeks;
 }
 
 /** What a run of dates spans, by month: "October 2026", "October–November 2026", "December 2026–January 2027". */

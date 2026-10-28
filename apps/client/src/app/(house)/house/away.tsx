@@ -2,7 +2,7 @@ import { AWAY_COPY, myTrips, PAGE_TITLE, SETUP_COPY } from '@app/core';
 
 import type { AwayView } from '@/api/away';
 import { HousePage } from '@/components/house/house-page';
-import { AwayCalendar, AwayForm, MyTrips } from '@/components/house/time-away';
+import { AwayForm, AwayMonth, MyTrips } from '@/components/house/time-away';
 import { Section } from '@/components/section';
 import { useAway } from '@/hooks/use-away';
 import { useHouse, type HouseView } from '@/hooks/use-house';
@@ -11,7 +11,8 @@ import { usePull, useReadOnFocus } from '@/hooks/use-refresh';
 
 /**
  * Time away, pushed from House: your own trips (cancel one, or say you're
- * back), who else in the house is away when, and booking a trip.
+ * back), who in the house is away on which days of the month, and booking
+ * a trip.
  */
 export default function AwayScreen() {
   const { session, house } = useMembership();
@@ -53,7 +54,7 @@ function AwayPage({ houseId, userId, view, away }: { houseId: string; userId: st
         </Section>
       ) : null}
       <Section label={SETUP_COPY.whosAway} testID="away-panel">
-        <AwayCalendar periods={periods} people={snapshot.members} me={userId} today={today} weekStarts={snapshot.rules.weekStarts} />
+        <AwayMonth periods={periods} people={snapshot.members} me={userId} today={today} weekStarts={snapshot.rules.weekStarts} />
       </Section>
       <Section label={AWAY_COPY.book}>
         <AwayForm houseId={houseId} today={today} weekStarts={snapshot.rules.weekStarts} />

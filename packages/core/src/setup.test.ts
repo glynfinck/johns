@@ -17,6 +17,7 @@ import {
   johnsComing,
   membersLine,
   monthsSpanned,
+  monthWeeks,
   myTrips,
   rulesChanged,
   rulesDraft,
@@ -341,6 +342,35 @@ describe("bookingWeeks", () => {
       "2026-10-24",
       "2026-10-25",
     ]);
+  });
+});
+
+describe("monthWeeks", () => {
+  it("runs from the week that holds the 1st to the week that holds the last day", () => {
+    // November 2026 starts on a Sunday and ends on a Monday: six Monday weeks.
+    const weeks = monthWeeks("2026-11", 1);
+    expect(weeks).toHaveLength(6);
+    expect(weeks[0]).toEqual(["2026-10-26", "2026-10-27", "2026-10-28", "2026-10-29", "2026-10-30", "2026-10-31", "2026-11-01"]);
+    expect(weeks[5]).toEqual(["2026-11-30", "2026-12-01", "2026-12-02", "2026-12-03", "2026-12-04", "2026-12-05", "2026-12-06"]);
+  });
+
+  it("starts each week on the house's first day", () => {
+    // Weeks from Sunday: the 1st opens the first week, and five are enough.
+    const weeks = monthWeeks("2026-11", 7);
+    expect(weeks).toHaveLength(5);
+    expect(weeks[0][0]).toBe("2026-11-01");
+    expect(weeks[4][6]).toBe("2026-12-05");
+    expect(monthWeeks("2026-10", 3)[0][0]).toBe("2026-09-30");
+  });
+
+  it("fits a February that starts on the first day in four weeks", () => {
+    expect(monthWeeks("2027-02", 1)).toHaveLength(4);
+    expect(monthWeeks("2027-02", 1)[3][6]).toBe("2027-02-28");
+  });
+
+  it("crosses the new year and leap days", () => {
+    expect(monthWeeks("2026-12", 1).at(-1)?.at(-1)).toBe("2027-01-03");
+    expect(monthWeeks("2028-02", 1).at(-1)).toContain("2028-02-29");
   });
 });
 
