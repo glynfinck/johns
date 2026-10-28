@@ -165,6 +165,6 @@ describe('the service worker, run', () => {
   it('says so when there is no connection', async () => {
     const w = boot('offline');
     await w.fire('notificationclick', { action: 'held', notification: notification({ url: '/week', token: 't' }) });
-    expect(w.shown[0].options.body).toBe('Couldn’t do that from here. Tap to open Johns.');
+    expect(w.shown[0].options.body).toBe('Couldn’t do that from here. Tap to open Jonz.');
   });
 });

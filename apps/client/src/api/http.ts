@@ -19,7 +19,7 @@ export class ApiRequestError extends Error {
 
 /**
  * Where apps/api answers. Unset on the web, it's the page's own origin:
- * johns.glyn.dev passes /api/* on to apps/api (apps/client/vercel.json), so
+ * jonz.app passes /api/* on to apps/api (apps/client/vercel.json), so
  * the browser needs no CORS. A phone has no origin, so there it must be set.
  */
 export function apiBase(): string {

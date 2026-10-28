@@ -3,13 +3,13 @@
 //
 // A push can carry buttons (Done on a reminder, It was done / It wasn't on a
 // housemate check) and a token that stands in for a sign-in. Pressing one
-// posts it to /api/push-actions, which johns.glyn.dev passes on to apps/api,
+// posts it to /api/push-actions, which jonz.app passes on to apps/api,
 // and the notification is swapped for one saying it worked, or why not.
 
 const ICON = "/icon-192.png";
 
 self.addEventListener("push", (event) => {
-  let message = { title: "Johns", body: "", url: "/today", actions: [], silent: false };
+  let message = { title: "Jonz", body: "", url: "/today", actions: [], silent: false };
   try {
     message = { ...message, ...event.data.json() };
   } catch {
@@ -55,7 +55,7 @@ async function answer(notification, action) {
   }
   // In place of the one pressed: tapping it opens the app, as any reminder's does.
   return self.registration.showNotification(reply.failed ? notification.title : reply.title, {
-    body: reply.failed ? reply.body || "Couldn’t do that from here. Tap to open Johns." : reply.body,
+    body: reply.failed ? reply.body || "Couldn’t do that from here. Tap to open Jonz." : reply.body,
     icon: ICON,
     badge: ICON,
     silent: true,

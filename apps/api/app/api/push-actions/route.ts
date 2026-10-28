@@ -14,7 +14,7 @@ export async function POST(request: Request) {
   if (!body.success) return error(request, 400, "That button didn’t say what to do.");
 
   const answer = await answerPush(body.data, new Date());
-  if ("expired" in answer) return error(request, 401, "That notification has expired. Open Johns to do it there.");
+  if ("expired" in answer) return error(request, 401, "That notification has expired. Open Jonz to do it there.");
   if ("mismatch" in answer) return error(request, 400, "That button didn’t say what to do.");
   if ("refusal" in answer) return refused(request, answer.refusal);
   return json(request, PushActionResponse.parse(answer.ok));

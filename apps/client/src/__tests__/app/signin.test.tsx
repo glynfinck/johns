@@ -81,7 +81,7 @@ describe('sign-in on Android and the web', () => {
     await open();
     expect(screen.getByTestId('hazard-tape', { includeHiddenElements: true })).toBeOnTheScreen();
     expect(screen.getByText(SIGN_IN_COPY.terms)).toBeOnTheScreen();
-    const home = screen.getByRole('link', { name: 'Johns' });
+    const home = screen.getByRole('link', { name: 'Jonz' });
     expect(home).toHaveProp('href', '/');
     expect(home).toHaveStyle({ minHeight: TAP });
   });

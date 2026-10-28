@@ -25,8 +25,8 @@ export async function pickPhoto(source: 'camera' | 'library'): Promise<string | 
     if (!permission.granted) {
       throw new Error(
         source === 'camera'
-          ? 'Johns needs the camera for photo receipts. Allow it in Settings.'
-          : 'Johns needs your photos for photo receipts. Allow it in Settings.',
+          ? 'Jonz needs the camera for photo receipts. Allow it in Settings.'
+          : 'Jonz needs your photos for photo receipts. Allow it in Settings.',
       );
     }
   }

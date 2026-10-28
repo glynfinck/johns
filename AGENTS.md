@@ -6,11 +6,13 @@ you're working in (`apps/api/AGENTS.md` for the Next.js app).
 
 ## About this app
 
-- What it does: **Johns** is shared housework with consequences. "Johns" is
+- What it does: **Jonz** is shared housework with consequences. "Johns" is
   what the house calls its assigned chores for the week; one chore is a
-  **John**. Fair shares are dealt for you, housemates check each other's
-  ticks, and late or missed Johns cost a share of a monthly stake. Live at
-  johns.glyn.dev.
+  **John**, and the app's name is the same word, spelled Jonz. Fair shares
+  are dealt for you, housemates check each other's ticks, and late or missed
+  Johns cost a share of a monthly stake. Live at jonz.app (johns.glyn.dev
+  until the rename; it forwards there). The rename is the brand only: the
+  repo, the database, the code's names and the chores keep "Johns".
 - Platforms: the web, served since 27 October 2026 by the Expo app's web
   build (`apps/client`; `apps/api` keeps the API). iOS, Android and web from
   one Expo app (`apps/client`) as `docs/specs/native-migration.md` lands,
@@ -31,8 +33,8 @@ you're working in (`apps/api/AGENTS.md` for the Next.js app).
 ```
 apps/
   api/          Next.js: the web app (its pages stay until Expo web reaches
-                parity), server actions, /api routes, the engine, push  → Vercel "johns"
-  client/       Expo: iOS, Android and web from one codebase   → Vercel "johns-web",
+                parity), server actions, /api routes, the engine, push  → Vercel "jonz-api"
+  client/       Expo: iOS, Android and web from one codebase   → Vercel "jonz-web",
                 from the cutover (DEPLOYMENT.md)
 packages/
   core/         @app/core: the pure rules, the shared words, the database types
@@ -280,14 +282,14 @@ at `<house>/<assignment>/<file>`.
 
 ## Hosting and deploys
 
-- Vercel's git integration builds `apps/api` (the `johns` project, Root
+- Vercel's git integration builds `apps/api` (the `jonz-api` project, Root
   Directory `apps/api`) and Supabase's GitHub integration applies migrations.
   `main` is production; CI only proves, and must be green to merge. There is
   no preview database yet, so preview deployments get no keys.
-- From the Phase 13 cutover, a second project, `johns-web` (Root Directory
+- From the Phase 13 cutover, a second project, `jonz-web` (Root Directory
   `apps/client`, configured by `apps/client/vercel.json`), serves
-  johns.glyn.dev with the Expo web build and passes `/api/*` on to `johns`,
-  which answers on `api.johns.glyn.dev`. The clock's URL and the secrets
+  jonz.app with the Expo web build and passes `/api/*` on to `jonz-api`,
+  which answers on `api.jonz.app`. The clock's URL and the secrets
   don't move. DEPLOYMENT.md has the steps and the rollback.
 - Production's accounts are described in `scripts/provision/config.mjs` and
   set up by `npm run provision`, which writes, then reads everything back

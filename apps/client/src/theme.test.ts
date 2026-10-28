@@ -162,9 +162,9 @@ describe('app.json', () => {
   });
 
   it('carries the identifiers the plan settled', () => {
-    expect(app.expo.scheme).toBe('johns');
-    expect(app.expo.ios.bundleIdentifier).toBe('dev.glyn.johns');
-    expect(app.expo.android.package).toBe('dev.glyn.johns');
+    expect(app.expo.scheme).toBe('jonz');
+    expect(app.expo.ios.bundleIdentifier).toBe('dev.glyn.jonz');
+    expect(app.expo.android.package).toBe('dev.glyn.jonz');
     expect(app.expo.web.output).toBe('single');
   });
 });
