@@ -2,7 +2,7 @@
 // a stale list of Johns is worse than a spinner.
 
 self.addEventListener("push", (event) => {
-  let message = { title: "Johns", body: "", url: "/today" };
+  let message = { title: "Jonz", body: "", url: "/today" };
   try {
     message = { ...message, ...event.data.json() };
   } catch {

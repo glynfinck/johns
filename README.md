@@ -1,8 +1,8 @@
-# Johns
+# Jonz
 
 Fair shares of the housework, and a house that keeps score. In our house the week's assigned
 chores were always "Johns", so that is what the app calls them: one chore is
-a **John**.
+a **John**. The app is the same word, spelled Jonz, at [jonz.app](https://jonz.app).
 
 - **Fair shares, dealt for you.** Every John has an effort score (1–10), a
   kind, a due day and a cadence. Each week the Johns are shared so effort
@@ -45,7 +45,7 @@ like `glynfinck/app-template`, on its way to iOS and Android with an Expo app
 ```
 packages/core/                 @app/core, the pure rules: week, deal, outcome, points, streak, stake, dispute;
                                Bin Night's colours and the shared words
-apps/api/                      the Next.js app and its /api, at api.johns.glyn.dev
+apps/api/                      the Next.js app and its /api, at api.jonz.app
   app/(house)/                 today · week · wall · table · stake · house
   app/join/[code]/             the join link
   app/api/cron/tick/           the clock (called by pg_cron)
@@ -54,7 +54,7 @@ apps/api/                      the Next.js app and its /api, at api.johns.glyn.d
   lib/actions/ lib/data/       server actions and loaders
   tests/db/                    the database attacked (the rules' tests sit beside them in core)
   e2e/                         phones and a laptop, end to end
-apps/client/                   the Expo app for iOS, Android and the web, at johns.glyn.dev
+apps/client/                   the Expo app for iOS, Android and the web, at jonz.app
   src/app/                     screens (Expo Router)
   src/components/ src/theme.ts Bin Night in React Native
 supabase/migrations/           schema, RLS, the housemate functions, the cron job

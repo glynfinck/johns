@@ -10,7 +10,7 @@ import { TitleBar } from '@/components/title-bar';
 import { SPACE } from '@/theme';
 
 /**
- * What Johns keeps and who sees it, in the web's /privacy words under
+ * What Jonz keeps and who sees it, in the web's /privacy words under
  * headings: what we keep, what we don't, who sees what, deleting your data.
  * Open to anyone, signed in or not; Back goes where you came from, or to the
  * front door (which, signed in, is your house).

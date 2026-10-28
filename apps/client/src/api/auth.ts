@@ -6,7 +6,7 @@ import { supabase } from './supabase';
 // All sign-in goes through this file: Google everywhere, and Sign in with
 // Apple on iOS (App Store guideline 4.8). On iOS and Android both are native
 // sheets whose ID token Supabase turns into a session; the web build signs in
-// with Google through Supabase's redirect, as johns.glyn.dev does.
+// with Google through Supabase's redirect, as jonz.app does.
 
 /** How a sign-in attempt ended. `redirected`: the web has left for Google. */
 export type SignInResult = 'signed-in' | 'cancelled' | 'redirected';

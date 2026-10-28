@@ -11,7 +11,7 @@ import { useMembership } from '@/hooks/use-membership';
 // The root layout's module brings sign-in with it; these pages don't need it.
 jest.mock('@/hooks/use-membership', () => ({ MembershipProvider: ({ children }: { children: unknown }) => children, useMembership: jest.fn() }));
 
-it('says what Johns keeps, and who sees it, in the web’s words under headings', async () => {
+it('says what Jonz keeps, and who sees it, in the web’s words under headings', async () => {
   await render(<Privacy />);
   expect(screen.getByRole('header', { name: PRIVACY_COPY.title })).toBeOnTheScreen();
   for (const { heading, body } of FRONT_DOOR_COPY.privacy) {

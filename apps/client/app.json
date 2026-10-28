@@ -1,14 +1,14 @@
 {
   "expo": {
-    "name": "Johns",
-    "slug": "johns",
+    "name": "Jonz",
+    "slug": "jonz",
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/images/icon.png",
-    "scheme": "johns",
+    "scheme": "jonz",
     "userInterfaceStyle": "automatic",
     "ios": {
-      "bundleIdentifier": "dev.glyn.johns",
+      "bundleIdentifier": "dev.glyn.jonz",
       "usesAppleSignIn": true
     },
     "android": {
@@ -18,7 +18,7 @@
         "monochromeImage": "./assets/images/android-icon-monochrome.png"
       },
       "predictiveBackGestureEnabled": false,
-      "package": "dev.glyn.johns"
+      "package": "dev.glyn.jonz"
     },
     "web": {
       "output": "single",
@@ -52,8 +52,8 @@
       [
         "expo-image-picker",
         {
-          "cameraPermission": "Johns uses the camera for photo receipts, so the house can see a John is done.",
-          "photosPermission": "Johns uses your photos for photo receipts, so the house can see a John is done.",
+          "cameraPermission": "Jonz uses the camera for photo receipts, so the house can see a John is done.",
+          "photosPermission": "Jonz uses your photos for photo receipts, so the house can see a John is done.",
           "microphonePermission": false
         }
       ]

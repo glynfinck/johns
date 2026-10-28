@@ -275,10 +275,10 @@ describe("AWAY_COPY", () => {
 
 describe("pageTitle", () => {
   it("names the page, then the app, as the web’s tab does", () => {
-    expect(pageTitle(PAGE_TITLE.today)).toBe("Today · Johns");
-    expect(pageTitle(PAGE_TITLE.week)).toBe("This week · Johns");
-    expect(pageTitle()).toBe("Johns");
-    expect(pageTitle("")).toBe("Johns");
+    expect(pageTitle(PAGE_TITLE.today)).toBe("Today · Jonz");
+    expect(pageTitle(PAGE_TITLE.week)).toBe("This week · Jonz");
+    expect(pageTitle()).toBe("Jonz");
+    expect(pageTitle("")).toBe("Jonz");
   });
 });
 

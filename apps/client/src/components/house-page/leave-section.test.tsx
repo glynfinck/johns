@@ -170,7 +170,7 @@ it('stays when you cancel', async () => {
   expect(removeMember).not.toHaveBeenCalled();
 });
 
-it('says Johns never moves money, and leads to Privacy', async () => {
+it('says Jonz never moves money, and leads to Privacy', async () => {
   await open();
   expect(screen.getByText(HOUSE_LOWER_COPY.noMoney)).toBeOnTheScreen();
   await fireEvent.press(screen.getByRole('link', { name: HOUSE_LOWER_COPY.privacy }));

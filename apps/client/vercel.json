@@ -9,7 +9,7 @@
     { "source": "/table", "destination": "/house", "permanent": false }
   ],
   "rewrites": [
-    { "source": "/api/:path*", "destination": "https://api.johns.glyn.dev/api/:path*" },
+    { "source": "/api/:path*", "destination": "https://api.jonz.app/api/:path*" },
     { "source": "/(.*)", "destination": "/index.html" }
   ],
   "headers": [
