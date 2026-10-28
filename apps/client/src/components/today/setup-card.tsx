@@ -1,11 +1,12 @@
 import { NEXT_UP_COPY, setupChecklist } from '@app/core';
+import { SparklesIcon } from 'lucide-react-native';
 import { useState } from 'react';
 import { StyleSheet, View } from 'react-native';
 
 import { Card, CardRows } from '@/components/card';
 import { DealButton } from '@/components/house/deal-button';
 import { InviteSheet } from '@/components/house-page/invite-sheet';
-import { Row } from '@/components/row';
+import { Row, RowIcon } from '@/components/row';
 import { Lead, SectionLabel } from '@/components/text';
 import { TickCircle } from '@/components/tick-circle';
 import { SPACE } from '@/theme';
@@ -17,7 +18,8 @@ function Step({ done }: { done: boolean }) {
 
 /**
  * An admin's Today before anything is dealt, in Next up's place: the steps
- * to start the house. Add the Johns (the John list), invite the housemates
+ * to start the house. While the list is empty, Describe your house (Claude
+ * drafts the Johns from a sentence or two). Add the Johns (the John list), invite the housemates
  * (House's invite sheet), then "Deal week 1", across the card, which becomes
  * the screen's amber button once the first two have something. It's there
  * before then too, in outline: the server says what's missing (no Johns
@@ -45,6 +47,16 @@ export function SetupCard({
         <SectionLabel style={styles.label}>{NEXT_UP_COPY.label}</SectionLabel>
         <Lead style={styles.lead}>{NEXT_UP_COPY.setUp(houseName)}</Lead>
         <CardRows testID="setup-steps">
+          {steps.johnCount === 0 ? (
+            <Row
+              leading={<RowIcon icon={SparklesIcon} />}
+              title={NEXT_UP_COPY.describe}
+              meta={NEXT_UP_COPY.describeMeta}
+              href="/house/describe"
+              chevron
+              testID="setup-describe"
+            />
+          ) : null}
           <Row
             leading={<Step done={steps.johns} />}
             title={NEXT_UP_COPY.addJohns}

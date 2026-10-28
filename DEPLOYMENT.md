@@ -107,6 +107,16 @@ is exactly what local development needs and production must not have.
   automatic branching off. It deploys on every push to `main`, applying any
   new migrations; Auth and API settings in `config.toml` are ignored, which
   is what keeps them local.
+- **Claude, for "Describe your house"** (optional). `POST /api/setup/draft`
+  asks Claude (`claude-haiku-5-5`, `apps/api/lib/ai/house-draft.ts`) to
+  draft a new house's John list. It needs an Anthropic API key, made at
+  [platform.claude.com](https://platform.claude.com/settings/keys) under a
+  workspace with a monthly spend limit, added to the `johns` project's
+  production environment as `ANTHROPIC_API_KEY` (server only, never in
+  `johns-web` or the app), then a redeploy. Provision doesn't manage it and
+  never removes it. Without it, setup offers the starter lists instead, so
+  nothing breaks. A draft costs well under a cent, and each house gets ten
+  a day (`DRAFTS_PER_DAY`), counted in `house_drafts`.
 - **Brand verification.** Opening the app beyond your own house means
   Google's review; the landing page at `/` carries the name, the purpose and
   the privacy link it checks for.

@@ -31,4 +31,5 @@ export * from "./house-page";
 export * from "./house-lower";
 export * from "./setup";
 export * from "./front-door";
+export * from "./house-draft";
 export type * from "./db-types";

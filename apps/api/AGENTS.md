@@ -76,8 +76,11 @@ appear only in the laptop board.
   query. CORS only for `ALLOWED_ORIGINS` (`lib/env.ts`): the Expo web build
   on 8205 locally; phones send no Origin. `proxy.ts` doesn't touch `/api/`.
   Today: `POST /api/fresh` (catch a house up, at most once a minute),
-  `POST /api/disputes`, `POST /api/disputes/:id/votes` and `POST /api/deal`
-  (an admin hands out or re-deals the week). A database
+  `POST /api/disputes`, `POST /api/disputes/:id/votes`, `POST /api/deal`
+  (an admin hands out or re-deals the week) and `POST /api/setup/draft`
+  (Describe your house: Claude drafts a John list for an admin to review,
+  `lib/moves/draft.ts` and `lib/ai/house-draft.ts`, the only code that
+  calls Claude; `docs/specs/describe-your-house.md`). A database
   refusal answers through `refused`: 403 when it isn't the caller's to make
   (42501), 409 when the rules say not now (P0001), in `humanError`'s words.
 - `lib/moves/`: a move that needs the service role after the caller's own

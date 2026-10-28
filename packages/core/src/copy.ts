@@ -29,6 +29,7 @@ export const PAGE_TITLE = {
   rules: "House rules",
   away: "Time away",
   groups: "Groups",
+  describe: "Describe your house",
 } as const;
 
 /** What Johns keeps, and who sees it. */
@@ -38,6 +39,7 @@ export const PRIVACY_COPY = {
     "Johns keeps what it needs to share out your house’s Johns and nothing more: your name from Google, the house you belong to, the Johns you were given and when you ticked them, any photos you add, disputes and votes, and the Stake ledger.",
     "Only people in your house can see any of it. Photos are stored privately and shown to your housemates through links that expire after an hour.",
     "Johns never moves money. The ledger records what housemates owe each other; you settle up however you like, outside the app.",
+    "If you ask Johns to draft your house’s Johns, what you write about the house is sent to Anthropic’s Claude to draft the list. It isn’t stored with your house, and Anthropic doesn’t train on it.",
     "If you turn on reminders, your browser gives us an address to send notifications to. Turning reminders off deletes it. Leaving a house removes you from it; your past Johns stay in its history.",
   ],
 } as const;
@@ -652,6 +654,8 @@ export const NEXT_UP_COPY = {
   changeDates: "Change dates",
   setUp: (house: string) => `Set up ${house}`,
   addJohns: "Add your Johns",
+  describe: "Describe your house",
+  describeMeta: "Johns drafts the list for you",
   onTheList: (count: number) => (count === 0 ? "Nothing on the list yet" : `${count} on the list`),
   invite: "Invite housemates",
   housemates: (count: number) => (count <= 1 ? "Just you so far" : `${count} in the house so far`),
@@ -1244,6 +1248,7 @@ export const FRONT_DOOR_COPY = {
     },
     { heading: "What we don’t", body: [PRIVACY_COPY.paragraphs[2]] },
     { heading: "Who sees what", body: [PRIVACY_COPY.paragraphs[1]] },
+    { heading: "Drafting your Johns", body: [PRIVACY_COPY.paragraphs[3]] },
     {
       heading: "Deleting your data",
       body: [
@@ -1251,4 +1256,41 @@ export const FRONT_DOOR_COPY = {
       ],
     },
   ],
+} as const;
+
+/** Describe your house: Claude drafts the John list, or a starter list does, and an admin keeps what they want. */
+export const HOUSE_DRAFT_COPY = {
+  title: "Describe your house",
+  lead: "Say who lives there and what needs doing. Johns drafts the list, and nothing is added until you keep it.",
+  field: "Your house",
+  placeholder:
+    "Four of us in a flat with two bathrooms. Sam and Priya share the upstairs one. Bins go out Tuesday night. Nobody ever cleans the oven.",
+  draft: "Draft my Johns",
+  drafting: "Drafting…",
+  privacy: "What you write is sent to Anthropic’s Claude to draft the list.",
+  orStart: "Or start from a list",
+  starter: {
+    flat_share: { title: "Flat share", meta: "Housemates sharing a kitchen and bathroom" },
+    couple: { title: "Couple", meta: "Two of you" },
+    family: { title: "Family", meta: "Parents and kids" },
+  },
+  draftLabel: "Your draft",
+  /** "9 Johns drafted. Untick any you don’t want." */
+  drafted: (n: number) => `${n === 1 ? "1 John" : `${n} Johns`} drafted. Untick any you don’t want; you can change each one after.`,
+  fromStarter: "A starter list. Untick any you don’t want; you can change each one after.",
+  /** Claude couldn't be reached, so a starter list stands in. */
+  offline: "Couldn’t draft from your description just now, so here’s a starter list to begin with.",
+  empty: "Nothing came back to draft from that. Say a little more about the house, or start from a list.",
+  groupsLabel: "Groups",
+  /** A drafted group's meta line: who's in it, and who it waits for. */
+  waiting: (names: string) => `waiting for ${names} to join`,
+  /** Under a group nobody in it has joined yet. */
+  everyoneForNow: (groups: string) => `Until someone in ${groups} joins, its Johns go to everyone. Make the group under House once they have.`,
+  johnLabel: (name: string, kept: boolean) => `${kept ? "Keep" : "Leave out"} ${name}`,
+  /** The primary button: how many Johns keeping adds. */
+  keep: (n: number) => (n === 0 ? "Pick at least one John" : n === 1 ? "Add 1 John to the list" : `Add ${n} Johns to the list`),
+  keeping: "Adding…",
+  startAgain: "Start again",
+  /** After keeping: Today's setup card takes over. */
+  added: (n: number) => (n === 1 ? "1 John added to the list." : `${n} Johns added to the list.`),
 } as const;

@@ -113,8 +113,11 @@ permanent once a store has seen them.
   SQL function (`supabase.rpc('mark_done', …)`) or one column-granted write;
   the database decides, and the client only translates a refusal with
   `humanError` from `@app/core` and refreshes. `apps/api` is called only for
-  the four moves that need a server: `POST /api/deal`, `POST /api/disputes`,
-  `POST /api/disputes/:id/votes` and `POST /api/fresh`.
+  the moves that need a server: `POST /api/deal`, `POST /api/disputes`,
+  `POST /api/disputes/:id/votes`, `POST /api/fresh`, `POST /api/flags` and
+  `POST /api/setup/draft` (`draft.ts`: a draft John list from a
+  description, a starter list if the API can't be reached, and `keepDraft`,
+  which adds the Johns an admin kept through `settings.ts`).
 - `src/hooks/`: connect `@app/core` and `src/api/` to screens (e.g.
   `use-session.ts`). `use-membership.tsx` is the session and the house it's
   in, read behind the splash screen, with `refresh()` for after creating or
@@ -191,7 +194,8 @@ permanent once a store has seen them.
   tab, so nothing else goes there: House is a stack
   (`(house)/house/_layout.tsx`): the group page (`index.tsx`) and the pages
   it pushes, `wall`, `stake`, `people/[userId]` (a housemate's page) and
-  the setup pages `johns`, `rules`, `away` and `groups`. A new page goes in
+  the setup pages `johns`, `rules`, `away`, `groups` and `describe`
+  (Describe your house, `components/house/describe-house.tsx`). A new page goes in
   `(house)/house/`, built on `HousePage` (whose back goes to `/house`),
   keeping the tabs; one opened straight from a link still has House under
   it (the stack's `anchor`). The
