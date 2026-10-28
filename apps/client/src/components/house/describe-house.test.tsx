@@ -24,6 +24,7 @@ const RULES: HouseRules = {
   missedForfeitMinor: 0,
   disputeHours: 24,
   coverGraceHours: 3,
+  lateHours: 24,
 };
 const people = [{ userId: ME, name: 'Glyn Finck' }];
 const drafted = tidyDraft(
