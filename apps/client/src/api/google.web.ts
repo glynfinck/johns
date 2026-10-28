@@ -3,7 +3,7 @@ import { SIGN_IN } from '@app/core';
 import type { SignInResult } from './auth';
 import { supabase } from './supabase';
 
-// The web build: Google through Supabase's redirect, as johns.glyn.dev does.
+// The web build: Google through Supabase's redirect, as jonz.app does.
 // The browser comes back to /signin with a code, and supabase-js finishes the
 // PKCE exchange in the page (detectSessionInUrl), so no callback route is needed.
 

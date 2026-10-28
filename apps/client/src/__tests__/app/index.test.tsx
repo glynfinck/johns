@@ -6,7 +6,7 @@ import { TAP } from '@/theme';
 
 it('opens on the wordmark, the taped sign and three plain sentences', async () => {
   await render(<FrontDoor />);
-  expect(screen.getByRole('image', { name: 'Johns' })).toBeOnTheScreen();
+  expect(screen.getByRole('image', { name: 'Jonz' })).toBeOnTheScreen();
   expect(screen.getByTestId('hazard-tape', { includeHiddenElements: true })).toBeOnTheScreen();
   expect(screen.getByRole('header', { name: FRONT_DOOR.headline })).toBeOnTheScreen();
   for (const point of FRONT_DOOR_COPY.points) expect(screen.getByText(point.body)).toBeOnTheScreen();

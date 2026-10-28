@@ -48,8 +48,8 @@ ask-first list), and `docs/specs/native-migration.md` says which screen
 arrives in which phase.
 
 Expo SDK 58, React Native 0.88, React 19.3 (one copy for the whole repo,
-pinned by the root `overrides`). The app's name, slug and scheme are `Johns`,
-`johns` and `johns`; the bundle ID and Android package are `dev.glyn.johns`,
+pinned by the root `overrides`). The app's name, slug and scheme are `Jonz`,
+`jonz` and `jonz`; the bundle ID and Android package are `dev.glyn.jonz`,
 permanent once a store has seen them.
 
 - Run `npx expo install <package>` from this directory: it picks the SDK's
@@ -70,7 +70,7 @@ permanent once a store has seen them.
   with no house goes where sign-in's `?next=` was carrying you, when
   `afterSignIn` (core) allows it: `/house/new`, `/welcome` or a join link,
   on every platform. A join link
-  (`join/[joinCode]`, which is `johns://join/CODE` on a phone) sits outside
+  (`join/[joinCode]`, which is `jonz://join/CODE` on a phone) sits outside
   the guards and signs you in in place, so the code survives. So do
   `privacy` and `+not-found` (anything not a route, `/_sitemap` included:
   the router plugin's `sitemap` is off), open to anyone. The root layout's
@@ -238,9 +238,9 @@ permanent once a store has seen them.
 - Shared code by default. Use platform files (`.ios.tsx`, `.android.tsx`,
   `.web.tsx`) or `Platform.OS` only where behaviour truly differs.
 - Web is a single-page build: keep `"web": { "output": "single" }` in
-  app.json. Vercel's `johns-web` project serves it from `vercel.json`
+  app.json. Vercel's `jonz-web` project serves it from `vercel.json`
   (`src/__tests__/vercel.test.ts` says why each line is there), taking over
-  johns.glyn.dev from `apps/api`'s pages at the hosting cutover (Phase 13,
+  the site from `apps/api`'s pages at the hosting cutover (Phase 13,
   DEPLOYMENT.md). With `EXPO_PUBLIC_API_URL` unset, as in production, the
   web build calls `/api/*` on its own origin, which passes it on to
   `apps/api`; the e2e serves it the same way (`e2e/serve-client.mjs`
