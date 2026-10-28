@@ -666,6 +666,50 @@ export type Database = {
           },
         ]
       }
+      notification_prefs: {
+        Row: {
+          checks: boolean
+          deal: boolean
+          flags: boolean
+          quiet_from: number | null
+          quiet_until: number | null
+          reminders: boolean
+          timezone: string | null
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          checks?: boolean
+          deal?: boolean
+          flags?: boolean
+          quiet_from?: number | null
+          quiet_until?: number | null
+          reminders?: boolean
+          timezone?: string | null
+          updated_at?: string
+          user_id?: string
+        }
+        Update: {
+          checks?: boolean
+          deal?: boolean
+          flags?: boolean
+          quiet_from?: number | null
+          quiet_until?: number | null
+          reminders?: boolean
+          timezone?: string | null
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "notification_prefs_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: true
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       on_call: {
         Row: {
           house_id: string
@@ -993,6 +1037,15 @@ export type Database = {
         Returns: string
       }
       proof_house: { Args: { object_name: string }; Returns: string }
+      push_action: {
+        Args: {
+          p_assignment: string
+          p_dispute: string
+          p_uphold: boolean
+          p_user: string
+        }
+        Returns: undefined
+      }
       raise_dispute: {
         Args: { p_assignment: string; p_reason: string }
         Returns: string
