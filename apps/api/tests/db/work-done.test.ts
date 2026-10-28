@@ -1,0 +1,44 @@
+import { nextWeek } from "@app/core";
+import { describe, expect, it } from "vitest";
+
+import { loadBalances } from "@/lib/engine/tick";
+import { adminClient } from "@/tests/support/clients";
+import { addJohns, deal, makeHouse, weeksAgo, ZONE } from "@/tests/support/factories";
+
+/**
+ * Balances count the work done, not what was handed out: a missed John
+ * comes back to whoever missed it, and a cover counts for the coverer.
+ */
+
+const db = adminClient();
+
+async function oneJohnLastWeek() {
+  const house = await makeHouse(["Ava", "Ben"]);
+  const week = weeksAgo(1);
+  await addJohns(house.id, [{ name: "Bathroom", points: 4 }], week);
+  const { assignments } = await deal(house.id, week, week.startsAt);
+  const a = assignments[0];
+  const other = house.everyone.find((x) => x.userId !== a.user_id)!;
+  const balances = async () =>
+    (await loadBalances(db, house.id, nextWeek(week, ZONE, 1).startsOn, house.everyone.map((x) => x.userId))).balances;
+  return { a, other, balances };
+}
+
+describe("balances count work done", () => {
+  it("leaves a missed John with whoever missed it", async () => {
+    const { a, other, balances } = await oneJohnLastWeek();
+    await db.from("assignments").update({ outcome: "missed", settled_at: new Date().toISOString() }).eq("id", a.id);
+    const b = await balances();
+    expect([b.get(a.user_id), b.get(other.userId)]).toEqual([-2, -2]);
+  });
+
+  it("counts a cover for whoever covered it", async () => {
+    const { a, other, balances } = await oneJohnLastWeek();
+    await db
+      .from("assignments")
+      .update({ outcome: "covered", settled_at: new Date().toISOString(), covered_by: other.userId, done_at: new Date().toISOString() })
+      .eq("id", a.id);
+    const b = await balances();
+    expect([b.get(a.user_id), b.get(other.userId)]).toEqual([-2, 2]);
+  });
+});

@@ -57,7 +57,7 @@ export async function loadTable(
   const [shares, handed] = weekIds.length
     ? await Promise.all([
         supabase.from('week_shares').select('week_id, user_id, share').in('week_id', weekIds),
-        supabase.from('assignments').select('week_id, user_id, points').in('week_id', weekIds),
+        supabase.from('assignments').select('week_id, user_id, points, outcome, covered_by').in('week_id', weekIds),
       ])
     : [{ data: [], error: null }, { data: [], error: null }];
   if (shares.error) throw shares.error;
