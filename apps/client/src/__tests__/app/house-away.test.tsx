@@ -68,6 +68,9 @@ it('shows the month, each day saying how many are away', async () => {
   expect(panel.getAllByTestId('away-day')).toHaveLength(35);
   expect(panel.getByRole('button', { name: 'Monday 28 September, everyone home' })).toBeOnTheScreen();
   expect(panel.getByRole('button', { name: 'Wednesday 21 October, 1 away' })).toBeOnTheScreen();
+  // Today, and only today, is outlined.
+  expect(panel.getAllByTestId('away-today')).toHaveLength(1);
+  expect(within(panel.getByRole('button', { name: 'Wednesday 21 October, 1 away' })).getByTestId('away-today')).toBeOnTheScreen();
   expect(panel.getByRole('button', { name: 'Monday 26 October, 2 away' })).toBeOnTheScreen();
   expect(panel.getByRole('button', { name: 'Wednesday 28 October, 1 away' })).toBeOnTheScreen();
   expect(panel.getByRole('button', { name: 'Thursday 29 October, everyone home' })).toBeOnTheScreen();
@@ -77,6 +80,7 @@ it('shows the month, each day saying how many are away', async () => {
   await fireEvent.press(panel.getByRole('button', { name: AWAY_COPY.laterMonth }));
   expect(panel.getByText('November 2026')).toBeOnTheScreen();
   expect(panel.getByRole('button', { name: 'Monday 2 November, 1 away' })).toBeOnTheScreen();
+  expect(panel.queryByTestId('away-today')).toBeNull();
   await fireEvent.press(panel.getByRole('button', { name: AWAY_COPY.earlierMonth }));
   expect(panel.getByText('October 2026')).toBeOnTheScreen();
 });

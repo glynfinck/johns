@@ -15,8 +15,11 @@ sheet that opens when you tap one.
   because only the last week of time away is read. Later month has no limit.
 - Each day is shaded by how many are away: none, one (ink at 12%), two (ink
   at 30%), or three or more (solid ink, with the words in the card colour).
-  The count sits under the date and today's date is ringed. A key under the
-  calendar shows the three shades. Days from other months, and days already
+  The count sits under the date. Today is outlined with a line around the
+  whole day (a second, card-coloured line inside it on a solid day), never
+  filled, because a filled day already means three or more away. Glyn
+  picked the outline over a filled circle, an underline and a corner tag on
+  28 October 2026. A key under the calendar shows the three shades. Days from other months, and days already
   gone, use the lighter weight, as the booking calendar does.
 - Under the key: "Tap a day to see who's away and who's home.", or "Nobody's
   booked any time away." when no trips are coming up.
@@ -52,6 +55,6 @@ middle of the page, as every sheet is.
 
 ## Done when
 
-- [x] The month shows each day's count, today ringed, on all three.
+- [x] The month shows each day's count, today outlined, on all three.
 - [x] Tapping a day opens its sheet, and Day before and Day after walk it.
 - [x] Screen readers hear each day as "Sunday 8 November, 3 away".

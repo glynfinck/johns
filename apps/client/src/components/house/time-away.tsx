@@ -42,7 +42,7 @@ import { FONT, RADIUS, SPACE, useTheme, type Theme } from '@/theme';
 /**
  * Who's away, on a month calendar for a group: weeks from the house's first
  * day, each day as dark as how many are away (one, two, three or more), with
- * how many under its date and today ringed, then a key to the shades. It
+ * how many under its date and today outlined, then a key to the shades. It
  * opens on this month; the months before it are gone from what's read, so
  * it goes no further back. Tapping a day opens its sheet: who's away and
  * who's home. Each day is a button that says the same in words.
@@ -120,8 +120,15 @@ export function AwayMonth({
                     style={[styles.day, { backgroundColor: shade }]}
                     testID="away-day"
                   >
-                    <View style={[styles.date, date === today && { borderColor: ink, borderWidth: 2 }]}>
-                      <Text style={[type.body, styles.number, faint && styles.faint, { color: ink }]}>{Number(date.slice(8))}</Text>
+                    {date === today ? (
+                      <View pointerEvents="none" style={[styles.today, { borderColor: colors.foreground }]} testID="away-today">
+                        {away >= 3 ? <View style={[styles.todayInner, { borderColor: colors.card }]} /> : null}
+                      </View>
+                    ) : null}
+                    <View style={styles.date}>
+                      <Text style={[type.body, styles.number, faint && styles.faint, date === today && styles.todayNumber, { color: ink }]}>
+                        {Number(date.slice(8))}
+                      </Text>
                     </View>
                     <Text style={[type.initials, { color: ink }]}>{away > 0 ? away : ' '}</Text>
                   </Pressable>
@@ -354,10 +361,14 @@ const styles = StyleSheet.create({
   week: { flexDirection: 'row', gap: 2 },
   dow: { flex: 1, textAlign: 'center', paddingVertical: SPACE.xs },
   day: { flex: 1, minHeight: 52, alignItems: 'center', paddingTop: SPACE.xs, borderRadius: RADIUS },
-  // Today's ring sits around the date alone, so the shade still shows the day.
-  date: { width: 26, height: 26, borderRadius: 13, alignItems: 'center', justifyContent: 'center' },
+  date: { width: 26, height: 26, alignItems: 'center', justifyContent: 'center' },
   number: { fontFamily: FONT.bold, lineHeight: 20 },
   faint: { fontFamily: FONT.regular },
+  // Today is outlined, not filled, because a solid day already means three or more away. On a
+  // solid day a card-coloured line inside the outline keeps it showing.
+  today: { position: 'absolute', top: 0, right: 0, bottom: 0, left: 0, borderRadius: RADIUS, borderWidth: 2 },
+  todayInner: { flex: 1, borderRadius: RADIUS - 2, borderWidth: 2 },
+  todayNumber: { fontFamily: FONT.extrabold },
   key: { flexDirection: 'row', flexWrap: 'wrap', justifyContent: 'center', gap: SPACE.lg },
   keyItem: { flexDirection: 'row', alignItems: 'center', gap: SPACE.xs + 2 },
   swatch: { width: 14, height: 14, borderRadius: 4 },
