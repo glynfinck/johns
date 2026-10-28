@@ -16,10 +16,14 @@
  *     rest is split among the sharers who are home.
  *   - If nobody who shares it is home, it is skipped this week.
  *
- * A balance is what someone was handed minus their share, over recent weeks
- * (carryOver). Away is not a holiday from your share: it shows up as a
- * balance below zero, and the weeks after hand you a little more until it
- * evens out.
+ * A balance is the work someone did minus their share, over recent weeks
+ * (carryOver). A John counts for whoever did it: done or late, for its
+ * holder; covered, for whoever covered it; skipped with immunity or excused,
+ * for its holder, since that's the house letting them off. A missed John
+ * counts for nobody, so it comes back to whoever missed it in the next
+ * deals, and covering for someone means you're dealt less later. Away is not
+ * a holiday from your share: it shows up as a balance below zero, and the
+ * weeks after hand you a little more until it evens out.
  *
  * Who gets what (fairShares), in order of what matters:
  *   1. Balances even out. Each John goes to whoever, of those home to do it,
@@ -46,7 +50,7 @@ export interface DealJohn {
 
 export interface DealMember {
   userId: string;
-  /** Recent weeks: what they were handed minus their share. Below zero means behind. */
+  /** Recent weeks: the work they did minus their share. Below zero means behind. */
   balance: number;
   /** Their share of this week. */
   share: number;
@@ -156,16 +160,37 @@ function lessThan(a: readonly number[], b: readonly number[]): boolean {
   return false;
 }
 
+export interface PastJohn {
+  /** Whose John it was. */
+  userId: string;
+  points: number;
+  /** How it ended; null (or absent) while it can still change. */
+  outcome?: string | null;
+  /** Who covered it, if a housemate did. */
+  coveredBy?: string | null;
+}
+
 export interface PastWeek {
   /** Each housemate's share of the week, as stored when it was dealt. */
   shares: readonly { userId: string; share: number }[];
-  assignments: readonly { userId: string; points: number }[];
+  assignments: readonly PastJohn[];
 }
 
 /**
- * Each current housemate's balance: what they were handed in recent weeks
- * minus their share of those weeks. Someone who joins part-way starts at
- * zero, since they had no share of the weeks before them.
+ * Who a past John counts for: whoever covered it, nobody if it was missed,
+ * otherwise its holder (done, late, excused, or not settled yet, which counts
+ * as theirs until it is).
+ */
+export function creditedTo(a: PastJohn): string | null {
+  if (a.coveredBy) return a.coveredBy;
+  if (a.outcome === "missed") return null;
+  return a.userId;
+}
+
+/**
+ * Each current housemate's balance: the work they did in recent weeks
+ * (creditedTo) minus their share of those weeks. Someone who joins part-way
+ * starts at zero, since they had no share of the weeks before them.
  */
 export function carryOver(weeks: readonly PastWeek[], currentMemberIds: readonly string[]): Map<string, number> {
   const balance = new Map(currentMemberIds.map((id) => [id, 0]));
@@ -174,17 +199,24 @@ export function carryOver(weeks: readonly PastWeek[], currentMemberIds: readonly
       if (balance.has(s.userId)) balance.set(s.userId, balance.get(s.userId)! - s.share);
     }
     for (const a of week.assignments) {
-      if (balance.has(a.userId)) balance.set(a.userId, balance.get(a.userId)! + a.points);
+      const who = creditedTo(a);
+      if (who && balance.has(who)) balance.set(who, balance.get(who)! + a.points);
     }
   }
   return balance;
 }
 
-/** The recent weeks as read: their ids, the shares stored when each was dealt, and what each housemate was handed. */
+/** The recent weeks as read: their ids, the shares stored when each was dealt, and each John in them with how it ended. */
 export interface RecentRows {
   weekIds: readonly string[];
   shares: readonly { week_id: string; user_id: string; share: number | string }[];
-  handed: readonly { week_id: string; user_id: string; points: number }[];
+  handed: readonly {
+    week_id: string;
+    user_id: string;
+    points: number;
+    outcome?: string | null;
+    covered_by?: string | null;
+  }[];
 }
 
 /**
@@ -198,7 +230,9 @@ export function recentBalances(
 ): { balances: Map<string, number>; usualShare: Map<string, number> } {
   const weeks: PastWeek[] = rows.weekIds.map((id) => ({
     shares: rows.shares.filter((s) => s.week_id === id).map((s) => ({ userId: s.user_id, share: Number(s.share) })),
-    assignments: rows.handed.filter((a) => a.week_id === id).map((a) => ({ userId: a.user_id, points: a.points })),
+    assignments: rows.handed
+      .filter((a) => a.week_id === id)
+      .map((a) => ({ userId: a.user_id, points: a.points, outcome: a.outcome, coveredBy: a.covered_by })),
   }));
   const usualShare = new Map<string, number>();
   for (const id of memberIds) {
@@ -210,7 +244,7 @@ export function recentBalances(
 
 export interface BalanceRow {
   userId: string;
-  /** Handed minus share over recent weeks, going into this week. Below zero is behind. */
+  /** Work done minus share over recent weeks, going into this week. Below zero is behind. */
   balance: number;
   /** About how many weeks of catching up are left at the catch-up pace. */
   weeksToEven: number;
