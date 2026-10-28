@@ -1326,7 +1326,7 @@ export const PASS_COPY = {
   ended: (day: string) => `Ended ${day}`,
   // The page.
   lead: "One Pass covers the whole house. Anyone can buy it, and everyone gets the extras.",
-  foundingLead: "Your house has the House Pass for life, as one of the first houses on Johns. Thank you.",
+  foundingLead: `Your house has the House Pass for life, as one of the first houses on ${APP_NAME}. Thank you.`,
   boughtBy: (name: string) => `Bought by ${name}`,
   includes: "What the house gets",
   stake: "The Stake",
