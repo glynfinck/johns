@@ -37,6 +37,7 @@ export type Database = {
       assignments: {
         Row: {
           category: string
+          closes_at: string | null
           covered_by: string | null
           created_at: string
           done_at: string | null
@@ -61,6 +62,7 @@ export type Database = {
         }
         Insert: {
           category: string
+          closes_at?: string | null
           covered_by?: string | null
           created_at?: string
           done_at?: string | null
@@ -85,6 +87,7 @@ export type Database = {
         }
         Update: {
           category?: string
+          closes_at?: string | null
           covered_by?: string | null
           created_at?: string
           done_at?: string | null
@@ -413,6 +416,7 @@ export type Database = {
           id: string
           join_code: string
           late_forfeit_minor: number
+          late_hours: number
           missed_forfeit_minor: number
           name: string
           stake_minor: number
@@ -431,6 +435,7 @@ export type Database = {
           id?: string
           join_code?: string
           late_forfeit_minor?: number
+          late_hours?: number
           missed_forfeit_minor?: number
           name: string
           stake_minor?: number
@@ -449,6 +454,7 @@ export type Database = {
           id?: string
           join_code?: string
           late_forfeit_minor?: number
+          late_hours?: number
           missed_forfeit_minor?: number
           name?: string
           stake_minor?: number

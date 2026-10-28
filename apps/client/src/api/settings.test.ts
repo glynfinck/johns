@@ -46,6 +46,7 @@ const RULES: HouseRules = {
   missedForfeitMinor: 300,
   disputeHours: 24,
   coverGraceHours: 3,
+  lateHours: 24,
 };
 const NOW = new Date('2026-10-21T12:00:00Z');
 const callsOf = (table: string, method: string) => mockCalls.filter(([t, m]) => t === table && m === method).map(([, , a]) => a);

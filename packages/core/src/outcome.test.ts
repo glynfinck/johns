@@ -2,8 +2,8 @@ import { describe, expect, it } from "vitest";
 
 import {
   canCover,
+  closesAt,
   coverOpensAt,
-  flagClosesAt,
   liveStatus,
   settleOutcome,
   standsAt,
@@ -99,18 +99,35 @@ describe("helpers", () => {
   });
 });
 
+describe("the late window", () => {
+  it("closes a John due on a day its late window after it was due, whatever the day", () => {
+    // Due Thursday 6pm with a day to do it late: missed Friday 6pm, not Sunday night.
+    const thursday = { ...base, closesAt: at("2026-10-09T18:00:00Z") };
+    expect(closesAt(thursday)).toEqual(at("2026-10-09T18:00:00Z"));
+    expect(settleOutcome(thursday, at("2026-10-09T17:59:00Z"), 24)).toBeNull();
+    expect(settleOutcome(thursday, at("2026-10-09T18:00:00Z"), 24)).toBe("missed");
+  });
+
+  it("keeps a Sunday-night John open into the next week for its late window", () => {
+    const sunday = { ...base, dueAt: at("2026-10-11T21:00:00Z"), closesAt: at("2026-10-12T21:00:00Z") };
+    expect(liveStatus({ ...sunday, outcome: null }, at("2026-10-12T08:00:00Z"), 24)).toBe("overdue");
+    expect(settleOutcome(sunday, at("2026-10-12T21:00:00Z"), 24)).toBe("missed");
+    expect(tickWouldBe(sunday.dueAt, at("2026-10-12T08:00:00Z"), closesAt(sunday))).toBe("late");
+  });
+});
+
 describe("flags (on-call Johns)", () => {
   // Raised Thursday 8pm with 12 hours: due Friday 8am, missed Friday 8pm.
   const flaggedAt = at("2026-10-08T20:00:00Z");
   const flag: AssignmentFacts = { ...base, flaggedAt, dueAt: at("2026-10-09T08:00:00Z") };
 
-  it("closes a John due on a day when its week ends", () => {
-    expect(flagClosesAt(base)).toEqual(weekEnds);
-    expect(flagClosesAt({ ...base, flaggedAt: null })).toEqual(weekEnds);
+  it("closes an older John due on a day when its week ends", () => {
+    expect(closesAt(base)).toEqual(weekEnds);
+    expect(closesAt({ ...base, flaggedAt: null })).toEqual(weekEnds);
   });
 
   it("misses a flag at twice its window", () => {
-    expect(flagClosesAt(flag).toISOString()).toBe("2026-10-09T20:00:00.000Z");
+    expect(closesAt(flag).toISOString()).toBe("2026-10-09T20:00:00.000Z");
     expect(settleOutcome(flag, at("2026-10-09T19:59:00Z"), 24)).toBeNull();
     expect(settleOutcome(flag, at("2026-10-09T20:00:00Z"), 24)).toBe("missed");
   });
@@ -118,13 +135,13 @@ describe("flags (on-call Johns)", () => {
   it("misses an overdue flag when its week ends first", () => {
     // Raised Sunday 4am, due 4pm; the week ends 11pm, before 4am Monday.
     const late = { ...base, flaggedAt: at("2026-10-11T04:00:00Z"), dueAt: at("2026-10-11T16:00:00Z") };
-    expect(flagClosesAt(late)).toEqual(weekEnds);
+    expect(closesAt(late)).toEqual(weekEnds);
   });
 
   it("keeps a flag open past its week's end while it is still in time", () => {
     // Raised Sunday 8pm: due 8am Monday, in the next week, and still the same person's.
     const straddling = { ...base, flaggedAt: at("2026-10-11T20:00:00Z"), dueAt: at("2026-10-12T08:00:00Z") };
-    expect(flagClosesAt(straddling).toISOString()).toBe("2026-10-12T20:00:00.000Z");
+    expect(closesAt(straddling).toISOString()).toBe("2026-10-12T20:00:00.000Z");
     expect(liveStatus({ ...straddling, outcome: null }, at("2026-10-12T01:00:00Z"), 24)).toBe("due-soon");
     expect(liveStatus({ ...straddling, outcome: null }, at("2026-10-12T09:00:00Z"), 24)).toBe("overdue");
     expect(settleOutcome(straddling, at("2026-10-12T20:00:00Z"), 24)).toBe("missed");
@@ -156,21 +173,31 @@ describe("covering", () => {
     expect(liveStatus({ ...covered, outcome: "covered" }, now, 24)).toBe("covered");
   });
 
+  const closes = at("2026-10-09T18:00:00Z");
+
   it("opens the grace period after the due time", () => {
-    expect(coverOpensAt(due, 3)).toEqual(at("2026-10-08T21:00:00Z"));
-    expect(coverOpensAt(due, 0)).toEqual(due);
+    expect(coverOpensAt(due, 3, closes)).toEqual(at("2026-10-08T21:00:00Z"));
+    expect(coverOpensAt(due, 0, closes)).toEqual(due);
   });
 
-  it("lets anyone else cover an undone John once the grace is up", () => {
-    const a = { userId: "sam", doneAt: null, outcome: null, dueAt: due };
+  it("opens halfway to the miss when the grace is longer than that", () => {
+    // Sunday 9pm with the week ending at 11pm: the old rule never opened it.
+    const sunday = at("2026-10-11T21:00:00Z");
+    expect(coverOpensAt(sunday, 3, weekEnds)).toEqual(at("2026-10-11T22:00:00Z"));
+    expect(coverOpensAt(due, 24, closes)).toEqual(at("2026-10-09T06:00:00Z"));
+  });
+
+  it("lets anyone else cover an undone John once the grace is up, until it's missed", () => {
+    const a = { userId: "sam", doneAt: null, outcome: null, dueAt: due, closesAt: closes };
     expect(canCover(a, "glyn", at("2026-10-08T20:59:59Z"), 3)).toBe(false);
     expect(canCover(a, "glyn", at("2026-10-08T21:00:00Z"), 3)).toBe(true);
     expect(canCover(a, "glyn", due, 0)).toBe(true);
+    expect(canCover(a, "glyn", closes, 3)).toBe(false);
   });
 
   it("never offers a cover of your own, a ticked, excused or settled John", () => {
-    const now = at("2026-10-10T00:00:00Z");
-    const a = { userId: "sam", doneAt: null, outcome: null, dueAt: due };
+    const now = at("2026-10-09T00:00:00Z");
+    const a = { userId: "sam", doneAt: null, outcome: null, dueAt: due, closesAt: closes };
     expect(canCover(a, "sam", now, 3)).toBe(false);
     expect(canCover({ ...a, doneAt: at("2026-10-09T00:00:00Z") }, "glyn", now, 3)).toBe(false);
     expect(canCover({ ...a, excused: true }, "glyn", now, 3)).toBe(false);

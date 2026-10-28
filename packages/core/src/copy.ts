@@ -478,6 +478,8 @@ export const RULES_COPY = {
   missed: (symbol: string) => `Missed forfeit (${symbol})`,
   disputes: "Disputes can be raised for",
   disputeHours: (hours: number) => (hours === 0 ? "No disputes (honour system)" : `${hours} hours after a tick`),
+  /** How long an overdue John can still be done late, as an option. */
+  lateHours: (hours: number) => `${hours} hours after it’s due, then it’s missed`,
   /** The grace before anyone else can cover an overdue John, as an option. */
   coverGrace: (hours: number) =>
     hours === 0 ? "No grace: anyone can cover it once it’s due" : `${hours} ${hours === 1 ? "hour" : "hours"} after it’s due`,
@@ -1154,6 +1156,10 @@ export const SETUP_COPY = {
   disputeWindow: (hours: number) => (hours === 0 ? "Not allowed" : `within ${hours} ${hours === 1 ? "hour" : "hours"}`),
   /** How long a tick can be disputed, as a value in the form: "24 hours". */
   disputeShort: (hours: number) => (hours === 0 ? "None" : `${hours} ${hours === 1 ? "hour" : "hours"}`),
+  lateWindow: "Done late",
+  /** How long an overdue John can still be done late, as the rules read: "up to 24 hours after it’s due". */
+  lateFor: (hours: number) => `up to ${hours} ${hours === 1 ? "hour" : "hours"} after it’s due`,
+  lateShort: (hours: number) => `${hours} ${hours === 1 ? "hour" : "hours"}`,
   cover: "Covering",
   /** When a housemate can cover an overdue John, as the rules read: "3 hours after it’s due". */
   coverWindow: (hours: number) => (hours === 0 ? "As soon as it’s due" : `${hours} ${hours === 1 ? "hour" : "hours"} after it’s due`),
