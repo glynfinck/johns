@@ -8,6 +8,7 @@ import {
   localDate,
   NEXT_UP_COPY,
   SECTION_LABEL,
+  SETUP_COPY,
 } from "@app/core";
 import { expect, test, type Page } from "@playwright/test";
 
@@ -29,6 +30,13 @@ test.afterAll(async () => cleanUp(made));
  */
 async function tapDay(page: Page, date: string) {
   await page.getByTestId("away-form").getByRole("button", { name: dayName(date), exact: true }).click();
+}
+
+/** Opens a day's sheet from Who's away, a month on if the day is in the next one. */
+async function openDay(page: Page, today: string, date: string, away: number) {
+  const month = page.getByTestId("away-month");
+  if (date.slice(0, 7) !== today.slice(0, 7)) await month.getByRole("button", { name: AWAY_COPY.laterMonth }).click();
+  await month.getByRole("button", { name: AWAY_COPY.dayLabel(dayName(date), away) }).click();
 }
 
 test("make a group, give it a John, and book time away", async ({ browser }) => {
@@ -86,10 +94,12 @@ test("make a group, give it a John, and book time away", async ({ browser }) => 
   await expect(away.getByTestId("away-picked")).toContainText("Away");
   await away.getByLabel(AWAY_COPY.note).fill("Lisbon");
   await away.getByTestId("book-away").click();
-  // Yours, to cancel; nobody else's yet.
+  // Yours, to cancel, and on the month as yours.
   await expect(awayPage.getByTestId("my-trip")).toContainText(dateRange(from, to));
   await expect(awayPage.getByTestId("my-trip")).toContainText("Lisbon");
-  await expect(awayPage.getByTestId("away-period")).toHaveCount(0);
+  await openDay(page, today, from, 1);
+  await expect(page.getByTestId("away-day-sheet").getByTestId("day-away")).toContainText(SETUP_COPY.you);
+  await page.getByTestId("sheet-close").click();
   const { data: booked } = await db.from("away").select("starts_on, ends_on, note").eq("house_id", houseId);
   expect(booked).toEqual([{ starts_on: from, ends_on: to, note: "Lisbon" }]);
 
@@ -98,9 +108,12 @@ test("make a group, give it a John, and book time away", async ({ browser }) => 
   await expect(page.getByTestId("today-screen").getByTestId("away-line")).toContainText(NEXT_UP_COPY.awaySoon(dateRange(from, to)));
   const benPage = await benContext.newPage();
   await benPage.goto("/house/away");
-  const avasTrip = benPage.getByTestId("away-screen").getByTestId("away-period");
+  await openDay(benPage, today, to, 1);
+  const avasTrip = benPage.getByTestId("away-day-sheet").getByTestId("day-away");
   await expect(avasTrip).toContainText("Ava");
+  await expect(avasTrip).toContainText(AWAY_COPY.backOn(dateRange(addDaysTo(to, 1), addDaysTo(to, 1))));
   await expect(avasTrip).toContainText("Lisbon");
+  await benPage.getByTestId("sheet-close").click();
   await benPage.goto("/house/groups");
   await expect(benPage.getByTestId("groups-screen").getByTestId("group")).toBeVisible();
   await expect(benPage.getByTestId("groups-screen").getByTestId("add-group")).toHaveCount(0);

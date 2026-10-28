@@ -47,7 +47,7 @@ it('sits under a title bar with the way back to House', async () => {
   expect(bar.getByRole('button', { name: FOCUS_SHELL_COPY.backTo(SECTION_LABEL.house) })).toBeOnTheScreen();
 });
 
-it("shows who else is away, by first name, in words as well as squares", async () => {
+it('shows the month, each day saying how many are away', async () => {
   const members = snapshot().members;
   (loadHouse as jest.Mock).mockResolvedValue(
     snapshot({ members: [members[0], { ...members[1], name: 'Sam Carter' }, { ...members[1], userId: 'tom', name: 'Tom Reilly' }] }),
@@ -55,31 +55,78 @@ it("shows who else is away, by first name, in words as well as squares", async (
   (loadAway as jest.Mock).mockResolvedValue({
     today: '2026-10-21',
     periods: [
+      trip({ id: 'p3', userId: 'tom', startsOn: '2026-10-20', endsOn: '2026-10-26', note: null }),
       trip(),
-      trip({ id: 'p3', userId: 'tom', startsOn: '2026-10-20', endsOn: '2026-10-22', note: null }),
       trip({ id: 'p2', userId: 'priya', startsOn: '2026-11-02', endsOn: '2026-11-03', note: null }),
     ],
   });
   await open();
   const panel = within(screen.getByTestId('away-panel'));
   expect(panel.getByText(SETUP_COPY.whosAway)).toBeOnTheScreen();
-  expect(panel.getByText(SETUP_COPY.nextWeeks('21 Oct–17 Nov'))).toBeOnTheScreen();
-  // Soonest first; your own trip is under Your time away, not here again.
-  const [tom, sam] = panel.getAllByTestId('away-period');
-  expect(panel.getAllByTestId('away-period')).toHaveLength(2);
-  // The avatar's initials, then the first name alone.
-  expect(tom).toHaveTextContent(new RegExp(`^TRTom20–22 Oct.*${SETUP_COPY.awayNow}`));
-  expect(sam).toHaveTextContent(/^SCSam26–28 Oct · Lisbon$/);
-  expect(within(sam).queryByText(SETUP_COPY.awayNow)).toBeNull();
-  expect(within(screen.getByTestId('my-trips')).getByTestId('my-trip')).toHaveTextContent(/2–3 Nov/);
+  expect(panel.getByText('October 2026')).toBeOnTheScreen();
+  // Weeks from the house's Monday, so October opens on 28 September.
+  expect(panel.getAllByTestId('away-day')).toHaveLength(35);
+  expect(panel.getByRole('button', { name: 'Monday 28 September, everyone home' })).toBeOnTheScreen();
+  expect(panel.getByRole('button', { name: 'Wednesday 21 October, 1 away' })).toBeOnTheScreen();
+  expect(panel.getByRole('button', { name: 'Monday 26 October, 2 away' })).toBeOnTheScreen();
+  expect(panel.getByRole('button', { name: 'Wednesday 28 October, 1 away' })).toBeOnTheScreen();
+  expect(panel.getByRole('button', { name: 'Thursday 29 October, everyone home' })).toBeOnTheScreen();
+  expect(panel.getByText(AWAY_COPY.tapADay)).toBeOnTheScreen();
+  // What was read starts a week back, so there's no going to September.
+  expect(panel.getByRole('button', { name: AWAY_COPY.earlierMonth })).toBeDisabled();
+  await fireEvent.press(panel.getByRole('button', { name: AWAY_COPY.laterMonth }));
+  expect(panel.getByText('November 2026')).toBeOnTheScreen();
+  expect(panel.getByRole('button', { name: 'Monday 2 November, 1 away' })).toBeOnTheScreen();
+  await fireEvent.press(panel.getByRole('button', { name: AWAY_COPY.earlierMonth }));
+  expect(panel.getByText('October 2026')).toBeOnTheScreen();
 });
 
-it('says nobody else is away when only you are', async () => {
-  (loadAway as jest.Mock).mockResolvedValue({ today: '2026-10-21', periods: [trip({ userId: 'priya' })] });
+it("opens a day's sheet: who's away, when they're back, and who's home", async () => {
+  const members = snapshot().members;
+  (loadHouse as jest.Mock).mockResolvedValue(
+    snapshot({ members: [members[0], { ...members[1], name: 'Sam Carter' }, { ...members[1], userId: 'tom', name: 'Tom Reilly' }] }),
+  );
+  (loadAway as jest.Mock).mockResolvedValue({
+    today: '2026-10-21',
+    periods: [trip(), trip({ id: 'p3', userId: 'tom', startsOn: '2026-10-20', endsOn: '2026-10-26', note: null })],
+  });
   await open();
-  const panel = within(screen.getByTestId('away-panel'));
-  expect(panel.getByText(SETUP_COPY.nobodyElse)).toBeOnTheScreen();
-  expect(panel.queryByTestId('away-period')).toBeNull();
+  await fireEvent.press(screen.getByRole('button', { name: 'Monday 26 October, 2 away' }));
+  const sheet = within(screen.getByTestId('away-day-sheet'));
+  expect(sheet.getByRole('header', { name: 'Monday 26 October' })).toBeOnTheScreen();
+  expect(sheet.getByText(AWAY_COPY.dayCount(2, 1))).toBeOnTheScreen();
+  // The trip that began first first, by first name, with the day they're back.
+  const [tom, sam] = sheet.getAllByTestId('day-away');
+  expect(tom).toHaveTextContent(/Tom.*Back Tue 27 Oct$/);
+  expect(sam).toHaveTextContent(/Sam.*Back Thu 29 Oct · Lisbon$/);
+  expect(sheet.getByTestId('day-home')).toHaveTextContent(/You$/);
+  // On a day, keeping the sheet open.
+  await fireEvent.press(sheet.getByRole('button', { name: AWAY_COPY.dayAfter }));
+  expect(sheet.getByRole('header', { name: 'Tuesday 27 October' })).toBeOnTheScreen();
+  expect(sheet.getAllByTestId('day-away')).toHaveLength(1);
+  expect(sheet.getByTestId('day-home')).toHaveTextContent(/You.*Tom$/);
+  await fireEvent.press(sheet.getByRole('button', { name: AWAY_COPY.dayAfter }));
+  await fireEvent.press(sheet.getByRole('button', { name: AWAY_COPY.dayAfter }));
+  expect(sheet.getByRole('header', { name: 'Thursday 29 October' })).toBeOnTheScreen();
+  expect(sheet.getByText(AWAY_COPY.everyoneHome)).toBeOnTheScreen();
+  await fireEvent.press(screen.getByTestId('sheet-close'));
+  await waitFor(() => expect(screen.queryByTestId('away-day-sheet')).toBeNull());
+});
+
+it('calls your own trip yours on the calendar, and says when everyone is away', async () => {
+  (loadAway as jest.Mock).mockResolvedValue({
+    today: '2026-10-21',
+    periods: [trip({ userId: 'priya' }), trip({ id: 'p2', startsOn: '2026-10-28', endsOn: '2026-10-30', note: null })],
+  });
+  await open();
+  await fireEvent.press(screen.getByRole('button', { name: 'Monday 26 October, 1 away' }));
+  const sheet = within(screen.getByTestId('away-day-sheet'));
+  expect(sheet.getByTestId('day-away')).toHaveTextContent(/You.*Back Thu 29 Oct · Lisbon$/);
+  expect(sheet.getByTestId('day-home')).toHaveTextContent(/Sam$/);
+  await fireEvent.press(sheet.getByRole('button', { name: AWAY_COPY.dayAfter }));
+  await fireEvent.press(sheet.getByRole('button', { name: AWAY_COPY.dayAfter }));
+  expect(sheet.getByText(AWAY_COPY.dayCount(2, 0))).toBeOnTheScreen();
+  expect(sheet.getByText(AWAY_COPY.nobodyHome)).toBeOnTheScreen();
 });
 
 it("says when nobody's away, and has no trips of yours to show", async () => {
@@ -126,7 +173,7 @@ describe('your own trips', () => {
     });
     await open();
     expect(screen.queryByTestId('my-trips')).toBeNull();
-    expect(screen.queryByTestId('away-period')).toBeNull();
+    expect(within(screen.getByTestId('away-panel')).getByText(AWAY_COPY.nobody)).toBeOnTheScreen();
   });
 });
 

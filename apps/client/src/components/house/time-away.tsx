@@ -1,23 +1,27 @@
 import {
   addDaysTo,
   AWAY_COPY,
-  awayMeta,
-  awayOn,
+  backOn,
   dateRange,
-  datesBetween,
+  dayName,
+  DOW_LABEL,
   firstName,
   FOCUS_SHELL_COPY,
-  isoDayOf,
+  monthLabel,
+  monthWeeks,
   SETUP_COPY,
+  shiftMonth,
   tripMeta,
   tripStarted,
+  tripsOn,
   upcomingTrips,
+  withAlpha,
   type AwayPeriod,
   type IsoDow,
 } from '@app/core';
-import { PlaneIcon } from 'lucide-react-native';
+import { ChevronLeftIcon, ChevronRightIcon, PlaneIcon } from 'lucide-react-native';
 import { useState } from 'react';
-import { StyleSheet, View } from 'react-native';
+import { Pressable, StyleSheet, Text, View } from 'react-native';
 
 import { cancelAway, setAway } from '@/api/away';
 import type { Housemate } from '@/api/board';
@@ -25,91 +29,210 @@ import { Alert } from '@/components/alert';
 import { Avatar } from '@/components/avatar';
 import { Button } from '@/components/button';
 import { Field } from '@/components/field';
-import { GroupItem } from '@/components/group';
+import { Group, GroupItem } from '@/components/group';
 import { Row, RowIcon } from '@/components/row';
+import { Section } from '@/components/section';
 import { AwayDates, type DateRange } from '@/components/setup/away-dates';
-import { Chip } from '@/components/status-mark';
+import { Sheet } from '@/components/sheet';
 import { Body, Meta } from '@/components/text';
 import { TextButton } from '@/components/text-button';
 import { useMove } from '@/hooks/use-move';
-import { SPACE, useTheme } from '@/theme';
+import { FONT, RADIUS, SPACE, useTheme, type Theme } from '@/theme';
 
 /**
- * Who's away over the next four weeks, for a group: a square a day for each
- * housemate, you included (the house's weeks spaced apart, so it's plain
- * which deal a trip falls in, today ringed), then each housemate's trip
- * still to come as a row that says the same in words. Your own trips are
- * the page's "Your time away", so they aren't listed twice. The squares are
- * a picture; the rows are what a screen reader hears.
+ * Who's away, on a month calendar for a group: weeks from the house's first
+ * day, each day as dark as how many are away (one, two, three or more), with
+ * how many under its date and today ringed, then a key to the shades. It
+ * opens on this month; the months before it are gone from what's read, so
+ * it goes no further back. Tapping a day opens its sheet: who's away and
+ * who's home. Each day is a button that says the same in words.
  */
-export function AwayCalendar({
+export function AwayMonth({
   periods,
   people,
   me,
   today,
   weekStarts,
-  days = 28,
 }: {
   periods: AwayPeriod[];
   people: Housemate[];
   me: string;
   today: string;
   weekStarts: IsoDow;
-  days?: number;
 }) {
-  const { colors } = useTheme();
-  const dates = datesBetween(today, addDaysTo(today, days - 1));
-  const upcoming = upcomingTrips(periods, today);
-  const others = upcoming.filter((p) => p.userId !== me);
-  const person = (id: string) => people.find((p) => p.userId === id);
+  const { colors, type } = useTheme();
+  const [month, setMonth] = useState(today.slice(0, 7));
+  const [day, setDay] = useState<string | null>(null);
+  const weeks = monthWeeks(month, weekStarts);
+  const days = Array.from({ length: 7 }, (_, i) => DOW_LABEL[(((weekStarts - 1 + i) % 7) + 1) as IsoDow]);
+  const nobody = upcomingTrips(periods, today).length === 0;
+
+  function open(date: string) {
+    setDay(date);
+    setMonth(date.slice(0, 7));
+  }
 
   return (
     <>
-      <GroupItem testID="away-grid">
-        <Meta>{SETUP_COPY.nextWeeks(dateRange(today, dates[dates.length - 1]))}</Meta>
-        <View aria-hidden style={styles.grid}>
-          {people.map((p) => (
-            <View key={p.userId} style={styles.line}>
-              <Meta numberOfLines={1} style={styles.who}>
-                {p.userId === me ? SETUP_COPY.you : firstName(p.name)}
-              </Meta>
-              <View style={styles.squares}>
-                {dates.map((d) => (
-                  <View
-                    key={d}
-                    style={[
-                      styles.square,
-                      { backgroundColor: awayOn(periods, p.userId, d) ? colors.foreground : colors.secondary },
-                      d !== today && isoDayOf(d) === weekStarts && styles.weekGap,
-                      d === today && { borderColor: colors.foreground, borderWidth: 2 },
-                    ]}
-                  />
-                ))}
-              </View>
+      <GroupItem testID="away-month">
+        <View style={styles.calendar}>
+          <View style={styles.head}>
+            <Button
+              variant="ghost"
+              icon={ChevronLeftIcon}
+              label={AWAY_COPY.earlierMonth}
+              iconOnly
+              disabled={month <= today.slice(0, 7)}
+              onPress={() => setMonth((was) => shiftMonth(was, -1))}
+            />
+            <Text style={[type.rowTitle, styles.month]} accessibilityLiveRegion="polite">
+              {monthLabel(month)}
+            </Text>
+            <Button
+              variant="ghost"
+              icon={ChevronRightIcon}
+              label={AWAY_COPY.laterMonth}
+              iconOnly
+              onPress={() => setMonth((was) => shiftMonth(was, 1))}
+            />
+          </View>
+          <View style={styles.week} aria-hidden>
+            {days.map((d) => (
+              <Text key={d} style={[type.sectionLabel, styles.dow]}>
+                {d.slice(0, 1)}
+              </Text>
+            ))}
+          </View>
+          {weeks.map((week) => (
+            <View key={week[0]} style={styles.week}>
+              {week.map((date) => {
+                const away = tripsOn(periods, date).length;
+                const shade = shadeOf(colors, away);
+                // Another month's days and the days gone by are lighter, as the booking calendar's are.
+                const faint = date.slice(0, 7) !== month || date < today;
+                const ink = away >= 3 ? colors.card : faint && away < 2 ? colors.mutedForeground : colors.foreground;
+                return (
+                  <Pressable
+                    key={date}
+                    accessibilityRole="button"
+                    accessibilityLabel={AWAY_COPY.dayLabel(dayName(date), away)}
+                    onPress={() => open(date)}
+                    style={[styles.day, { backgroundColor: shade }]}
+                    testID="away-day"
+                  >
+                    <View style={[styles.date, date === today && { borderColor: ink, borderWidth: 2 }]}>
+                      <Text style={[type.body, styles.number, faint && styles.faint, { color: ink }]}>{Number(date.slice(8))}</Text>
+                    </View>
+                    <Text style={[type.initials, { color: ink }]}>{away > 0 ? away : ' '}</Text>
+                  </Pressable>
+                );
+              })}
             </View>
           ))}
         </View>
+        <View style={styles.key} aria-hidden>
+          {[1, 2, 3].map((n) => (
+            <View key={n} style={styles.keyItem}>
+              <View style={[styles.swatch, { backgroundColor: shadeOf(colors, n) }]} />
+              <Meta>{AWAY_COPY.shade(n)}</Meta>
+            </View>
+          ))}
+        </View>
+        {nobody ? <Body>{AWAY_COPY.nobody}</Body> : <Meta>{AWAY_COPY.tapADay}</Meta>}
       </GroupItem>
-      {others.length === 0 ? (
-        <GroupItem>
-          <Body>{upcoming.length === 0 ? AWAY_COPY.nobody : SETUP_COPY.nobodyElse}</Body>
-        </GroupItem>
-      ) : (
-        others.map((p) => {
-          const who = person(p.userId);
-          return (
-            <Row
-              key={p.id}
-              leading={<Avatar name={who?.name ?? FOCUS_SHELL_COPY.formerHousemate} />}
-              title={who ? firstName(who.name) : FOCUS_SHELL_COPY.formerHousemate}
-              meta={awayMeta(p)}
-              trailing={tripStarted(p, today) ? <Chip label={SETUP_COPY.awayNow} icon={PlaneIcon} /> : undefined}
-              testID="away-period"
-            />
-          );
-        })
-      )}
+      <DaySheet day={day} periods={periods} people={people} me={me} onDay={open} onClose={() => setDay(null)} />
     </>
+  );
+}
+
+/** A day's shade: none with nobody away, ink faintly for one, more for two, solid ink for three or more. */
+function shadeOf(colors: Theme['colors'], away: number): string {
+  if (away <= 0) return 'transparent';
+  if (away >= 3) return colors.foreground;
+  return withAlpha(colors.foreground, away === 1 ? 0.12 : 0.3);
+}
+
+/**
+ * One day of the month calendar: who's away (back when, and where), then
+ * who's home, and the day before and after it, so you can walk through a
+ * trip without closing the sheet.
+ */
+function DaySheet({
+  day,
+  periods,
+  people,
+  me,
+  onDay,
+  onClose,
+}: {
+  day: string | null;
+  periods: AwayPeriod[];
+  people: Housemate[];
+  me: string;
+  onDay: (date: string) => void;
+  onClose: () => void;
+}) {
+  const trips = day ? tripsOn(periods, day) : [];
+  const home = people.filter((p) => !trips.some((t) => t.userId === p.userId));
+  const name = (p: Housemate) => (p.userId === me ? SETUP_COPY.you : firstName(p.name));
+  const person = (id: string) => people.find((p) => p.userId === id);
+  return (
+    <Sheet
+      visible={day !== null}
+      title={day ? dayName(day) : undefined}
+      description={AWAY_COPY.dayCount(trips.length, home.length)}
+      flush
+      onClose={onClose}
+      testID="away-day-sheet"
+    >
+      <Section label={AWAY_COPY.awayLabel}>
+        <Group>
+          {trips.length === 0 ? (
+            <GroupItem>
+              <Body>{AWAY_COPY.everyoneHome}</Body>
+            </GroupItem>
+          ) : (
+            trips.map((t) => {
+              const who = person(t.userId);
+              const back = backOn(t);
+              return (
+                <Row
+                  key={t.id}
+                  leading={<Avatar name={who?.name ?? FOCUS_SHELL_COPY.formerHousemate} me={t.userId === me} />}
+                  title={who ? name(who) : FOCUS_SHELL_COPY.formerHousemate}
+                  meta={[AWAY_COPY.backOn(dateRange(back, back)), t.note || null].filter(Boolean).join(' · ')}
+                  testID="day-away"
+                />
+              );
+            })
+          )}
+        </Group>
+      </Section>
+      <Section label={AWAY_COPY.homeLabel}>
+        <Group>
+          <GroupItem testID="day-home">
+            {home.length === 0 ? (
+              <Body>{AWAY_COPY.nobodyHome}</Body>
+            ) : (
+              <View style={styles.home}>
+                {home.map((p) => (
+                  <View key={p.userId} style={styles.homeItem}>
+                    <Avatar name={p.name} me={p.userId === me} size={24} />
+                    <Body>{name(p)}</Body>
+                  </View>
+                ))}
+              </View>
+            )}
+          </GroupItem>
+        </Group>
+      </Section>
+      {day ? (
+        <View style={styles.steps}>
+          <Button variant="ghost" icon={ChevronLeftIcon} label={AWAY_COPY.dayBefore} onPress={() => onDay(addDaysTo(day, -1))} />
+          <Button variant="ghost" icon={ChevronRightIcon} label={AWAY_COPY.dayAfter} iconAfter onPress={() => onDay(addDaysTo(day, 1))} />
+        </View>
+      ) : null}
+    </Sheet>
   );
 }
 
@@ -225,11 +348,21 @@ export function AwayForm({ houseId, today, weekStarts }: { houseId: string; toda
 }
 
 const styles = StyleSheet.create({
-  grid: { gap: SPACE.xs },
-  line: { flexDirection: 'row', alignItems: 'center', gap: SPACE.sm },
-  who: { width: 64 },
-  squares: { flex: 1, flexDirection: 'row', gap: 2 },
-  square: { flex: 1, height: 16, borderRadius: 2 },
-  weekGap: { marginLeft: 3 },
+  calendar: { gap: 2 },
+  head: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
+  month: { flexShrink: 1, textAlign: 'center' },
+  week: { flexDirection: 'row', gap: 2 },
+  dow: { flex: 1, textAlign: 'center', paddingVertical: SPACE.xs },
+  day: { flex: 1, minHeight: 52, alignItems: 'center', paddingTop: SPACE.xs, borderRadius: RADIUS },
+  // Today's ring sits around the date alone, so the shade still shows the day.
+  date: { width: 26, height: 26, borderRadius: 13, alignItems: 'center', justifyContent: 'center' },
+  number: { fontFamily: FONT.bold, lineHeight: 20 },
+  faint: { fontFamily: FONT.regular },
+  key: { flexDirection: 'row', flexWrap: 'wrap', justifyContent: 'center', gap: SPACE.lg },
+  keyItem: { flexDirection: 'row', alignItems: 'center', gap: SPACE.xs + 2 },
+  swatch: { width: 14, height: 14, borderRadius: 4 },
+  home: { flexDirection: 'row', flexWrap: 'wrap', gap: SPACE.md },
+  homeItem: { flexDirection: 'row', alignItems: 'center', gap: SPACE.sm },
+  steps: { flexDirection: 'row', justifyContent: 'space-between' },
   start: { alignItems: 'flex-start' },
 });

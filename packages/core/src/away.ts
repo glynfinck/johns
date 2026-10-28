@@ -27,6 +27,18 @@ export function awayOn(periods: readonly AwayPeriod[], userId: string, date: str
   return periods.some((p) => p.userId === userId && p.startsOn <= date && date <= p.endsOn);
 }
 
+/** The trips that cover a local date, the one that began first first: who is away that day. */
+export function tripsOn(periods: readonly AwayPeriod[], date: string): AwayPeriod[] {
+  return periods
+    .filter((p) => p.startsOn <= date && date <= p.endsOn)
+    .sort((a, b) => a.startsOn.localeCompare(b.startsOn));
+}
+
+/** The day someone is home again from a trip: the day after its last. */
+export function backOn(period: Pick<AwayPeriod, "endsOn">): string {
+  return addDaysTo(period.endsOn, 1);
+}
+
 /** The local dates from `from` to `to`, inclusive. */
 export function datesBetween(from: string, to: string): string[] {
   const out: string[] = [];

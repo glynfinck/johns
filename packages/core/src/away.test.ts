@@ -5,12 +5,14 @@ import {
   awayOn,
   awayPeriod,
   awayThisWeek,
+  backOn,
   currentOrNext,
   datesBetween,
   homeForWeek,
   isoDayOf,
   remaining,
   shiftMonth,
+  tripsOn,
   type AwayPeriod,
 } from "./away";
 import { addDaysTo, localDate } from "./week";
@@ -133,5 +135,34 @@ describe("shiftMonth", () => {
     expect(shiftMonth("2026-01", -1)).toBe("2025-12");
     expect(shiftMonth("2026-10", 0)).toBe("2026-10");
     expect(shiftMonth("2026-10", 14)).toBe("2027-12");
+  });
+});
+
+describe("tripsOn", () => {
+  const sam = { ...ben("2026-11-05", "2026-11-09", "s"), userId: "sam" };
+  const priya = { ...ben("2026-11-07", "2026-11-15", "p"), userId: "priya" };
+  const alex = { ...ben("2026-11-08", "2026-11-10", "a"), userId: "alex" };
+
+  it("lists who is away on a day, the trip that began first first", () => {
+    expect(tripsOn([alex, priya, sam], "2026-11-08").map((p) => p.userId)).toEqual(["sam", "priya", "alex"]);
+  });
+
+  it("counts a trip's first and last days, and nothing either side", () => {
+    expect(tripsOn([sam], "2026-11-05")).toEqual([sam]);
+    expect(tripsOn([sam], "2026-11-09")).toEqual([sam]);
+    expect(tripsOn([sam], "2026-11-04")).toEqual([]);
+    expect(tripsOn([sam], "2026-11-10")).toEqual([]);
+  });
+
+  it("has nobody with no trips", () => {
+    expect(tripsOn([], "2026-11-08")).toEqual([]);
+  });
+});
+
+describe("backOn", () => {
+  it("is the day after a trip's last, over a month's and a year's end", () => {
+    expect(backOn(ben("2026-11-05", "2026-11-09"))).toBe("2026-11-10");
+    expect(backOn(ben("2026-11-26", "2026-11-30"))).toBe("2026-12-01");
+    expect(backOn(ben("2026-12-28", "2026-12-31"))).toBe("2027-01-01");
   });
 });

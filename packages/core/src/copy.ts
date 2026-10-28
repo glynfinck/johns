@@ -593,6 +593,22 @@ export const AWAY_COPY = {
         : "."
     }`,
   change: "Change",
+  /** Who's away: a month calendar, each day as dark as how many are away, and a day's sheet. */
+  earlierMonth: "Earlier month",
+  laterMonth: "Later month",
+  /** A day on the calendar, for a screen reader: "Sunday 8 November, 3 away". */
+  dayLabel: (day: string, away: number) => `${day}, ${away === 0 ? "everyone home" : `${away} away`}`,
+  /** The key under the calendar, one shade at a time: 1, 2, then 3 or more. */
+  shade: (away: number) => (away >= 3 ? "3 or more" : `${away} away`),
+  tapADay: "Tap a day to see who’s away and who’s home.",
+  dayCount: (away: number, home: number) => `${away} away · ${home} home`,
+  awayLabel: "Away",
+  homeLabel: "Home",
+  everyoneHome: "Nobody. Everyone’s home.",
+  nobodyHome: "Nobody. Everyone’s away.",
+  backOn: (day: string) => `Back ${day}`,
+  dayBefore: "Day before",
+  dayAfter: "Day after",
 } as const;
 
 /** Today: Next up, Needs you, the rest of your week and the standing line; a John's row, here and on Week. */
@@ -1166,9 +1182,6 @@ export const SETUP_COPY = {
   saved: "House rules saved",
   /** Time away. */
   whosAway: "Who’s away",
-  /** Who's away, when your own trips are listed above it. */
-  nobodyElse: "Nobody else has booked any time away.",
-  nextWeeks: (range: string) => `The next four weeks, ${range}`,
   awayNow: "Away now",
   /** The booking calendar's way back and on, a few weeks at a time. */
   earlier: "Earlier weeks",

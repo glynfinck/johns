@@ -263,6 +263,14 @@ describe("AWAY_COPY", () => {
     expect(AWAY_COPY.bannerBody(50)).toMatch(/, but half your share still counts/);
     expect(AWAY_COPY.bannerBody(0)).toBe("Nobody hands you a John due while you’re gone.");
   });
+
+  it("says a day of the month calendar, its key and its sheet", () => {
+    expect(AWAY_COPY.dayLabel("Sunday 8 November", 3)).toBe("Sunday 8 November, 3 away");
+    expect(AWAY_COPY.dayLabel("Monday 2 November", 0)).toBe("Monday 2 November, everyone home");
+    expect([1, 2, 3, 5].map(AWAY_COPY.shade)).toEqual(["1 away", "2 away", "3 or more", "3 or more"]);
+    expect(AWAY_COPY.dayCount(3, 2)).toBe("3 away · 2 home");
+    expect(AWAY_COPY.backOn("Tue 10 Nov")).toBe("Back Tue 10 Nov");
+  });
 });
 
 describe("pageTitle", () => {
