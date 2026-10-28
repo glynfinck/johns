@@ -2,7 +2,7 @@ import "server-only";
 
 import Anthropic from "@anthropic-ai/sdk";
 import { zodOutputFormat } from "@anthropic-ai/sdk/helpers/zod";
-import { CATEGORIES, DOW_LABEL, type IsoDow, type RawDraft } from "@app/core";
+import { APP_NAME, CATEGORIES, DOW_LABEL, type IsoDow, type RawDraft } from "@app/core";
 import { z } from "zod";
 
 // Describe your house: Claude drafts a John list from a sentence or two. A
@@ -43,7 +43,7 @@ export interface DraftContext {
 }
 
 /** Fixed, so it caches: the rules of a good John list. The house itself goes in the user turn. */
-const SYSTEM = `You draft the chore list for a shared house in an app called Johns. In Johns a chore is called a John. Each week the app deals the Johns out fairly between the housemates, weighted by effort points, and housemates check each other's ticks.
+const SYSTEM = `You draft the chore list for a shared house in an app called ${APP_NAME}. In ${APP_NAME} a chore is called a John. Each week the app deals the Johns out fairly between the housemates, weighted by effort points, and housemates check each other's ticks.
 
 From the description, draft the Johns this house actually needs: usually 6 to 15. Cover the usual (kitchen, bathroom, bins, floors) even when the description doesn't mention them, and add anything specific the description does mention. Name each John in a few plain words, sentence case ("Bathroom clean", "Bins out").
 

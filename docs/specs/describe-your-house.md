@@ -4,7 +4,7 @@
 
 An admin setting up a house writes a sentence or two about it ("Four of us,
 two bathrooms, Sam and Priya share the upstairs one, bins go out Tuesday
-night") and Johns drafts the John list: each John's kind, effort points,
+night") and the app drafts the John list: each John's kind, effort points,
 how often, its due day and time, whether it's on call, and the groups that
 share some of them. The draft is only shown. Every John starts ticked; the
 admin unticks any they don't want and adds the rest to the list, where each

@@ -39,7 +39,7 @@ export const PRIVACY_COPY = {
     "Johns keeps what it needs to share out your house’s Johns and nothing more: your name from Google, the house you belong to, the Johns you were given and when you ticked them, any photos you add, disputes and votes, and the Stake ledger.",
     "Only people in your house can see any of it. Photos are stored privately and shown to your housemates through links that expire after an hour.",
     "Johns never moves money. The ledger records what housemates owe each other; you settle up however you like, outside the app.",
-    "If you ask Johns to draft your house’s Johns, what you write about the house is sent to Anthropic’s Claude to draft the list. It isn’t stored with your house, and Anthropic doesn’t train on it.",
+    `If you ask ${APP_NAME} to draft your house’s Johns, what you write about the house is sent to Anthropic’s Claude to draft the list. It isn’t stored with your house, and Anthropic doesn’t train on it.`,
     "If you turn on reminders, your browser gives us an address to send notifications to. Turning reminders off deletes it. Leaving a house removes you from it; your past Johns stay in its history.",
   ],
 } as const;
@@ -655,7 +655,7 @@ export const NEXT_UP_COPY = {
   setUp: (house: string) => `Set up ${house}`,
   addJohns: "Add your Johns",
   describe: "Describe your house",
-  describeMeta: "Johns drafts the list for you",
+  describeMeta: `${APP_NAME} drafts the list for you`,
   onTheList: (count: number) => (count === 0 ? "Nothing on the list yet" : `${count} on the list`),
   invite: "Invite housemates",
   housemates: (count: number) => (count <= 1 ? "Just you so far" : `${count} in the house so far`),
@@ -1261,7 +1261,7 @@ export const FRONT_DOOR_COPY = {
 /** Describe your house: Claude drafts the John list, or a starter list does, and an admin keeps what they want. */
 export const HOUSE_DRAFT_COPY = {
   title: "Describe your house",
-  lead: "Say who lives there and what needs doing. Johns drafts the list, and nothing is added until you keep it.",
+  lead: `Say who lives there and what needs doing. ${APP_NAME} drafts the list, and nothing is added until you keep it.`,
   field: "Your house",
   placeholder:
     "Four of us in a flat with two bathrooms. Sam and Priya share the upstairs one. Bins go out Tuesday night. Nobody ever cleans the oven.",
