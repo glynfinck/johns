@@ -17,13 +17,23 @@ describe("verdict", () => {
     expect(verdict({ eligible: 4, uphold: 2, reject: 1, closesAt }, before)).toBeNull();
   });
 
-  it("closes on time with the larger side", () => {
-    expect(verdict({ eligible: 5, uphold: 2, reject: 1, closesAt }, closesAt)).toBe("upheld");
+  it("leaves the tick standing when the vote closes without a majority to strike it", () => {
+    // Six housemates: five may vote, three is a majority. Two to strike isn't enough.
+    expect(verdict({ eligible: 5, uphold: 2, reject: 1, closesAt }, closesAt)).toBe("rejected");
     expect(verdict({ eligible: 5, uphold: 1, reject: 1, closesAt }, closesAt)).toBe("rejected");
   });
 
-  it("gives a tie to the tick once everyone has voted", () => {
+  it("never strikes on one silent objection in a house of three or more", () => {
+    // The raiser's own vote, and nobody else says anything.
+    expect(verdict({ eligible: 2, uphold: 1, reject: 0, closesAt }, before)).toBeNull();
+    expect(verdict({ eligible: 2, uphold: 1, reject: 0, closesAt }, closesAt)).toBe("rejected");
+    expect(verdict({ eligible: 3, uphold: 1, reject: 0, closesAt }, closesAt)).toBe("rejected");
+  });
+
+  it("lets the tick stand as soon as a strike can't reach a majority", () => {
     expect(verdict({ eligible: 4, uphold: 2, reject: 2, closesAt }, before)).toBe("rejected");
+    expect(verdict({ eligible: 4, uphold: 1, reject: 2, closesAt }, before)).toBe("rejected");
+    expect(verdict({ eligible: 4, uphold: 1, reject: 1, closesAt }, before)).toBeNull();
   });
 
   it("lets the only other housemate decide alone", () => {

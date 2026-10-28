@@ -6,11 +6,13 @@ you're working in (`apps/api/AGENTS.md` for the Next.js app).
 
 ## About this app
 
-- What it does: **Johns** is shared housework with consequences. "Johns" is
+- What it does: **Jonz** is shared housework with consequences. "Johns" is
   what the house calls its assigned chores for the week; one chore is a
-  **John**. Fair shares are dealt for you, housemates check each other's
-  ticks, and late or missed Johns cost a share of a monthly stake. Live at
-  johns.glyn.dev.
+  **John**, and the app's name is the same word, spelled Jonz. Fair shares
+  are dealt for you, housemates check each other's ticks, and late or missed
+  Johns cost a share of a monthly stake. Live at jonz.app (johns.glyn.dev
+  until the rename; it forwards there). The rename is the brand only: the
+  repo, the database, the code's names and the chores keep "Johns".
 - Platforms: the web, served since 27 October 2026 by the Expo app's web
   build (`apps/client`; `apps/api` keeps the API). iOS, Android and web from
   one Expo app (`apps/client`) as `docs/specs/native-migration.md` lands,
@@ -31,8 +33,8 @@ you're working in (`apps/api/AGENTS.md` for the Next.js app).
 ```
 apps/
   api/          Next.js: the web app (its pages stay until Expo web reaches
-                parity), server actions, /api routes, the engine, push  → Vercel "johns"
-  client/       Expo: iOS, Android and web from one codebase   → Vercel "johns-web",
+                parity), server actions, /api routes, the engine, push  → Vercel "jonz-api"
+  client/       Expo: iOS, Android and web from one codebase   → Vercel "jonz-web",
                 from the cutover (DEPLOYMENT.md)
 packages/
   core/         @app/core: the pure rules, the shared words, the database types
@@ -137,7 +139,9 @@ each app's AGENTS.md.
   `undo_cover`, `raise_dispute`,
   `cast_vote`, `use_immunity`, `use_swap`, `confirm_payment`,
   `create_house`, `join_house`, `set_member_role`, `remove_member`,
-  `save_group`, `delete_group`, `set_away`, `cancel_away`, `raise_flag`) or a few column
+  `save_group`, `delete_group`, `set_away`, `cancel_away`, `raise_flag`;
+  a notification's buttons reach `mark_done` and `cast_vote` through the
+  service-role-only `push_action`) or a few column
   grants (house settings and the John list, its group included, for admins;
   your own name, reactions, push subscriptions). Refusals raise `42501` (not
   yours) or `P0001` with a short code that `errors.ts` turns into a sentence.
@@ -238,7 +242,8 @@ housemate's share of it) → `assignments` (a snapshot of the John as dealt,
 `group_name`, `due_at`, `due_moved_from`, `done_at`, `photo_path`, `outcome`
 stamped once final); `away` (local first and last dates, inclusive) →
 `disputes` + `dispute_votes`; `ledger` + `month_closes`; `events` +
-`reactions`; `push_subscriptions`. On-call Johns add `johns.kind`, `respond_hours` and
+`reactions`; `push_subscriptions` + `notification_prefs` (each person's
+kinds of push on or off, and quiet hours; no row is everything on). On-call Johns add `johns.kind`, `respond_hours` and
 `per_week`, `on_call` (who holds each one each week), and
 `assignments.flagged_at` and `flagged_by`. Photos live in the private `proofs` bucket
 at `<house>/<assignment>/<file>`.
@@ -279,14 +284,14 @@ at `<house>/<assignment>/<file>`.
 
 ## Hosting and deploys
 
-- Vercel's git integration builds `apps/api` (the `johns` project, Root
+- Vercel's git integration builds `apps/api` (the `jonz-api` project, Root
   Directory `apps/api`) and Supabase's GitHub integration applies migrations.
   `main` is production; CI only proves, and must be green to merge. There is
   no preview database yet, so preview deployments get no keys.
-- From the Phase 13 cutover, a second project, `johns-web` (Root Directory
+- From the Phase 13 cutover, a second project, `jonz-web` (Root Directory
   `apps/client`, configured by `apps/client/vercel.json`), serves
-  johns.glyn.dev with the Expo web build and passes `/api/*` on to `johns`,
-  which answers on `api.johns.glyn.dev`. The clock's URL and the secrets
+  jonz.app with the Expo web build and passes `/api/*` on to `jonz-api`,
+  which answers on `api.jonz.app`. The clock's URL and the secrets
   don't move. DEPLOYMENT.md has the steps and the rollback.
 - Production's accounts are described in `scripts/provision/config.mjs` and
   set up by `npm run provision`, which writes, then reads everything back

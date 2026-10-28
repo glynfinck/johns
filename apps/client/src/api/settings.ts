@@ -120,6 +120,7 @@ export async function updateHouse(houseId: string, settings: HouseSettings) {
         missed_forfeit_minor: s.missedForfeitMinor,
         dispute_hours: s.disputeHours,
         ...(s.coverGraceHours === undefined ? {} : { cover_grace_hours: s.coverGraceHours }),
+        ...(s.lateHours === undefined ? {} : { late_hours: s.lateHours }),
         away_makeup: s.awayMakeup,
       })
       .eq('id', houseId)

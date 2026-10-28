@@ -89,6 +89,8 @@ export interface HouseRules {
   disputeHours: number;
   /** How long past its due time a John stays the assignee's alone, before a housemate can cover it. */
   coverGraceHours: number;
+  /** How long past its due time a John can still be done late, before it counts as missed. */
+  lateHours: number;
 }
 
 export const DEFAULT_RULES: Omit<HouseRules, "timezone" | "currency"> = {
@@ -98,4 +100,5 @@ export const DEFAULT_RULES: Omit<HouseRules, "timezone" | "currency"> = {
   missedForfeitMinor: 300,
   disputeHours: 24,
   coverGraceHours: 3,
+  lateHours: 24,
 };

@@ -1,8 +1,9 @@
-# Deploying Johns
+# Deploying Jonz
 
 The same arrangement as Pub Golf: Vercel's git integration builds the apps
-(the Next.js workspace in `apps/api` as the `johns` project, and from the
-cutover below the Expo app's web build in `apps/client` as `johns-web`),
+(the Next.js workspace in `apps/api` as the `jonz-api` project, and from the
+cutover below the Expo app's web build in `apps/client` as `jonz-web`;
+they were `johns` and `johns-web` until the move to jonz.app below),
 Supabase's GitHub integration applies the migrations, and CI only proves.
 `main` is production. There is no preview database yet, so preview
 deployments get no keys (a preview writing to production's data would be
@@ -49,9 +50,9 @@ reset the password if you ever need a direct connection.
 | Migrations | Pushes any `supabase/migrations` the database hasn't recorded (`supabase db push`, with the saved password) | Compares versions both ways |
 | The clock | Writes the two Vault secrets `request_tick()` reads. The tick secret is reused if it exists, so it never drifts from Vercel's `CRON_SECRET` | Reads both back; finds the `johns-tick` pg_cron job |
 | Sign-in | Sets only production's auth fields through the Management API: site URL, redirect URLs, email sign-up off, and Google once its client is given, with the app's iOS and Android clients from `config.mjs` listed after it (nonce check skipped only once there is an iOS client) | Reads them back and refuses an unresolved `env(...)` client ID, a different client list or nonce setting |
-| Vercel | Upserts the production environment (Supabase URL and keys, site URL, `CRON_SECRET`, VAPID keys, made once and then kept, since new ones would orphan every subscribed phone) and deploys `main` | Reads the variables back; checks the project builds from `apps/api` (its Root Directory, which it never sets: that one is by hand) and that its own name, `api.johns.glyn.dev`, is attached and verified; waits for the deploy |
-| The web build | Upserts `johns-web`'s production environment (public values only: Supabase's URL and anon key, and the VAPID public key read back from `johns`) and deploys `main` | Finds the project (made by hand, never by provision); checks it builds from `apps/client`, reads the variables back, and that `johns.glyn.dev` is attached to it and verified; waits for the deploy |
-| End to end | | `/signin` answers; the clock's tick, sent to `johns.glyn.dev` and passed on to `apps/api`, is accepted (so Vercel and the Vault share one secret); Supabase sends sign-in to Google with this client and back to `/signin`, and Google doesn't refuse it |
+| Vercel | Upserts the production environment (Supabase URL and keys, site URL, `CRON_SECRET`, VAPID keys, made once and then kept, since new ones would orphan every subscribed phone) and deploys `main` | Reads the variables back; checks the project builds from `apps/api` (its Root Directory, which it never sets: that one is by hand) and that its own name, `api.jonz.app`, is attached and verified; waits for the deploy |
+| The web build | Upserts `jonz-web`'s production environment (public values only: Supabase's URL and anon key, and the VAPID public key read back from `jonz-api`) and deploys `main` | Finds the project (made by hand, never by provision); checks it builds from `apps/client`, reads the variables back, and that `jonz.app` is attached to it and verified; waits for the deploy |
+| End to end | | `/signin` answers; the clock's tick, sent to `jonz.app` and passed on to `apps/api`, is accepted (so Vercel and the Vault share one secret); Supabase sends sign-in to Google with this client and back to `/signin`, and Google doesn't refuse it |
 
 It never runs `supabase config push`. That would write `config.toml`'s
 localhost over the production site URL and turn email sign-up back on, which
@@ -72,12 +73,12 @@ is exactly what local development needs and production must not have.
   with Google's own sheet, which hands Supabase an ID token, so it needs
   clients of its own beside the web one, in the same Cloud project
   ([Clients → Create client](https://console.cloud.google.com/auth/clients/create)):
-  1. **iOS**: bundle ID `dev.glyn.johns` (the Team ID once the Apple
+  1. **iOS**: bundle ID `dev.glyn.jonz` (the Team ID once the Apple
      account exists). Its client ID goes in `scripts/provision/config.mjs`
      (`google.iosClientId`) and in `apps/client/.env.local` as
      `EXPO_PUBLIC_GOOGLE_IOS_CLIENT_ID`, which also gives the iOS build its
      URL scheme (`app.config.ts`).
-  2. **Android**: package `dev.glyn.johns` and the SHA-1 of the key the
+  2. **Android**: package `dev.glyn.jonz` and the SHA-1 of the key the
      build is signed with. One client per key: the development builds' now,
      the store's later. Development builds use React Native's shared debug
      key, whose SHA-1 is
@@ -96,8 +97,8 @@ is exactly what local development needs and production must not have.
   Supabase's guide says to skip the check for it. That weakens replay
   protection for Google tokens, which is why it waits for iOS.
 - **Sign in with Apple** (iOS only), once there is an Apple Developer
-  account: turn on the capability for the App ID `dev.glyn.johns`, then the
-  Apple provider in Supabase with `dev.glyn.johns` as its client ID. The
+  account: turn on the capability for the App ID `dev.glyn.jonz`, then the
+  Apple provider in Supabase with `dev.glyn.jonz` as its client ID. The
   app's sign-in is native, so it needs no secret key. It can't be tried on a
   device before then.
 - **The Supabase GitHub integration**, so that migrations apply on merge:
@@ -184,6 +185,41 @@ The steps, each asked for and checked before the next:
 by promoting `johns`'s last deployment that still had them (Vercel keeps
 every deployment) and moving the domain back.
 
+## The move to jonz.app (October 2026)
+
+The app is called Jonz and lives at jonz.app; it was Johns at
+johns.glyn.dev. Only the brand moved: the repo, the Supabase project `Johns`,
+the database, the Vault names (`johns_tick_url`, `johns_tick_secret`), the
+cron job `johns-tick` and the chores themselves keep "Johns". The section
+above is the cutover as it happened, under the old names.
+
+In order, each checked before the next:
+
+1. **The new names answer.** jonz.app and www.jonz.app (forwarding to
+   jonz.app) on the web project, api.jonz.app on the API project, both over
+   HTTPS, and `https://api.jonz.app/api/cron/tick` refuses a request without
+   the secret (401). Supabase's redirect URLs gain `https://jonz.app/**`, and
+   Google's consent screen is renamed Jonz with jonz.app authorised.
+2. **The code moves** in one PR: the name, the app's ids (`dev.glyn.jonz`,
+   scheme `jonz`), `SITE_URL`, the web build's `/api` rewrite to
+   api.jonz.app, and `scripts/provision/config.mjs`. The web project starts
+   calling api.jonz.app the moment it deploys, which is why step 1 comes
+   first. Rename the Vercel projects to `jonz-web` and `jonz-api` in the same
+   hour: provision finds them by name.
+3. **The switch-over.** The Vault's `johns_tick_url` becomes
+   `https://jonz.app/api/cron/tick` and Supabase's site URL
+   `https://jonz.app`. Running `npm run provision` after step 2 writes both
+   (and the site URL and VAPID subject in Vercel), so don't run it until this
+   step is wanted. Then johns.glyn.dev and api.johns.glyn.dev forward (308,
+   path kept) to the new names.
+4. **Tell the house.** A browser keeps sign-in, the home-screen install and
+   reminders per address, so everyone signs in again on jonz.app, re-adds it
+   to the home screen and turns reminders back on.
+
+Rolling back before step 3 is reverting the PR; the old names still answer.
+After it, take the forwards off in the Vercel dashboard. About three months
+on, remove the old names and their Supabase redirect URLs.
+
 ## Day to day
 
 - Work on a branch, open a PR; CI must be green to merge.
@@ -191,7 +227,7 @@ every deployment) and moving the domain back.
   anything the running code reads is an outage for the minute the deploys
   take; split it into an additive step and a later cleanup.
 - `npm run provision -- --check` says whether production still looks right.
-- `TICK_URL=https://johns.glyn.dev/api/cron/tick CRON_SECRET=… npm run tick`
-  runs the clock by hand (through the web project's rewrite after the
-  cutover; `https://api.johns.glyn.dev/api/cron/tick` goes straight there). Check the cron job with
+- `TICK_URL=https://jonz.app/api/cron/tick CRON_SECRET=… npm run tick`
+  runs the clock by hand (through the web project's rewrite;
+  `https://api.jonz.app/api/cron/tick` goes straight there). Check the cron job with
   `select * from cron.job_run_details order by start_time desc limit 5;`.

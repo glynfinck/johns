@@ -1,4 +1,4 @@
-import { FRONT_DOOR, TAGLINE, type FrontDoorPoint } from "@app/core";
+import { APP_NAME, FRONT_DOOR, TAGLINE, type FrontDoorPoint } from "@app/core";
 import { CoinsIcon, MessagesSquareIcon, ShuffleIcon } from "lucide-react";
 import Link from "next/link";
 import { redirect } from "next/navigation";
@@ -58,7 +58,7 @@ export default async function Home() {
       </section>
 
       <footer className="mt-auto flex gap-4 pt-12 text-xs text-muted-foreground">
-        <span>Johns</span>
+        <span>{APP_NAME}</span>
         <Link href="/privacy" className="underline-offset-2 hover:underline">
           Privacy
         </Link>

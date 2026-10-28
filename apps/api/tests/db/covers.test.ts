@@ -121,7 +121,8 @@ describe("what the clock does with a cover", () => {
     // Only this one John in the month: later weeks the clock deals have nothing in them.
     await db.from("johns").update({ archived_at: new Date().toISOString() }).eq("house_id", house.id);
 
-    // An old week still unsettled can be covered; then put the tick back in that week.
+    // Cover it now, as if it were still inside its late window; then put the tick back in that week.
+    await db.from("assignments").update({ closes_at: new Date(Date.now() + DAY).toISOString() }).eq("id", a.id);
     expectOk(await coverer.db.rpc("cover_john", { p_assignment: a.id }));
     await db.from("assignments").update({ done_at: new Date(new Date(a.due_at).getTime() + 5 * HOUR).toISOString() }).eq("id", a.id);
 

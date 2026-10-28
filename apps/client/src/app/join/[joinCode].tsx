@@ -12,7 +12,7 @@ import { SignInPanel } from '@/components/sign-in-panel';
 import { useMembership } from '@/hooks/use-membership';
 
 /**
- * A join link: /join/CODE on the web, johns://join/CODE on a phone, the same
+ * A join link: /join/CODE on the web, jonz://join/CODE on a phone, the same
  * path the web app's links use. Open to anyone, so the code survives signing
  * in: signed out, it signs you in here. Like the web, it names the house only
  * to someone signed in: then the house's name on the taped sign, how many

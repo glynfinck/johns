@@ -41,6 +41,7 @@ export function snapshot(overrides: Partial<HouseSnapshot> = {}): HouseSnapshot 
       missedForfeitMinor: 300,
       disputeHours: 24,
       coverGraceHours: 3,
+      lateHours: 24,
     },
     members: [
       { userId: 'priya', name: 'Priya', role: 'admin', streak: 3, immunityTokens: 0, swapTokens: 0 },

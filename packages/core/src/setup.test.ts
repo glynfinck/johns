@@ -41,6 +41,7 @@ const RULES: HouseRules = {
   missedForfeitMinor: 300,
   disputeHours: 24,
   coverGraceHours: 3,
+  lateHours: 24,
 };
 
 describe("johnsByKind", () => {
@@ -123,6 +124,7 @@ describe("rulesRows", () => {
       { label: "Late John", value: "−£1" },
       { label: "Missed John", value: "−£3" },
       { label: "Disputes", value: "within 24 hours" },
+      { label: "Done late", value: "up to 24 hours after it’s due" },
       { label: "Covering", value: "3 hours after it’s due" },
       { label: "Time away", value: "made up in full" },
       { label: "Weeks start", value: "Monday, London time" },
@@ -140,6 +142,7 @@ describe("rulesRows", () => {
         weekStarts: 3,
         disputeHours: 1,
         coverGraceHours: 1,
+        lateHours: 48,
       },
       50,
     );
@@ -148,6 +151,7 @@ describe("rulesRows", () => {
       "−$0.75",
       "−$3",
       "within 1 hour",
+      "up to 48 hours after it’s due",
       "1 hour after it’s due",
       "half made up",
       "Wednesday, New York time",
@@ -159,18 +163,19 @@ describe("rulesRows", () => {
       { ...RULES, stakeMinor: 0, lateForfeitMinor: 0, missedForfeitMinor: 0, disputeHours: 0, coverGraceHours: 0 },
       0,
     );
-    expect(rows.map((r) => r.value).slice(0, 6)).toEqual([
+    expect(rows.map((r) => r.value).slice(0, 7)).toEqual([
       "None",
       "Nothing",
       "Nothing",
       "Not allowed",
+      "up to 24 hours after it’s due",
       "As soon as it’s due",
       "not made up",
     ]);
   });
 
   it("says a make-up rate it has no words for as a share", () => {
-    expect(rulesRows(RULES, 75)[5].value).toBe("75% made up");
+    expect(rulesRows(RULES, 75)[6].value).toBe("75% made up");
   });
 });
 
@@ -400,6 +405,7 @@ describe("the rules form", () => {
       weekStarts: 1,
       disputeHours: 24,
       coverGraceHours: 3,
+      lateHours: 24,
       awayMakeup: 100,
       stake: "20",
       late: "1",
@@ -415,6 +421,7 @@ describe("the rules form", () => {
     expect(rulesChanged({ ...start, stake: "20.5" }, start)).toBe(true);
     expect(rulesChanged({ ...start, disputeHours: 48 }, start)).toBe(true);
     expect(rulesChanged({ ...start, coverGraceHours: 0 }, start)).toBe(true);
+    expect(rulesChanged({ ...start, lateHours: 48 }, start)).toBe(true);
     expect(rulesChanged({ ...start, currency: "EUR" }, start)).toBe(true);
     expect(rulesChanged({ ...start, late: "a quid" }, start)).toBe(true);
   });
@@ -432,6 +439,7 @@ describe("the rules form", () => {
         missedForfeitMinor: 0,
         disputeHours: 24,
         coverGraceHours: 3,
+        lateHours: 24,
         awayMakeup: 100,
       },
     });

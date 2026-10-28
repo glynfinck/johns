@@ -37,6 +37,7 @@ export type Database = {
       assignments: {
         Row: {
           category: string
+          closes_at: string | null
           covered_by: string | null
           created_at: string
           done_at: string | null
@@ -61,6 +62,7 @@ export type Database = {
         }
         Insert: {
           category: string
+          closes_at?: string | null
           covered_by?: string | null
           created_at?: string
           done_at?: string | null
@@ -85,6 +87,7 @@ export type Database = {
         }
         Update: {
           category?: string
+          closes_at?: string | null
           covered_by?: string | null
           created_at?: string
           done_at?: string | null
@@ -413,6 +416,7 @@ export type Database = {
           id: string
           join_code: string
           late_forfeit_minor: number
+          late_hours: number
           missed_forfeit_minor: number
           name: string
           pass_buyer: string | null
@@ -434,6 +438,7 @@ export type Database = {
           id?: string
           join_code?: string
           late_forfeit_minor?: number
+          late_hours?: number
           missed_forfeit_minor?: number
           name: string
           pass_buyer?: string | null
@@ -455,6 +460,7 @@ export type Database = {
           id?: string
           join_code?: string
           late_forfeit_minor?: number
+          late_hours?: number
           missed_forfeit_minor?: number
           name?: string
           pass_buyer?: string | null
@@ -679,6 +685,50 @@ export type Database = {
             columns: ["house_id"]
             isOneToOne: false
             referencedRelation: "houses"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      notification_prefs: {
+        Row: {
+          checks: boolean
+          deal: boolean
+          flags: boolean
+          quiet_from: number | null
+          quiet_until: number | null
+          reminders: boolean
+          timezone: string | null
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          checks?: boolean
+          deal?: boolean
+          flags?: boolean
+          quiet_from?: number | null
+          quiet_until?: number | null
+          reminders?: boolean
+          timezone?: string | null
+          updated_at?: string
+          user_id?: string
+        }
+        Update: {
+          checks?: boolean
+          deal?: boolean
+          flags?: boolean
+          quiet_from?: number | null
+          quiet_until?: number | null
+          reminders?: boolean
+          timezone?: string | null
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "notification_prefs_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: true
+            referencedRelation: "profiles"
             referencedColumns: ["id"]
           },
         ]
@@ -1010,6 +1060,15 @@ export type Database = {
         Returns: string
       }
       proof_house: { Args: { object_name: string }; Returns: string }
+      push_action: {
+        Args: {
+          p_assignment: string
+          p_dispute: string
+          p_uphold: boolean
+          p_user: string
+        }
+        Returns: undefined
+      }
       raise_dispute: {
         Args: { p_assignment: string; p_reason: string }
         Returns: string

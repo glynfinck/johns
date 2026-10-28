@@ -20,6 +20,12 @@ export interface AssignmentFacts {
   /** A dispute has been raised on the current tick and not yet resolved. */
   disputeOpen: boolean;
   weekEndsAt: Date;
+  /**
+   * On a John due on a day: when it turns missed, its due time plus the
+   * house's late window (assignments.closes_at). Null on one dealt before
+   * the house had a late window, which closes when its week ends.
+   */
+  closesAt?: Date | null;
   /** Set on an on-call John's flag: when it was raised (its due time is this plus the John's window). */
   flaggedAt?: Date | null;
   /** Who covered it, when the tick is a housemate's rather than the assignee's. */
@@ -29,14 +35,16 @@ export interface AssignmentFacts {
 const HOUR = 3_600_000;
 
 /**
- * When an open John turns missed. A John due on a day: when its week ends.
+ * When an open John turns missed. A John due on a day: the house's late
+ * window after it was due (a day, by default), whatever day of the week that
+ * is, so a Monday John and a Sunday John get the same time to be done late.
  * A flag: at twice its window (raised at 8pm with 12 hours, missed at 8pm the
  * next day), or when its week ends if it is overdue by then. A flag never
  * passes to whoever is on call next week: it stays missed or done by whoever
  * had it. The database's closes_at says the same.
  */
-export function flagClosesAt(a: Pick<AssignmentFacts, "dueAt" | "weekEndsAt" | "flaggedAt">): Date {
-  if (!a.flaggedAt) return a.weekEndsAt;
+export function closesAt(a: Pick<AssignmentFacts, "dueAt" | "weekEndsAt" | "flaggedAt" | "closesAt">): Date {
+  if (!a.flaggedAt) return a.closesAt ?? a.weekEndsAt;
   const missAt = new Date(a.dueAt.getTime() * 2 - a.flaggedAt.getTime());
   if (a.dueAt < a.weekEndsAt) return missAt < a.weekEndsAt ? missAt : a.weekEndsAt;
   return missAt;
@@ -59,7 +67,7 @@ export function settleOutcome(
     if (a.coveredBy) return "covered";
     return a.doneAt <= a.dueAt ? "done" : "late";
   }
-  if (now >= flagClosesAt(a)) return "missed";
+  if (now >= closesAt(a)) return "missed";
   return null;
 }
 
@@ -88,28 +96,34 @@ export function liveStatus(
   return "upcoming";
 }
 
-/** Whether a tick on this status would count as on time, late, or not at all. */
-export function tickWouldBe(dueAt: Date, now: Date, weekEndsAt: Date): "on-time" | "late" | "closed" {
-  if (now >= weekEndsAt) return "closed";
+/** Whether a tick now would count as on time, late, or not at all (`closes` is when it turns missed). */
+export function tickWouldBe(dueAt: Date, now: Date, closes: Date): "on-time" | "late" | "closed" {
+  if (now >= closes) return "closed";
   return now <= dueAt ? "on-time" : "late";
 }
 
-/** When a housemate can first cover a John that is still undone. */
-export function coverOpensAt(dueAt: Date, graceHours: number): Date {
-  return new Date(dueAt.getTime() + graceHours * HOUR);
+/**
+ * When a housemate can first cover a John that is still undone: the house's
+ * grace after it was due, or halfway to when it turns missed if that comes
+ * sooner, so there is always time to cover it however short the late window.
+ */
+export function coverOpensAt(dueAt: Date, graceHours: number, closes: Date): Date {
+  const half = Math.max(0, (closes.getTime() - dueAt.getTime()) / 2);
+  return new Date(dueAt.getTime() + Math.min(graceHours * HOUR, half));
 }
 
 /**
  * Whether `userId` could cover this John now: someone else's, not ticked,
- * excused or settled, and past its due time by the house's grace. The same
- * rule cover_john enforces, read early so a screen only offers what will work.
+ * excused or settled, past its due time by the house's grace and not yet
+ * missed. The same rule cover_john enforces, read early so a screen only
+ * offers what will work.
  */
 export function canCover(
-  a: { userId: string; doneAt: Date | null; outcome: Outcome | null; excused?: boolean; dueAt: Date },
+  a: { userId: string; doneAt: Date | null; outcome: Outcome | null; excused?: boolean; dueAt: Date; closesAt: Date },
   userId: string,
   now: Date,
   graceHours: number,
 ): boolean {
   if (a.userId === userId || a.doneAt || a.outcome || a.excused) return false;
-  return now >= coverOpensAt(a.dueAt, graceHours);
+  return now >= coverOpensAt(a.dueAt, graceHours, a.closesAt) && now < a.closesAt;
 }

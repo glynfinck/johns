@@ -1,6 +1,6 @@
 import "server-only";
 
-import type { Database } from "@app/core";
+import { NOTIFY_COPY, type Database } from "@app/core";
 import type { SupabaseClient } from "@supabase/supabase-js";
 
 import { tickHouse } from "@/lib/engine/tick";
@@ -31,20 +31,34 @@ export interface Refusal {
  * already the majority, so it is decided now.
  */
 export async function raiseDispute(caller: Caller, assignmentId: string, reason: string, now: Date): Promise<Refusal | null> {
-  const { error } = await caller.db.rpc("raise_dispute", { p_assignment: assignmentId, p_reason: reason });
+  const { data: disputeId, error } = await caller.db.rpc("raise_dispute", { p_assignment: assignmentId, p_reason: reason });
   if (error) return error;
 
   // Who to tell is read through the caller's own session, so this can only
-  // reach their house.
-  const { data: a } = await caller.db.from("assignments").select("house_id, user_id, name").eq("id", assignmentId).single();
+  // reach their house. Whose tick it is: the coverer's, for a cover.
+  const { data: a } = await caller.db
+    .from("assignments")
+    .select("house_id, user_id, covered_by, name, houses(timezone)")
+    .eq("id", assignmentId)
+    .single();
   if (!a) return null;
   const admin = createAdminClient();
   const notify = pushNotifier(admin);
   if (notify) {
+    const ticker = a.covered_by ?? a.user_id;
+    const zone = a.houses?.timezone ?? "UTC";
     const { data: members } = await caller.db.from("members").select("user_id").eq("house_id", a.house_id);
-    const voters = (members ?? []).map((m) => m.user_id).filter((id) => id !== a.user_id && id !== caller.userId);
-    await notify([a.user_id], { title: `Your ${a.name} tick is disputed`, body: reason, url: "/week" });
-    await notify(voters, { title: `Vote: was ${a.name} really done?`, body: reason, url: "/week" });
+    const voters = (members ?? []).map((m) => m.user_id).filter((id) => id !== ticker && id !== caller.userId);
+    await notify([ticker], { title: NOTIFY_COPY.disputedTitle(a.name), body: reason, url: "/week", kind: "checks", zone });
+    await notify(voters, {
+      title: NOTIFY_COPY.voteTitle(a.name),
+      body: reason,
+      url: "/week",
+      kind: "checks",
+      zone,
+      act: { disputeId },
+      tag: `dispute:${disputeId}`,
+    });
   }
   await tickHouse(admin, a.house_id, now);
   return null;

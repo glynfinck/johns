@@ -10,14 +10,14 @@ The block above is Next.js's. These rules are specific to this app; the root
 AGENTS.md has the project-wide rules (the game, the words, the data, the
 ask-first list).
 
-Next.js 16.2 on Vercel (the `johns` project, Root Directory `apps/api`), at
-api.johns.glyn.dev. It serves the `/api` routes (johns.glyn.dev passes
+Next.js 16.2 on Vercel (the `jonz-api` project, Root Directory `apps/api`), at
+api.jonz.app. It serves the `/api` routes (jonz.app passes
 `/api/*` on to it), the cron tick and push sending. Its pages served
 johns.glyn.dev until the Expo web build took over on 27 October 2026.
 
 **An exception to the template, with an end date.** The app template's API is
 route handlers only, with no pages. This one keeps its pages, components and
-server actions, which no longer serve johns.glyn.dev since the Phase 13
+server actions, which no longer serve the site since the Phase 13
 cutover but stay as the rollback (DEPLOYMENT.md), until Phase 14 removes
 them (`docs/specs/native-migration.md`). Until then,
 fix and extend the web UI here as normal, and make the same change in
@@ -77,7 +77,9 @@ appear only in the laptop board.
   on 8205 locally; phones send no Origin. `proxy.ts` doesn't touch `/api/`.
   Today: `POST /api/fresh` (catch a house up, at most once a minute),
   `POST /api/disputes`, `POST /api/disputes/:id/votes` and `POST /api/deal`
-  (an admin hands out or re-deals the week). A database
+  (an admin hands out or re-deals the week), and `POST /api/push-actions`
+  (a button on a notification: the one route with no bearer token, because
+  the push's own signed token, `lib/push-token.ts`, stands in for it). A database
   refusal answers through `refused`: 403 when it isn't the caller's to make
   (42501), 409 when the rules say not now (P0001), in `humanError`'s words.
 - `lib/moves/`: a move that needs the service role after the caller's own
@@ -94,7 +96,13 @@ appear only in the laptop board.
 - `lib/engine/`: the tick (`tick.ts`) and the page-load catch-up
   (`fresh.ts`). The only code that uses the service role, apart from the cron
   route and push.
-- `lib/push.ts`: Web Push with VAPID, the engine's `Notify`.
+- `lib/push.ts`: Web Push with VAPID, the engine's `Notify`. It reads each
+  person's `notification_prefs` (skip a kind they turned off, no sound in
+  quiet hours) and gives each push its buttons and that person's token.
+- `lib/push-token.ts`: the signed token a push's buttons carry (who, and
+  which John or dispute), keyed from the VAPID private key, good for 8 days.
+  `lib/moves/push-actions.ts` checks it, then calls `push_action`, which
+  makes the move as that person through `mark_done` or `cast_vote`.
 - `@app/core` for every rule; nothing here re-implements one.
 
 ## Tests

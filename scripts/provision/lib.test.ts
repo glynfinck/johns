@@ -48,8 +48,8 @@ const NATIVE = {
 describe("auth settings", () => {
   it("sends only production's fields, never the local config", () => {
     expect(authSettings(CONFIG, null)).toEqual({
-      site_url: "https://johns.glyn.dev",
-      uri_allow_list: "https://johns.glyn.dev/**",
+      site_url: "https://jonz.app",
+      uri_allow_list: "https://jonz.app/**",
       external_email_enabled: false,
     });
     expect(authSettings(CONFIG, GOOGLE)).toMatchObject({
@@ -73,7 +73,7 @@ describe("auth settings", () => {
   it("catches localhost written over the site URL, and email sign-up left on", () => {
     const read = { ...authSettings(CONFIG, null), site_url: "http://localhost:3205", external_email_enabled: true };
     expect(authProblems(read, CONFIG, null)).toEqual([
-      "site URL is http://localhost:3205, not https://johns.glyn.dev",
+      "site URL is http://localhost:3205, not https://jonz.app",
       "email sign-up is still on",
     ]);
   });
@@ -112,7 +112,7 @@ describe("auth settings", () => {
   });
 
   it("finds the app's redirect URL among others", () => {
-    const read = { ...authSettings(CONFIG, null), uri_allow_list: "http://localhost:3205/**, https://johns.glyn.dev/**" };
+    const read = { ...authSettings(CONFIG, null), uri_allow_list: "http://localhost:3205/**, https://jonz.app/**" };
     expect(authProblems(read, CONFIG, null)).toEqual([]);
   });
 });
@@ -121,9 +121,10 @@ describe("the Google console", () => {
   it("lists exactly what to paste", () => {
     const v = googleConsoleValues(CONFIG, REF);
     expect(v.redirectUris).toEqual([`https://${REF}.supabase.co/auth/v1/callback`, "http://127.0.0.1:54341/auth/v1/callback"]);
-    expect(v.javascriptOrigins).toEqual(["https://johns.glyn.dev", "http://localhost:3205"]);
-    expect(v.authorizedDomains).toEqual(["glyn.dev", "supabase.co"]);
-    expect(v.privacyPolicy).toBe("https://johns.glyn.dev/privacy");
+    expect(v.javascriptOrigins).toEqual(["https://jonz.app", "http://localhost:3205"]);
+    expect(v.authorizedDomains).toEqual(["jonz.app", "supabase.co"]);
+    expect(v.privacyPolicy).toBe("https://jonz.app/privacy");
+    expect(apexDomain("jonz.app")).toBe("jonz.app");
     expect(apexDomain("johns.glyn.dev")).toBe("glyn.dev");
   });
 
@@ -169,7 +170,7 @@ describe("keys and environment", () => {
     const sensitive = plan.filter((e) => e.type === "sensitive").map((e) => e.key);
     expect(sensitive.sort()).toEqual(["CRON_SECRET", "SUPABASE_SERVICE_ROLE_KEY", "VAPID_PRIVATE_KEY"]);
     expect(plan.every((e) => e.target.length === 1 && e.target[0] === "production")).toBe(true);
-    expect(plan.find((e) => e.key === "NEXT_PUBLIC_SITE_URL")!.value).toBe("https://johns.glyn.dev");
+    expect(plan.find((e) => e.key === "NEXT_PUBLIC_SITE_URL")!.value).toBe("https://jonz.app");
   });
 
   it("leaves existing push keys alone, since new ones orphan every subscribed phone", () => {
@@ -185,20 +186,20 @@ describe("the Vercel projects", () => {
   });
 
   it("names where it builds from instead", () => {
-    expect(rootDirectoryProblem(null, CONFIG.vercel)).toBe("johns builds from the repository root, not `apps/api`");
-    expect(rootDirectoryProblem("", CONFIG.vercel)).toBe("johns builds from the repository root, not `apps/api`");
-    expect(rootDirectoryProblem("apps/client", CONFIG.vercel)).toBe("johns builds from `apps/client`, not `apps/api`");
+    expect(rootDirectoryProblem(null, CONFIG.vercel)).toBe("jonz-api builds from the repository root, not `apps/api`");
+    expect(rootDirectoryProblem("", CONFIG.vercel)).toBe("jonz-api builds from the repository root, not `apps/api`");
+    expect(rootDirectoryProblem("apps/client", CONFIG.vercel)).toBe("jonz-api builds from `apps/client`, not `apps/api`");
   });
 
   it("builds the web from apps/client", () => {
     expect(rootDirectoryProblem("apps/client", CONFIG.web)).toBeNull();
-    expect(rootDirectoryProblem("apps/api", CONFIG.web)).toBe("johns-web builds from `apps/api`, not `apps/client`");
+    expect(rootDirectoryProblem("apps/api", CONFIG.web)).toBe("jonz-web builds from `apps/api`, not `apps/client`");
   });
 
   it("puts the site on the web build and apps/api on a name of its own", () => {
     expect(domainPlan(CONFIG)).toEqual([
-      { project: "johns-web", domain: "johns.glyn.dev" },
-      { project: "johns", domain: "api.johns.glyn.dev" },
+      { project: "jonz-web", domain: "jonz.app" },
+      { project: "jonz-api", domain: "api.jonz.app" },
     ]);
   });
 
@@ -263,36 +264,36 @@ describe("the run's summary", () => {
       "https://console.cloud.google.com/auth/clients/create",
       undefined,
     ]);
-    expect(steps[1].text).toContain("https://johns.glyn.dev/privacy");
+    expect(steps[1].text).toContain("https://jonz.app/privacy");
   });
 
   it("makes every step a link and every value its own code span, for a phone", () => {
     const md = summaryMarkdown({
-      app: "Johns",
-      site: "https://johns.glyn.dev",
+      app: "Jonz",
+      site: "https://jonz.app",
       results: [
         { ok: true, msg: "healthy" },
         { ok: false, msg: "Google refuses sign-in: invalid_client" },
       ],
       todo,
     });
-    expect(md).toContain("## Johns: 1 check failed");
+    expect(md).toContain("## Jonz: 1 check failed");
     expect(md).toContain("- ✅ healthy");
     expect(md).toContain("- ❌ Google refuses sign-in: invalid_client");
     expect(md).toContain("1. **Connect the integration** · [open](https://supabase.com/dashboard/project/x/settings/integrations)");
-    expect(md).toContain("[Create a Google Cloud project called Johns](https://console.cloud.google.com/projectcreate)");
+    expect(md).toContain("[Create a Google Cloud project called Jonz](https://console.cloud.google.com/projectcreate)");
     expect(md).toContain(`\`https://${REF}.supabase.co/auth/v1/callback\``);
   });
 
   it("says why a run stopped early on the page a phone opens first", () => {
     const md = summaryMarkdown({
-      app: "Johns",
-      site: "https://johns.glyn.dev",
+      app: "Jonz",
+      site: "https://jonz.app",
       results: [{ ok: false, msg: "no project called Johns yet" }],
       todo: [],
       stopped: "SUPABASE_ACCESS_TOKEN is not set.\nAdd it as a repository secret.",
     });
-    expect(md).toContain("## Johns: stopped");
+    expect(md).toContain("## Jonz: stopped");
     expect(md).toContain("> SUPABASE_ACCESS_TOKEN is not set.\n> Add it as a repository secret.");
     expect(md).toContain("- ❌ no project called Johns yet");
   });

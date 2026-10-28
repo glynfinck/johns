@@ -43,7 +43,7 @@ it('opens the join screen for a code, however it was typed', async () => {
 
 it('opens the join screen for a whole link pasted in', async () => {
   await open();
-  await paste('https://johns.glyn.dev/join/AB3DEF7H');
+  await paste('https://jonz.app/join/AB3DEF7H');
   expect(screen).toHavePathname('/join/AB3DEF7H');
 });
 

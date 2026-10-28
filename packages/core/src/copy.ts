@@ -6,10 +6,10 @@ import { IMMUNITY_EVERY } from "./streak";
  * the front door. One copy, so the web and the phone can't tell the house
  * different things.
  */
-export const APP_NAME = "Johns";
+export const APP_NAME = "Jonz";
 export const TAGLINE = "Fair shares of the housework, and a house that keeps score.";
 
-/** A page's title in the browser tab: "Today · Johns", or just the name on the front door. */
+/** A page's title in the browser tab: "Today · Jonz", or just the name on the front door. */
 export function pageTitle(page?: string): string {
   return page ? `${page} · ${APP_NAME}` : APP_NAME;
 }
@@ -32,13 +32,13 @@ export const PAGE_TITLE = {
   pass: "House Pass",
 } as const;
 
-/** What Johns keeps, and who sees it. */
+/** What Jonz keeps, and who sees it. */
 export const PRIVACY_COPY = {
   title: "Privacy",
   paragraphs: [
-    "Johns keeps what it needs to share out your house’s Johns and nothing more: your name from Google, the house you belong to, the Johns you were given and when you ticked them, any photos you add, disputes and votes, and the Stake ledger.",
+    "Jonz keeps what it needs to share out your house’s Johns and nothing more: your name from Google, the house you belong to, the Johns you were given and when you ticked them, any photos you add, disputes and votes, and the Stake ledger.",
     "Only people in your house can see any of it. Photos are stored privately and shown to your housemates through links that expire after an hour.",
-    "Johns never moves money. The ledger records what housemates owe each other; you settle up however you like, outside the app.",
+    "Jonz never moves money. The ledger records what housemates owe each other; you settle up however you like, outside the app.",
     "If you turn on reminders, your browser gives us an address to send notifications to. Turning reminders off deletes it. Leaving a house removes you from it; your past Johns stay in its history.",
   ],
 } as const;
@@ -63,7 +63,7 @@ export const ERROR_COPY = {
 
 export const FRONT_DOOR = {
   eyebrow: "For houses that share a bin",
-  headline: "Johns: who’s on what this week.",
+  headline: "Jonz: who’s on what this week.",
   signIn: "Sign in",
   start: "Start your house",
   join: "I have a join link",
@@ -130,7 +130,7 @@ export const JOIN_COPY = {
   alreadyIn: (house: string) => `You’re already in ${house}`,
   goToJohns: "Go to your Johns",
   otherHouse: "You’re in another house",
-  otherHouseBody: "Johns keeps you in one house at a time. Leave your current one from its House screen first.",
+  otherHouseBody: "Jonz keeps you in one house at a time. Leave your current one from its House screen first.",
   yourHouse: "Your house",
   invited: "You’re invited",
   livesHere: (people: number) =>
@@ -206,7 +206,7 @@ export const INVITE_COPY = {
   share: "Share",
   copy: "Copy",
   copied: "Link copied",
-  shareTitle: (house: string) => `Join ${house} on Johns`,
+  shareTitle: (house: string) => `Join ${house} on Jonz`,
 } as const;
 
 /** The week's board: everyone's Johns, and where each has got to. */
@@ -314,7 +314,7 @@ export const TABLE_COPY = {
   record: (r: { done: number; late: number; missed: number; covered?: number }) =>
     `${r.done} done${r.late ? ` · ${r.late} late` : ""}${r.missed ? ` · ${r.missed} missed` : ""}${r.covered ? ` · ${r.covered} covered` : ""}`,
   shares: "Fair shares",
-  sharesBody: `What each of you was handed over the last ${BALANCE_WEEKS} weeks, against your share. Each deal hands a little more to whoever is behind, never more than half a week extra, until it evens out.`,
+  sharesBody: `What each of you did over the last ${BALANCE_WEEKS} weeks, against your share. A missed John comes back to whoever missed it, and covering for someone counts as yours. Each deal hands a little more to whoever is behind, never more than half a week extra, until it evens out.`,
   sharesKey: "Below zero is behind, above is ahead. Time away is made up:",
   streaks: "Streaks and perks",
   weeks: (n: number) => `${n} ${n === 1 ? "week" : "weeks"}`,
@@ -479,6 +479,8 @@ export const RULES_COPY = {
   missed: (symbol: string) => `Missed forfeit (${symbol})`,
   disputes: "Disputes can be raised for",
   disputeHours: (hours: number) => (hours === 0 ? "No disputes (honour system)" : `${hours} hours after a tick`),
+  /** How long an overdue John can still be done late, as an option. */
+  lateHours: (hours: number) => `${hours} hours after it’s due, then it’s missed`,
   /** The grace before anyone else can cover an overdue John, as an option. */
   coverGrace: (hours: number) =>
     hours === 0 ? "No grace: anyone can cover it once it’s due" : `${hours} ${hours === 1 ? "hour" : "hours"} after it’s due`,
@@ -525,10 +527,59 @@ export function lookOf(saved: string | null | undefined): Look {
 export const REMINDERS_COPY = {
   on: "Remind me on this device",
   off: "Turn reminders off on this device",
-  unsupported: "Reminders need a browser that supports notifications. On iPhone, add Johns to your home screen first.",
+  unsupported: "Reminders need a browser that supports notifications. On iPhone, add Jonz to your home screen first.",
   blocked: "Notifications are blocked for this site in your browser settings.",
   failed: "Couldn’t turn reminders on. Try again.",
   turnedOn: "Reminders on for this device",
+} as const;
+
+/** What the pushes say, their buttons, and the settings for them. */
+export const NOTIFY_COPY = {
+  dueTomorrowTitle: (john: string) => `${john} is due tomorrow`,
+  dueSoonTitle: (john: string) => `${john} is due soon`,
+  dueTomorrowBody: (due: string) => `Due ${due}. Tick it here when it’s done.`,
+  dueSoonBody: (due: string) => `Due ${due}. A few hours left to do it on time.`,
+  needsPhoto: "It needs a photo, so tick it in the app.",
+  dealTitle: "This week’s Johns",
+  disputedTitle: (john: string) => `Your ${john} tick is disputed`,
+  voteTitle: (john: string) => `Vote: was ${john} really done?`,
+  // The buttons. Short: a phone shows a few words at most.
+  done: "Done",
+  held: "It was done",
+  struck: "It wasn’t",
+  // What the notification says once a button worked.
+  ticked: (john: string) => `${john} ticked`,
+  tickedBody: "The house can check it now.",
+  alreadyTicked: (john: string) => `${john} was already ticked`,
+  voted: (john: string) => `Vote counted on ${john}`,
+  votedHeld: "You said it was done.",
+  votedStruck: "You said it wasn’t done.",
+  // Settings.
+  settings: "What to send",
+  kinds: {
+    reminders: "Johns due soon",
+    checks: "Housemate checks",
+    flags: "On-call flags",
+    deal: "The week’s deal",
+  },
+  kindHints: {
+    reminders: "The day before and a few hours before. Tick from the notification.",
+    checks: "A tick of yours disputed, or a vote for you to answer.",
+    flags: "When a housemate flags an on-call John you have.",
+    deal: "Your Johns, when the week is handed out.",
+  },
+  quiet: "Quiet hours",
+  quietHint: "Reminders wait until morning. Anything else arrives without a sound.",
+  on: "On",
+  off: "Off",
+  /** The quiet hours on offer, from and until, on the hour. */
+  quietOptions: [
+    { label: "Off", from: null, until: null },
+    { label: "22:00–07:00", from: 22, until: 7 },
+    { label: "23:00–08:00", from: 23, until: 8 },
+  ],
+  saved: "Saved",
+  failed: "Couldn’t save that. Try again.",
 } as const;
 
 export const ME_COPY = {
@@ -885,7 +936,7 @@ export const HOUSE_PAGE_COPY = {
     "A John done on time earns its points. A late one earns half, and a missed one earns nothing. The Table adds them up for the week and the month.",
   rulesStake: "The Stake",
   rulesStakeBody: (stake: string, late: string, missed: string) =>
-    `Everyone puts in ${stake} a month. A late John costs ${late} and a missed one ${missed}, but nobody loses more than ${stake} in a month. On the 1st, what was forfeited is shared out among everyone else. Johns never moves money: pay each other however you like, and whoever is paid marks it received.`,
+    `Everyone puts in ${stake} a month. A late John costs ${late} and a missed one ${missed}, but nobody loses more than ${stake} in a month. On the 1st, what was forfeited is shared out among everyone else. Jonz never moves money: pay each other however you like, and whoever is paid marks it received.`,
   rulesImmunity: "Immunity",
   rulesImmunityBody: (every: number, cap: number) =>
     `Every ${every} clean weeks in a row earns an immunity token (you can hold ${cap}). Spend one to skip a John with no forfeit.`,
@@ -893,7 +944,7 @@ export const HOUSE_PAGE_COPY = {
   rulesSwapBody: "Top the week and you earn a swap: trade one of your open Johns for a housemate’s open John that week.",
   rulesShares: "Fair shares",
   rulesSharesBody: (weeks: number, makeup: string) =>
-    `Johns are dealt so that everyone does their share over the last ${weeks} weeks. Whoever is behind is handed a little more, never more than half as much again. Time away is made up ${makeup}.`,
+    `Johns are dealt so that everyone does their share over the last ${weeks} weeks. What counts is what you did: a missed John comes back to you, and one you cover for someone counts as yours. Whoever is behind is handed a little more, never more than half as much again. Time away is made up ${makeup}.`,
   /** How time away is made up, by the house's setting (houses.away_makeup). */
   makeup: { 100: "in full", 50: "by half", 0: "not at all" } as Record<number, string>,
 } as const;
@@ -1116,7 +1167,7 @@ export const HOUSE_LOWER_COPY = {
   list: (clauses: readonly string[]) =>
     clauses.length < 2 ? clauses.join("") : `${clauses.slice(0, -1).join(", ")}, and ${clauses[clauses.length - 1]}`,
   // The foot of House.
-  noMoney: "Johns never moves money.",
+  noMoney: "Jonz never moves money.",
   privacy: "Privacy",
 } as const;
 
@@ -1155,6 +1206,10 @@ export const SETUP_COPY = {
   disputeWindow: (hours: number) => (hours === 0 ? "Not allowed" : `within ${hours} ${hours === 1 ? "hour" : "hours"}`),
   /** How long a tick can be disputed, as a value in the form: "24 hours". */
   disputeShort: (hours: number) => (hours === 0 ? "None" : `${hours} ${hours === 1 ? "hour" : "hours"}`),
+  lateWindow: "Done late",
+  /** How long an overdue John can still be done late, as the rules read: "up to 24 hours after it’s due". */
+  lateFor: (hours: number) => `up to ${hours} ${hours === 1 ? "hour" : "hours"} after it’s due`,
+  lateShort: (hours: number) => `${hours} ${hours === 1 ? "hour" : "hours"}`,
   cover: "Covering",
   /** When a housemate can cover an overdue John, as the rules read: "3 hours after it’s due". */
   coverWindow: (hours: number) => (hours === 0 ? "As soon as it’s due" : `${hours} ${hours === 1 ? "hour" : "hours"} after it’s due`),

@@ -38,7 +38,7 @@ export async function loadTable(
   const [monthRows, pastWeeks] = await Promise.all([
     supabase
       .from('assignments')
-      .select('user_id, points, outcome, done_at, due_at, excused, covered_by, weeks(ends_at)')
+      .select('user_id, points, outcome, done_at, due_at, excused, covered_by, flagged_at, closes_at, weeks(ends_at)')
       .eq('house_id', houseId)
       .gte('due_at', window.startsAt.toISOString())
       .lt('due_at', window.endsAt.toISOString()),
@@ -57,7 +57,7 @@ export async function loadTable(
   const [shares, handed] = weekIds.length
     ? await Promise.all([
         supabase.from('week_shares').select('week_id, user_id, share').in('week_id', weekIds),
-        supabase.from('assignments').select('week_id, user_id, points').in('week_id', weekIds),
+        supabase.from('assignments').select('week_id, user_id, points, outcome, covered_by').in('week_id', weekIds),
       ])
     : [{ data: [], error: null }, { data: [], error: null }];
   if (shares.error) throw shares.error;

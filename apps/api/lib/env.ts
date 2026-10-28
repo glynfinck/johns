@@ -14,7 +14,7 @@ export const env = {
   /**
    * Web origins allowed to call /api/* from another origin, comma-separated:
    * the Expo app's web build on 8205 locally. The phones send no Origin, and
-   * once the Expo web build serves johns.glyn.dev it calls the API from the
+   * once the Expo web build serves jonz.app it calls the API from the
    * same origin.
    */
   allowedOrigins: () =>

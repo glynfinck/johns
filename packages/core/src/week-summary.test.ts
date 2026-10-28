@@ -55,6 +55,8 @@ function item(id: string, overrides: Partial<BoardItem> = {}): BoardItem {
     status: "upcoming",
     standsAt: null,
     dispute: null,
+    // A day to do it late, as the house's default late window.
+    closesAt: new Date((overrides.dueAt ?? at(30)).getTime() + 86_400_000),
     ...overrides,
   };
 }

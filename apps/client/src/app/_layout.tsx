@@ -86,7 +86,7 @@ function Routes() {
             the house already open, never stacking a second one. */}
         {/* A join link opens for anyone, and signs you in in place. */}
         <Stack.Screen name="join/[joinCode]" />
-        {/* So does what Johns keeps about you, and a link to nowhere. */}
+        {/* So does what Jonz keeps about you, and a link to nowhere. */}
         <Stack.Screen name="privacy" />
         <Stack.Screen name="+not-found" />
       </Stack>
