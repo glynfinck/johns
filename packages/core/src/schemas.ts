@@ -49,6 +49,9 @@ export const DISPUTE_HOURS = [0, 6, 12, 24, 48, 72] as const;
 /** How long past its due time a John stays its owner's before a housemate can cover it (houses.cover_grace_hours). */
 export const COVER_GRACE_HOURS = [0, 1, 3, 6, 12, 24] as const;
 
+/** How long past its due time a John can still be done late, before it's missed (houses.late_hours). */
+export const LATE_HOURS = [12, 24, 48, 72] as const;
+
 /** How much of a share time away still owes, in percent (houses.away_makeup). */
 export const AWAY_MAKEUP = [100, 50, 0] as const;
 
@@ -73,6 +76,8 @@ export const HouseSettings = z.object({
   disputeHours: z.coerce.number().int().min(0).max(72),
   /** Absent from a form that doesn't show it (the older web's), which leaves the house's as it is. */
   coverGraceHours: z.coerce.number().int().min(0).max(48).optional(),
+  /** Absent from a form that doesn't show it, like coverGraceHours. */
+  lateHours: z.coerce.number().int().min(1).max(72).optional(),
   awayMakeup: z.coerce.number().int().refine((n) => (AWAY_MAKEUP as readonly number[]).includes(n)),
 });
 export type HouseSettings = z.infer<typeof HouseSettings>;

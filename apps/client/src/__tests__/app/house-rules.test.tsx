@@ -72,6 +72,7 @@ it('reads the rules out in plain words, with who can change them under', async (
     [SETUP_COPY.late, '−£1'],
     [SETUP_COPY.missed, '−£3'],
     [SETUP_COPY.disputes, 'within 24 hours'],
+    [SETUP_COPY.lateWindow, 'up to 24 hours after it’s due'],
     [SETUP_COPY.cover, '3 hours after it’s due'],
     [SETUP_COPY.away, 'made up in full'],
     [SETUP_COPY.weekStarts, 'Monday, London time'],
@@ -152,6 +153,7 @@ describe('an admin', () => {
       missedForfeitMinor: 300,
       disputeHours: 48,
       coverGraceHours: 3,
+      lateHours: 24,
       awayMakeup: 100,
     });
     expect(await screen.findByTestId('rules-panel')).toBeOnTheScreen();

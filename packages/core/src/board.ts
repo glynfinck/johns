@@ -1,6 +1,6 @@
 import type { Database } from "./db-types";
 import type { Category, Currency, HouseRules, IsoDow, JohnWhen, Outcome } from "./domain";
-import { canCover, liveStatus, standsAt, type LiveStatus } from "./outcome";
+import { canCover, closesAt, liveStatus, standsAt, type LiveStatus } from "./outcome";
 import { standings, type TableRow } from "./points";
 
 // The week as both apps show it, built from the rows they each read through
@@ -100,6 +100,7 @@ export function rulesOf(
     | "missed_forfeit_minor"
     | "dispute_hours"
     | "cover_grace_hours"
+    | "late_hours"
   >,
 ): HouseRules {
   return {
@@ -111,6 +112,7 @@ export function rulesOf(
     missedForfeitMinor: house.missed_forfeit_minor,
     disputeHours: house.dispute_hours,
     coverGraceHours: house.cover_grace_hours,
+    lateHours: house.late_hours,
   };
 }
 
@@ -142,6 +144,8 @@ export type AssignmentRow = Pick<
   /** On a flag: when it was raised, and by whom (null: opened again after a miss). */
   flagged_at?: string | null;
   flagged_by?: string | null;
+  /** On a John due on a day: when it turns missed (null on one dealt before the late window), when read. */
+  closes_at?: string | null;
 };
 
 /** An open dispute, with its votes: `disputes` and `dispute_votes` as read. */
@@ -194,7 +198,9 @@ export interface BoardItem {
   /** On a flag (an on-call John someone said needs doing): when, and who said so. */
   flaggedAt: Date | null;
   flaggedBy: string | null;
-  /** A flag raised last week that is still open: it stays its holder's, and isn't on this week's Table. */
+  /** When it turns missed if nobody does it (outcome.ts closesAt). */
+  closesAt: Date;
+  /** A John from last week that is still open (a flag, or one due late on its last day): it stays its holder's, and isn't on this week's Table. */
   carried: boolean;
 }
 
@@ -251,20 +257,16 @@ export function buildWeekBoard(input: {
       const flaggedAt = a.flagged_at ? new Date(a.flagged_at) : null;
       // Weeks follow on from each other, so last week ended when this one started.
       const carried = a.week_id !== undefined && a.week_id !== week.id;
-      const status = liveStatus(
-        {
-          dueAt,
-          doneAt,
-          excused: a.excused,
-          disputeOpen: dispute !== null,
-          weekEndsAt: carried ? new Date(week.starts_at) : endsAt,
-          flaggedAt,
-          outcome,
-          coveredBy: a.covered_by,
-        },
-        now,
-        disputeHours,
-      );
+      const facts = {
+        dueAt,
+        doneAt,
+        excused: a.excused,
+        disputeOpen: dispute !== null,
+        weekEndsAt: carried ? new Date(week.starts_at) : endsAt,
+        flaggedAt,
+        closesAt: a.closes_at ? new Date(a.closes_at) : null,
+      };
+      const status = liveStatus({ ...facts, outcome, coveredBy: a.covered_by }, now, disputeHours);
       return {
         id: a.id,
         johnId: a.john_id ?? null,
@@ -286,6 +288,7 @@ export function buildWeekBoard(input: {
         dispute,
         flaggedAt,
         flaggedBy: a.flagged_by ?? null,
+        closesAt: closesAt(facts),
         carried,
       };
     });
@@ -408,6 +411,8 @@ export type MonthRow = Pick<
   weeks: { ends_at: string } | null;
   /** On a flag, when it was raised, when the read has it. */
   flagged_at?: string | null;
+  /** When it turns missed, when the read has it. */
+  closes_at?: string | null;
 };
 
 /** The month's Table: every John due this month, each at its live status. */
@@ -430,6 +435,7 @@ export function monthStandings(
           // A John with no week (never, in practice) counts as ending when it's due.
           weekEndsAt: new Date(a.weeks?.ends_at ?? a.due_at),
           flaggedAt: a.flagged_at ? new Date(a.flagged_at) : null,
+          closesAt: a.closes_at ? new Date(a.closes_at) : null,
           outcome: a.outcome as Outcome | null,
           coveredBy: a.covered_by,
         },
