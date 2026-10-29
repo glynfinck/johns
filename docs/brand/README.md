@@ -1,0 +1,133 @@
+# The Jonz brand
+
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="readme-banner-dark.png">
+  <img alt="Jonz" src="readme-banner-light.png" width="640">
+</picture>
+
+Jonz wears Bin Night, the app's house style: council signage on a street at
+night. This page is how the brand is used outside the app's own screens, and
+where every image goes. Every image here is drawn from one mark by
+`npm run brand` (`scripts/brand.mjs`); change the mark in
+`packages/core/src/mark.ts` or a colour in `packages/core/src/bin-night.ts`
+and run it again.
+
+## The logo
+
+| | |
+| --- | --- |
+| ![The sign](icon-512.png) | **The sign** is the J in its road-sign frame on hi-vis amber. It stands alone wherever the name is already said: the app icon, the favicon, a profile picture, a notification. |
+| ![The lockup](lockup.png) | **The lockup** is the sign beside JONZ in Overpass Black, in caps. Use it where people meet Jonz for the first time: the front door, a card, an email, the README. On dark grounds use `lockup-on-dark.png`. |
+
+- Give it clear space all round about one J stroke wide, the frame's corner radius.
+- Never recolour, stretch, outline or rotate the sign. On amber it is inked in tarmac; on tarmac, the sign keeps its amber tile.
+- Below 48px the small-size master takes over (`SIGN_SMALL`), with a heavier frame and a bigger J, so the lines hold up in a browser tab. `favicon.svg`, `favicon.ico` and the app's own lockup at small sizes use it.
+- The name is "Jonz" in a sentence and JONZ in the lockup. One chore is a John.
+
+## Colour
+
+| Colour | Hex | Job |
+| --- | --- | --- |
+| Hi-vis amber | `#F3AA00` (`#FFB81C` after dark) | The one thing to do, the sign, buttons that matter. A fill with tarmac on it, never text on a light ground (1.6:1). |
+| Tarmac | `#16181A` | Ink, and the ground of the join link's card. |
+| Pavement | `#E7E9E5` | The light ground. |
+| Wet tarmac | `#111315` | The dark ground. |
+| Hazard | `#C8410C` | Late and missed only. |
+| Done | `#2E7D32` | Done only. |
+
+The bin-lid colours (one per kind of John) live in the app and stay out of
+marketing. Amber on tarmac is 9:1, tarmac on pavement 14.6:1.
+
+## Type
+
+Overpass, the one family (open licence, `apps/client/assets/fonts`). Black
+900 in caps for the wordmark, screen titles and headlines of five words at
+most; Bold 700 for leads and row titles; Regular 400 for sentences;
+ExtraBold 800 in tracked caps for small labels. Figures are tabular. Where
+the font can't load (an email), headlines go in an image and text falls
+back to Arial or the system's sans.
+
+## Voice
+
+A good council notice written by a housemate: plain, short and fair, with a
+dry joke now and then. It states the rule and never scolds.
+
+| Say | Not |
+| --- | --- |
+| Bins out tonight. | Don't forget to take the bins out!! |
+| Sam's John is 3 hours late. | Sam failed to do the dishes. |
+| Your Johns for the week | Your assigned tasks |
+| The bathroom moves around. | Say goodbye to chore drama forever |
+
+No emoji and no exclamation marks, in the app or out of it. The tagline is
+"Fair shares of the housework, and a house that keeps score."; the short
+form is "Fair shares of the housework." The social handle is @jonz.app.
+
+## Where each image goes
+
+| Where | File | Size |
+| --- | --- | --- |
+| iOS app icon, light, dark and tinted | `apps/client/assets/images/icon.png`, `icon-dark.png`, `icon-tinted.png` | 1024 |
+| Android adaptive icon (and themed) | `android-icon-foreground.png`, `android-icon-monochrome.png`, amber background in `app.json` | 1024 |
+| Splash | `splash-icon.png`, the rounded tile on the ground colour | 1024, shown at 96 |
+| Browser tab | `apps/client/public/favicon.svg`, `favicon.ico` (16, 32, 48) | |
+| iPhone's Add to Home Screen | `apple-touch-icon.png` | 180 |
+| Installed web app | `icon-192.png`, `icon-512.png`, `icon-maskable-512.png` | 192, 512 |
+| Any jonz.app link pasted in a chat | `og.png` | 1200×630 |
+| A join link pasted in a chat | drawn per house by `apps/api/app/api/og/join/[code]` | 1200×630 |
+| Email header | `email-header.png`, shown at 600×120 | 1200×240 |
+| Repo social preview | `social-preview.png` | 1280×640 |
+| README banner | `readme-banner-light.png`, `readme-banner-dark.png` | 1280×360 |
+| Stripe, App Store and Play icon | `icon-512.png`, `icon-1024.png` | 512, 1024 |
+| Google sign-in screen | `logo-120.png` | 120 |
+| Profile picture (Instagram, TikTok, X) | `profile-400.png` | 400 |
+| Google Play feature graphic | `play-feature.png` | 1024×500 |
+| Store screenshots | `store/ios-*.png` (6.9-inch iPhone), `store/play-*.png` | 1290×2796, 1080×1920 |
+
+The store frames put a five-word headline over a phone screenshot. Make them
+from fresh screenshots of the app (the e2e run takes them) with
+`npm run brand -- --store today.png week.png …`; each screenshot gets the
+next headline in `STORE_HEADLINES`.
+
+## Link previews
+
+A jonz.app link pasted into iMessage, WhatsApp, Slack, Telegram, Discord or X
+shows a card. Every page's card is `og.png` with the page's name ("The Wall ·
+Jonz"). A join link's card names its house and how many live there, the two
+things the join page shows anyone who signs in, and never shows the code; a
+reset or dead link's card says "This invite has expired". The bots that draw
+cards don't run the app, so `apps/client/vercel.json` sends them, by user
+agent, to `/api/share/*` on the API, which answers with just the card's tags.
+`SHARE_NAMES_HOUSE` in `packages/core/src/share.ts` turns the house's name off.
+
+Chat apps keep a card for a while. To see a changed one, paste the link with
+`?v=2` on the end.
+
+## Outside the app, by hand
+
+These take a logo by upload. Each works from a phone except where it says.
+For GitHub in Safari, tap **aA**, then **Request Desktop Website**.
+
+1. **Stripe** (Checkout, the billing page and receipts). Open
+   [Branding settings](https://dashboard.stripe.com/settings/branding):
+   icon `icon-512.png`, logo `lockup.png`, brand colour `#F3AA00`, accent
+   `#16181A`. Do the same in the sandbox. Under
+   [Emails](https://dashboard.stripe.com/settings/emails), turn on
+   successful payment receipts so they carry the brand.
+2. **Google sign-in** (the "Jonz" Google Cloud project). Open
+   [Branding](https://console.cloud.google.com/auth/branding): app name
+   Jonz, logo `logo-120.png`, home page `https://jonz.app`, privacy policy
+   `https://jonz.app/privacy`. Adding a logo sends the app to Google's brand
+   check, which takes a few days; sign-in keeps working meanwhile.
+3. **Microsoft sign-in**. Open
+   [App registrations](https://entra.microsoft.com/#view/Microsoft_AAD_RegisteredApps/ApplicationsListBlade),
+   then Jonz, then **Branding & properties**: logo `icon-512.png`, home page
+   `https://jonz.app`, privacy `https://jonz.app/privacy`.
+4. **GitHub**. Open the repo's
+   [Settings](https://github.com/glynfinck/jonz/settings), then **Social
+   preview**, then **Edit**, and upload `social-preview.png`.
+5. **App Store Connect and Google Play**, once the accounts exist: icon
+   `icon-1024.png` (Apple) or `icon-512.png` (Play), the store frames and
+   `play-feature.png`.
+6. **Instagram, TikTok and X** as @jonz.app: profile picture
+   `profile-400.png`, which every app crops to a circle safely.

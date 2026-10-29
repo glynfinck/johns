@@ -30,7 +30,8 @@ const TYPES = {
 // Vercel's `:name*` is a named wildcard; `(.*)` is already a regex group.
 const { redirects = [], rewrites } = JSON.parse(readFileSync(path.join(root, "..", "vercel.json"), "utf8"));
 const toPattern = (source) => new RegExp(`^${source.replace(/:(\w+)\*/g, "(?<$1>.*)")}$`);
-const rules = rewrites.map(({ source, destination }) => ({ pattern: toPattern(source), destination }));
+// Rules with `has` are for link-preview bots (by user agent); a browser never meets them.
+const rules = rewrites.filter(({ has }) => !has).map(({ source, destination }) => ({ pattern: toPattern(source), destination }));
 const moves = redirects.map(({ source, destination, permanent }) => ({
   pattern: toPattern(source),
   destination,

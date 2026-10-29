@@ -20,6 +20,8 @@ const NOT_API = "/:path((?!api(?:/|$)).*)";
 
 const nextConfig: NextConfig = {
   poweredByHeader: false,
+  // The link-preview cards read Overpass off the disk (lib/share/card.tsx).
+  outputFileTracingIncludes: { "/api/og/**": ["./assets/fonts/**"] },
   async headers() {
     return [{ source: "/:path*", headers: SECURITY_HEADERS }];
   },

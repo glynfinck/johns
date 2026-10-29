@@ -18,7 +18,21 @@
     <meta name="apple-mobile-web-app-title" content="Jonz" />
     <meta name="apple-mobile-web-app-status-bar-style" content="default" />
     <link rel="manifest" href="/manifest.webmanifest" />
-    <link rel="apple-touch-icon" href="/icon-192.png" />
+    <link rel="icon" href="/favicon.ico" sizes="48x48" />
+    <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
+    <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
+    <!-- The card a pasted link shows in iMessage, WhatsApp, Slack and X. These
+         are every page's; a join link's card names its house, and link-preview
+         bots get it from apps/api (vercel.json sends them there). -->
+    <meta property="og:site_name" content="Jonz" />
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content="Jonz" />
+    <meta property="og:description" content="Fair shares of the housework, and a house that keeps score." />
+    <meta property="og:image" content="https://jonz.app/og.png" />
+    <meta property="og:image:width" content="1200" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:image:alt" content="Jonz: fair shares of the housework." />
+    <meta name="twitter:card" content="summary_large_image" />
     <!-- The `react-native-web` recommended style reset: https://necolas.github.io/react-native-web/docs/setup/#root-element -->
     <style id="expo-reset">
       /* These styles make the body full-height */
