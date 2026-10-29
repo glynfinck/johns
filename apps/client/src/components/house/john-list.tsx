@@ -1,23 +1,19 @@
 import {
   CATEGORIES,
   CATEGORY_LABEL,
-  DOW_LABEL,
   JOHN_LIST_COPY,
   NEXT_UP_COPY,
   johnFacts,
   johnsByKind,
   NEW_JOHN,
   pointsLabel,
-  RESPOND_HOURS,
   scheduleLine,
   SETUP_COPY,
   weeklyEffort,
   type Category,
   type GroupDef,
   type HouseRules,
-  type IsoDow,
   type JohnDef,
-  type JohnWhen,
 } from '@app/core';
 import { ListTodoIcon, PlusIcon, SparklesIcon, Trash2Icon } from 'lucide-react-native';
 import { useState } from 'react';
@@ -29,6 +25,7 @@ import { Button } from '@/components/button';
 import { EmptyState } from '@/components/empty-state';
 import { Field } from '@/components/field';
 import { Group, GroupItem } from '@/components/group';
+import { TimingPicker, TimingSentence, type TimingWord } from '@/components/house/john-timing';
 import { useHouseWorkspace } from '@/components/house/workspace';
 import { Row, RowIcon } from '@/components/row';
 import { Section } from '@/components/section';
@@ -43,15 +40,7 @@ import { INSET, LABEL_GAP, SECTION_GAP, SPACE } from '@/theme';
 type Draft = Omit<JohnDef, 'id'> & { id?: string };
 
 const KINDS = CATEGORIES.map((c) => ({ value: c, label: CATEGORY_LABEL[c] }));
-const EFFORT = Array.from({ length: 10 }, (_, i) => ({ value: i + 1, label: pointsLabel(i + 1) }));
-const EVERY = [1, 2, 3, 4].map((n) => ({ value: n, label: JOHN_LIST_COPY.every[n] }));
-const DAYS = (Object.entries(DOW_LABEL) as [string, string][]).map(([day, name]) => ({ value: Number(day) as IsoDow, label: name }));
-const WHEN: { value: JohnWhen; label: string }[] = [
-  { value: 'day', label: JOHN_LIST_COPY.onADay },
-  { value: 'on_call', label: JOHN_LIST_COPY.onCall },
-];
-const WITHIN = RESPOND_HOURS.map((h) => ({ value: h as number, label: JOHN_LIST_COPY.respondHours(h) }));
-const TIMES = [1, 2, 3, 4, 5, 6, 7].map((n) => ({ value: n, label: JOHN_LIST_COPY.perWeekLabel(n) }));
+const EFFORT = Array.from({ length: 20 }, (_, i) => ({ value: i + 1, label: pointsLabel(i + 1) }));
 
 /**
  * The house's list of Johns, a section per kind ("Kitchen · 3"), each John a
@@ -196,11 +185,12 @@ function JohnFacts({ john, group }: { john: JohnDef; group: string | null }) {
 }
 
 /**
- * One John's details, in groups of rows: its name; what it is and who shares
- * it, with a line on what sharing means; then how much effort, and when: on
- * a day (how often, the day and time) or on call (how soon once it's
- * flagged, and about how often, with a line on what on call means); and
- * whether the tick needs a photo. Save is the sheet's one amber button.
+ * One John's details: its name; what it is and who shares it, with a line on
+ * what sharing means; then when, as a sentence under a switch between on a
+ * schedule and on call ("Every 3 months from November on the first Saturday
+ * by 21:00"), each of whose words opens its choices in place of the form;
+ * then how much effort and whether the tick needs a photo. Save is the
+ * sheet's one amber button.
  */
 function JohnForm({
   houseId,
@@ -217,6 +207,7 @@ function JohnForm({
 }) {
   const move = useMove(houseId);
   const [v, setV] = useState(initial);
+  const [picking, setPicking] = useState<TimingWord | null>(null);
   const set = (patch: Partial<Draft>) => setV((old) => ({ ...old, ...patch }));
   const sharers = [{ value: '', label: JOHN_LIST_COPY.everyone }, ...groups.map((g) => ({ value: g.id, label: g.name }))];
   // What "Shared by" means, under it: how to share with fewer when there's no
@@ -229,6 +220,15 @@ function JohnForm({
 
   async function remove() {
     if (v.id && (await move.run(() => archiveJohn(houseId, v.id!, new Date())))) onDone();
+  }
+
+  // A word of the timing sentence, pressed: its choices in place of the form until Done.
+  if (picking) {
+    return (
+      <View style={styles.form} testID="john-form">
+        <TimingPicker word={picking} value={v} rules={rules} now={new Date()} onChange={set} onDone={() => setPicking(null)} />
+      </View>
+    );
   }
 
   return (
@@ -256,53 +256,18 @@ function JohnForm({
           </Meta>
         ) : null}
       </View>
-      <View style={styles.noted}>
-        <Group>
-          <PickRow label={JOHN_LIST_COPY.effort} options={EFFORT} value={v.points} onChange={(points) => set({ points })} />
-          <PickRow label={JOHN_LIST_COPY.whenLabel} options={WHEN} value={v.when} onChange={(when) => set({ when })} />
-          {v.when === 'on_call' ? (
-            <>
-              <PickRow
-                label={JOHN_LIST_COPY.respond}
-                // A window set outside the list's choices (by an older app) still shows.
-                options={WITHIN.some((o) => o.value === v.respondHours) ? WITHIN : [...WITHIN, { value: v.respondHours, label: JOHN_LIST_COPY.respondHours(v.respondHours) }]}
-                value={v.respondHours}
-                onChange={(respondHours) => set({ respondHours })}
-              />
-              <PickRow label={JOHN_LIST_COPY.timesAWeek} options={TIMES} value={v.perWeek} onChange={(perWeek) => set({ perWeek })} />
-            </>
-          ) : (
-            <>
-              <PickRow label={JOHN_LIST_COPY.often} options={EVERY} value={v.everyWeeks} onChange={(everyWeeks) => set({ everyWeeks })} />
-              <PickRow label={JOHN_LIST_COPY.due} options={DAYS} value={v.dueDow} onChange={(dueDow) => set({ dueDow })} />
-              <GroupItem>
-                <Field
-                  label={JOHN_LIST_COPY.by}
-                  value={v.dueTime}
-                  onChangeText={(dueTime) => set({ dueTime })}
-                  placeholder="21:00"
-                  maxLength={5}
-                  keyboardType="numbers-and-punctuation"
-                  testID="john-time"
-                />
-              </GroupItem>
-            </>
-          )}
-          <ChoiceRow
-            role="checkbox"
-            label={JOHN_LIST_COPY.photo}
-            meta={SETUP_COPY.photoMeta}
-            checked={v.needsPhoto}
-            onPress={() => set({ needsPhoto: !v.needsPhoto })}
-            testID="john-photo"
-          />
-        </Group>
-        {v.when === 'on_call' ? (
-          <Meta style={styles.note} testID="on-call-note">
-            {JOHN_LIST_COPY.onCallHint}
-          </Meta>
-        ) : null}
-      </View>
+      <TimingSentence value={v} rules={rules} now={new Date()} onChange={set} onPick={setPicking} />
+      <Group>
+        <PickRow label={JOHN_LIST_COPY.effort} options={EFFORT} value={v.points} onChange={(points) => set({ points })} />
+        <ChoiceRow
+          role="checkbox"
+          label={JOHN_LIST_COPY.photo}
+          meta={SETUP_COPY.photoMeta}
+          checked={v.needsPhoto}
+          onPress={() => set({ needsPhoto: !v.needsPhoto })}
+          testID="john-photo"
+        />
+      </Group>
       <View style={styles.actions}>
         {move.problem ? <Alert message={move.problem} /> : null}
         <Button

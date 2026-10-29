@@ -72,12 +72,12 @@ export async function loadHouse(houseId: string, now: Date): Promise<HouseSnapsh
   const [assignments, carried, disputes, onCall] = week
     ? await Promise.all([
         // With how often each comes round, from the John it was dealt from (the John sheet says so).
-        supabase.from('assignments').select('*, johns(every_weeks)').eq('week_id', week.id).order('due_at'),
+        supabase.from('assignments').select('*, johns(every_weeks, every_months)').eq('week_id', week.id).order('due_at'),
         // A John from last week can still be open (a flag, or one due late on
         // its last day, inside its late window): it stays with whoever had it.
         supabase
           .from('assignments')
-          .select('*, johns(every_weeks)')
+          .select('*, johns(every_weeks, every_months)')
           .eq('house_id', houseId)
           .neq('week_id', week.id)
           .is('outcome', null),

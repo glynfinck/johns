@@ -486,6 +486,7 @@ describe("the sheet's header", () => {
       "Kitchen · Upstairs bathroom · 4 pts · every 2 weeks",
     );
     expect(sheetKind(item("a", { category: "bins" }))).toBe("Bins · 2 pts · every week");
+    expect(sheetKind(item("a", { points: 8, everyMonths: 3 }))).toBe("Kitchen · 8 pts · every 3 months");
     // Its John taken off the list since the deal (or a read that didn't say): no "every".
     expect(sheetKind(item("a", { johnId: null, everyWeeks: null }))).toBe("Kitchen · 2 pts");
   });

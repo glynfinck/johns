@@ -1,4 +1,4 @@
-import { monthOf, nextWeek } from "@app/core";
+import { dateInWeek, monthOf, nextWeek, weekdayOfMonth } from "@app/core";
 import { describe, expect, it } from "vitest";
 
 import { tickHouse } from "@/lib/engine/tick";
@@ -57,6 +57,50 @@ describe("dealing", () => {
     const following = nextWeek(week, ZONE, 1);
     const second = await deal(house.id, following, following.startsAt);
     expect(second.assignments.map((a) => a.name)).toEqual(["Bins"]);
+  });
+});
+
+describe("any-length repeats", () => {
+  it("deals a quarterly John in the week of its date, brings it back after a miss, and not after it's done", async () => {
+    const house = await makeHouse();
+    const week = weeksAgo(6);
+    // Whichever Wednesday this week holds, as the Nth Wednesday of its month: the John lands here.
+    const nth = weekdayOfMonth(dateInWeek(week.startsOn, 1, 3)).nth;
+    await addJohns(house.id, [{ name: "Fridge deep clean", points: 8, dueDow: 3, monthly: { everyMonths: 3, weekOfMonth: nth } }, { name: "Bins" }], week);
+    const first = await deal(house.id, week, week.startsAt);
+    expect(first.assignments.map((a) => a.name).sort()).toEqual(["Bins", "Fridge deep clean"]);
+    expect(first.assignments.find((a) => a.name === "Fridge deep clean")!.points).toBe(8);
+
+    // Nobody does it: missed the day after, it goes into the next week's deal.
+    await tickHouse(db, house.id, new Date(week.endsAt.getTime() - DAY));
+    const fridge = first.assignments.find((a) => a.name === "Fridge deep clean")!;
+    const { data: missed } = await db.from("assignments").select("outcome").eq("id", fridge.id).single();
+    expect(missed!.outcome).toBe("missed");
+    const following = nextWeek(week, ZONE, 1);
+    const second = await deal(house.id, following, following.startsAt);
+    expect(second.assignments.map((a) => a.name).sort()).toEqual(["Bins", "Fridge deep clean"]);
+
+    // Done this time: the week after has only the bins.
+    const back = second.assignments.find((a) => a.name === "Fridge deep clean")!;
+    await db.from("assignments").update({ done_at: new Date(new Date(back.due_at).getTime() - 3_600_000).toISOString() }).eq("id", back.id);
+    await tickHouse(db, house.id, new Date(following.endsAt.getTime() - DAY));
+    const third = nextWeek(following, ZONE, 1);
+    const dealt = await deal(house.id, third, third.startsAt);
+    expect(dealt.assignments.map((a) => a.name)).toEqual(["Bins"]);
+  });
+
+  it("brings back a John missed at the weekend in the deal after it's called missed, not while it can still be done late", async () => {
+    const house = await makeHouse();
+    const week = weeksAgo(6);
+    const nth = weekdayOfMonth(dateInWeek(week.startsOn, 1, 7)).nth;
+    await addJohns(house.id, [{ name: "Oven", points: 6, monthly: { everyMonths: 2, weekOfMonth: nth } }, { name: "Bins" }], week);
+    await deal(house.id, week, week.startsAt);
+    // Sunday's Oven can still be done late on Monday, so the next week is dealt without it.
+    const following = nextWeek(week, ZONE, 1);
+    expect((await deal(house.id, following, following.startsAt)).assignments.map((a) => a.name)).toEqual(["Bins"]);
+    await tickHouse(db, house.id, new Date(following.endsAt.getTime() - DAY));
+    const third = nextWeek(following, ZONE, 1);
+    expect((await deal(house.id, third, third.startsAt)).assignments.map((a) => a.name).sort()).toEqual(["Bins", "Oven"]);
   });
 });
 

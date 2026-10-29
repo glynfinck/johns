@@ -8,7 +8,10 @@ import { humanError } from "./errors";
 import { dateRange, firstName, joinRange, monthLabel, pointsLabel } from "./format";
 import { formatMoney, formatSigned, moneyInput, parseMoney } from "./money";
 import { HouseSettings } from "./schemas";
+import { dueWords, oftenWords, placeWord } from "./repeat";
 import { addDaysTo } from "./week";
+
+const capitalise = (word: string) => word.charAt(0).toLocaleUpperCase() + word.slice(1);
 
 /** A line of a read-out: what it is, and what it's set to ("Stake", "£20 a month"). */
 export interface LabelValue {
@@ -31,21 +34,25 @@ export function johnsByKind(johns: readonly JohnDef[]): JohnKind[] {
   });
 }
 
-/** "Every 2 weeks", from how many weeks apart a John falls. */
-function cadence(everyWeeks: number): string {
-  return JOHN_LIST_COPY.every[everyWeeks] ?? SETUP_COPY.everyWeeks(everyWeeks);
+/** "Every 2 weeks", "Every 3 months", "Twice a year": how often a John comes round. */
+function cadence(john: Pick<JohnDef, "everyWeeks"> & Partial<Pick<JohnDef, "everyMonths">>): string {
+  return oftenWords({ everyWeeks: john.everyWeeks, everyMonths: john.everyMonths ?? null });
+}
+
+/** When it's due: "Sun 21:00", or "first Sat 21:00" for a John that repeats in months. */
+function dueLine(john: Pick<JohnDef, "dueDow" | "dueTime"> & Partial<Pick<JohnDef, "weekOfMonth">>): string {
+  return dueWords({ weekOfMonth: john.weekOfMonth ?? null }, john.dueTime, DOW_LABEL[john.dueDow].slice(0, 3));
 }
 
 /** A John's meta line on the list: "Every week · Sun 21:00 · photo", then the group that shares it, if one does. */
 export function scheduleLine(
-  john: Pick<JohnDef, "everyWeeks" | "dueDow" | "dueTime" | "needsPhoto"> & Partial<Pick<JohnDef, "when" | "respondHours" | "perWeek">>,
+  john: Pick<JohnDef, "everyWeeks" | "dueDow" | "dueTime" | "needsPhoto"> &
+    Partial<Pick<JohnDef, "when" | "respondHours" | "perWeek" | "everyMonths" | "weekOfMonth">>,
   groupName?: string | null,
 ): string {
   const onCall = john.when === "on_call";
   return [
-    ...(onCall
-      ? [JOHN_LIST_COPY.onCallWhen(john.respondHours ?? 12, john.perWeek ?? 1)]
-      : [cadence(john.everyWeeks), `${DOW_LABEL[john.dueDow].slice(0, 3)} ${john.dueTime}`]),
+    ...(onCall ? [JOHN_LIST_COPY.onCallWhen(john.respondHours ?? 12, john.perWeek ?? 1)] : [cadence(john), dueLine(john)]),
     john.needsPhoto ? SETUP_COPY.photo : null,
     groupName || null,
   ]
@@ -66,8 +73,14 @@ export function johnFacts(john: JohnDef, groupName?: string | null): LabelValue[
           { label: JOHN_LIST_COPY.timesAWeek, value: JOHN_LIST_COPY.perWeekLabel(john.perWeek) },
         ]
       : [
-          { label: JOHN_LIST_COPY.often, value: cadence(john.everyWeeks) },
-          { label: JOHN_LIST_COPY.due, value: `${DOW_LABEL[john.dueDow]} ${john.dueTime}` },
+          { label: JOHN_LIST_COPY.often, value: cadence(john) },
+          {
+            label: JOHN_LIST_COPY.due,
+            value:
+              john.weekOfMonth === null
+                ? `${DOW_LABEL[john.dueDow]} ${john.dueTime}`
+                : `${capitalise(placeWord(john.weekOfMonth))} ${DOW_LABEL[john.dueDow]} ${john.dueTime}`,
+          },
         ]),
     { label: SETUP_COPY.photoLabel, value: john.needsPhoto ? SETUP_COPY.photoNeeded : SETUP_COPY.photoNot },
   ];

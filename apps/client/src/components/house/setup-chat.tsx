@@ -13,6 +13,7 @@ import {
   scheduleLine,
   STARTER_KINDS,
   starterDraft,
+  weeklyEffort,
   type ChatAsk,
   type ChatMessage,
   type DraftChange,
@@ -72,9 +73,9 @@ function namesList(names: readonly string[]): string {
   return names.length <= 1 ? (names[0] ?? '') : `${names.slice(0, -1).join(', ')} and ${names[names.length - 1]}`;
 }
 
-/** Roughly how many points a week Johns come to: one due every few weeks counts its share, one on call as often as it comes up. */
+/** Roughly how many points a week Johns come to: one due every few weeks or months counts its share, one on call as often as it comes up. */
 function pointsAWeek(johns: readonly DraftedJohn[]): number {
-  return Math.round(johns.reduce((sum, j) => sum + (j.when === 'on_call' ? j.points * j.perWeek : j.points / j.everyWeeks), 0));
+  return Math.round(weeklyEffort(johns));
 }
 
 /** The list once the ticked changes are applied (an unticked change leaves its John as it was). */
