@@ -23,6 +23,7 @@ export const PAGE_TITLE = {
   week: "This week",
   house: "House",
   privacy: "Privacy",
+  terms: "Terms",
   notFound: "Nothing here",
   welcome: "No house yet",
   johnList: "The John list",
@@ -32,18 +33,6 @@ export const PAGE_TITLE = {
   describe: "Describe your house",
   ask: `Ask ${APP_NAME}`,
   pass: "House Pass",
-} as const;
-
-/** What Jonz keeps, and who sees it. */
-export const PRIVACY_COPY = {
-  title: "Privacy",
-  paragraphs: [
-    "Jonz keeps what it needs to share out your house’s Johns and nothing more: your name from the account you sign in with, the house you belong to, the Johns you were given and when you ticked them, any photos you add, disputes and votes, and the Stake ledger.",
-    "Only people in your house can see any of it. Photos are stored privately and shown to your housemates through links that expire after an hour.",
-    "Jonz never moves money. The ledger records what housemates owe each other; you settle up however you like, outside the app.",
-    `If you ask ${APP_NAME} to draft your house’s Johns, what you write about the house is sent to Anthropic’s Claude, through Vercel, to draft the list. It isn’t stored with your house, and Anthropic doesn’t train on it.`,
-    "If you turn on reminders, your browser gives us an address to send notifications to. Turning reminders off deletes it. Leaving a house removes you from it; your past Johns stay in its history.",
-  ],
 } as const;
 
 /** A page that isn't there, and a page that broke. */
@@ -108,8 +97,9 @@ export const SIGN_IN_COPY = {
   microsoftBusy: "Opening Microsoft…",
   eitherAccount: "Your house’s Johns are kept with the account you sign in with.",
   sameAccount: "Already in a house? Use the account you joined with.",
-  terms: "By signing in you agree to the house rules your housemates set.",
+  terms: "By continuing you agree to the Terms and the Privacy Policy, and to the house rules your housemates set.",
   privacy: "Privacy",
+  termsLink: "Terms",
   failed: (provider: SignInProvider) => `${provider} didn’t finish signing you in. Try again.`,
   /** The web came back from Google or Microsoft with an error, and can't tell which. */
   returnFailed: "That sign-in didn’t finish. Try again.",
@@ -1401,6 +1391,7 @@ export const HOUSE_LOWER_COPY = {
   // The foot of House.
   noMoney: "Jonz never moves money.",
   privacy: "Privacy",
+  terms: "Terms",
 } as const;
 
 /** House setup: the Johns, Rules, Time away and Groups pages. */
@@ -1481,7 +1472,7 @@ export const SETUP_COPY = {
   groupsNote: "A John that belongs to a group is only handed to the people in it.",
 } as const;
 
-/** The front door, starting a house, welcome and privacy. */
+/** The front door, starting a house and welcome. */
 export const FRONT_DOOR_COPY = {
   /** The front door's three plain sentences, in place of the old feature cards. */
   points: [
@@ -1517,29 +1508,6 @@ export const FRONT_DOOR_COPY = {
   // A join link, signed in.
   join: "Join the house",
   lookingUp: "Looking up the house",
-  /**
-   * Privacy's words under headings, a paragraph or two each. The reminders
-   * paragraph is split between what's kept and deleting it, so its "it"
-   * names the address.
-   */
-  privacy: [
-    {
-      heading: "What we keep",
-      body: [
-        PRIVACY_COPY.paragraphs[0],
-        "If you turn on reminders, your browser gives us an address to send notifications to.",
-      ],
-    },
-    { heading: "What we don’t", body: [PRIVACY_COPY.paragraphs[2]] },
-    { heading: "Who sees what", body: [PRIVACY_COPY.paragraphs[1]] },
-    { heading: "Drafting your Johns", body: [PRIVACY_COPY.paragraphs[3]] },
-    {
-      heading: "Deleting your data",
-      body: [
-        "Turning reminders off deletes that address. Leaving a house removes you from it; your past Johns stay in its history.",
-      ],
-    },
-  ],
 } as const;
 
 /** Describe your house: Claude drafts the John list, or a starter list does, and an admin keeps what they want. */
@@ -1660,6 +1628,9 @@ export const PASS_COPY = {
   notBuyer: "Only the housemate who bought the House Pass can change it.",
   nothingToManage: "There’s no plan to manage yet.",
   free: "Free for every house, always: the deal, the housemate check, reminders, covering and time away. No ads.",
+  /** Under the plans while they're on sale: how renewing works, and the terms that say so. */
+  renewal: "Yearly and monthly plans renew until you cancel, and you can cancel any time.",
+  terms: "House Pass terms",
   /** Where a locked extra was, once the Pass is enforced. */
   locked: (feature: string) => `${feature} comes with the House Pass`,
   unlock: "See the House Pass",

@@ -13,6 +13,7 @@ it('opens on the wordmark, the taped sign and three plain sentences', async () =
   // The old feature cards are gone.
   for (const point of FRONT_DOOR.points) expect(screen.queryByText(point.title)).not.toBeOnTheScreen();
   expect(screen.getByRole('link', { name: 'Privacy' })).toHaveProp('href', '/privacy');
+  expect(screen.getByRole('link', { name: 'Terms' })).toHaveProp('href', '/terms');
 });
 
 it('carries the way in through sign-in, so it survives signing in', async () => {
@@ -32,6 +33,7 @@ it('has one amber button: starting a house', async () => {
 it('gives every link a whole thumb to land on', async () => {
   await render(<FrontDoor />);
   expect(screen.getByTestId('privacy')).toHaveStyle({ minHeight: TAP });
+  expect(screen.getByTestId('terms')).toHaveStyle({ minHeight: TAP });
   for (const label of [FRONT_DOOR_COPY.start, FRONT_DOOR_COPY.invite, FRONT_DOOR.signIn]) {
     expect(screen.getByRole('link', { name: label })).toHaveStyle({ minHeight: TAP });
   }

@@ -25,7 +25,6 @@ import {
   NO_HOUSE_COPY,
   PAGE_TITLE,
   pageTitle,
-  PRIVACY_COPY,
   REMINDERS_COPY,
   RULES_COPY,
   SECTION_LABEL,
@@ -283,10 +282,7 @@ describe("pageTitle", () => {
 });
 
 describe("the pages around the house", () => {
-  it("has privacy, not-found and error words", () => {
-    expect(PRIVACY_COPY.paragraphs).toHaveLength(5);
-    expect(PRIVACY_COPY.paragraphs.join(" ")).toMatch(/sent to Anthropic’s Claude, through Vercel/);
-    expect(PRIVACY_COPY.paragraphs.join(" ")).toMatch(/never moves money/);
+  it("has not-found and error words", () => {
     expect(NOT_FOUND_COPY.back).toBe("Back to your Johns");
     expect(NOT_FOUND_COPY.backToDoor).toBe("Back to the front door");
     expect(PAGE_TITLE.welcome).toBe(NO_HOUSE_COPY.heading);

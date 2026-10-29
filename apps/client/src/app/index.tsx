@@ -64,6 +64,7 @@ export default function FrontDoor() {
         <View style={styles.foot}>
           <Meta>{APP_NAME}</Meta>
           <TextLink href="/privacy" label={SIGN_IN_COPY.privacy} muted testID="privacy" />
+          <TextLink href="/terms" label={SIGN_IN_COPY.termsLink} muted testID="terms" />
         </View>
       </DoorFoot>
     </Door>

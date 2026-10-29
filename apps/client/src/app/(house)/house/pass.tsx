@@ -19,6 +19,7 @@ import { HousePage } from '@/components/house/house-page';
 import { Row, RowIcon } from '@/components/row';
 import { Section } from '@/components/section';
 import { Body, Meta } from '@/components/text';
+import { TextLink } from '@/components/text-link';
 import { useToast } from '@/components/toast';
 import { useHouse, type HouseView } from '@/hooks/use-house';
 import { useMembership } from '@/hooks/use-membership';
@@ -184,7 +185,9 @@ function PassReadOut({
       <View style={styles.words}>
         {firstCharge ? <Meta testID="pass-first-charge">{firstCharge}</Meta> : null}
         {founding || selling ? null : <Meta testID="pass-soon">{PASS_COPY.buyingSoon}</Meta>}
+        {selling ? <Meta testID="pass-renewal">{PASS_COPY.renewal}</Meta> : null}
         <Meta>{PASS_COPY.free}</Meta>
+        <TextLink href="/terms" label={PASS_COPY.terms} muted testID="pass-terms" />
       </View>
     </>
   );

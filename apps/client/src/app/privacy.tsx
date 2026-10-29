@@ -1,41 +1,8 @@
-import { FRONT_DOOR_COPY, PAGE_TITLE, PRIVACY_COPY } from '@app/core';
-import { StyleSheet, View } from 'react-native';
+import { PAGE_TITLE, PRIVACY_POLICY } from '@app/core';
 
-import { GroupItem } from '@/components/group';
-import { PageTitle } from '@/components/page-title';
-import { Screen } from '@/components/screen';
-import { Section } from '@/components/section';
-import { Body } from '@/components/text';
-import { TitleBar } from '@/components/title-bar';
-import { SPACE } from '@/theme';
+import { LegalPage } from '@/components/legal/legal-page';
 
-/**
- * What Jonz keeps and who sees it, in the web's /privacy words under
- * headings: what we keep, what we don't, who sees what, deleting your data.
- * Open to anyone, signed in or not; Back goes where you came from, or to the
- * front door (which, signed in, is your house).
- */
+/** jonz.app/privacy: what Jonz keeps, who sees it and how to delete it. Google, Microsoft, Apple, Stripe and the stores link here. */
 export default function Privacy() {
-  return (
-    <>
-      <PageTitle page={PAGE_TITLE.privacy} />
-      <Screen bar={<TitleBar title={PRIVACY_COPY.title} back="/" />} testID="privacy-screen">
-        {FRONT_DOOR_COPY.privacy.map(({ heading, body }) => (
-          <Section key={heading} label={heading}>
-            <GroupItem>
-              <View style={styles.words}>
-                {body.map((paragraph) => (
-                  <Body key={paragraph}>{paragraph}</Body>
-                ))}
-              </View>
-            </GroupItem>
-          </Section>
-        ))}
-      </Screen>
-    </>
-  );
+  return <LegalPage page={PRIVACY_POLICY} tab={PAGE_TITLE.privacy} testID="privacy-screen" />;
 }
-
-const styles = StyleSheet.create({
-  words: { gap: SPACE.md },
-});

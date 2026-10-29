@@ -95,6 +95,7 @@ export function LeaveSection({ houseId, userId, view }: { houseId: string; userI
       <View style={styles.footer}>
         <Meta>{HOUSE_LOWER_COPY.noMoney}</Meta>
         <TextButton label={HOUSE_LOWER_COPY.privacy} href="/privacy" chevron testID="to-privacy" />
+        <TextButton label={HOUSE_LOWER_COPY.terms} href="/terms" chevron testID="to-terms" />
       </View>
       <ConfirmSheet
         visible={asking}
@@ -141,6 +142,6 @@ export function LeaveSection({ houseId, userId, view }: { houseId: string; userI
 
 const styles = StyleSheet.create({
   stack: { gap: SPACE.lg },
-  // The words on the leading edge; Privacy's own padding sets it off from them.
+  // The words on the leading edge; Privacy's and Terms' own padding sets them off.
   footer: { flexDirection: 'row', flexWrap: 'wrap', alignItems: 'center', paddingLeft: INSET },
 });

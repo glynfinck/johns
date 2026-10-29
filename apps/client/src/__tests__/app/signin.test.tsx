@@ -51,7 +51,8 @@ describe('sign-in on Android and the web', () => {
     expect(screen.queryByTestId('demo-sign-in')).toBeNull();
     expect(screen.queryByTestId('staging-ribbon')).toBeNull();
     expect(screen.getByText(SIGN_IN_COPY.sameAccount)).toBeOnTheScreen();
-    expect(screen.getByRole('link', { name: SIGN_IN_COPY.privacy })).toBeOnTheScreen();
+    expect(screen.getByRole('link', { name: SIGN_IN_COPY.privacy })).toHaveProp('href', '/privacy');
+    expect(screen.getByRole('link', { name: SIGN_IN_COPY.termsLink })).toHaveProp('href', '/terms');
   });
 
   it('signs in with Google, and a closed sheet is no failure', async () => {

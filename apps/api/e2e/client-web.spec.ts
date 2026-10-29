@@ -1,4 +1,4 @@
-import { HOUSE_LOWER_COPY, LOOK_LABEL, NOT_FOUND_COPY, PRIVACY_COPY, REMINDERS_COPY, SECTION_LABEL, SIGN_IN_COPY } from "@app/core";
+import { GOOGLE_LIMITED_USE, HOUSE_LOWER_COPY, LOOK_LABEL, NOT_FOUND_COPY, REMINDERS_COPY, SECTION_LABEL, SIGN_IN_COPY, TERMS } from "@app/core";
 import { expect, test } from "@playwright/test";
 
 import { admin, CLIENT_URL, cleanUp, dealtHouseInClient } from "./auth";
@@ -11,12 +11,17 @@ test.use({ baseURL: CLIENT_URL });
 const made: string[] = [];
 test.afterAll(async () => cleanUp(made));
 
-test("privacy, and a link to nowhere, open for anyone", async ({ page }) => {
+test("privacy, the terms, and a link to nowhere, open for anyone", async ({ page }) => {
   await page.goto("/signin");
   await page.getByRole("link", { name: SIGN_IN_COPY.privacy }).click();
   await expect(page).toHaveURL(/\/privacy$/);
-  await expect(page.getByText(PRIVACY_COPY.paragraphs[2])).toBeVisible();
+  await expect(page.getByText(GOOGLE_LIMITED_USE)).toBeVisible();
   await expect(page).toHaveTitle("Privacy · Jonz");
+
+  // Opened cold, as Google's, Microsoft's and the stores' reviewers will.
+  await page.goto("/terms");
+  await expect(page.getByText(TERMS.lead)).toBeVisible();
+  await expect(page).toHaveTitle("Terms · Jonz");
 
   for (const path of ["/nowhere/at-all", "/_sitemap"]) {
     await page.goto(path);
