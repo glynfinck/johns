@@ -59,7 +59,7 @@ export function RollCall({ item, context, onCancel }: { item: BoardItem; context
   return (
     <>
       <SheetLines>
-        <Body testID="roll-call-sub">{CREW_COPY.sub(item.name, pointsLabel(plan.total))}</Body>
+        <Body testID="roll-call-sub">{CREW_COPY.sub(pointsLabel(plan.total))}</Body>
       </SheetLines>
       <SheetSection>
         <Section label={CREW_COPY.title} testID="roll-call">
@@ -175,6 +175,7 @@ export function CrewPart({ item, context }: { item: BoardItem; context: JohnShee
   const places = jobPlaces(item, context.board.items);
   if (!item.crew && places.length <= 1) return null;
   const avatar = (id: string) => <Avatar name={context.nameOf(id)} me={id === context.userId} />;
+  const name = (id: string) => (id === context.userId ? JOHN_SHEET_COPY.you : context.nameOf(id));
   if (!item.crew) {
     return (
       <SheetSection>
@@ -183,7 +184,7 @@ export function CrewPart({ item, context }: { item: BoardItem; context: JohnShee
             <Row
               key={p.id}
               leading={avatar(p.userId)}
-              title={context.nameOf(p.userId)}
+              title={name(p.userId)}
               trailing={<StatusMark status={p.status} />}
               testID="crew-place"
             />
@@ -200,7 +201,7 @@ export function CrewPart({ item, context }: { item: BoardItem; context: JohnShee
           <Row
             key={c.userId}
             leading={avatar(c.userId)}
-            title={context.nameOf(c.userId)}
+            title={name(c.userId)}
             meta={c.helper ? CREW_COPY.helped : undefined}
             trailing={shareLabel(c.points)}
             testID="crew-member"
@@ -210,7 +211,7 @@ export function CrewPart({ item, context }: { item: BoardItem; context: JohnShee
           <Row
             key={p.id}
             leading={avatar(p.userId)}
-            title={context.nameOf(p.userId)}
+            title={name(p.userId)}
             meta={CREW_COPY.wasntThere}
             trailing={<StatusMark status={p.status} />}
             testID="crew-absent"

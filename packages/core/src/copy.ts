@@ -920,7 +920,7 @@ export const CREW_COPY = {
   shareOf: (points: string) => `${points}`,
   /** The roll call. */
   title: "Who did it?",
-  sub: (john: string, total: string) => `${john} · ${total} shared by whoever did it`,
+  sub: (total: string) => `${total}, shared by whoever did it`,
   leftOff: (name: string) => `Counts as a miss for ${name}`,
   addHelper: "Add someone who helped",
   pickHelper: "Who helped?",

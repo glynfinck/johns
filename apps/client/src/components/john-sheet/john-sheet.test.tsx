@@ -417,13 +417,13 @@ describe('a John done together, and help', () => {
     await show(house(garden(), people));
     const body = await openOn('Open a1');
     const onIt = within(body).getByTestId('crew-part');
-    expect(within(onIt).getByText('Priya')).toBeOnTheScreen();
+    expect(within(onIt).getByText(JOHN_SHEET_COPY.you)).toBeOnTheScreen();
     expect(within(onIt).getByText('Sam')).toBeOnTheScreen();
     // No one-tap tick: Mark done asks who did it.
     expect(within(body).queryByRole('button', { name: CREW_COPY.withHelp })).toBeNull();
     await fireEvent.press(within(body).getByRole('button', { name: JOHN_COPY.markDone }));
     const call = within(body).getByTestId('roll-call');
-    expect(within(body).getByTestId('roll-call-sub')).toHaveTextContent('Garden tidy · 8 pts shared by whoever did it');
+    expect(within(body).getByTestId('roll-call-sub')).toHaveTextContent('8 pts, shared by whoever did it');
     expect(within(call).getByRole('checkbox', { name: `You, ${CREW_COPY.youDidIt}` })).toBeDisabled();
     expect(within(call).getByRole('checkbox', { name: 'Sam' })).toBeChecked();
     expect(within(call).getByTestId('roll-call-split')).toHaveTextContent('8 pts ÷ 2 · 4 pts each');
