@@ -78,7 +78,7 @@ beforeEach(() => {
   const base = snapshot();
   (loadHouse as jest.Mock).mockResolvedValue(
     snapshot({
-      members: [...base.members, { userId: 'alex', name: 'Alex Moss', role: 'member', streak: 0, immunityTokens: 0, swapTokens: 0 }],
+      members: [...base.members, { userId: 'alex', name: 'Alex Moss', photo: null, role: 'member', streak: 0, immunityTokens: 0, swapTokens: 0 }],
     }),
   );
   (catchUp as jest.Mock).mockResolvedValue(false);

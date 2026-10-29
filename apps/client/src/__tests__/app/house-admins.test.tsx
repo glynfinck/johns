@@ -18,7 +18,7 @@ jest.mock('@/hooks/use-membership', () => ({
   useMembership: () => ({ session: { user: { id: mockMe } }, house: { id: 'h1', name: 'Flat 3' } }),
 }));
 
-const ADA = { userId: 'ada', name: 'Ada', role: 'member' as const, streak: 0, immunityTokens: 0, swapTokens: 0 };
+const ADA = { userId: 'ada', name: 'Ada', photo: null, role: 'member' as const, streak: 0, immunityTokens: 0, swapTokens: 0 };
 
 async function open() {
   await renderPages(

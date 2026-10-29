@@ -50,7 +50,7 @@ jest.mock('@/api/supabase', () => ({ supabase: {} }));
 const HOUR = 3_600_000;
 const at = (hours: number) => new Date(Date.now() + hours * HOUR).toISOString();
 
-const MEGAN: Housemate = { userId: 'megan', name: 'Megan', role: 'member', streak: 0, immunityTokens: 0, swapTokens: 0 };
+const MEGAN: Housemate = { userId: 'megan', name: 'Megan', photo: null, role: 'member', streak: 0, immunityTokens: 0, swapTokens: 0 };
 
 /** Where the sheet is opened from, and what for. */
 const OPENERS: [string, JohnSheetFocus?][] = [['a1'], ['a3'], ['a4'], ['gone'], ['a1', 'swap'], ['a1', 'cant'], ['a4', 'dispute']];

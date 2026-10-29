@@ -85,7 +85,7 @@ function TableRow({ item, context }: { item: BoardItem; context: JohnRowContext 
         cells={
           <>
             <View style={[styles.who, styles.person]}>
-              <Avatar name={name} me={mine} size={24} />
+              <Avatar name={name} userId={item.userId} me={mine} size={24} />
               <Body numberOfLines={1} style={styles.shrink}>
                 {who}
               </Body>

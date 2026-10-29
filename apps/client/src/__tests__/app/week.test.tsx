@@ -415,7 +415,7 @@ describe('on a phone', () => {
   it("says in a person's header when they're away, and gives someone with no Johns a group too", async () => {
     read.mockResolvedValue(
       busyWeek({
-        members: [...snapshot().members, { userId: 'cal', name: 'Cal', role: 'member', streak: 0, immunityTokens: 0, swapTokens: 0 }],
+        members: [...snapshot().members, { userId: 'cal', name: 'Cal', photo: null, role: 'member', streak: 0, immunityTokens: 0, swapTokens: 0 }],
       }),
     );
     (loadAway as jest.Mock).mockResolvedValue({

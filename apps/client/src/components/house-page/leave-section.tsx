@@ -117,7 +117,7 @@ export function LeaveSection({ houseId, userId, view }: { houseId: string; userI
                   key={m.userId}
                   role="radio"
                   label={m.name}
-                  leading={<Avatar name={m.name} />}
+                  leading={<Avatar name={m.name} userId={m.userId} />}
                   checked={heir === m.userId}
                   onPress={() => setHeir(m.userId)}
                   testID="heir"

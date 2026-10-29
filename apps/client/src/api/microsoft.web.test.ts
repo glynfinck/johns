@@ -15,12 +15,12 @@ beforeAll(() => {
 beforeEach(() => signInWithOAuth.mockReset());
 
 describe('signInWithMicrosoft on the web', () => {
-  it("leaves for Microsoft through Supabase, asking for the email, and comes back to this site's sign-in", async () => {
+  it("leaves for Microsoft through Supabase, asking for the email and the photo, and comes back to this site's sign-in", async () => {
     signInWithOAuth.mockResolvedValue({ data: {}, error: null });
     await expect(signInWithMicrosoft()).resolves.toBe('redirected');
     expect(signInWithOAuth).toHaveBeenCalledWith({
       provider: 'azure',
-      options: { redirectTo: 'http://localhost:8205/signin', scopes: 'email' },
+      options: { redirectTo: 'http://localhost:8205/signin', scopes: 'email User.Read' },
     });
   });
 

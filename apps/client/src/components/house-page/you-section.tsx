@@ -53,7 +53,7 @@ export function YouSection({ houseId, userId, view }: { houseId: string; userId:
     <View testID="you-section">
       <Section label={HOUSE_COPY.you}>
         <Row
-          leading={<Avatar name={name} me />}
+          leading={<Avatar name={name} userId={userId} me />}
           title={HOUSE_LOWER_COPY.name}
           meta={name}
           onPress={() => {

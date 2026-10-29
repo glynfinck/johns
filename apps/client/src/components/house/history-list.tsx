@@ -103,7 +103,7 @@ function HistoryRow({ item, scene }: { item: HistoryItem; scene: HistoryScene })
   return (
     <>
       <Row
-        leading={<Avatar name={scene.fullName(item.actor)} me={item.actor === scene.me} />}
+        leading={<Avatar name={scene.fullName(item.actor)} userId={item.actor} me={item.actor === scene.me} />}
         title={line}
         titleLines={2}
         meta={meta}

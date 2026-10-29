@@ -144,7 +144,7 @@ function Admins({ houseId, userId, view }: { houseId: string; userId: string; vi
               key={m.userId}
               role="radio"
               label={m.name}
-              leading={<Avatar name={m.name} />}
+              leading={<Avatar name={m.name} userId={m.userId} />}
               checked={pick === m.userId}
               onPress={() => setPick(m.userId)}
               testID="admin-pick"

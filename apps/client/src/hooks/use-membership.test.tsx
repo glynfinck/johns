@@ -7,6 +7,7 @@ import { useSession } from '@/hooks/use-session';
 
 jest.mock('@/api/house', () => ({ getMyHouse: jest.fn() }));
 jest.mock('@/hooks/use-session', () => ({ useSession: jest.fn() }));
+jest.mock('@/api/microsoft-photo', () => ({ followMicrosoftSignIns: () => () => undefined }));
 
 const myHouse = getMyHouse as jest.Mock;
 const session = useSession as jest.Mock;

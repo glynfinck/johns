@@ -275,7 +275,7 @@ function SwapChoice({
   const { meta, label } = swapChoice(item, context.members, context.rules, context.now, chosen);
   return (
     <Row
-      leading={<Avatar name={context.nameOf(item.userId)} />}
+      leading={<Avatar name={context.nameOf(item.userId)} userId={item.userId} />}
       title={item.name}
       meta={meta}
       trailing={
@@ -307,7 +307,7 @@ export function TheirsOpen({ item, context }: { item: BoardItem; context: JohnSh
   return (
     <SheetLines>
       <View style={styles.owner}>
-        <Avatar name={context.nameOf(item.userId)} />
+        <Avatar name={context.nameOf(item.userId)} userId={item.userId} />
         <Body style={styles.shrink}>{JOHN_SHEET_COPY.theirs(owner ? firstName(owner.name) : FOCUS_SHELL_COPY.formerHousemate)}</Body>
       </View>
       {offer.kind === 'cover' && offer.text ? (

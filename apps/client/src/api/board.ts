@@ -20,6 +20,8 @@ import { supabase } from './supabase';
 export interface Housemate {
   userId: string;
   name: string;
+  /** Their sign-in photo's address, or null: the avatar shows initials. */
+  photo: string | null;
   role: 'admin' | 'member';
   streak: number;
   immunityTokens: number;
@@ -52,7 +54,7 @@ export async function loadHouse(houseId: string, now: Date): Promise<HouseSnapsh
     supabase.from('houses').select('*').eq('id', houseId).single(),
     supabase
       .from('members')
-      .select('user_id, role, streak, immunity_tokens, swap_tokens, profiles(display_name)')
+      .select('user_id, role, streak, immunity_tokens, swap_tokens, profiles(display_name, avatar_url)')
       .eq('house_id', houseId)
       .order('joined_at'),
   ]);
@@ -112,6 +114,7 @@ export async function loadHouse(houseId: string, now: Date): Promise<HouseSnapsh
     members: (members ?? []).map((m) => ({
       userId: m.user_id,
       name: m.profiles?.display_name ?? 'Housemate',
+      photo: m.profiles?.avatar_url ?? null,
       role: m.role as Housemate['role'],
       streak: m.streak,
       immunityTokens: m.immunity_tokens,
