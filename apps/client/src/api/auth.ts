@@ -3,15 +3,17 @@ import type { Session } from '@supabase/supabase-js';
 import { signOutOfGoogle } from './google';
 import { supabase } from './supabase';
 
-// All sign-in goes through this file: Google everywhere, and Sign in with
-// Apple on iOS (App Store guideline 4.8). On iOS and Android both are native
-// sheets whose ID token Supabase turns into a session; the web build signs in
-// with Google through Supabase's redirect, as jonz.app does.
+// All sign-in goes through this file: Google and Microsoft everywhere, and
+// Sign in with Apple on iOS (App Store guideline 4.8). On iOS and Android,
+// Google and Apple are native sheets whose ID token Supabase turns into a
+// session, and Microsoft is the system's sign-in browser; the web build signs
+// in with Google or Microsoft through Supabase's redirect, as jonz.app does.
 
-/** How a sign-in attempt ended. `redirected`: the web has left for Google. */
+/** How a sign-in attempt ended. `redirected`: the web has left for Google or Microsoft. */
 export type SignInResult = 'signed-in' | 'cancelled' | 'redirected';
 
 export { signInWithGoogle } from './google';
+export { signInWithMicrosoft } from './microsoft';
 export { appleSignInAvailable, signInWithApple } from './apple';
 
 export async function signOut(): Promise<void> {
