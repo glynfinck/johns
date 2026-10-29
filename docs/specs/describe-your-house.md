@@ -94,9 +94,13 @@ Today, Week and House.
 
 ## Platforms
 
-The same on iOS, Android and web: a page in House's stack
-(`/house/describe`), opened from Today's setup card while the list is empty
-and from the empty John list. The message box stays above the keyboard.
+On a phone or a tablet, a page in House's stack (`/house/describe`),
+opened from Today's setup card while the list is empty, from the empty John
+list, and from the sparkles in the title bar. From laptop width (`WIDE`) the
+same chat opens as a panel down the right of the window (`AskPanel`), with
+the page still beside it: the sparkles open and close it, and the done row
+goes to the John list without closing it. The message box stays above the
+keyboard.
 
 ## Done when
 

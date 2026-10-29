@@ -9,6 +9,7 @@ import { InviteSheet } from '@/components/house-page/invite-sheet';
 import { Row, RowIcon } from '@/components/row';
 import { Lead, SectionLabel } from '@/components/text';
 import { TickCircle } from '@/components/tick-circle';
+import { useAskJonz } from '@/hooks/use-ask-jonz';
 import { SPACE } from '@/theme';
 
 /** A checklist step's circle: ticked once it's done. A picture, not a control: the row is the way in. */
@@ -40,6 +41,8 @@ export function SetupCard({
   memberCount: number;
 }) {
   const [inviting, setInviting] = useState(false);
+  // Describe your house: the chat's page on a phone, the panel beside Today from WIDE.
+  const ask = useAskJonz();
   const steps = setupChecklist(johns, memberCount);
   return (
     <>
@@ -52,7 +55,7 @@ export function SetupCard({
               leading={<RowIcon icon={SparklesIcon} />}
               title={NEXT_UP_COPY.describe}
               meta={NEXT_UP_COPY.describeMeta}
-              href="/house/describe"
+              {...ask}
               chevron
               testID="setup-describe"
             />
