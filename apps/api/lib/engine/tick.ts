@@ -15,6 +15,8 @@ import {
   monthWindow,
   NOTIFY_COPY,
   ON_CALL_COPY,
+  passOf,
+  passUnlocked,
   prefsOf,
   recentBalances,
   reminderFor,
@@ -418,6 +420,8 @@ async function decideDisputes(db: Db, house: HouseRow, members: readonly MemberR
 
 async function settleDue(db: Db, house: HouseRow, now: Date, notify?: Notify) {
   const rules = rulesOf(house);
+  // The Stake is a House Pass extra: without it, a late or missed John costs nothing.
+  const staked = passUnlocked(passOf(house), now);
   const open = must(
     await db
       .from("assignments")
@@ -454,7 +458,7 @@ async function settleDue(db: Db, house: HouseRow, now: Date, notify?: Notify) {
     items.push({
       id: a.id,
       outcome,
-      forfeit: forfeitFor(outcome, rules),
+      forfeit: staked ? forfeitFor(outcome, rules) : 0,
       month: monthOf(new Date(a.due_at), rules.timezone),
     });
   }
@@ -506,6 +510,8 @@ async function closeWeeks(db: Db, house: HouseRow, members: readonly MemberRow[]
     "weeks to close",
   );
   const streaks = new Map(members.map((m) => [m.user_id, m.streak]));
+  // Perks are a House Pass extra: without it, streaks still count but earn nothing.
+  const perks = passUnlocked(passOf(house), now);
   let closed = 0;
 
   for (const week of due) {
@@ -528,8 +534,8 @@ async function closeWeeks(db: Db, house: HouseRow, members: readonly MemberRow[]
       const clean = isCleanWeek(outcomes);
       const after = clean === null ? before : clean ? before + 1 : 0;
       const earn: string[] = [];
-      if (earnsImmunity(before, after)) earn.push("immunity");
-      if (winners.has(m.user_id)) earn.push("swap");
+      if (perks && earnsImmunity(before, after)) earn.push("immunity");
+      if (perks && winners.has(m.user_id)) earn.push("swap");
       return { user_id: m.user_id, streak: after, earn };
     });
 
