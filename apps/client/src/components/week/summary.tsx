@@ -78,7 +78,7 @@ export function WeekSummaryBar({
         )}
       </View>
       {onFilter == null ? (
-        <Meta numberOfLines={1} testID="week-parts">
+        <Meta numberOfLines={1} style={styles.parts} testID="week-parts">
           {summary.parts
             .filter((p) => p.count > 0)
             .map((p) => `${p.count} ${p.label}`)
@@ -165,5 +165,6 @@ const styles = StyleSheet.create({
   tint: { position: 'absolute', top: 0, bottom: 0, left: -PART_PAD, right: -PART_PAD, borderRadius: RADIUS },
   figure: { flexDirection: 'row', alignItems: 'center', gap: 6 },
   swatch: { width: 8, height: 8, borderRadius: 2 },
+  parts: { marginTop: SPACE.sm },
   note: { marginTop: SPACE.xs },
 });
