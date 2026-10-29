@@ -100,7 +100,7 @@ export function PickMenu<T extends string>({
         ref={words}
         accessibilityRole="button"
         accessibilityLabel={chosen?.spoken ?? chosen?.label}
-        accessibilityState={{ expanded: open }}
+        aria-expanded={open}
         aria-haspopup="menu"
         onPress={show}
         onPressIn={() => setPressed(true)}

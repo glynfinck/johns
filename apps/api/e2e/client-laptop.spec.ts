@@ -1,4 +1,4 @@
-import { HOUSE_LOWER_COPY, JOHN_LIST_COPY, PAGE_TITLE, SECTION_LABEL } from "@app/core";
+import { HOUSE_LOWER_COPY, HOUSE_PAGE_COPY, JOHN_LIST_COPY, PAGE_TITLE, SECTION_LABEL } from "@app/core";
 import { expect, test, type Locator, type Page } from "@playwright/test";
 
 import { admin, CLIENT_URL, cleanUp, dealtHouseInClient } from "./auth";
@@ -84,6 +84,25 @@ test("each place spreads out on a laptop, and a narrow window keeps the phone's 
   expect(await topOf(week.getByTestId("week-row").nth(1))).toBeCloseTo(await topOf(week.getByTestId("standing").nth(1)), 0);
   await shoot(page, "week");
 
+  // The Table shows the week or the month from the menu in its header, dropped from its words.
+  const span = week.getByTestId("table-span");
+  await expect(span).toHaveText(HOUSE_PAGE_COPY.week);
+  await span.click();
+  const menu = page.getByTestId("table-span-menu");
+  await expect(menu).toBeVisible();
+  const words = await span.boundingBox();
+  const dropped = await menu.boundingBox();
+  expect((dropped?.x ?? 0) + (dropped?.width ?? 0)).toBeCloseTo((words?.x ?? 0) + (words?.width ?? 0), 0);
+  expect(dropped?.y ?? 0).toBeGreaterThan((words?.y ?? 0) + (words?.height ?? 0));
+  await shoot(page, "table-menu");
+  await page.keyboard.press("Escape");
+  await expect(menu).toHaveCount(0);
+  await span.click();
+  await page.getByTestId("table-span-month").click();
+  await expect(menu).toHaveCount(0);
+  await expect(span).not.toHaveText(HOUSE_PAGE_COPY.week);
+  await shoot(page, "table-month");
+
   await page.getByRole("tab", { name: SECTION_LABEL.house }).click();
   const house = page.getByTestId("house-screen");
   await expect(house.getByTestId("month-card")).toBeVisible();
@@ -112,6 +131,10 @@ test("each place spreads out on a laptop, and a narrow window keeps the phone's 
   await shoot(page, "house-wide");
   await house.getByTestId("ask-jonz").click();
   await expect(page.getByTestId("ask-panel")).toBeVisible();
+  // The open panel is the sign: the sparkles stay as they were, saying only to a screen reader that it's open.
+  await expect(house.getByTestId("ask-jonz")).toHaveAttribute("aria-expanded", "true");
+  await expect(house.getByTestId("ask-jonz")).toHaveCSS("background-color", "rgba(0, 0, 0, 0)");
+  await shoot(page, "ask-open");
   await nav.getByRole("link", { name: HOUSE_LOWER_COPY.johns }).click();
   await page.getByRole("button", { name: /^Edit Big shop, / }).click();
   await expect(panel).toBeVisible();

@@ -130,7 +130,7 @@ function AskButton() {
     <Pressable
       accessibilityRole="button"
       accessibilityLabel={HOUSE_DRAFT_COPY.open}
-      accessibilityState={'onPress' in ask ? { expanded: open } : undefined}
+      aria-expanded={'onPress' in ask ? open : undefined}
       onPress={'onPress' in ask ? ask.onPress : undefined}
       testID="ask-jonz"
       style={({ pressed }) => [styles.icon, styles.ask, styles.more, pressed && styles.pressed]}
