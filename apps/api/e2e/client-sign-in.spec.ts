@@ -36,9 +36,9 @@ test("the front door leads to Google sign-in through Supabase", async ({ page })
   expect(url.searchParams.get("code_challenge_method")).toBe("s256");
 });
 
-test("a failed Google sign-in says so", async ({ page }) => {
+test("a failed sign-in says so, without guessing whose", async ({ page }) => {
   await page.goto("/signin?error=access_denied");
-  await expect(page.getByRole("alert")).toHaveText(SIGN_IN_COPY.failed("Google"));
+  await expect(page.getByRole("alert")).toHaveText(SIGN_IN_COPY.returnFailed);
 });
 
 test("signed out, Today sends you to sign in", async ({ page }) => {
