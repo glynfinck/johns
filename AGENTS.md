@@ -166,10 +166,11 @@ already due a day's grace (`graceDue`).
 - **Fair shares** (`deal.ts`): each deal stores everyone's share of the week
   (`week_shares`). A John is split equally among whoever shares it: the whole
   house, or its **group** (three on the upstairs bathroom owe a third each,
-  two on the downstairs one a half). A **balance** is what you were handed
-  minus your share over the last 12 weeks; each John goes to whoever, of
-  those home on its due day, would be furthest behind. Doing the same John
-  twice running costs a small penalty.
+  two on the downstairs one a half). A **balance** is the work you did
+  minus your share over every week since you joined (`house_balances` adds
+  it up; never a window, which would forget debts mid-repayment); each John
+  goes to whoever, of those home on its due day, would be furthest behind.
+  Doing the same John twice running costs a small penalty.
 - **On call** (`johns.kind = 'on_call'`, `on_call`): a John that needs
   doing whenever it needs doing (the bins when they're full). Each deal puts
   one sharer on call for the week by fair shares, weighing it as points ×
@@ -231,7 +232,8 @@ already due a day's grace (`graceDue`).
 `profiles` (from auth via `handle_new_user`) → `houses` (rules: timezone,
 currency GBP/CAD/USD/EUR defaulted from Vercel's geo headers, week start,
 stake and forfeits, dispute hours; `join_code` from the CSPRNG; the House
-Pass's `pass_plan`, `pass_until` and `pass_buyer`, service role only:
+Pass's `pass_plan`, `pass_until` and `pass_buyer`, service role only, with
+its Stripe ids in `house_pass_billing`, which housemates can't read:
 `docs/specs/house-pass.md`) → `members`
 (role admin/member, streak, tokens; one house per person via
 `members_one_house`, dropped when "more than one house" ships) → `groups` +

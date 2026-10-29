@@ -1,4 +1,3 @@
-import { BALANCE_WEEKS } from "./deal";
 import type { BreakdownKey, RecordCounts, RecordMark, RecordSpan } from "./record";
 import { IMMUNITY_EVERY } from "./streak";
 
@@ -318,7 +317,8 @@ export const TABLE_COPY = {
   record: (r: { done: number; late: number; missed: number; covered?: number }) =>
     `${r.done} done${r.late ? ` · ${r.late} late` : ""}${r.missed ? ` · ${r.missed} missed` : ""}${r.covered ? ` · ${r.covered} covered` : ""}`,
   shares: "Fair shares",
-  sharesBody: `What each of you did over the last ${BALANCE_WEEKS} weeks, against your share. A missed John comes back to whoever missed it, and covering for someone counts as yours. Each deal hands a little more to whoever is behind, never more than half a week extra, until it evens out.`,
+  sharesBody:
+    "What each of you has done since you joined, against your share. A missed John comes back to whoever missed it, and covering for someone counts as yours. Each deal hands a little more to whoever is behind, never more than half a week extra, until it evens out.",
   sharesKey: "Below zero is behind, above is ahead. Time away is made up:",
   streaks: "Streaks and perks",
   weeks: (n: number) => `${n} ${n === 1 ? "week" : "weeks"}`,
@@ -1001,8 +1001,8 @@ export const HOUSE_PAGE_COPY = {
   rulesSwap: "Swap",
   rulesSwapBody: "Top the week and you earn a swap: trade one of your open Johns for a housemate’s open John that week.",
   rulesShares: "Fair shares",
-  rulesSharesBody: (weeks: number, makeup: string) =>
-    `Johns are dealt so that everyone does their share over the last ${weeks} weeks. What counts is what you did: a missed John comes back to you, and one you cover for someone counts as yours. Whoever is behind is handed a little more, never more than half as much again. Time away is made up ${makeup}.`,
+  rulesSharesBody: (makeup: string) =>
+    `Johns are dealt so that everyone does their share, counted from the day they joined. What counts is what you did: a missed John comes back to you, and one you cover for someone counts as yours. Whoever is behind is handed a little more, never more than half as much again. Time away is made up ${makeup}.`,
   /** How time away is made up, by the house's setting (houses.away_makeup). */
   makeup: { 100: "in full", 50: "by half", 0: "not at all" } as Record<number, string>,
 } as const;
@@ -1024,7 +1024,7 @@ export const PERSON_COPY = {
   level: (you: boolean) => `Level with ${you ? "your" : "their"} share`,
   catchingUp: (weeks: number) => `Catching up over about ${weeks} ${weeks === 1 ? "week" : "weeks"}`,
   easier: "The next deals go a little easier",
-  overWeeks: (weeks: number) => `Over the last ${weeks} weeks`,
+  sinceJoining: "Since joining",
   streakAndTokens: "Streak and tokens",
   streak: (weeks: number) => `${weeks}-week streak`,
   noStreak: "No streak yet",
@@ -1473,6 +1473,18 @@ export const PASS_COPY = {
   foundingMeta: "The Pass for life, for houses that start at launch",
   /** Until the stores are set up there is nothing to press. */
   buyingSoon: "Buying opens with the app store release. Until then every house keeps everything.",
+  /** Under the plans during the free month, when Stripe can put the first charge off. */
+  firstCharge: (day: string) => `Nothing to pay until your free month ends on ${day}.`,
+  /** Back from Stripe Checkout, before the webhook has landed. */
+  bought: "Thanks for buying the House Pass. It shows here in a moment.",
+  manage: "Manage plan",
+  manageMeta: "Change plan, change card or cancel",
+  // The API's refusals.
+  checkoutClosed: "Buying the House Pass isn’t open yet.",
+  alreadyFounding: "This house has the House Pass for life already.",
+  alreadyPaid: "This house has the House Pass already. Whoever bought it can change the plan from Manage plan.",
+  notBuyer: "Only the housemate who bought the House Pass can change it.",
+  nothingToManage: "There’s no plan to manage yet.",
   free: "Free for every house, always: the deal, the housemate check, reminders, covering and time away. No ads.",
   /** Where a locked extra was, once the Pass is enforced. */
   locked: (feature: string) => `${feature} comes with the House Pass`,
