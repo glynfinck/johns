@@ -1,0 +1,185 @@
+import { describe, expect, it } from "vitest";
+
+import { readDealt, type BoardItem } from "./board";
+import { WHY_COPY } from "./copy";
+import type { DealWhy } from "./deal";
+import { DEFAULT_RULES, type HouseRules } from "./domain";
+import { johnWhy } from "./why";
+
+const HOUR = 3_600_000;
+// Wednesday 14 Oct 2026, noon in London (BST, UTC+1).
+const now = new Date("2026-10-14T11:00:00Z");
+const at = (hours: number) => new Date(now.getTime() + hours * HOUR);
+
+const RULES: HouseRules = { ...DEFAULT_RULES, timezone: "Europe/London", currency: "GBP" };
+const ME = "me";
+const PEOPLE = [
+  { userId: ME, name: "Sam Carter" },
+  { userId: "priya", name: "Priya Shah" },
+  { userId: "megan", name: "Megan Doyle" },
+];
+
+function item(dealt: DealWhy | null, overrides: Partial<BoardItem> = {}): BoardItem {
+  return {
+    id: "a1",
+    flaggedAt: null,
+    flaggedBy: null,
+    carried: false,
+    dealt,
+    johnId: "j1",
+    everyWeeks: 1,
+    userId: ME,
+    name: "Bins",
+    category: "kitchen",
+    points: 2,
+    needsPhoto: false,
+    // Today 21:00 in London.
+    dueAt: at(9),
+    movedFrom: null,
+    groupName: null,
+    doneAt: null,
+    photoPath: null,
+    coveredBy: null,
+    outcome: null,
+    status: "due-soon",
+    standsAt: null,
+    dispute: null,
+    // Tomorrow 21:00: the house's default day to do it late.
+    closesAt: at(33),
+    ...overrides,
+  };
+}
+
+const why = (b: BoardItem, viewer = ME) => johnWhy(b, PEOPLE, viewer, RULES, now);
+
+describe("johnWhy: why it went where it did", () => {
+  it("says it went to whoever was furthest behind, and how each stood", () => {
+    const b = item({
+      to: ME,
+      by: "behind",
+      weighed: [
+        { userId: ME, standing: -2.5 },
+        { userId: "priya", standing: 0 },
+        { userId: "megan", standing: 1 },
+      ],
+      away: [],
+    });
+    const view = why(b);
+    expect(view.answer).toBe(WHY_COPY.behind("you"));
+    expect(view.rows.map((r) => [r.name, r.value, r.meta])).toEqual([
+      ["You", "−2.5", WHY_COPY.dealtIt],
+      ["Priya", "level", null],
+      ["Megan", "+1", null],
+    ]);
+  });
+
+  it("names whoever it went to, to a housemate looking", () => {
+    const b = item({ to: ME, by: "behind", weighed: [{ userId: ME, standing: -1 }, { userId: "priya", standing: 0 }], away: [] });
+    expect(why(b, "priya").answer).toBe(WHY_COPY.behind("Sam"));
+  });
+
+  it("says when someone further behind had already been handed the most a week gives", () => {
+    const b = item({
+      to: ME,
+      by: "behind",
+      weighed: [
+        { userId: "megan", standing: -4, full: true },
+        { userId: ME, standing: -1 },
+      ],
+      away: [],
+    });
+    expect(why(b).answer).toBe(`${WHY_COPY.behind("you")} ${WHY_COPY.full("Megan", true)}`);
+    expect(why(b).rows[0].meta).toBe(WHY_COPY.handedMost);
+  });
+
+  it("says when doing it last time moved it on", () => {
+    const b = item({
+      to: ME,
+      by: "behind",
+      weighed: [
+        { userId: "priya", standing: -1, last: true },
+        { userId: ME, standing: -1 },
+      ],
+      away: [],
+    });
+    expect(why(b).answer).toBe(`${WHY_COPY.nudged("you")} ${WHY_COPY.movedOn("Priya", true, true)}`);
+    expect(why(b).rows.find((r) => r.userId === "priya")?.meta).toBe(WHY_COPY.hadItLast);
+  });
+
+  it("says when you had it last time and were still furthest behind", () => {
+    const b = item({
+      to: ME,
+      by: "behind",
+      weighed: [
+        { userId: ME, standing: -5, last: true },
+        { userId: "priya", standing: 0 },
+      ],
+      away: [],
+    });
+    expect(why(b).answer).toBe(`${WHY_COPY.behind("you")} ${WHY_COPY.again("You", true)}`);
+  });
+
+  it("says when you were the only one home, and who was away", () => {
+    const b = item({ to: ME, by: "only", weighed: [{ userId: ME, standing: 0 }], away: ["priya", "megan"] });
+    expect(why(b).answer).toBe(`${WHY_COPY.only("You", true)} ${WHY_COPY.away("Priya and Megan", false)}`);
+    expect(why(b).rows).toEqual([]);
+  });
+
+  it("says when it was level and went on fewer Johns, or a draw", () => {
+    const level = [
+      { userId: ME, standing: 0 },
+      { userId: "priya", standing: 0 },
+    ];
+    expect(why(item({ to: ME, by: "fewer", weighed: level, away: [] })).answer).toBe(WHY_COPY.fewer("you"));
+    expect(why(item({ to: ME, by: "draw", weighed: level, away: [] })).answer).toBe(WHY_COPY.draw("you"));
+  });
+
+  it("says when it changed hands after the deal", () => {
+    const b = item({ to: "priya", by: "behind", weighed: [{ userId: "priya", standing: -2 }, { userId: ME, standing: 0 }], away: [] });
+    expect(why(b).answer).toBe(`${WHY_COPY.behind("Priya")} ${WHY_COPY.moved("Priya", "you")}`);
+  });
+
+  it("says a flag goes to whoever is on call, and owns up to a John dealt before the deal kept its working", () => {
+    expect(why(item(null, { flaggedAt: at(-1) })).answer).toBe(WHY_COPY.flag);
+    expect(why(item(null)).answer).toBe(WHY_COPY.unknown);
+  });
+});
+
+describe("johnWhy: what's at stake", () => {
+  it("says when it turns missed, that a miss comes back, and when a housemate can cover it", () => {
+    // Due today 21:00, the grace three hours: cover opens at midnight.
+    expect(why(item(null)).stakes).toBe(`${WHY_COPY.missedBy("tomorrow 21:00", "you")} ${WHY_COPY.coverFrom("tomorrow 00:00")}`);
+    expect(why(item(null), "priya").stakes).toBe(`${WHY_COPY.missedBy("tomorrow 21:00", "Sam")} ${WHY_COPY.coverFrom("tomorrow 00:00")}`);
+  });
+
+  it("says a housemate can cover it now once the grace is up", () => {
+    const b = item(null, { dueAt: at(-4), closesAt: at(20), status: "overdue" });
+    expect(why(b).stakes).toBe(`${WHY_COPY.missedBy("tomorrow 08:00", "you")} ${WHY_COPY.coverNow}`);
+  });
+
+  it("says whose work it counted as, once done", () => {
+    expect(why(item(null, { status: "done", doneAt: at(-1), outcome: "done" })).stakes).toBe(WHY_COPY.counts("your"));
+    expect(why(item(null, { status: "late", outcome: "late" }), "priya").stakes).toBe(WHY_COPY.counts("Sam’s"));
+    expect(why(item(null, { status: "covered", coveredBy: "priya", outcome: "missed" })).stakes).toBe(
+      WHY_COPY.coveredCounts("Priya", "Priya’s"),
+    );
+    expect(why(item(null, { status: "missed", outcome: "missed" })).stakes).toBe(WHY_COPY.missedCounts("you"));
+    expect(why(item(null, { status: "excused", outcome: "excused" })).stakes).toBe(WHY_COPY.excusedCounts("yours"));
+    expect(why(item(null, { status: "disputed" })).stakes).toBeNull();
+  });
+});
+
+describe("readDealt", () => {
+  it("reads what the deal kept", () => {
+    const kept = { to: "a", by: "behind", weighed: [{ userId: "a", standing: -1, last: true }], away: ["b"] };
+    expect(readDealt(kept)).toEqual(kept);
+  });
+
+  it("is null for nothing, or a shape it doesn't know", () => {
+    expect(readDealt(null)).toBeNull();
+    expect(readDealt(undefined)).toBeNull();
+    expect(readDealt({ to: "a", by: "vibes", weighed: [], away: [] })).toBeNull();
+    expect(readDealt({ to: "a", by: "only", weighed: [{ userId: "a" }], away: [] })).toBeNull();
+    expect(readDealt([1, 2])).toBeNull();
+  });
+});
