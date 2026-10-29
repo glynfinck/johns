@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 
-import { SIGN, SIGN_SMALL, signParts, signSvg } from "./mark";
-import { escapeHtml, joinCodeIn, joinPreview, pagePreview, shareHtml } from "./share";
+import { SIGN, SIGN_SMALL, signLegendSize, signParts, signSvg, signWidth } from "./mark";
+import { escapeHtml, joinCodeIn, joinPreview, joinSign, pagePreview, shareHtml } from "./share";
 
 describe("a pasted link's card", () => {
   it("names the page, and the front door and anything unknown just Jonz", () => {
@@ -44,6 +44,13 @@ describe("a pasted link's card", () => {
     expect(joinPreview("TRC4QX7M", null).title).toBe("This invite has expired");
   });
 
+  it("posts the house's own name on its sign, and the brand's when it's kept out or gone", () => {
+    expect(joinSign({ name: "The Terrace", members: 4 })).toEqual({ legend: "The Terrace", plate: "Join 4 housemates on Jonz." });
+    expect(joinSign({ name: "Flat 3", members: 1 }).plate).toBe("Join 1 housemate on Jonz.");
+    expect(joinSign({ name: "The Terrace", members: 4 }, false)).toEqual({ legend: "Jonz", plate: "You're invited to a house." });
+    expect(joinSign(null).legend).toBe("Invite expired");
+  });
+
   it("escapes what a house's admin typed", () => {
     expect(escapeHtml(`"><script>alert('x')</script>&`)).toBe("&quot;&gt;&lt;script&gt;alert(&#39;x&#39;)&lt;/script&gt;&amp;");
     const html = shareHtml(joinPreview("TRC4QX7M", { name: `<b>"Flat"</b>`, members: 2 }));
@@ -73,5 +80,13 @@ describe("the sign", () => {
     expect(signSvg({ ink: "#000" })).not.toContain('width="512" height="512"');
     expect(signSvg({ ink: "#000", ground: "#f3aa00", radius: 112 })).toContain('rx="112" fill="#f3aa00"');
     expect(signSvg({ ink: "#000", safe: 0.78 })).toContain("scale(0.78)");
+  });
+
+  it("sizes a card's sign to its words: short names sit on a shorter sign, long ones wrap on the widest", () => {
+    expect(signWidth("Flat 3", "Join 4 housemates on Jonz.")).toBeLessThan(1056);
+    expect(signWidth("The Terrace", "Join 4 housemates on Jonz.")).toBeGreaterThan(signWidth("Flat 3", "Join 4 housemates on Jonz."));
+    expect(signWidth("The Big Shared House on Wellington Road", "x")).toBe(1056);
+    expect(signWidth("J", "x")).toBe(640);
+    expect(signLegendSize("Jonz")).toBeGreaterThan(signLegendSize("The Big Shared House on Wellington Road"));
   });
 });

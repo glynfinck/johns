@@ -79,3 +79,52 @@ export function signSvg({ ink, ground = null, radius = 0, safe = 1, master = SIG
 
 /** The rounded tile's corner radius on the 512 square, where Jonz draws its own tile (splash, lockup, cards). */
 export const TILE_RADIUS = 112;
+
+/**
+ * A sign plate, the way Jonz posts anything it says out loud (a link's card,
+ * a banner, a store headline): an amber plate with an ink border inset from
+ * its edge, the J sign at the left like a route shield, then the legend in
+ * Overpass Black caps, and under it a pavement plate with the small print,
+ * as a supplementary plate hangs under a road sign. Sizes are at a 1200-wide
+ * card's scale.
+ */
+export const PLATE = {
+  /** The plate's corner radius. */
+  radius: 30,
+  /** From the plate's edge to its border. */
+  inset: 12,
+  /** The border's width. */
+  stroke: 9,
+  /** Between the sign and the plate under it. */
+  gap: 14,
+} as const;
+
+/**
+ * The legend's size on a 1200-wide card's sign, stepping down as it grows:
+ * a house's name runs from "Flat 3" to sixty characters, and neither
+ * renderer fits text, so a long name takes more, smaller lines.
+ */
+export function signLegendSize(legend: string): number {
+  if (legend.length <= 6) return 150;
+  if (legend.length <= 11) return 92;
+  if (legend.length <= 20) return 80;
+  if (legend.length <= 40) return 64;
+  return 54;
+}
+
+/** How much larger the sign draws as a sign's route shield, so its frame meets the box's edge (signSvg's `safe`). */
+export const SHIELD = 1.5;
+
+/**
+ * How wide a card's sign is for its words, for a renderer that can't size a
+ * box to its text (Satori). Estimated from Overpass's average letter widths
+ * (Black caps about 0.65 em, Bold about 0.5 em, with a little to spare),
+ * plus the plates' borders and padding and the J; between 640 and 1056, and
+ * a legend too long for one line takes the widest and wraps.
+ */
+export function signWidth(legend: string, plate: string): number {
+  const frame = 2 * (PLATE.inset + PLATE.stroke + 44);
+  const words = frame + 168 + 40 + 24 + legend.length * 0.65 * signLegendSize(legend);
+  const under = frame + plate.length * 0.5 * 44;
+  return Math.round(Math.min(1056, Math.max(640, words, under)));
+}

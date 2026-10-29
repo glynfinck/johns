@@ -24,6 +24,25 @@ and run it again.
 - Below 48px the small-size master takes over (`SIGN_SMALL`), with a heavier frame and a bigger J, so the lines hold up in a browser tab. `favicon.svg`, `favicon.ico` and the app's own lockup at small sizes use it.
 - The name is "Jonz" in a sentence and JONZ in the lockup. One chore is a John.
 
+## The sign
+
+Anything Jonz says out loud is posted as a road sign: a link's card, the
+README banner, the email header, a store headline. The amber plate carries
+the J at its left like a route shield, and the legend in Overpass Black
+caps; under it hangs a pavement plate with the small print, as a
+supplementary plate hangs under a road sign. Both plates have an ink border
+inset from the edge (`PLATE` in `packages/core/src/mark.ts`), and the
+assembly is posted on tarmac, the street at night.
+
+![The JONZ sign, every jonz.app link's card](../../apps/client/public/og.png)
+
+- A sign is as wide as its words. The legend is a name or five words at
+  most; the plate under it is one short sentence.
+- The house's own sign swaps JONZ for the house's name: the J says it's
+  Jonz.
+- No eyebrows, no labels over the legend, and no strings of words joined
+  with dots. If the small print needs two ideas, it is two sentences.
+
 ## Colour
 
 | Colour | Hex | Job |
@@ -92,13 +111,15 @@ next headline in `STORE_HEADLINES`.
 ## Link previews
 
 A jonz.app link pasted into iMessage, WhatsApp, Slack, Telegram, Discord or X
-shows a card. Every page's card is `og.png` with the page's name ("The Wall ·
-Jonz"). A join link's card names its house and how many live there, the two
-things the join page shows anyone who signs in, and never shows the code; a
-reset or dead link's card says "This invite has expired". The bots that draw
-cards don't run the app, so `apps/client/vercel.json` sends them, by user
-agent, to `/api/share/*` on the API, which answers with just the card's tags.
-`SHARE_NAMES_HOUSE` in `packages/core/src/share.ts` turns the house's name off.
+shows a card. Every page's card is `og.png`, the JONZ sign, titled with the
+page's name ("The Wall · Jonz"). A join link's card is the house's own sign:
+its name beside the J, and "Join 4 housemates on Jonz." on the plate under
+it, the two things the join page shows anyone who signs in. It never shows
+the code. A reset or dead link's sign says "Invite expired". The bots that
+draw cards don't run the app, so `apps/client/vercel.json` sends them, by
+user agent, to `/api/share/*` on the API, which answers with just the card's
+tags. `SHARE_NAMES_HOUSE` in `packages/core/src/share.ts` keeps the house's
+name off, and the card shows the JONZ sign instead.
 
 Chat apps keep a card for a while. To see a changed one, paste the link with
 `?v=2` on the end.

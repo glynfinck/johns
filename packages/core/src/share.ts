@@ -31,18 +31,34 @@ export const SHARE_COPY = {
   /** The brand card's description: every page but a join link. */
   description: TAGLINE,
   imageAlt: `${APP_NAME}: fair shares of the housework.`,
-  /** A join link's card. */
-  invited: "You're invited",
   joinTitle: (house: string) => `Join ${house} on ${APP_NAME}`,
   joinGeneric: `You're invited to a house on ${APP_NAME}`,
   housemates: (n: number) => `${n} ${n === 1 ? "housemate" : "housemates"}`,
   joinLine: "Sign in to join and get your Johns.",
-  /** The card's small print under the house's name. */
-  joinMeta: "Fair shares, dealt every week",
   /** A code that opens nothing: reset, or its house is empty. */
   expiredTitle: "This invite has expired",
   expiredLine: "Ask the house for a new link.",
 } as const;
+
+/**
+ * What a card's sign says (packages/core/src/mark.ts, PLATE): the legend on
+ * the amber plate, in caps beside the J, and the line on the pavement plate
+ * hung under it.
+ */
+export interface ShareSign {
+  legend: string;
+  plate: string;
+}
+
+/** The brand's sign: every page's card, the banners. */
+export const BRAND_SIGN: ShareSign = { legend: APP_NAME, plate: "Fair shares of the housework." };
+
+/** A join link's sign: the house's own name beside the J, or the brand's when it's kept out. */
+export function joinSign(invite: InviteCard | null, namesHouse = SHARE_NAMES_HOUSE): ShareSign {
+  if (!invite) return { legend: "Invite expired", plate: SHARE_COPY.expiredLine };
+  if (!namesHouse) return { legend: APP_NAME, plate: "You're invited to a house." };
+  return { legend: invite.name, plate: `Join ${SHARE_COPY.housemates(invite.members)} on ${APP_NAME}.` };
+}
 
 /** A house as its join link's card shows it. */
 export interface InviteCard {
