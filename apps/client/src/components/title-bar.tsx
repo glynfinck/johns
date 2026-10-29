@@ -1,6 +1,6 @@
-import { FOCUS_SHELL_COPY } from '@app/core';
-import { useRouter, type Href } from 'expo-router';
-import { ChevronLeftIcon, EllipsisIcon } from 'lucide-react-native';
+import { FOCUS_SHELL_COPY, HOUSE_DRAFT_COPY } from '@app/core';
+import { Link, useRouter, type Href } from 'expo-router';
+import { ChevronLeftIcon, EllipsisIcon, SparklesIcon } from 'lucide-react-native';
 import type { ReactNode } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -19,7 +19,8 @@ import { FONT, GUTTER, INSET, SPACE, TAP, TITLE_BAR, useTheme } from '@/theme';
  * back goes to, whatever came before it: a link-like "‹ House"
  * (`backLabel`, the place it goes back to) sits on its own line above the
  * Title, which stays on the leading edge. It keeps clear of the notch and
- * lines up with the content below it.
+ * lines up with the content below it. `ask` puts the sparkles that open
+ * Jonz (Describe your house, or Ask Jonz once there's a list) before it.
  */
 export function TitleBar({
   title,
@@ -27,6 +28,7 @@ export function TitleBar({
   right,
   back,
   backLabel = FOCUS_SHELL_COPY.back,
+  ask = false,
 }: {
   title: string;
   sub?: string;
@@ -34,6 +36,8 @@ export function TitleBar({
   back?: Href;
   /** Where back goes, in words ("House"); "Back" when left out. */
   backLabel?: string;
+  /** Show the sparkles that open the chat with Jonz (admins). */
+  ask?: boolean;
 }) {
   const { colors } = useTheme();
   const insets = useSafeAreaInsets();
@@ -52,6 +56,8 @@ export function TitleBar({
             </Title>
             {sub ? <Meta numberOfLines={1}>{sub}</Meta> : null}
           </View>
+          {/* The sparkles sit at the edge, unless the screen's own button is there. */}
+          {ask && typeof right === 'object' && right != null ? <AskButton /> : null}
           {right == null ? null : typeof right === 'string' ? (
             <Meta numberOfLines={1} style={styles.date}>
               {right}
@@ -59,6 +65,7 @@ export function TitleBar({
           ) : (
             <View style={styles.right}>{right}</View>
           )}
+          {ask && (right == null || typeof right === 'string') ? <AskButton edge /> : null}
         </View>
       </View>
     </View>
@@ -89,6 +96,23 @@ function BackLink({ to, label }: { to: Href; label: string }) {
         {label}
       </Text>
     </Pressable>
+  );
+}
+
+/** The title bar's sparkles: open the chat with Jonz, to start or change the list. */
+function AskButton({ edge = false }: { edge?: boolean }) {
+  const { colors } = useTheme();
+  return (
+    <Link href="/house/describe" asChild>
+      <Pressable
+        accessibilityRole="button"
+        accessibilityLabel={HOUSE_DRAFT_COPY.open}
+        testID="ask-jonz"
+        style={({ pressed }) => [styles.icon, styles.ask, edge && styles.more, pressed && styles.pressed]}
+      >
+        <SparklesIcon size={22} color={colors.foreground} aria-hidden />
+      </Pressable>
+    </Link>
   );
 }
 
@@ -141,5 +165,7 @@ const styles = StyleSheet.create({
   icon: { width: TAP, height: TAP, alignItems: 'center', justifyContent: 'center', borderRadius: 6 },
   // The dots' right edge lines up with the content's.
   more: { marginRight: -SPACE.md },
+  // Sits in the bar's own 4 above and below, like the dots.
+  ask: { flexShrink: 0, marginVertical: -SPACE.xs },
   pressed: { opacity: 0.6 },
 });

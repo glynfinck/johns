@@ -1,4 +1,5 @@
-import { PAGE_TITLE, SECTION_LABEL } from '@app/core';
+import { PAGE_TITLE, passUnlocked, SECTION_LABEL } from '@app/core';
+import { useState } from 'react';
 import { StyleSheet, View } from 'react-native';
 
 import { SetupChat } from '@/components/house/setup-chat';
@@ -11,10 +12,11 @@ import { useMembership } from '@/hooks/use-membership';
 import { GUTTER, useTheme } from '@/theme';
 
 /**
- * Describe your house, pushed from Today's setup card and from an empty
- * John list: a chat with Jonz (Claude, or a starter list when Claude isn't
- * there) that drafts the Johns, and an admin keeps what they want of the
- * draft. Not a HousePage: the chat scrolls over a message box that stays
+ * The chat with Jonz. For a new house it's Describe your house, pushed
+ * from Today's setup card and the empty John list: Jonz (Claude, or a
+ * starter list when Claude isn't there) drafts the Johns. For a house with
+ * a list it's Ask Jonz, from the sparkles in the title bar: Jonz changes the
+ * list (a House Pass extra). Either way an admin applies what they want. Not a HousePage: the chat scrolls over a message box that stays
  * put above the keyboard.
  */
 export default function DescribeScreen() {
@@ -29,12 +31,24 @@ function DescribeFor({ houseId, userId }: { houseId: string; userId: string }) {
   const list = useJohnList(houseId);
   const retry = () => void Promise.all([query.refetch(), list.refetch()]);
   const ready = view !== null && list.data !== undefined;
+  // Ask Jonz for a house with a list, Describe your house for a new one: fixed on the first read, so adding Johns doesn't retitle it.
+  const [title, setTitle] = useState<string | null>(null);
+  if (ready && title === null) setTitle(list.data.johns.length > 0 ? PAGE_TITLE.ask : PAGE_TITLE.describe);
+  const page = title ?? PAGE_TITLE.ask;
   return (
     <View style={[styles.screen, { backgroundColor: colors.background }]} testID="describe-screen">
-      <TitleBar title={PAGE_TITLE.describe} back="/house" backLabel={SECTION_LABEL.house} />
-      <PageTitle page={PAGE_TITLE.describe} />
+      <TitleBar title={page} back="/house" backLabel={SECTION_LABEL.house} />
+      <PageTitle page={page} />
       {ready ? (
-        <SetupChat houseId={houseId} rules={view.snapshot.rules} groups={list.data.groups} people={view.snapshot.members} me={userId} />
+        <SetupChat
+          houseId={houseId}
+          rules={view.snapshot.rules}
+          johns={list.data.johns}
+          groups={list.data.groups}
+          people={view.snapshot.members}
+          me={userId}
+          passOpen={passUnlocked(view.snapshot.house.pass, view.now)}
+        />
       ) : (
         <View style={styles.reading}>{query.isError || list.isError ? <ReadFailed onRetry={retry} /> : <Reading />}</View>
       )}

@@ -1,5 +1,4 @@
 import {
-  BALANCE_WEEKS,
   awayOn,
   dueAt,
   dueInLine,
@@ -24,6 +23,7 @@ import {
   settleMonth,
   settleOutcome,
   standings,
+  USUAL_WEEKS,
   verdict,
   weekIndex,
   weekShares,
@@ -159,9 +159,11 @@ export async function tickAll(db: Db, now: Date, notify?: Notify) {
 // --- Dealing ---------------------------------------------------------------
 
 /**
- * Each housemate's balance going into a week: what they were handed minus
- * their share, over the weeks before it (@app/core deal.ts). Reads through whatever
- * client it is given, so a screen can show the same number the deal used.
+ * Each housemate's balance going into a week: everything they did minus
+ * everything they owed, over every week before it (@app/core deal.ts),
+ * summed by the database (house_balances), and their usual share from the
+ * last few weeks. Reads through whatever client it is given, so a screen can
+ * show the same number the deal used.
  */
 export async function loadBalances(
   db: Db,
@@ -169,24 +171,21 @@ export async function loadBalances(
   beforeStartsOn: string,
   memberIds: readonly string[],
 ): Promise<{ balances: Map<string, number>; usualShare: Map<string, number> }> {
-  const pastWeeks = must(
-    await db
+  const [totals, pastWeeks] = await Promise.all([
+    db.rpc("house_balances", { p_house: houseId, p_before: beforeStartsOn }),
+    db
       .from("weeks")
       .select("id")
       .eq("house_id", houseId)
       .lt("starts_on", beforeStartsOn)
       .order("starts_on", { ascending: false })
-      .limit(BALANCE_WEEKS),
-    "past weeks",
-  );
+      .limit(USUAL_WEEKS),
+  ]).then(([a, b]) => [must(a, "balances"), must(b, "past weeks")] as const);
   const ids = pastWeeks.map((w) => w.id);
-  const [shares, handed] = ids.length
-    ? await Promise.all([
-        db.from("week_shares").select("week_id, user_id, share").in("week_id", ids),
-        db.from("assignments").select("week_id, user_id, points, outcome, covered_by").in("week_id", ids),
-      ]).then(([a, b]) => [must(a, "shares"), must(b, "past assignments")] as const)
-    : [[], []];
-  return recentBalances({ weekIds: ids, shares, handed }, memberIds);
+  const recentShares = ids.length
+    ? must(await db.from("week_shares").select("user_id, share").in("week_id", ids), "shares")
+    : [];
+  return recentBalances({ totals, recentShares }, memberIds);
 }
 
 /**
@@ -589,6 +588,7 @@ async function closeMonths(db: Db, house: HouseRow, members: readonly MemberRow[
       forfeitRows
         .filter((r) => r.month === month)
         .map((r) => ({ userId: r.user_id, amount: -r.amount_minor, to: r.counterparty })),
+      month,
     );
     const applied = must(
       await db.rpc("close_month", {

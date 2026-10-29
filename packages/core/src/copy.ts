@@ -1,4 +1,3 @@
-import { BALANCE_WEEKS } from "./deal";
 import type { BreakdownKey, RecordCounts, RecordMark, RecordSpan } from "./record";
 import { IMMUNITY_EVERY } from "./streak";
 
@@ -31,6 +30,7 @@ export const PAGE_TITLE = {
   away: "Time away",
   groups: "Groups",
   describe: "Describe your house",
+  ask: `Ask ${APP_NAME}`,
   pass: "House Pass",
 } as const;
 
@@ -317,7 +317,8 @@ export const TABLE_COPY = {
   record: (r: { done: number; late: number; missed: number; covered?: number }) =>
     `${r.done} done${r.late ? ` · ${r.late} late` : ""}${r.missed ? ` · ${r.missed} missed` : ""}${r.covered ? ` · ${r.covered} covered` : ""}`,
   shares: "Fair shares",
-  sharesBody: `What each of you did over the last ${BALANCE_WEEKS} weeks, against your share. A missed John comes back to whoever missed it, and covering for someone counts as yours. Each deal hands a little more to whoever is behind, never more than half a week extra, until it evens out.`,
+  sharesBody:
+    "What each of you has done since you joined, against your share. A missed John comes back to whoever missed it, and covering for someone counts as yours. Each deal hands a little more to whoever is behind, never more than half a week extra, until it evens out.",
   sharesKey: "Below zero is behind, above is ahead. Time away is made up:",
   streaks: "Streaks and perks",
   weeks: (n: number) => `${n} ${n === 1 ? "week" : "weeks"}`,
@@ -1000,8 +1001,8 @@ export const HOUSE_PAGE_COPY = {
   rulesSwap: "Swap",
   rulesSwapBody: "Top the week and you earn a swap: trade one of your open Johns for a housemate’s open John that week.",
   rulesShares: "Fair shares",
-  rulesSharesBody: (weeks: number, makeup: string) =>
-    `Johns are dealt so that everyone does their share over the last ${weeks} weeks. What counts is what you did: a missed John comes back to you, and one you cover for someone counts as yours. Whoever is behind is handed a little more, never more than half as much again. Time away is made up ${makeup}.`,
+  rulesSharesBody: (makeup: string) =>
+    `Johns are dealt so that everyone does their share, counted from the day they joined. What counts is what you did: a missed John comes back to you, and one you cover for someone counts as yours. Whoever is behind is handed a little more, never more than half as much again. Time away is made up ${makeup}.`,
   /** How time away is made up, by the house's setting (houses.away_makeup). */
   makeup: { 100: "in full", 50: "by half", 0: "not at all" } as Record<number, string>,
 } as const;
@@ -1023,7 +1024,7 @@ export const PERSON_COPY = {
   level: (you: boolean) => `Level with ${you ? "your" : "their"} share`,
   catchingUp: (weeks: number) => `Catching up over about ${weeks} ${weeks === 1 ? "week" : "weeks"}`,
   easier: "The next deals go a little easier",
-  overWeeks: (weeks: number) => `Over the last ${weeks} weeks`,
+  sinceJoining: "Since joining",
   streakAndTokens: "Streak and tokens",
   streak: (weeks: number) => `${weeks}-week streak`,
   noStreak: "No streak yet",
@@ -1411,6 +1412,25 @@ export const HOUSE_DRAFT_COPY = {
   added: (n: number) => (n === 1 ? "1 John added" : `${n} Johns added`),
   addedMeta: "Deal the week once everyone’s in",
   openList: "Open the list",
+
+  // A house with a list already: the chat changes it (the House Pass's assistant).
+  /** The AI button in the title bar, to a screen reader. */
+  open: `Ask ${APP_NAME}`,
+  greetingList: "What would you like to change? I can add Johns, change them or take some off, and nothing changes until you apply it.",
+  placeholderList: "Sam’s moving out…",
+  /** The card's label, and its line: the house's points a week before and after. */
+  changesLabel: "Changes",
+  changesMeta: (before: number, after: number) => (before === after ? `${after} pts a week` : `${before} → ${after} pts a week`),
+  /** Each change's kind, before what it says about the John. */
+  adding: "New",
+  removing: "Taking off",
+  apply: (n: number) => (n === 0 ? "Pick at least one change" : n === 1 ? "Apply 1 change" : `Apply ${n} changes`),
+  applying: "Applying…",
+  applied: (n: number) => (n === 1 ? "1 change made" : `${n} changes made`),
+  appliedMeta: "From the next deal",
+  /** In place of the message box, for a house without the Pass. */
+  passNeeded: `Changing your list with ${APP_NAME} comes with the House Pass. Setting up a new house stays free.`,
+  seePass: "See the House Pass",
 } as const;
 
 /**

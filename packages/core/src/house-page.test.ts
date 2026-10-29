@@ -362,7 +362,7 @@ describe("stakeRules", () => {
     expect(rules.map((r) => r.label)).toEqual(["Points", "The Stake", "Immunity", "Swap", "Fair shares"]);
     expect(rules[1].body).toContain("Everyone puts in £20 a month. A late John costs £1 and a missed one £3");
     expect(rules[2].body).toContain("Every 4 clean weeks in a row");
-    expect(rules[4].body).toContain("the last 12 weeks");
+    expect(rules[4].body).toContain("from the day they joined");
     expect(rules[4].body).toContain("made up by half");
   });
 
@@ -407,14 +407,14 @@ describe("a housemate's page", () => {
     expect(shareLine({ userId: "sam", balance: 0.2, weeksToEven: 0 }, true)).toEqual({
       key: "share",
       title: "Level with your share",
-      meta: [{ text: PERSON_COPY.overWeeks(12) }],
+      meta: [{ text: PERSON_COPY.sinceJoining }],
     });
-    expect(shareLine({ userId: "tom", balance: -0.6, weeksToEven: 0 }, false).meta).toEqual([{ text: PERSON_COPY.overWeeks(12) }]);
+    expect(shareLine({ userId: "tom", balance: -0.6, weeksToEven: 0 }, false).meta).toEqual([{ text: PERSON_COPY.sinceJoining }]);
     // Nobody has dealt them anything lately (they've just joined): level.
     expect(shareLine(undefined, false)).toEqual({
       key: "share",
       title: "Level with their share",
-      meta: [{ text: PERSON_COPY.overWeeks(12) }],
+      meta: [{ text: PERSON_COPY.sinceJoining }],
     });
   });
 

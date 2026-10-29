@@ -20,7 +20,7 @@ import { Row, RowIcon } from '@/components/row';
 import { Section } from '@/components/section';
 import { Body, Meta } from '@/components/text';
 import { useToast } from '@/components/toast';
-import { useHouse } from '@/hooks/use-house';
+import { useHouse, type HouseView } from '@/hooks/use-house';
 import { useMembership } from '@/hooks/use-membership';
 import { usePull, useReadOnFocus } from '@/hooks/use-refresh';
 import { INSET, SPACE } from '@/theme';
@@ -49,7 +49,6 @@ function PassFor({ houseId, userId }: { houseId: string; userId: string }) {
   useReadOnFocus(query.refetch);
   const { refreshing, pull } = usePull(houseId, query.refetch);
   const toast = useToast();
-  const selling = passCheckoutOpen();
   const [leaving, setLeaving] = useState(false);
 
   // Back from Checkout: read again until the Pass shows, a few times at most.
@@ -77,8 +76,6 @@ function PassFor({ houseId, userId }: { houseId: string; userId: string }) {
       toast.show(e instanceof ApiRequestError ? e.message : PASS_COPY.checkoutClosed);
     }
   }
-  const buy = (plan: PassPurchase) => void go(() => passCheckoutUrl(houseId, plan));
-  const manage = () => void go(() => passBillingUrl(houseId));
 
   return (
     <HousePage
@@ -90,77 +87,106 @@ function PassFor({ houseId, userId }: { houseId: string; userId: string }) {
       refreshing={refreshing}
       onRefresh={pull}
     >
-      {() => {
-        const { house, rules, members } = view!.snapshot;
-        const { now } = view!;
-        const { pass } = house;
-        const founding = pass.plan === 'founding';
-        const buyer = pass.buyerId ? members.find((m) => m.userId === pass.buyerId)?.name : undefined;
-        // Selling, a house sees only what it can buy now: a house on a paid plan changes it from Manage.
-        const offers = passOffers(rules.currency).filter(
-          (o) => !selling || passPurchaseRefusal(pass, o.plan, now) === null,
-        );
-        const canManage = selling && pass.buyerId === userId && (pass.plan === 'monthly' || pass.plan === 'yearly');
-        const firstCharge = selling ? passFirstChargeNote(pass, now, rules.timezone) : null;
-        return (
-          <>
-            <View style={styles.words}>
-              <Body testID="pass-lead">{founding ? PASS_COPY.foundingLead : PASS_COPY.lead}</Body>
-              <Meta testID="pass-line">
-                {buyer
-                  ? `${passLine(pass, now, rules.timezone)} · ${PASS_COPY.boughtBy(buyer)}`
-                  : passLine(pass, now, rules.timezone)}
-              </Meta>
-              {waiting ? <Meta testID="pass-bought">{PASS_COPY.bought}</Meta> : null}
-            </View>
-
-            <Section label={PASS_COPY.includes}>
-              <Row leading={<RowIcon icon={CoinsIcon} />} title={PASS_COPY.stake} meta={PASS_COPY.stakeMeta} />
-              <Row leading={<RowIcon icon={TrophyIcon} />} title={PASS_COPY.table} meta={PASS_COPY.tableMeta} />
-              <Row leading={<RowIcon icon={CameraIcon} />} title={PASS_COPY.photos} meta={PASS_COPY.photosMeta} />
-              <Row
-                leading={<RowIcon icon={HistoryIcon} />}
-                title={PASS_COPY.history}
-                meta={PASS_COPY.historyMeta(PASS_FREE_HISTORY_WEEKS)}
-              />
-            </Section>
-
-            {founding ? null : (
-              <Section label={PASS_COPY.plans} testID="pass-plans">
-                {canManage ? (
-                  <Row
-                    leading={<RowIcon icon={CreditCardIcon} />}
-                    title={PASS_COPY.manage}
-                    meta={PASS_COPY.manageMeta}
-                    onPress={manage}
-                    disabled={leaving}
-                    chevron
-                    testID="pass-manage"
-                  />
-                ) : null}
-                {offers.map((offer) => (
-                  <Row
-                    key={offer.plan}
-                    title={offer.label}
-                    meta={offer.meta}
-                    trailing={offer.price}
-                    onPress={selling ? () => buy(offer.plan) : undefined}
-                    disabled={!selling || leaving}
-                    testID={`plan-${offer.plan}`}
-                  />
-                ))}
-              </Section>
-            )}
-
-            <View style={styles.words}>
-              {firstCharge ? <Meta testID="pass-first-charge">{firstCharge}</Meta> : null}
-              {founding || selling ? null : <Meta testID="pass-soon">{PASS_COPY.buyingSoon}</Meta>}
-              <Meta>{PASS_COPY.free}</Meta>
-            </View>
-          </>
-        );
-      }}
+      {() => (
+        <PassReadOut
+          view={view!}
+          userId={userId}
+          waiting={waiting}
+          leaving={leaving}
+          onBuy={(plan) => void go(() => passCheckoutUrl(houseId, plan))}
+          onManage={() => void go(() => passBillingUrl(houseId))}
+        />
+      )}
     </HousePage>
+  );
+}
+
+/**
+ * The page once the house is read. Its own component, so `view` is never
+ * null here: the React Compiler lifts reads of it out of a render callback
+ * into the screen, where a first load (no house read yet) would throw.
+ */
+function PassReadOut({
+  view,
+  userId,
+  waiting,
+  leaving,
+  onBuy,
+  onManage,
+}: {
+  view: HouseView;
+  userId: string;
+  /** Back from Checkout, before the webhook has given the house its Pass. */
+  waiting: boolean;
+  /** On the way to Stripe: nothing more to press. */
+  leaving: boolean;
+  onBuy: (plan: PassPurchase) => void;
+  onManage: () => void;
+}) {
+  const { house, rules, members } = view.snapshot;
+  const { now } = view;
+  const { pass } = house;
+  const founding = pass.plan === 'founding';
+  const buyer = pass.buyerId ? members.find((m) => m.userId === pass.buyerId)?.name : undefined;
+  const selling = passCheckoutOpen();
+  // Selling, a house sees only what it can buy now: a house on a paid plan changes it from Manage.
+  const offers = passOffers(rules.currency).filter((o) => !selling || passPurchaseRefusal(pass, o.plan, now) === null);
+  const canManage = selling && pass.buyerId === userId && (pass.plan === 'monthly' || pass.plan === 'yearly');
+  const firstCharge = selling ? passFirstChargeNote(pass, now, rules.timezone) : null;
+  return (
+    <>
+      <View style={styles.words}>
+        <Body testID="pass-lead">{founding ? PASS_COPY.foundingLead : PASS_COPY.lead}</Body>
+        <Meta testID="pass-line">
+          {buyer ? `${passLine(pass, now, rules.timezone)} · ${PASS_COPY.boughtBy(buyer)}` : passLine(pass, now, rules.timezone)}
+        </Meta>
+        {waiting ? <Meta testID="pass-bought">{PASS_COPY.bought}</Meta> : null}
+      </View>
+
+      <Section label={PASS_COPY.includes}>
+        <Row leading={<RowIcon icon={CoinsIcon} />} title={PASS_COPY.stake} meta={PASS_COPY.stakeMeta} />
+        <Row leading={<RowIcon icon={TrophyIcon} />} title={PASS_COPY.table} meta={PASS_COPY.tableMeta} />
+        <Row leading={<RowIcon icon={CameraIcon} />} title={PASS_COPY.photos} meta={PASS_COPY.photosMeta} />
+        <Row
+          leading={<RowIcon icon={HistoryIcon} />}
+          title={PASS_COPY.history}
+          meta={PASS_COPY.historyMeta(PASS_FREE_HISTORY_WEEKS)}
+        />
+      </Section>
+
+      {founding ? null : (
+        <Section label={PASS_COPY.plans} testID="pass-plans">
+          {canManage ? (
+            <Row
+              leading={<RowIcon icon={CreditCardIcon} />}
+              title={PASS_COPY.manage}
+              meta={PASS_COPY.manageMeta}
+              onPress={onManage}
+              disabled={leaving}
+              chevron
+              testID="pass-manage"
+            />
+          ) : null}
+          {offers.map((offer) => (
+            <Row
+              key={offer.plan}
+              title={offer.label}
+              meta={offer.meta}
+              trailing={offer.price}
+              onPress={selling ? () => onBuy(offer.plan) : undefined}
+              disabled={!selling || leaving}
+              testID={`plan-${offer.plan}`}
+            />
+          ))}
+        </Section>
+      )}
+
+      <View style={styles.words}>
+        {firstCharge ? <Meta testID="pass-first-charge">{firstCharge}</Meta> : null}
+        {founding || selling ? null : <Meta testID="pass-soon">{PASS_COPY.buyingSoon}</Meta>}
+        <Meta>{PASS_COPY.free}</Meta>
+      </View>
+    </>
   );
 }
 

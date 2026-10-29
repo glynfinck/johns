@@ -3,7 +3,7 @@
  *
  * Pure and deterministic. The engine hands it the week's Johns (who shares
  * each one, and which of them are home on the day it is due), each
- * housemate's balance from recent weeks, and their share of this week; it
+ * housemate's balance from every week so far, and their share of this week; it
  * hands back assignments. Same inputs, same deal, on any machine, which is
  * what lets a test pin it.
  *
@@ -16,8 +16,10 @@
  *     rest is split among the sharers who are home.
  *   - If nobody who shares it is home, it is skipped this week.
  *
- * A balance is the work someone did minus their share, over recent weeks
- * (carryOver). A John counts for whoever did it: done or late, for its
+ * A balance is the work someone did minus their share, over every week
+ * they have lived there (carryOver). It never forgets a week: a balance that
+ * dropped old weeks would drop a debt just as it was being paid back, and
+ * the weeks spent catching up would then make the person look ahead. A John counts for whoever did it: done or late, for its
  * holder; covered, for whoever covered it; skipped with immunity or excused,
  * for its holder, since that's the house letting them off. A missed John
  * counts for nobody, so it comes back to whoever missed it in the next
@@ -50,7 +52,7 @@ export interface DealJohn {
 
 export interface DealMember {
   userId: string;
-  /** Recent weeks: the work they did minus their share. Below zero means behind. */
+  /** Every week so far: the work they did minus their share. Below zero means behind. */
   balance: number;
   /** Their share of this week. */
   share: number;
@@ -67,8 +69,8 @@ export const REPEAT_PENALTY = 1.5;
 /** The most extra one week hands someone catching up, as a fraction of their share. */
 export const CATCH_UP_PACE = 0.5;
 
-/** How many past weeks a balance remembers: enough to pay back a month away at that pace. */
-export const BALANCE_WEEKS = 12;
+/** How many recent weeks a usual week's share is the average of (recentBalances). */
+export const USUAL_WEEKS = 12;
 
 /** What time away still owes, by the house's setting (houses.away_makeup). */
 export const MAKEUP_LABEL: Record<number, string> = {
@@ -242,7 +244,7 @@ export function creditedTo(a: PastJohn): string | null {
 }
 
 /**
- * Each current housemate's balance: the work they did in recent weeks
+ * Each current housemate's balance: the work they did in the weeks given
  * (creditedTo) minus their share of those weeks. Someone who joins part-way
  * starts at zero, since they had no share of the weeks before them.
  */
@@ -260,45 +262,40 @@ export function carryOver(weeks: readonly PastWeek[], currentMemberIds: readonly
   return balance;
 }
 
-/** The recent weeks as read: their ids, the shares stored when each was dealt, and each John in them with how it ended. */
-export interface RecentRows {
-  weekIds: readonly string[];
-  shares: readonly { week_id: string; user_id: string; share: number | string }[];
-  handed: readonly {
-    week_id: string;
-    user_id: string;
-    points: number;
-    outcome?: string | null;
-    covered_by?: string | null;
-  }[];
+/**
+ * The past as read: everything each person ever owed and did, summed by the
+ * database over every week before this one (house_balances, counted as
+ * creditedTo counts), and the shares of the last USUAL_WEEKS weeks.
+ */
+export interface PastRows {
+  totals: readonly { user_id: string; owed: number | string; credited: number | string }[];
+  recentShares: readonly { user_id: string; share: number | string }[];
 }
 
 /**
- * Each current housemate's balance over the recent weeks (`carryOver`), and
- * their usual week's share: the average of the weeks they had one, for
- * saying how long catching up takes.
+ * Each current housemate's balance over every week so far (what carryOver
+ * gives for all of them), and their usual week's share: the average of the
+ * recent weeks they had one, for saying how long catching up takes.
  */
 export function recentBalances(
-  rows: RecentRows,
+  rows: PastRows,
   memberIds: readonly string[],
 ): { balances: Map<string, number>; usualShare: Map<string, number> } {
-  const weeks: PastWeek[] = rows.weekIds.map((id) => ({
-    shares: rows.shares.filter((s) => s.week_id === id).map((s) => ({ userId: s.user_id, share: Number(s.share) })),
-    assignments: rows.handed
-      .filter((a) => a.week_id === id)
-      .map((a) => ({ userId: a.user_id, points: a.points, outcome: a.outcome, coveredBy: a.covered_by })),
-  }));
+  const balances = new Map(memberIds.map((id) => [id, 0]));
+  for (const t of rows.totals) {
+    if (balances.has(t.user_id)) balances.set(t.user_id, Number(t.credited) - Number(t.owed));
+  }
   const usualShare = new Map<string, number>();
   for (const id of memberIds) {
-    const theirs = rows.shares.filter((s) => s.user_id === id && Number(s.share) > 0).map((s) => Number(s.share));
+    const theirs = rows.recentShares.filter((s) => s.user_id === id && Number(s.share) > 0).map((s) => Number(s.share));
     usualShare.set(id, theirs.length ? theirs.reduce((a, b) => a + b, 0) / theirs.length : 0);
   }
-  return { balances: carryOver(weeks, memberIds), usualShare };
+  return { balances, usualShare };
 }
 
 export interface BalanceRow {
   userId: string;
-  /** Work done minus share over recent weeks, going into this week. Below zero is behind. */
+  /** Work done minus share over every week so far, going into this week. Below zero is behind. */
   balance: number;
   /** About how many weeks of catching up are left at the catch-up pace. */
   weeksToEven: number;

@@ -1,19 +1,19 @@
-import { HOUSE_DRAFT_COPY, NEXT_UP_COPY, starterDraft, tidyDraft, type HouseRules } from '@app/core';
+import { HOUSE_DRAFT_COPY, listAsDraft, NEW_JOHN, NEXT_UP_COPY, starterDraft, tidyDraft, type HouseRules, type JohnDef } from '@app/core';
 import { QueryClientProvider } from '@tanstack/react-query';
 import { fireEvent, render, screen } from '@testing-library/react-native';
 import { router } from 'expo-router';
 import type { ReactNode } from 'react';
 
-import { keepDraft, sendChat } from '@/api/draft';
+import { applyDraft, sendChat } from '@/api/draft';
 import { testQueryClient } from '@/testing/query';
 
 import { SetupChat } from './setup-chat';
 
-jest.mock('@/api/draft', () => ({ keepDraft: jest.fn(), sendChat: jest.fn() }));
+jest.mock('@/api/draft', () => ({ applyDraft: jest.fn(), sendChat: jest.fn() }));
 jest.mock('expo-router', () => ({ ...jest.requireActual('expo-router'), router: { dismissTo: jest.fn() } }));
 
 const chat = sendChat as jest.Mock;
-const keep = keepDraft as jest.Mock;
+const keep = applyDraft as jest.Mock;
 const ME = '00000000-0000-4000-8000-000000000001';
 const RULES: HouseRules = {
   timezone: 'Europe/London',
@@ -46,7 +46,7 @@ function House({ children }: { children: ReactNode }) {
 }
 
 async function open() {
-  await render(<SetupChat houseId="h1" rules={RULES} groups={[]} people={people} me={ME} />, { wrapper: House });
+  await render(<SetupChat houseId="h1" rules={RULES} johns={[]} groups={[]} people={people} me={ME} passOpen />, { wrapper: House });
 }
 
 async function say(text: string) {
@@ -82,9 +82,9 @@ it('shows the draft in the chat with every John kept, opens it into its groups, 
   for (const row of screen.getAllByRole('checkbox')) expect(row).toBeChecked();
   expect(screen.queryByTestId('draft-group')).toBeNull();
   await fireEvent.press(screen.getByRole('checkbox', { name: /^Upstairs bathroom/ }));
-  expect(screen.getByText(HOUSE_DRAFT_COPY.draftMeta(1, 2))).toBeTruthy();
+  expect(screen.getByText(HOUSE_DRAFT_COPY.draftMeta(1, 1))).toBeTruthy();
   await fireEvent.press(screen.getByRole('button', { name: HOUSE_DRAFT_COPY.keep(1) }));
-  expect(keep).toHaveBeenCalledWith('h1', RULES, drafted, [1], [], expect.any(Date));
+  expect(keep).toHaveBeenCalledWith('h1', RULES, null, drafted, ['add:1'], { johns: [], groups: [] }, expect.any(Date));
   expect(await screen.findByText(HOUSE_DRAFT_COPY.added(1))).toBeTruthy();
   expect(screen.queryByTestId('chat-input')).toBeNull();
   await fireEvent.press(screen.getByTestId('chat-open-list'));
@@ -150,4 +150,44 @@ it('can’t add nothing', async () => {
   for (const row of screen.getAllByRole('checkbox')) await fireEvent.press(row);
   expect(screen.getByRole('button', { name: HOUSE_DRAFT_COPY.keep(0) })).toBeDisabled();
   expect(NEXT_UP_COPY.describe).toBe(HOUSE_DRAFT_COPY.title);
+});
+
+describe('with a list already', () => {
+  const BATH = '11111111-1111-4111-8111-111111111111';
+  const BINS = '22222222-2222-4222-8222-222222222222';
+  const johns: JohnDef[] = [
+    { ...NEW_JOHN, id: BATH, name: 'Bathroom', category: 'bathroom', points: 3 },
+    { ...NEW_JOHN, id: BINS, name: 'Bins out', category: 'bins', points: 1 },
+  ];
+  const base = listAsDraft(johns, []);
+  const changed = { ...base, johns: [{ ...base.johns[0], points: 4 }, starterDraft('couple').johns[0]] };
+
+  async function openList(passOpen = true) {
+    await render(<SetupChat houseId="h1" rules={RULES} johns={johns} groups={[]} people={people} me={ME} passOpen={passOpen} />, {
+      wrapper: House,
+    });
+  }
+
+  it('asks what to change, sends the list as the draft, and shows each change to tick', async () => {
+    chat.mockResolvedValue({ reply: 'Done.', ask: null, draft: changed, source: 'ai' });
+    await openList();
+    expect(screen.getByText(HOUSE_DRAFT_COPY.greetingList)).toBeTruthy();
+    expect(screen.queryByTestId('starter-family')).toBeNull();
+    await say('Bathroom is more work, and no bins');
+    expect(chat).toHaveBeenCalledWith('h1', [{ role: 'user', text: 'Bathroom is more work, and no bins' }], base);
+    expect(await screen.findByTestId('draft-change')).toHaveTextContent(/was 3 pts/);
+    expect(screen.getByTestId('draft-john')).toHaveTextContent(new RegExp(HOUSE_DRAFT_COPY.adding));
+    expect(screen.getByTestId('draft-remove')).toHaveTextContent(new RegExp(HOUSE_DRAFT_COPY.removing));
+    expect(screen.getByText(HOUSE_DRAFT_COPY.changesMeta(4, 7))).toBeTruthy();
+    await fireEvent.press(screen.getByRole('checkbox', { name: /^Bins out/ }));
+    await fireEvent.press(screen.getByRole('button', { name: HOUSE_DRAFT_COPY.apply(2) }));
+    expect(keep).toHaveBeenCalledWith('h1', RULES, base, changed, [`change:${BATH}`, 'add:1'], { johns, groups: [] }, expect.any(Date));
+    expect(await screen.findByText(HOUSE_DRAFT_COPY.applied(1))).toBeTruthy();
+  });
+
+  it('offers the House Pass in place of the message box when the house hasn’t got it', async () => {
+    await openList(false);
+    expect(screen.getByText(HOUSE_DRAFT_COPY.passNeeded)).toBeTruthy();
+    expect(screen.queryByTestId('chat-input')).toBeNull();
+  });
 });

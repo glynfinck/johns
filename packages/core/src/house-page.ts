@@ -2,7 +2,7 @@ import { format } from "date-fns";
 
 import { currentOrNext, shiftMonth, type AwayPeriod } from "./away";
 import { FOCUS_SHELL_COPY, HOUSE_PAGE_COPY, PERSON_COPY, STAKE_HISTORY_COPY } from "./copy";
-import { BALANCE_WEEKS, type BalanceRow } from "./deal";
+import type { BalanceRow } from "./deal";
 import type { Currency, HouseRules } from "./domain";
 import { dateRange, dayLabel, firstName, formatBalance, monthLabel, pointsLabel, STATUS_MARK, type StatusIcon } from "./format";
 import { formatMoney, formatSigned } from "./money";
@@ -389,7 +389,7 @@ export function stakeRules(
     { label: HOUSE_PAGE_COPY.rulesSwap, body: HOUSE_PAGE_COPY.rulesSwapBody },
     {
       label: HOUSE_PAGE_COPY.rulesShares,
-      body: HOUSE_PAGE_COPY.rulesSharesBody(BALANCE_WEEKS, HOUSE_PAGE_COPY.makeup[awayMakeup] ?? HOUSE_PAGE_COPY.makeup[100]),
+      body: HOUSE_PAGE_COPY.rulesSharesBody(HOUSE_PAGE_COPY.makeup[awayMakeup] ?? HOUSE_PAGE_COPY.makeup[100]),
     },
   ];
 }
@@ -442,12 +442,12 @@ export function shareLine(balance: BalanceRow | null | undefined, you: boolean):
   const value = formatBalance(points);
   const weeks = balance?.weeksToEven ?? 0;
   if (rounded < 0) {
-    const meta = weeks > 0 ? PERSON_COPY.catchingUp(weeks) : PERSON_COPY.overWeeks(BALANCE_WEEKS);
+    const meta = weeks > 0 ? PERSON_COPY.catchingUp(weeks) : PERSON_COPY.sinceJoining;
     return { key: "share", title: PERSON_COPY.behind(words, you), meta: [{ text: meta }], value };
   }
   if (rounded > 0) return { key: "share", title: PERSON_COPY.ahead(words, you), meta: [{ text: PERSON_COPY.easier }], value };
   // Level says it in the title, so no figure trails it: not the word again, nor a bare 0.
-  return { key: "share", title: PERSON_COPY.level(you), meta: [{ text: PERSON_COPY.overWeeks(BALANCE_WEEKS) }] };
+  return { key: "share", title: PERSON_COPY.level(you), meta: [{ text: PERSON_COPY.sinceJoining }] };
 }
 
 /** Their streak (and how far to the next immunity token), then the tokens they hold. */

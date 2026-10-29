@@ -1,5 +1,6 @@
 import {
   ChatResponse,
+  draftChanges,
   draftPlan,
   offlineTurn,
   type ChatMessage,
@@ -9,7 +10,7 @@ import {
 } from '@app/core';
 
 import { apiPost, ApiRequestError } from './http';
-import { addJohns, saveGroup } from './settings';
+import { addJohns, archiveJohn, saveGroup, saveJohn, type JohnList } from './settings';
 import { supabase } from './supabase';
 
 // Describe your house: one turn of the setup chat with apps/api (Claude, or
@@ -45,19 +46,53 @@ export async function keepDraft(
   groups: readonly GroupDef[],
   now: Date,
 ): Promise<number> {
-  const plan = draftPlan(draft, keep, groups);
+  return applyDraft(houseId, rules, null, draft, keep.map((i) => `add:${i}`), { johns: [], groups: [...groups] }, now);
+}
+
+/**
+ * Apply the changes an admin ticked (draftChanges' keys) of a draft made
+ * from the list `base`: make the groups they need, add the new Johns, save
+ * the changed ones over what's there, and take the rest off. Each goes
+ * through the list's own writes, as if by hand. Returns how many applied.
+ */
+export async function applyDraft(
+  houseId: string,
+  rules: HouseRules,
+  base: HouseDraft | null,
+  draft: HouseDraft,
+  keys: readonly string[],
+  list: JohnList,
+  now: Date,
+): Promise<number> {
+  const picked = draftChanges(base, draft).filter((c) => keys.includes(c.key));
+  const at = picked.flatMap((c) => (c.kind === 'remove' ? [] : [c.at])).sort((a, b) => a - b);
+  const plan = draftPlan(draft, at, list.groups);
   for (const group of plan.makeGroups) await saveGroup(houseId, group);
-  let ids = new Map(groups.map((g) => [g.name, g.id]));
+  let ids = new Map(list.groups.map((g) => [g.name, g.id]));
   if (plan.makeGroups.length > 0) {
     const { data, error } = await supabase.from('groups').select('id, name').eq('house_id', houseId);
     if (error) throw error;
     ids = new Map((data ?? []).map((g) => [g.name, g.id]));
   }
+  // draftPlan keeps the draft's order, so its Johns line up with `at`.
+  const planned = new Map(at.map((i, n) => [i, plan.johns[n]]));
+  const written = (i: number) => {
+    const { john, groupName } = planned.get(i)!;
+    return { ...john, groupId: groupName ? (ids.get(groupName) ?? null) : null };
+  };
   await addJohns(
     houseId,
     rules,
-    plan.johns.map(({ john, groupName }) => ({ ...john, groupId: groupName ? (ids.get(groupName) ?? null) : null })),
+    picked.flatMap((c) => (c.kind === 'add' ? [written(c.at)] : [])),
     now,
   );
-  return plan.johns.length;
+  for (const c of picked) {
+    if (c.kind === 'change') {
+      const was = list.johns.find((j) => j.id === c.john.id);
+      if (was) await saveJohn(houseId, rules, { ...was, ...written(c.at), id: was.id }, now);
+    } else if (c.kind === 'remove' && c.before.id) {
+      await archiveJohn(houseId, c.before.id, now);
+    }
+  }
+  return picked.length;
 }

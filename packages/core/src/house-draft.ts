@@ -1,13 +1,17 @@
-// A house's first John list, drafted in a chat: the admin says what the house
-// is like, Jonz (Claude, through POST /api/setup/draft) asks a question or two
-// and drafts the list, and every message after that changes the draft. A
-// starter list stands in whenever Claude can't. Nothing here writes
-// anything: a draft is only shown, and an admin keeps what they want of it,
-// which then goes on the list like any John added by hand.
+// A house's John list, drafted and changed in a chat with Jonz (Claude,
+// through POST /api/setup/draft). For a new house the admin says what the
+// house is like, Jonz asks a question or two and drafts the list, and every
+// message after that changes the draft; a starter list stands in whenever
+// Claude can't. For a house with a list already, the draft starts as that
+// list and the chat changes it (the House Pass's assistant): Johns to add,
+// to change and to take off. Nothing here writes anything: a draft is only
+// shown, and an admin applies what they want of it through the list's own
+// grants, as if by hand.
 import { z } from "zod";
 
 import { HOUSE_DRAFT_COPY } from "./copy";
-import { CATEGORIES, JOHN_WHEN, type Category, type IsoDow } from "./domain";
+import type { GroupDef, JohnDef } from "./board";
+import { CATEGORIES, CATEGORY_LABEL, DOW_LABEL, JOHN_WHEN, type Category, type IsoDow } from "./domain";
 import { firstName } from "./format";
 import type { JohnDraft } from "./schemas";
 
@@ -32,6 +36,8 @@ export type ChatMessage = z.infer<typeof ChatMessage>;
 
 /** One drafted John: a John as the list holds it, the group that shares it by name, and why it's there. */
 export const DraftedJohn = z.object({
+  /** The John on the house's list this is, when the draft changes an existing list; absent for a John to add. */
+  id: z.uuid().optional(),
   name: z.string().min(1).max(60),
   category: z.enum(CATEGORIES),
   points: z.number().int().min(1).max(10),
@@ -112,6 +118,8 @@ export type ChatResponse = z.infer<typeof ChatResponse>;
  */
 export interface RawDraft {
   johns?: readonly {
+    /** Which John on the list this is (draftForModel's short ref), when it's one already there. */
+    ref?: unknown;
     name?: unknown;
     category?: unknown;
     points?: unknown;
@@ -167,7 +175,13 @@ export function matchPerson(name: string, people: readonly Person[]): string | n
  * John's group dropped when no such group was drafted. At most
  * DRAFT_MAX_JOHNS Johns and DRAFT_MAX_GROUPS groups.
  */
-export function tidyDraft(raw: RawDraft, people: readonly Person[], me: string): HouseDraft {
+export function tidyDraft(
+  raw: RawDraft,
+  people: readonly Person[],
+  me: string,
+  /** The house's list as it stands, when the draft changes it: its Johns (by id) and groups, which a ref or a group name may point at. */
+  list: { johnIds: readonly string[]; groups: readonly DraftedGroup[] } = { johnIds: [], groups: [] },
+): HouseDraft {
   const groups: DraftedGroup[] = [];
   for (const g of raw.groups ?? []) {
     const name = text(g.name, 40);
@@ -192,10 +206,22 @@ export function tidyDraft(raw: RawDraft, people: readonly Person[], me: string):
   const johns: DraftedJohn[] = [];
   for (const j of raw.johns ?? []) {
     const name = text(j.name, 60);
-    if (!name || johns.some((k) => key(k.name) === key(name))) continue;
+    // A ref names a John on the list, once; anything else is a John to add.
+    const ref = text(j.ref, 40);
+    const matches = ref ? list.johnIds.filter((id) => id.startsWith(ref)) : [];
+    const id = matches.length === 1 && !johns.some((k) => k.id === matches[0]) ? matches[0] : undefined;
+    // The same new John twice is kept once; a list may already have two of a name (one per group), and keeps both.
+    if (!name || (!id && johns.some((k) => key(k.name) === key(name)))) continue;
     const groupName = text(j.group, 40);
-    const group = groups.find((g) => key(g.name) === key(groupName))?.name ?? null;
+    let group = groups.find((g) => key(g.name) === key(groupName))?.name ?? null;
+    // A group the house already has keeps its Johns, whether or not Claude listed it again.
+    const there = group ? null : list.groups.find((g) => key(g.name) === key(groupName));
+    if (there && groups.length < DRAFT_MAX_GROUPS) {
+      groups.push({ name: there.name, memberIds: [...there.memberIds], waitingFor: [...there.waitingFor] });
+      group = there.name;
+    }
     johns.push({
+      ...(id ? { id } : {}),
       name,
       category: (CATEGORIES as readonly string[]).includes(j.category as string) ? (j.category as Category) : "other",
       points: whole(j.points, 1, 10, 2),
@@ -209,7 +235,8 @@ export function tidyDraft(raw: RawDraft, people: readonly Person[], me: string):
       group,
       why: text(j.why, 120),
     });
-    if (johns.length === DRAFT_MAX_JOHNS) break;
+    // A long list already there keeps every John, with room for a few more.
+    if (johns.length === Math.max(DRAFT_MAX_JOHNS, list.johnIds.length + 10)) break;
   }
 
   // A group no kept John uses is noise on the review screen.
@@ -285,6 +312,9 @@ export function tidyAsk(raw: RawAsk | null | undefined): ChatAsk | null {
   return options.length > 0 ? { kind: "choices", options } : null;
 }
 
+/** A John on the list as Claude knows it: the start of its id, short enough not to waste words and still one of a kind in a house. */
+const refOf = (id: string) => id.slice(0, 8);
+
 /**
  * The draft as Claude is shown it, to change: groups by who's in them in
  * words ("me" for the person asking, first names for the rest, and names
@@ -293,7 +323,7 @@ export function tidyAsk(raw: RawAsk | null | undefined): ChatAsk | null {
 export function draftForModel(draft: HouseDraft, people: readonly Person[], me: string): RawDraft {
   const named = (id: string) => (id === me ? "me" : firstName(people.find((p) => p.userId === id)?.name ?? "")) || null;
   return {
-    johns: draft.johns.map(({ when, ...j }) => ({ ...j, onCall: when === "on_call" })),
+    johns: draft.johns.map(({ when, id, ...j }) => ({ ...(id ? { ref: refOf(id) } : {}), ...j, onCall: when === "on_call" })),
     groups: draft.groups.map((g) => ({ name: g.name, members: [...g.memberIds.map(named).filter(Boolean), ...g.waitingFor] })),
     note: draft.note,
   };
@@ -312,6 +342,79 @@ export function offlineTurn(messages: readonly ChatMessage[], draft: HouseDraft 
   const kind = named ?? guessStarter(said.join(" "));
   return { reply: named ? HOUSE_DRAFT_COPY.fromStarter : HOUSE_DRAFT_COPY.offline, ask: null, draft: starterDraft(kind), source: "starter" };
 }
+
+// --- Changing a list that's already there ---------------------------------------
+
+/**
+ * The house's list as a draft, for the chat to change: every John with its
+ * id, and the groups they use with who's in them.
+ */
+export function listAsDraft(johns: readonly JohnDef[], groups: readonly GroupDef[]): HouseDraft {
+  const used = groups.filter((g) => johns.some((j) => j.groupId === g.id));
+  return {
+    johns: johns.map((j) => ({
+      id: j.id,
+      name: j.name,
+      category: j.category,
+      points: j.points,
+      everyWeeks: j.everyWeeks,
+      dueDow: j.dueDow,
+      dueTime: j.dueTime,
+      needsPhoto: j.needsPhoto,
+      when: j.when,
+      respondHours: j.respondHours,
+      perWeek: j.perWeek,
+      group: used.find((g) => g.id === j.groupId)?.name ?? null,
+      why: "",
+    })),
+    groups: used.map((g) => ({ name: g.name, memberIds: [...g.memberIds], waitingFor: [] })),
+    note: null,
+  };
+}
+
+/** The fields a change can touch, in the order a change line names them. */
+const CHANGEABLE = ["name", "category", "points", "everyWeeks", "dueDow", "dueTime", "needsPhoto", "when", "respondHours", "perWeek", "group"] as const;
+
+/** One thing a draft does to the list: a John to add (its place in the draft), one to change, or one to take off. */
+export type DraftChange =
+  | { kind: "add"; key: string; at: number; john: DraftedJohn }
+  | { kind: "change"; key: string; at: number; john: DraftedJohn; before: DraftedJohn }
+  | { kind: "remove"; key: string; before: DraftedJohn };
+
+/**
+ * What a draft does to the list it was made from: Johns without an id are
+ * added, Johns whose fields differ are changed, and Johns on the list the
+ * draft left out are taken off. With no list (a new house), every John is
+ * an add. Each change has a `key` to tick it by.
+ */
+export function draftChanges(base: HouseDraft | null, next: HouseDraft): DraftChange[] {
+  const was = new Map((base?.johns ?? []).filter((j) => j.id).map((j) => [j.id!, j]));
+  const changes: DraftChange[] = [];
+  next.johns.forEach((john, at) => {
+    const before = john.id ? was.get(john.id) : undefined;
+    if (!before) changes.push({ kind: "add", key: `add:${at}`, at, john });
+    else if (CHANGEABLE.some((f) => before[f] !== john[f])) changes.push({ kind: "change", key: `change:${john.id}`, at, john, before });
+  });
+  const kept = new Set(next.johns.map((j) => j.id).filter(Boolean));
+  for (const before of base?.johns ?? []) {
+    if (before.id && !kept.has(before.id)) changes.push({ kind: "remove", key: `remove:${before.id}`, before });
+  }
+  return changes;
+}
+
+/** What changed on a John, in words, for under its name: "was every week · was 3 pts". */
+export function changedLine(before: DraftedJohn, after: DraftedJohn): string {
+  const parts: string[] = [];
+  if (before.name !== after.name) parts.push(`was “${before.name}”`);
+  const timing = (j: DraftedJohn) => (j.when === "on_call" ? "on call" : `${cadenceWords(j.everyWeeks)}, ${DOW_LABEL[j.dueDow as IsoDow].slice(0, 3)} ${j.dueTime}`);
+  if (timing(before) !== timing(after)) parts.push(`was ${timing(before)}`);
+  if (before.points !== after.points) parts.push(`was ${before.points} ${before.points === 1 ? "pt" : "pts"}`);
+  if (before.group !== after.group) parts.push(`was ${before.group ?? "everyone’s"}`);
+  if (before.category !== after.category) parts.push(`was ${CATEGORY_LABEL[before.category]}`);
+  return parts.join(" · ");
+}
+
+const cadenceWords = (everyWeeks: number) => (everyWeeks === 1 ? "every week" : `every ${everyWeeks} weeks`);
 
 // --- Starter lists ------------------------------------------------------------
 

@@ -50,6 +50,7 @@ function TodayFor({ houseId, userId }: { houseId: string; userId: string }) {
         <TitleBar
           title={PAGE_TITLE.today}
           right={view ? dayLabel(view.now, view.snapshot.rules.timezone) : undefined}
+          ask={view?.me?.role === 'admin'}
         />
       }
       refreshing={refreshing}
