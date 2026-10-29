@@ -37,6 +37,8 @@ export type Database = {
       assignments: {
         Row: {
           category: string
+          changed_at: string | null
+          changed_by: string | null
           closes_at: string | null
           covered_by: string | null
           created_at: string
@@ -63,6 +65,8 @@ export type Database = {
         }
         Insert: {
           category: string
+          changed_at?: string | null
+          changed_by?: string | null
           closes_at?: string | null
           covered_by?: string | null
           created_at?: string
@@ -89,6 +93,8 @@ export type Database = {
         }
         Update: {
           category?: string
+          changed_at?: string | null
+          changed_by?: string | null
           closes_at?: string | null
           covered_by?: string | null
           created_at?: string
@@ -114,6 +120,13 @@ export type Database = {
           week_id?: string
         }
         Relationships: [
+          {
+            foreignKeyName: "assignments_changed_by_fkey"
+            columns: ["changed_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "assignments_covered_by_fkey"
             columns: ["covered_by"]
@@ -856,6 +869,42 @@ export type Database = {
           },
         ]
       }
+      month_let_offs: {
+        Row: {
+          created_at: string
+          house_id: string
+          let_off_by: string | null
+          month: string
+        }
+        Insert: {
+          created_at?: string
+          house_id: string
+          let_off_by?: string | null
+          month: string
+        }
+        Update: {
+          created_at?: string
+          house_id?: string
+          let_off_by?: string | null
+          month?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "month_let_offs_house_id_fkey"
+            columns: ["house_id"]
+            isOneToOne: false
+            referencedRelation: "houses"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "month_let_offs_let_off_by_fkey"
+            columns: ["let_off_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       notification_prefs: {
         Row: {
           checks: boolean
@@ -1092,6 +1141,8 @@ export type Database = {
           ends_at: string
           house_id: string
           id: string
+          skipped_at: string | null
+          skipped_by: string | null
           starts_at: string
           starts_on: string
         }
@@ -1101,6 +1152,8 @@ export type Database = {
           ends_at: string
           house_id: string
           id?: string
+          skipped_at?: string | null
+          skipped_by?: string | null
           starts_at: string
           starts_on: string
         }
@@ -1110,6 +1163,8 @@ export type Database = {
           ends_at?: string
           house_id?: string
           id?: string
+          skipped_at?: string | null
+          skipped_by?: string | null
           starts_at?: string
           starts_on?: string
         }
@@ -1121,6 +1176,13 @@ export type Database = {
             referencedRelation: "houses"
             referencedColumns: ["id"]
           },
+          {
+            foreignKeyName: "weeks_skipped_by_fkey"
+            columns: ["skipped_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
         ]
       }
     }
@@ -1128,6 +1190,27 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      add_correction: {
+        Args: {
+          p_amount: number
+          p_assignment: string
+          p_house: string
+          p_month: string
+          p_user: string
+        }
+        Returns: number[]
+      }
+      admin_reset: {
+        Args: {
+          p_actor: string
+          p_apply?: boolean
+          p_forfeits?: Json
+          p_house: string
+          p_kind: string
+          p_target: Json
+        }
+        Returns: Json
+      }
       can_upload_proof: { Args: { object_name: string }; Returns: boolean }
       cancel_away: { Args: { p_away: string }; Returns: undefined }
       cast_vote: {
@@ -1183,6 +1266,10 @@ export type Database = {
         }
         Returns: string
       }
+      credited_to: {
+        Args: { a: Database["public"]["Tables"]["assignments"]["Row"] }
+        Returns: string
+      }
       deal_week: {
         Args: {
           p_assignments: Json
@@ -1197,6 +1284,8 @@ export type Database = {
         Returns: string
       }
       delete_group: { Args: { p_group: string }; Returns: undefined }
+      flag_sharers: { Args: { p_john: string }; Returns: string[] }
+      hand_over: { Args: { p_house: string; p_to: string }; Returns: undefined }
       house_balances: {
         Args: { p_before: string; p_house: string }
         Returns: {
@@ -1242,6 +1331,8 @@ export type Database = {
         Args: { p_assignment: string }
         Returns: {
           category: string
+          changed_at: string | null
+          changed_by: string | null
           closes_at: string | null
           covered_by: string | null
           created_at: string
@@ -1294,13 +1385,22 @@ export type Database = {
       }
       raise_flag: { Args: { p_john: string }; Returns: string }
       recording: { Args: never; Returns: boolean }
+      recount_streaks: { Args: { p_house: string }; Returns: undefined }
       remove_member: {
         Args: { p_house: string; p_user: string }
         Returns: undefined
       }
       request_tick: { Args: never; Returns: undefined }
       require_user: { Args: never; Returns: string }
+      reset_bump: {
+        Args: { acc: Json; field: string; n: number; p_user: string }
+        Returns: Json
+      }
       reset_join_code: { Args: { p_house: string }; Returns: string }
+      reset_reach: {
+        Args: { x: Database["public"]["Tables"]["house_actions"]["Row"] }
+        Returns: string
+      }
       resolve_dispute: {
         Args: { p_dispute: string; p_resolution: string }
         Returns: boolean
@@ -1335,6 +1435,10 @@ export type Database = {
       undo_reach: {
         Args: { x: Database["public"]["Tables"]["house_actions"]["Row"] }
         Returns: string
+      }
+      undo_reset: {
+        Args: { x: Database["public"]["Tables"]["house_actions"]["Row"] }
+        Returns: undefined
       }
       use_immunity: { Args: { p_assignment: string }; Returns: undefined }
       use_swap: {

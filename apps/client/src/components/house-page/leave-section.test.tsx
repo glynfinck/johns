@@ -3,7 +3,7 @@ import { fireEvent, screen, waitFor, within } from 'expo-router/testing-library'
 import { Text } from 'react-native';
 
 import { loadHouse } from '@/api/board';
-import { removeMember } from '@/api/settings';
+import { handOver, removeMember } from '@/api/settings';
 import { loadStake } from '@/api/stake';
 import { useHouse } from '@/hooks/use-house';
 import { snapshot } from '@/testing/house';
@@ -13,7 +13,7 @@ import { LeaveSection } from './leave-section';
 
 jest.mock('@/api/board', () => ({ loadHouse: jest.fn() }));
 jest.mock('@/api/house', () => ({ catchUp: jest.fn() }));
-jest.mock('@/api/settings', () => ({ removeMember: jest.fn() }));
+jest.mock('@/api/settings', () => ({ removeMember: jest.fn(), handOver: jest.fn() }));
 jest.mock('@/api/stake', () => ({ loadStake: jest.fn() }));
 jest.mock('@/api/supabase', () => ({ supabase: {} }));
 
@@ -86,15 +86,19 @@ it("says it costs nothing when you're square, and that the last one out leaves t
   expect(sheet.getByTestId('confirm')).toBeEnabled();
 });
 
-it("tells the only admin to make someone else one first, with nothing to press that would be refused", async () => {
+it("lets the only admin leave by picking who looks after the house", async () => {
   (loadHouse as jest.Mock).mockResolvedValue(snapshot());
   await open();
   await waitFor(() => expect(loadStake).toHaveBeenCalled());
   const sheet = await ask();
-  expect(sheet.getByText(HOUSE_LOWER_COPY.lastAdmin)).toBeOnTheScreen();
+  expect(sheet.getByText(new RegExp(HOUSE_LOWER_COPY.lastAdmin))).toBeOnTheScreen();
+  // Nothing to press until someone is picked.
   expect(sheet.queryByTestId('confirm')).toBeNull();
-  await fireEvent.press(sheet.getByTestId('cancel'));
-  await waitFor(() => expect(screen.queryByTestId('leave-sheet')).toBeNull());
+  const [first] = sheet.getAllByTestId('heir');
+  await fireEvent.press(first);
+  const name = first.props.accessibilityLabel as string;
+  await fireEvent.press(sheet.getByRole('button', { name: HOUSE_LOWER_COPY.handOver(name.split(' ')[0]) }));
+  await waitFor(() => expect(handOver).toHaveBeenCalledWith('h1', expect.any(String)));
   expect(removeMember).not.toHaveBeenCalled();
 });
 

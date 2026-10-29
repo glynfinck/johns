@@ -4,6 +4,7 @@ import { format } from "date-fns";
 import type { Currency } from "./domain";
 import { dateRange, dayLabel } from "./format";
 import { formatMoney } from "./money";
+import { resetWhat } from "./resets";
 import { addDaysTo, localDate } from "./week";
 
 // History: everything people did in the house, newest first, in words, with
@@ -23,6 +24,7 @@ export const ACTION_KINDS = [
   "away",
   "role",
   "remove",
+  "reset",
 ] as const;
 export type ActionKind = (typeof ACTION_KINDS)[number];
 
@@ -158,6 +160,8 @@ export function actionLine(
       return data.to === "admin" ? `${who} made ${obj(subject)} an admin` : `${who} made ${obj(subject)} a housemate`;
     case "remove":
       return `${who} removed ${obj(subject)} from the house`;
+    case "reset":
+      return `${who} ${resetWhat(data, subject)}`;
   }
 }
 
@@ -187,6 +191,8 @@ export function undoneWhat(kind: string, name: string | null): string {
       return "admin change";
     case "remove":
       return "removal";
+    case "reset":
+      return "reset";
     default:
       return "change";
   }

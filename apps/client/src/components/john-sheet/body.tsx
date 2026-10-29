@@ -18,6 +18,7 @@ import { STATUS_ICON } from '@/components/status-mark';
 import { Lead, Meta } from '@/components/text';
 import { INSET, SPACE, useTheme } from '@/theme';
 
+import { ChangeResult } from './change-result';
 import { TheirsChecking, YoursChecking } from './checking';
 import { TheirsOpen, YoursOpen } from './open';
 import { Settled } from './settled';
@@ -67,13 +68,15 @@ export interface JohnSheetContext {
  * hold a token. Being checked: when it stands, and Undo for yours or
  * Dispute for a housemate's. Disputed: the reason, the tally and the vote.
  * Settled: the photo, if it had one (the header says what happened). Then,
- * whatever its state, "Why?": why it's whose it is, and what's at stake.
+ * whatever its state, an admin's "Change result", and "Why?": why it's
+ * whose it is, and what's at stake.
  */
 export function JohnSheetBody({ item, context }: { item: BoardItem; context: JohnSheetContext }) {
   return (
     <View testID="john-sheet-body">
       <JohnSheetHeader item={item} context={context} />
       <ModeContent item={item} context={context} />
+      <ChangeResult item={item} context={context} />
       <JohnWhy item={item} context={context} />
     </View>
   );
