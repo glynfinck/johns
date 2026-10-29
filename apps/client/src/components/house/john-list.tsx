@@ -35,6 +35,7 @@ import { ChoiceRow } from '@/components/setup/choice-row';
 import { PickRow } from '@/components/setup/pick-row';
 import { Sheet } from '@/components/sheet';
 import { Meta } from '@/components/text';
+import { useAskJonz } from '@/hooks/use-ask-jonz';
 import { useMove } from '@/hooks/use-move';
 import { INSET, LABEL_GAP, SECTION_GAP, SPACE } from '@/theme';
 
@@ -77,6 +78,8 @@ export function JohnList({
   const [reading, setReading] = useState<JohnDef | null>(null);
   const groupName = (id: string | null) => groups.find((g) => g.id === id)?.name ?? null;
   const add = () => setEditing({ ...NEW_JOHN });
+  // Describe your house: the chat's page on a phone, the panel beside the list from WIDE.
+  const ask = useAskJonz();
 
   return (
     <>
@@ -88,7 +91,7 @@ export function JohnList({
           action={
             editable ? (
               <View style={styles.emptyActions}>
-                <Button icon={SparklesIcon} label={NEXT_UP_COPY.describe} href="/house/describe" testID="describe-house" />
+                <Button icon={SparklesIcon} label={NEXT_UP_COPY.describe} {...ask} testID="describe-house" />
                 <Button variant="outline" icon={PlusIcon} label={JOHN_LIST_COPY.add} onPress={add} testID="add-john" />
               </View>
             ) : undefined

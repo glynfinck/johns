@@ -7,6 +7,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { useContentWidth } from '@/components/screen';
 import { Meta, Title } from '@/components/text';
+import { useAskJonz, useAskPanelOpen } from '@/hooks/use-ask-jonz';
 import { FONT, GUTTER, INSET, SPACE, TAP, TITLE_BAR, useTheme } from '@/theme';
 
 /**
@@ -102,17 +103,34 @@ function BackLink({ to, label }: { to: Href; label: string }) {
 /** The title bar's sparkles: open the chat with Jonz, to start or change the list. */
 function AskButton({ edge = false }: { edge?: boolean }) {
   const { colors } = useTheme();
-  return (
-    <Link href="/house/describe" asChild>
-      <Pressable
-        accessibilityRole="button"
-        accessibilityLabel={HOUSE_DRAFT_COPY.open}
-        testID="ask-jonz"
-        style={({ pressed }) => [styles.icon, styles.ask, edge && styles.more, pressed && styles.pressed]}
-      >
-        <SparklesIcon size={22} color={colors.foreground} aria-hidden />
-      </Pressable>
+  // From WIDE the sparkles open and close the panel beside the page; on a phone they open the chat's page.
+  const ask = useAskJonz('toggle');
+  const open = useAskPanelOpen();
+  const button = (
+    <Pressable
+      accessibilityRole="button"
+      accessibilityLabel={HOUSE_DRAFT_COPY.open}
+      accessibilityState={'onPress' in ask ? { expanded: open } : undefined}
+      onPress={'onPress' in ask ? ask.onPress : undefined}
+      testID="ask-jonz"
+      style={({ pressed }) => [
+        styles.icon,
+        styles.ask,
+        edge && styles.more,
+        // Lit while the panel beside the page is open.
+        open && { backgroundColor: colors.secondary },
+        pressed && styles.pressed,
+      ]}
+    >
+      <SparklesIcon size={22} color={colors.foreground} aria-hidden />
+    </Pressable>
+  );
+  return 'href' in ask ? (
+    <Link href={ask.href} asChild>
+      {button}
     </Link>
+  ) : (
+    button
   );
 }
 

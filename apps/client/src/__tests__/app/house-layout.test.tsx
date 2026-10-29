@@ -35,6 +35,18 @@ jest.mock('@/api/supabase', () => {
 jest.mock('@/hooks/use-membership', () => ({
   useMembership: () => ({ session: { user: { id: 'priya' } }, house: { id: 'h1', name: 'Flat 3' } }),
 }));
+// The chat with Jonz itself, which the side panel holds from laptop width.
+jest.mock('@/components/house/ask-jonz', () => ({
+  AskJonz: ({ bar }: { bar: (title: string) => React.ReactNode }) => {
+    const { Text: Words, View: Box } = jest.requireActual('react-native');
+    return (
+      <Box>
+        {bar('Ask Jonz')}
+        <Words>Chat with Jonz</Words>
+      </Box>
+    );
+  },
+}));
 jest.mock('react-native/Libraries/Utilities/useWindowDimensions', () => ({
   __esModule: true,
   default: jest.fn(() => ({ width: 412, height: 915, scale: 1, fontScale: 1 })),
@@ -67,7 +79,12 @@ async function open(url = '/today') {
           <Link href="/house/stake">To the Stake</Link>
         </View>
       ),
-      '(house)/week': () => <Text>Week screen</Text>,
+      '(house)/week': () => (
+        <View>
+          <TitleBar title="Week" ask />
+          <Text>Week screen</Text>
+        </View>
+      ),
       // As the module is, so the anchor under a page opened from a link applies.
       '(house)/house/_layout': { default: HouseStack, unstable_settings: houseStackSettings },
       '(house)/house/index': () => (
@@ -207,6 +224,31 @@ describe('on a phone', () => {
     // The stack pops on the next frame, once every listener has had the press.
     await waitFor(() => expect(screen).toHavePathname('/house'));
     expect(screen.getByText('House screen')).toBeOnTheScreen();
+  });
+});
+
+describe('the sparkles', () => {
+  it('open the chat as a page on a phone', async () => {
+    (useWindowDimensions as jest.Mock).mockReturnValue({ width: 412, height: 915, scale: 1, fontScale: 1 });
+    await open('/week');
+    await fireEvent.press(screen.getByTestId('ask-jonz'));
+    expect(screen).toHavePathname('/house/describe');
+    expect(screen.queryByTestId('ask-panel')).toBeNull();
+  });
+
+  it('open and close the chat beside the page on a laptop', async () => {
+    (useWindowDimensions as jest.Mock).mockReturnValue({ width: 1440, height: 900, scale: 1, fontScale: 1 });
+    await open('/week');
+    await fireEvent.press(screen.getByTestId('ask-jonz'));
+    expect(screen).toHavePathname('/week');
+    expect(within(screen.getByTestId('ask-panel')).getByText('Chat with Jonz')).toBeOnTheScreen();
+    expect(screen.getByText('Week screen')).toBeOnTheScreen();
+    await fireEvent.press(screen.getByTestId('ask-close'));
+    expect(screen.queryByTestId('ask-panel')).toBeNull();
+    // The sparkles close it too.
+    await fireEvent.press(screen.getByTestId('ask-jonz'));
+    await fireEvent.press(screen.getByTestId('ask-jonz'));
+    expect(screen.queryByTestId('ask-panel')).toBeNull();
   });
 });
 
