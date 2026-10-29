@@ -9,10 +9,10 @@ import { WallSection } from '@/components/house-page/wall-section';
 import { YouSection } from '@/components/house-page/you-section';
 import { PageTitle } from '@/components/page-title';
 import { Reading, ReadFailed } from '@/components/read-state';
-import { Screen } from '@/components/screen';
+import { Columns, Screen, useColumns } from '@/components/screen';
 import { TitleBar, TopLine } from '@/components/title-bar';
 import { useAway } from '@/hooks/use-away';
-import { useHouse } from '@/hooks/use-house';
+import { useHouse, type HouseView } from '@/hooks/use-house';
 import { useMembership } from '@/hooks/use-membership';
 import { usePull, useReadOnFocus } from '@/hooks/use-refresh';
 import { useStake } from '@/hooks/use-stake';
@@ -49,7 +49,7 @@ function HouseFor({ houseId, userId }: { houseId: string; userId: string }) {
   const bar = <TitleBar title={snapshot?.house.name ?? PAGE_TITLE.house} ask={view?.me?.role === 'admin'} />;
 
   return (
-    <Screen bar={bar} refreshing={refreshing} onRefresh={pull} testID="house-screen">
+    <Screen bar={bar} spreads refreshing={refreshing} onRefresh={pull} testID="house-screen">
       <PageTitle page={PAGE_TITLE.house} />
       {!view ? (
         query.isError ? (
@@ -65,25 +65,59 @@ function HouseFor({ houseId, userId }: { houseId: string; userId: string }) {
               formatMoney(view.snapshot.rules.stakeMinor, view.snapshot.rules.currency),
             )}
           </TopLine>
-          {passUnlocked(view.snapshot.house.pass, view.now) ? (
-            <>
-              <MonthCard houseId={houseId} userId={userId} view={view} stake={stake} />
-              <TableSection userId={userId} view={view} table={table} stake={stake} away={away} />
-            </>
-          ) : (
-            <>
-              <PassLocked label={PASS_COPY.stake} feature={PASS_COPY.stake} testID="stake-locked" />
-              <PassLocked label={PASS_COPY.table} feature={PASS_COPY.table} testID="table-locked" />
-            </>
-          )}
-
-          <WallSection houseId={houseId} userId={userId} view={view} />
-          <SetupSection houseId={houseId} userId={userId} view={view} />
-          <PassSection view={view} />
-          <YouSection houseId={houseId} userId={userId} view={view} />
-          <LeaveSection houseId={houseId} userId={userId} view={view} />
+          <HouseSections houseId={houseId} userId={userId} view={view} table={table} stake={stake} away={away} />
         </>
       )}
     </Screen>
+  );
+}
+
+/**
+ * House's sections: the month's money and the Table, then the lower
+ * sections. On a laptop the money and the Table keep the main column and
+ * the lower sections sit beside them.
+ */
+function HouseSections({
+  houseId,
+  userId,
+  view,
+  table,
+  stake,
+  away,
+}: {
+  houseId: string;
+  userId: string;
+  view: HouseView;
+  table: ReturnType<typeof useTable>;
+  stake: ReturnType<typeof useStake>;
+  away: ReturnType<typeof useAway>;
+}) {
+  const two = useColumns();
+  const money = passUnlocked(view.snapshot.house.pass, view.now) ? (
+    <>
+      <MonthCard houseId={houseId} userId={userId} view={view} stake={stake} />
+      <TableSection userId={userId} view={view} table={table} stake={stake} away={away} />
+    </>
+  ) : (
+    <>
+      <PassLocked label={PASS_COPY.stake} feature={PASS_COPY.stake} testID="stake-locked" />
+      <PassLocked label={PASS_COPY.table} feature={PASS_COPY.table} testID="table-locked" />
+    </>
+  );
+  const lower = (
+    <>
+      <WallSection houseId={houseId} userId={userId} view={view} />
+      <SetupSection houseId={houseId} userId={userId} view={view} />
+      <PassSection view={view} />
+      <YouSection houseId={houseId} userId={userId} view={view} />
+      <LeaveSection houseId={houseId} userId={userId} view={view} />
+    </>
+  );
+  if (two) return <Columns main={money} side={lower} />;
+  return (
+    <>
+      {money}
+      {lower}
+    </>
   );
 }

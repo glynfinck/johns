@@ -43,7 +43,8 @@ export function WeekSummaryBar({
   range: string;
   summary: WeekSummary;
   filter: WeekPart | null;
-  onFilter: (part: WeekPart) => void;
+  /** Pressing a legend part. Without it the legend is one Meta line ("3 done · 5 to go"): Today's glance. */
+  onFilter?: (part: WeekPart) => void;
   tag?: ReactNode;
   note?: string | null;
 }) {
@@ -76,52 +77,61 @@ export function WeekSummaryBar({
           ))
         )}
       </View>
-      <View style={styles.legend}>
-        {summary.parts.map((p) => {
-          const chosen = filter === p.part;
-          const empty = p.count === 0;
-          // A toggle's state: the web hears aria-pressed, which React Native lacks.
-          const state = Platform.OS === 'web' ? ({ 'aria-pressed': chosen } as object) : { 'aria-selected': chosen };
-          return (
-            <Pressable
-              key={p.part}
-              accessibilityRole="button"
-              accessibilityLabel={WEEK_SUMMARY_COPY.part(p.count, p.label)}
-              accessibilityHint={WEEK_SUMMARY_COPY.showOnly}
-              {...state}
-              aria-disabled={empty}
-              disabled={empty}
-              onPress={() => onFilter(p.part)}
-              testID={`legend-${p.part}`}
-              style={styles.part}
-            >
-              {({ pressed }) => (
-                <>
-                  {/* The tint reaches past the words, so they keep to the leading edge and their full width. */}
-                  {chosen || pressed ? (
-                    <View
-                      pointerEvents="none"
-                      style={[styles.tint, { backgroundColor: pressed ? withAlpha(colors.foreground, 0.06) : colors.secondary }]}
-                    />
-                  ) : null}
-                  <View style={styles.figure}>
-                    <View
-                      aria-hidden
-                      style={[styles.swatch, { backgroundColor: partColour(theme, p.part) }, empty && styles.faded]}
-                    />
-                    <RowTitle numberOfLines={1} style={empty ? { color: colors.mutedForeground } : undefined}>
-                      {String(p.count)}
-                    </RowTitle>
-                  </View>
-                  <Text numberOfLines={1} style={[type.meta, chosen && { color: colors.foreground }]}>
-                    {p.label}
-                  </Text>
-                </>
-              )}
-            </Pressable>
-          );
-        })}
-      </View>
+      {onFilter == null ? (
+        <Meta numberOfLines={1} style={styles.parts} testID="week-parts">
+          {summary.parts
+            .filter((p) => p.count > 0)
+            .map((p) => `${p.count} ${p.label}`)
+            .join(' · ')}
+        </Meta>
+      ) : (
+        <View style={styles.legend}>
+          {summary.parts.map((p) => {
+            const chosen = filter === p.part;
+            const empty = p.count === 0;
+            // A toggle's state: the web hears aria-pressed, which React Native lacks.
+            const state = Platform.OS === 'web' ? ({ 'aria-pressed': chosen } as object) : { 'aria-selected': chosen };
+            return (
+              <Pressable
+                key={p.part}
+                accessibilityRole="button"
+                accessibilityLabel={WEEK_SUMMARY_COPY.part(p.count, p.label)}
+                accessibilityHint={WEEK_SUMMARY_COPY.showOnly}
+                {...state}
+                aria-disabled={empty}
+                disabled={empty}
+                onPress={() => onFilter(p.part)}
+                testID={`legend-${p.part}`}
+                style={styles.part}
+              >
+                {({ pressed }) => (
+                  <>
+                    {/* The tint reaches past the words, so they keep to the leading edge and their full width. */}
+                    {chosen || pressed ? (
+                      <View
+                        pointerEvents="none"
+                        style={[styles.tint, { backgroundColor: pressed ? withAlpha(colors.foreground, 0.06) : colors.secondary }]}
+                      />
+                    ) : null}
+                    <View style={styles.figure}>
+                      <View
+                        aria-hidden
+                        style={[styles.swatch, { backgroundColor: partColour(theme, p.part) }, empty && styles.faded]}
+                      />
+                      <RowTitle numberOfLines={1} style={empty ? { color: colors.mutedForeground } : undefined}>
+                        {String(p.count)}
+                      </RowTitle>
+                    </View>
+                    <Text numberOfLines={1} style={[type.meta, chosen && { color: colors.foreground }]}>
+                      {p.label}
+                    </Text>
+                  </>
+                )}
+              </Pressable>
+            );
+          })}
+        </View>
+      )}
       {note ? (
         <Meta style={styles.note} testID="week-away">
           {note}
@@ -155,5 +165,6 @@ const styles = StyleSheet.create({
   tint: { position: 'absolute', top: 0, bottom: 0, left: -PART_PAD, right: -PART_PAD, borderRadius: RADIUS },
   figure: { flexDirection: 'row', alignItems: 'center', gap: 6 },
   swatch: { width: 8, height: 8, borderRadius: 2 },
+  parts: { marginTop: SPACE.sm },
   note: { marginTop: SPACE.xs },
 });

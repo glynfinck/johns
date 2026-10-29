@@ -1,5 +1,6 @@
 import {
   BIN_NIGHT,
+  buildStake,
   FOCUS_SHELL_COPY,
   humanError,
   JOHN_SHEET_COPY,
@@ -21,6 +22,7 @@ import { catchUp } from '@/api/house';
 import { markDone, undoDone } from '@/api/johns';
 import { pickPhoto } from '@/api/photos';
 import { dealThisWeek, loadJohnList } from '@/api/settings';
+import { loadStake } from '@/api/stake';
 import { loadTable } from '@/api/table';
 import Week from '@/app/(house)/week';
 import { ToastProvider } from '@/components/toast';
@@ -31,6 +33,7 @@ import { testQueryClient } from '@/testing/query';
 jest.mock('@/api/board', () => ({ loadHouse: jest.fn() }));
 jest.mock('@/api/away', () => ({ loadAway: jest.fn() }));
 jest.mock('@/api/table', () => ({ loadTable: jest.fn() }));
+jest.mock('@/api/stake', () => ({ loadStake: jest.fn(), confirmPayment: jest.fn() }));
 jest.mock('@/api/settings', () => ({ dealThisWeek: jest.fn(), loadJohnList: jest.fn() }));
 jest.mock('@/api/house', () => ({ catchUp: jest.fn() }));
 jest.mock('@/api/johns', () => ({ markDone: jest.fn(), undoDone: jest.fn(), spendImmunity: jest.fn(), spendSwap: jest.fn() }));
@@ -648,7 +651,29 @@ describe('the ••• menu', () => {
 });
 
 describe('on a laptop', () => {
-  beforeEach(() => (useWindowDimensions as jest.Mock).mockReturnValue(LAPTOP));
+  beforeEach(() => {
+    (useWindowDimensions as jest.Mock).mockReturnValue(LAPTOP);
+    const stake = buildStake({ ledger: [], closedMonths: [], memberIds: ['priya', 'sam'], stakeMinor: 2000, month: '2026-10' });
+    (loadStake as jest.Mock).mockResolvedValue({ ...stake, ledger: [], closedMonths: [] });
+  });
+
+  it('keeps the board in the main column and puts the Table beside it, over the way to the track record', async () => {
+    await open();
+    const main = within(screen.getByTestId('column-main'));
+    const side = within(screen.getByTestId('column-side'));
+    expect(main.getByTestId('week-summary')).toBeOnTheScreen();
+    expect(main.getByTestId('week-table')).toBeOnTheScreen();
+    expect(await side.findByTestId('house-table')).toBeOnTheScreen();
+    expect(side.getByTestId('week-record')).toBeOnTheScreen();
+  });
+
+  it('stays in one column at the narrowest laptop, where the rail leaves too little room', async () => {
+    (useWindowDimensions as jest.Mock).mockReturnValue({ ...LAPTOP, width: 1100 });
+    await open();
+    expect(screen.queryByTestId('columns')).toBeNull();
+    expect(screen.getByTestId('week-table')).toBeOnTheScreen();
+    expect(screen.queryByTestId('house-table')).toBeNull();
+  });
 
   it('puts the whole house in one table, a row per John, the finished ones folded', async () => {
     await open();

@@ -417,3 +417,22 @@ it("says when it can't read the house, and tries again", async () => {
   await fireEvent.press(screen.getByRole('button', { name: FOCUS_SHELL_COPY.retry }));
   expect(await screen.findByRole('header', { name: 'Flat 3' })).toBeOnTheScreen();
 });
+
+describe('on a laptop', () => {
+  beforeEach(() => (useWindowDimensions as jest.Mock).mockReturnValue({ width: 1440, height: 900, scale: 1, fontScale: 1 }));
+
+  it('keeps the money and the Table in the main column and the lower sections beside them', async () => {
+    await open();
+    const main = within(screen.getByTestId('column-main'));
+    const side = within(screen.getByTestId('column-side'));
+    expect(main.getByTestId('month-card')).toBeOnTheScreen();
+    expect(main.getByTestId('house-table')).toBeOnTheScreen();
+    expect(side.getAllByTestId('lower').map((node) => node.props.children)).toEqual(['the Wall', 'House setup', 'You', 'Leaving']);
+  });
+
+  it('stays in one column at the narrowest laptop', async () => {
+    (useWindowDimensions as jest.Mock).mockReturnValue({ width: 1100, height: 900, scale: 1, fontScale: 1 });
+    await open();
+    expect(screen.queryByTestId('columns')).toBeNull();
+  });
+});
