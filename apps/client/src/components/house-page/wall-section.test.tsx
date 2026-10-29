@@ -106,11 +106,11 @@ it('reads only the latest four, under its label and See all', async () => {
 it('tells each in one sentence with first names, and a meta line with when', async () => {
   await open();
   const [bath, dispute, hob, joined] = await rows();
-  expect(bath).toHaveTextContent(/Sam ticked Clean the bath.*Checking · 3h/);
-  expect(dispute).toHaveTextContent(/Sam disputed your tick on Wipe the hob.*“Still greasy round the back of the rings” · 4h/);
+  expect(bath).toHaveTextContent(/Sam ticked Clean the bath.*Checking.*3h/);
+  expect(dispute).toHaveTextContent(/Sam disputed your tick on Wipe the hob.*“Still greasy round the back of the rings”.*4h/);
   expect(hob).toHaveTextContent(/You ticked Wipe the hob/);
   expect(joined).toHaveTextContent(/Sam moved in.*New housemate/);
-  expect(target(bath)).toHaveAccessibleName('Sam ticked Clean the bath, Checking · 3h');
+  expect(target(bath)).toHaveAccessibleName('Sam ticked Clean the bath, Checking, 3h');
   // A sentence gets two lines before it's cut short.
   expect(within(dispute).getByText('Sam disputed your tick on Wipe the hob')).toHaveProp('numberOfLines', 2);
 });
@@ -165,7 +165,7 @@ it('opens anything else in full, none of it cut short, with all four reactions w
   await fireEvent.press(within(joined).getByRole('button'));
   let sheet = within(screen.getByTestId('wall-sheet'));
   expect(sheet.getByRole('header', { name: 'Sam moved in' })).toBeOnTheScreen();
-  expect(sheet.getByText(/^New housemate · \w/)).toBeOnTheScreen();
+  expect(sheet.getByText(/^New housemate\s\w/)).toBeOnTheScreen();
   // Moving in takes no reactions.
   expect(sheet.queryByTestId('react-nice')).toBeNull();
   await fireEvent.press(screen.getByTestId('sheet-close'));
@@ -224,7 +224,10 @@ it('puts a reaction back and says why under the row it was made on, until anothe
   expect(alert).toHaveTextContent("You can't react to that.");
   // Straight after the bath's row, before the dispute's.
   const order = within(screen.getByTestId('wall-section')).getAllByText(/Sam ticked Clean the bath|You can't react|Sam disputed/);
-  expect(order.map((t) => t.props.children)).toEqual(['Sam ticked Clean the bath', "You can't react to that.", 'Sam disputed your tick on Wipe the hob']);
+  // A sentence's names and Johns are runs of their own: read the words whole.
+  type Node = { children: (string | Node)[] };
+  const words = (node: Node): string => node.children.map((c) => (typeof c === 'string' ? c : words(c))).join('');
+  expect(order.map((t) => words(t as unknown as Node))).toEqual(['Sam ticked Clean the bath', "You can't react to that.", 'Sam disputed your tick on Wipe the hob']);
   await waitFor(() => expect(within(bath).getByTestId('nice-one')).toBeSelected());
   await fireEvent.press(within(joined).getByRole('button'));
   expect(screen.queryByRole('alert')).toBeNull();

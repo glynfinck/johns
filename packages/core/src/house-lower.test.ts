@@ -137,7 +137,7 @@ describe("wallFeedRow", () => {
     const missed = row({ kind: "missed", data: { name: "Bins out" } });
     expect(missed.detail).toBe(WALL_FEED_COPY.missedWord);
     expect(missed.mark).toBe(STATUS_MARK.missed.icon);
-    expect(missed.label).toBe("Megan missed Bins out, Missed · 3h");
+    expect(missed.label).toBe("Megan missed Bins out, Missed, 3h");
     expect(row({ kind: "joined" }).mark).toBeNull();
   });
 
@@ -182,9 +182,9 @@ describe("wallFeedRow", () => {
     expect(row(away).detail).toBe(WALL_FEED_COPY.timeAway);
     expect(row({ ...away, user_id: "sam", data: { ...away.data, moved: 1 } }).title).toBe("You’re away 29 Oct–1 Nov");
     expect(row({ ...away, user_id: "sam", data: { ...away.data, moved: 1 } }).detail).toBe(
-      "Time away · 1 John due before you go",
+      "Time away. 1 John due before you go",
     );
-    expect(row({ ...away, data: { ...away.data, moved: 2 } }).detail).toBe("Time away · 2 Johns due before they go");
+    expect(row({ ...away, data: { ...away.data, moved: 2 } }).detail).toBe("Time away. 2 Johns due before they go");
   });
 
   it("tells perks, immunity, swaps and new housemates", () => {
@@ -256,15 +256,15 @@ describe("wallFeedRow", () => {
       created_at: "2026-10-26T09:39:00Z",
       data: { name: "Clean the bathroom", against: "priya", reason: "Shower drain's still full of hair and the plughole" },
     });
-    expect(dispute.full).toBe("“Shower drain's still full of hair and the plughole” · Today, 09:39");
-    expect(row({ kind: "joined", created_at: "2026-10-25T23:30:00Z" }).full).toBe("New housemate · Yesterday, 23:30");
+    expect(dispute.full).toBe("“Shower drain's still full of hair and the plughole”\nToday, 09:39");
+    expect(row({ kind: "joined", created_at: "2026-10-25T23:30:00Z" }).full).toBe("New housemate\nYesterday, 23:30");
     // Before the clocks went back, London was an hour ahead.
-    expect(row({ kind: "joined", created_at: "2026-10-24T22:40:00Z" }).full).toBe("New housemate · Sat 24 Oct, 23:40");
+    expect(row({ kind: "joined", created_at: "2026-10-24T22:40:00Z" }).full).toBe("New housemate\nSat 24 Oct, 23:40");
     expect(row({ kind: "something_new", created_at: "2026-10-26T09:39:00Z" }).full).toBe("Today, 09:39");
   });
 
   it("tells a screen reader the sentence, then the meta line", () => {
-    expect(row().label).toBe("Megan ticked Wipe down the kitchen, On time · 3h");
+    expect(row().label).toBe("Megan ticked Wipe down the kitchen, On time, 3h");
     expect(row({ kind: "something_new" }).label).toBe("something_new, 3h");
   });
 
@@ -301,6 +301,87 @@ describe("topReaction", () => {
   });
 });
 
+describe("wallFeedRow on flags, undos and resets", () => {
+  const dueAt = new Date(NOW.getTime() + (11 * 60 + 40) * 60_000).toISOString();
+  const flag = (data: Record<string, unknown>, status?: string) =>
+    row(
+      { kind: "flagged", user_id: "tom", data: { name: "Bins", due_at: dueAt, ...data } },
+      status ? { statusOf: () => status as never } : {},
+    );
+
+  it("names the John, who flagged it and who's on call, with how long is left while it's open", () => {
+    const r = flag({ by: "megan" }, "due-soon");
+    expect(r.title).toBe("Megan flagged Bins for Tom");
+    expect(r.parts).toEqual([
+      { text: "Megan", bold: true },
+      { text: " flagged " },
+      { text: "Bins", bold: true },
+      { text: " for " },
+      { text: "Tom", bold: true },
+    ]);
+    // 15:00 GMT plus 11h40 is 02:40 the next day.
+    expect(r.detail).toBe("Tom’s on call, due by Tue 02:40");
+    expect(r.open).toEqual({ left: "11h left", late: false });
+    expect(r.family).toBe("flag");
+    expect(r.icon).toBe("flag");
+    // The flagger leads the row.
+    expect(r.actor?.userId).toBe("megan");
+    expect(r.label).toBe("Megan flagged Bins for Tom, Tom’s on call, due by Tue 02:40, 11h left, 3h");
+  });
+
+  it("speaks to you when it's yours, and says when it's late", () => {
+    const late = new Date(NOW.getTime() - 40 * 60_000).toISOString();
+    const r = row(
+      { kind: "flagged", user_id: "sam", data: { name: "Bins", by: "megan", due_at: late } },
+      { statusOf: () => "overdue" },
+    );
+    expect(r.title).toBe("Megan flagged Bins for you");
+    expect(r.detail).toBe("You’re on call, due by 14:20");
+    expect(r.open).toEqual({ left: "40 min late", late: true });
+  });
+
+  it("says a flag someone raised on their own John, and one the clock raised again", () => {
+    expect(flag({ by: "tom" }, "upcoming").title).toBe("Tom flagged Bins");
+    const again = flag({ by: null }, "upcoming");
+    expect(again.title).toBe("Bins was flagged again after a miss");
+    expect(again.actor).toBeNull();
+  });
+
+  it("goes quiet once it's settled, saying how it went", () => {
+    for (const [status, detail] of [
+      ["done", "Tom did it"],
+      ["checking", "Tom ticked it"],
+      ["missed", "Tom missed it"],
+      [undefined, "Tom was on call"],
+    ] as const) {
+      const r = flag({ by: "megan" }, status);
+      expect(r.detail).toBe(detail);
+      expect(r.open).toBeNull();
+      expect(r.family).toBe("notice");
+    }
+  });
+
+  it("says an admin's undo and reset, never the event's kind", () => {
+    const undone = row({ kind: "undone", user_id: "tom", data: { by: "priya", what: "tick", name: "Bins" } });
+    expect(undone.title).toBe("Priya undid Tom’s tick on Bins");
+    expect(undone.actor?.userId).toBe("priya");
+    expect(undone.icon).toBe("undo");
+    const reset = row({ kind: "reset", user_id: "priya", data: { what: "person_week", subject: "tom" } });
+    expect(reset.title).toBe("Priya reset Tom’s week");
+    expect(reset.detail).toBe(WALL_FEED_COPY.adminFix);
+  });
+
+  it("sorts each kind into its family", () => {
+    const family = (kind: string) => row({ kind }).family;
+    expect(["done", "late", "covered", "rejected"].map(family)).toEqual(["done", "done", "done", "done"]);
+    expect(["missed", "disputed", "upheld"].map(family)).toEqual(["trouble", "trouble", "trouble"]);
+    expect(["immunity_earned", "swap_used"].map(family)).toEqual(["perk", "perk"]);
+    expect(["joined", "paid", "month_closed"].map(family)).toEqual(["notice", "notice", "notice"]);
+    expect(row({ kind: "away", data: { starts_on: "2026-10-28", ends_on: "2026-10-30" } }).family).toBe("notice");
+    expect(row({ kind: "disputed", data: { name: "Bins", against: "tom" } }).icon).toBe("gavel");
+  });
+});
+
 describe("wallDays", () => {
   const at = (iso: string, overrides: Partial<WallRow> = {}): WallFeedRow =>
     wallFeedRow(event({ id: iso, created_at: iso, ...overrides }), scene({ clock: true }));
@@ -320,12 +401,12 @@ describe("wallDays", () => {
       ZONE,
       NOW,
     );
-    expect(days.map((d) => [d.date, d.label, d.items.length])).toEqual([
-      ["2026-10-26", "Today", 1],
-      ["2026-10-25", "Yesterday", 1],
+    expect(days.map((d) => [d.date, d.label, d.sub, d.items.length])).toEqual([
+      ["2026-10-26", "Today", "Mon 26 Oct", 1],
+      ["2026-10-25", "Yesterday", "Sun 25 Oct", 1],
       // 22:30 UTC on the 24th is 23:30 in London, still summer time.
-      ["2026-10-24", "Sat 24 Oct", 1],
-      ["2026-10-20", "Tue 20 Oct", 1],
+      ["2026-10-24", "Sat 24 Oct", null, 1],
+      ["2026-10-20", "Tue 20 Oct", null, 1],
     ]);
   });
 

@@ -58,7 +58,10 @@ const feedRow = (overrides: Partial<WallFeedRow> = {}): WallFeedRow => ({
   at: new Date('2026-10-26T12:00:00Z'),
   actor: { userId: 'megan', name: 'Megan Doyle', me: false },
   icon: 'check',
+  family: 'done',
   title: 'Megan ticked Food waste caddy out',
+  parts: [{ text: 'Megan', bold: true }, { text: ' ticked ' }, { text: 'Food waste caddy out', bold: true }],
+  open: null,
   detail: WALL_FEED_COPY.checking,
   mark: null,
   when: '6h',
@@ -67,8 +70,8 @@ const feedRow = (overrides: Partial<WallFeedRow> = {}): WallFeedRow => ({
   top: null,
   reactions: { nice: { count: 2, mine: false }, fire: none, sparkle: none, eyes: none },
   board: { assignmentId: 'a1', vote: false },
-  full: 'Checking · Today, 12:00',
-  label: 'Megan ticked Food waste caddy out, Checking · 6h',
+  full: 'Checking\nToday, 12:00',
+  label: 'Megan ticked Food waste caddy out, Checking, 6h',
   john: 'Food waste caddy out',
   photoPath: null,
   repeat: 'tick:megan',
@@ -106,4 +109,36 @@ it('marks a John that went wrong in hazard, and leaves the rest quiet', async ()
   expect(screen.getByText(WALL_FEED_COPY.missedWord)).toHaveStyle({ color: hazard });
   await screen.rerender(<WallEventRow row={feedRow()} onReact={jest.fn()} onPress={jest.fn()} onReactions={jest.fn()} />);
   expect(screen.getByText(WALL_FEED_COPY.checking)).not.toHaveStyle({ color: hazard });
+});
+
+it('shows the time on every row, and the kind of news as a plate on the face that leads it', async () => {
+  await render(<WallEventRow row={feedRow()} onReact={jest.fn()} onPress={jest.fn()} onReactions={jest.fn()} />);
+  expect(screen.getByText('6h')).toBeTruthy();
+  expect(screen.getByTestId('wall-badge-done', { includeHiddenElements: true })).toBeTruthy();
+  expect(screen.getByText('Food waste caddy out')).toBeTruthy();
+});
+
+it('gives a flag still open its time left in place of a reaction, and the house news its own plate', async () => {
+  await render(
+    <WallEventRow
+      row={feedRow({
+        kind: 'flagged',
+        icon: 'flag',
+        family: 'flag',
+        actor: null,
+        title: 'Bins was flagged again after a miss',
+        parts: [{ text: 'Bins', bold: true }, { text: ' was flagged again after a miss' }],
+        detail: 'Tom’s on call, due by 02:40',
+        open: { left: '11h left', late: false },
+        reactable: false,
+        nice: false,
+      })}
+      onReact={jest.fn()}
+      onPress={jest.fn()}
+      onReactions={jest.fn()}
+    />,
+  );
+  expect(screen.getByTestId('flag-left')).toHaveTextContent('11h left');
+  expect(screen.getByTestId('wall-plate-flag', { includeHiddenElements: true })).toBeTruthy();
+  expect(screen.queryByRole('button', { name: WALL_FEED_COPY.react })).toBeNull();
 });
