@@ -110,7 +110,10 @@ export function SignInPanel({ next, failed: failedBefore = false }: { next?: str
 
       <DoorFoot>
         <Meta>{SIGN_IN_COPY.terms}</Meta>
-        <TextLink href="/privacy" label={SIGN_IN_COPY.privacy} muted />
+        <View style={styles.legal}>
+          <TextLink href="/privacy" label={SIGN_IN_COPY.privacy} muted />
+          <TextLink href="/terms" label={SIGN_IN_COPY.termsLink} muted />
+        </View>
       </DoorFoot>
     </>
   );
@@ -119,4 +122,5 @@ export function SignInPanel({ next, failed: failedBefore = false }: { next?: str
 const styles = StyleSheet.create({
   ways: { gap: SPACE.sm },
   apple: { height: TAP, width: '100%' },
+  legal: { flexDirection: 'row', gap: SPACE.lg },
 });

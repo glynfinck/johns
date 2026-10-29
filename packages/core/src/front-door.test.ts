@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 
 import { signInPath, signInReason } from "./auth-paths";
-import { FRONT_DOOR_COPY, PRIVACY_COPY, SIGN_IN_COPY } from "./copy";
+import { FRONT_DOOR_COPY, SIGN_IN_COPY } from "./copy";
 import { CURRENCIES } from "./domain";
 import {
   afterSignIn,
@@ -177,35 +177,7 @@ describe("the choices behind Change", () => {
   });
 });
 
-/** Sentences, as a reader meets them: split after each full stop. */
-function sentences(paragraphs: readonly string[]): string[] {
-  return paragraphs.flatMap((p) => p.split(/(?<=\.)\s+/));
-}
-
 describe("FRONT_DOOR_COPY", () => {
-  it("puts every word of privacy under one heading, and only its words", () => {
-    const shown = sentences(FRONT_DOOR_COPY.privacy.flatMap((s) => s.body));
-    // Split from the address it names, the reminders paragraph's "it" says which.
-    const web = sentences(PRIVACY_COPY.paragraphs).map((s) =>
-      s === "Turning reminders off deletes it." ? "Turning reminders off deletes that address." : s,
-    );
-    expect([...shown].sort()).toEqual([...web].sort());
-  });
-
-  it("heads privacy in five short sections", () => {
-    expect(FRONT_DOOR_COPY.privacy.map((s) => s.heading)).toEqual([
-      "What we keep",
-      "What we don’t",
-      "Who sees what",
-      "Drafting your Johns",
-      "Deleting your data",
-    ]);
-    for (const { heading, body } of FRONT_DOOR_COPY.privacy) {
-      expect(heading.split(" ").length).toBeLessThanOrEqual(3);
-      expect(body.length).toBeGreaterThan(0);
-    }
-  });
-
   it("names the phone's time zone in the note under Change", () => {
     expect(FRONT_DOOR_COPY.zoneNote("America/New York")).toBe(
       "The time zone is this phone’s, America/New York. Change it later from House.",

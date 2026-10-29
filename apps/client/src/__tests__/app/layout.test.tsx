@@ -44,6 +44,7 @@ const routes = {
   '(house)/house/people/[userId]': () => <Text>Housemate</Text>,
   'join/[joinCode]': () => <Text>Join</Text>,
   privacy: () => <Text>Privacy</Text>,
+  terms: () => <Text>Terms</Text>,
   '+not-found': () => <Text>Nothing here</Text>,
 };
 
@@ -216,16 +217,18 @@ it("offers to try again when the house can't be read", async () => {
 });
 
 describe('the pages anyone can open', () => {
-  it('shows privacy signed out, signed in and in a house', async () => {
+  it('shows privacy and the terms signed out, signed in and in a house', async () => {
     for (const [session, house] of [
       [null, null],
       [SESSION, null],
       [SESSION, FLAT],
     ] as const) {
-      as(session, house);
-      await open('/privacy');
-      expect(screen.getByText('Privacy')).toBeOnTheScreen();
-      expect(screen).toHavePathname('/privacy');
+      for (const page of ['Privacy', 'Terms']) {
+        as(session, house);
+        await open(`/${page.toLowerCase()}`);
+        expect(screen.getByText(page)).toBeOnTheScreen();
+        expect(screen).toHavePathname(`/${page.toLowerCase()}`);
+      }
     }
   });
 

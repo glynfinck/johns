@@ -28,7 +28,7 @@ async function open() {
     const { view } = useHouse('h1', 'priya');
     return view ? <LeaveSection houseId="h1" userId="priya" view={view} /> : null;
   }
-  await renderPages({ 'house/index': Host, privacy: () => <Text>Privacy page</Text> }, '/house');
+  await renderPages({ 'house/index': Host, privacy: () => <Text>Privacy page</Text>, terms: () => <Text>Terms page</Text> }, '/house');
   await screen.findByTestId('leave-section');
 }
 
@@ -180,4 +180,11 @@ it('says Jonz never moves money, and leads to Privacy', async () => {
   await fireEvent.press(screen.getByRole('link', { name: HOUSE_LOWER_COPY.privacy }));
   expect(screen).toHavePathname('/privacy');
   expect(screen.getByText('Privacy page')).toBeOnTheScreen();
+});
+
+it('leads to the Terms', async () => {
+  await open();
+  await fireEvent.press(screen.getByRole('link', { name: HOUSE_LOWER_COPY.terms }));
+  expect(screen).toHavePathname('/terms');
+  expect(screen.getByText('Terms page')).toBeOnTheScreen();
 });

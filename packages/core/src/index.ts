@@ -13,6 +13,7 @@ export * from "./domain";
 export * from "./errors";
 export * from "./format";
 export * from "./history";
+export * from "./legal";
 export * from "./money";
 export * from "./notify";
 export * from "./outcome";
