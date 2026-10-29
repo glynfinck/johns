@@ -26,6 +26,7 @@ import {
   SmilePlusIcon,
   SparklesIcon,
   ThumbsUpIcon,
+  Undo2Icon,
   UserPlusIcon,
   XIcon,
   type LucideIcon,
@@ -55,6 +56,7 @@ const WALL_ICON: Record<WallIcon, LucideIcon> = {
   banknote: BanknoteIcon,
   'bell-ring': BellRingIcon,
   'badge-check': BadgeCheckIcon,
+  undo: Undo2Icon,
 };
 
 /** Icons, not emoji: the house style has none. */

@@ -1,4 +1,4 @@
-import { DISPUTE_COPY } from '@app/core';
+import { DISPUTE_COPY, HISTORY_COPY } from '@app/core';
 import { useState } from 'react';
 import { StyleSheet, View } from 'react-native';
 
@@ -7,6 +7,7 @@ import { Alert } from '@/components/alert';
 import { Button } from '@/components/button';
 import { Field } from '@/components/field';
 import { useMove } from '@/hooks/use-move';
+import { useUndoOffer } from '@/hooks/use-undo-offer';
 import { SPACE } from '@/theme';
 
 /**
@@ -26,12 +27,14 @@ export function DisputeForm({
   autoFocus?: boolean;
 }) {
   const move = useMove(houseId);
+  const offer = useUndoOffer(houseId);
   const [reason, setReason] = useState('');
 
   async function send() {
     if (await move.run(() => raiseDispute(assignmentId, reason))) {
       setReason('');
       onSent?.();
+      offer(HISTORY_COPY.disputed, 'dispute', assignmentId);
     }
   }
 

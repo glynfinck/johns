@@ -1,17 +1,35 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useState, type ReactNode } from 'react';
-import { AccessibilityInfo, Platform, StyleSheet, Text, View } from 'react-native';
+import { AccessibilityInfo, Platform, Pressable, StyleSheet, Text, View } from 'react-native';
 
-import { CONTENT_MAX, GUTTER, RADIUS, SPACE, useTheme } from '@/theme';
+import { CONTENT_MAX, FONT, GUTTER, RADIUS, SPACE, TAP, useTheme } from '@/theme';
 
 /** How long a toast stays: long enough to read a sentence. */
 export const TOAST_MS = 4000;
 
+/** How long a toast with a button stays: long enough to read it and reach the button. */
+export const TOAST_ACTION_MS = 10000;
+
+/** A toast's one button: Undo, after a move. */
+export interface ToastAction {
+  label: string;
+  onPress: () => void;
+}
+
 interface Toasts {
-  /** Say something short at the bottom of the screen ("Vote counted."); it goes by itself. */
-  show: (message: string) => void;
+  /**
+   * Say something short at the bottom of the screen ("Vote counted."); it
+   * goes by itself. With an action ("Undo") it stays TOAST_ACTION_MS and
+   * goes as soon as the button is pressed.
+   */
+  show: (message: string, action?: ToastAction) => void;
 }
 
 const ToastContext = createContext<Toasts | null>(null);
+
+/** The house's toasts, or null outside a ToastProvider (a screen tested on its own). */
+export function useToastIfAny(): Toasts | null {
+  return useContext(ToastContext);
+}
 
 /** The house's toasts. ToastProvider (in the house layout) must be above. */
 export function useToast(): Toasts {
@@ -28,17 +46,17 @@ export function useToast(): Toasts {
  */
 export function ToastProvider({ children, bottom = SPACE.xl }: { children: ReactNode; bottom?: number }) {
   const { colors, type } = useTheme();
-  const [toast, setToast] = useState<{ message: string; serial: number } | null>(null);
+  const [toast, setToast] = useState<{ message: string; action?: ToastAction; serial: number } | null>(null);
 
   useEffect(() => {
     if (!toast) return;
-    const timer = setTimeout(() => setToast(null), TOAST_MS);
+    const timer = setTimeout(() => setToast(null), toast.action ? TOAST_ACTION_MS : TOAST_MS);
     return () => clearTimeout(timer);
   }, [toast]);
 
-  const show = useCallback((message: string) => {
-    // A new message starts its own four seconds, even when it says the same thing.
-    setToast((was) => ({ message, serial: (was?.serial ?? 0) + 1 }));
+  const show = useCallback((message: string, action?: ToastAction) => {
+    // A new message starts its own time, even when it says the same thing.
+    setToast((was) => ({ message, action, serial: (was?.serial ?? 0) + 1 }));
     if (Platform.OS === 'ios') AccessibilityInfo.announceForAccessibility(message);
   }, []);
   const value = useMemo(() => ({ show }), [show]);
@@ -58,7 +76,23 @@ export function ToastProvider({ children, bottom = SPACE.xl }: { children: React
         >
           {toast ? (
             <View testID="toast" style={[styles.toast, { backgroundColor: colors.foreground }]}>
-              <Text style={[type.body, { color: colors.background }]}>{toast.message}</Text>
+              <Text style={[type.body, styles.message, { color: colors.background }]}>{toast.message}</Text>
+              {toast.action ? (
+                <Pressable
+                  role="button"
+                  accessibilityLabel={`${toast.action.label}: ${toast.message}`}
+                  hitSlop={SPACE.sm}
+                  onPress={() => {
+                    const press = toast.action!.onPress;
+                    setToast(null);
+                    press();
+                  }}
+                  style={styles.action}
+                  testID="toast-action"
+                >
+                  <Text style={[type.rowTitle, styles.actionLabel, { color: colors.background }]}>{toast.action.label}</Text>
+                </Pressable>
+              ) : null}
             </View>
           ) : null}
         </View>
@@ -75,5 +109,12 @@ const styles = StyleSheet.create({
     paddingVertical: SPACE.md,
     paddingHorizontal: SPACE.lg,
     borderRadius: RADIUS,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: SPACE.lg,
   },
+  message: { flexShrink: 1 },
+  // A thumb's height, though the toast is shorter: hitSlop makes up the rest.
+  action: { minHeight: TAP - 2 * SPACE.sm, justifyContent: 'center' },
+  actionLabel: { fontFamily: FONT.extrabold, textDecorationLine: 'underline' },
 });
