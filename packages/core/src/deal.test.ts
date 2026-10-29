@@ -5,6 +5,7 @@ import {
   CATCH_UP_PACE,
   canDeal,
   carryOver,
+  creditedTo,
   catchUpWeeks,
   recentBalances,
   fairShares,
@@ -257,6 +258,44 @@ describe("carryOver", () => {
     expect([...out.values()].reduce((s, v) => s + v, 0)).toBeCloseTo(0);
   });
 
+  it("counts a missed John for nobody, so it comes back to whoever missed it", () => {
+    const out = carryOver(
+      [
+        {
+          shares: [
+            { userId: "a", share: 3 },
+            { userId: "b", share: 3 },
+          ],
+          assignments: [
+            { userId: "a", points: 3, outcome: "done" },
+            { userId: "b", points: 3, outcome: "missed" },
+          ],
+        },
+      ],
+      ["a", "b"],
+    );
+    expect(Object.fromEntries(out)).toEqual({ a: 0, b: -3 });
+  });
+
+  it("counts a covered John for whoever covered it", () => {
+    const out = carryOver(
+      [
+        {
+          shares: [
+            { userId: "a", share: 3 },
+            { userId: "b", share: 3 },
+          ],
+          assignments: [
+            { userId: "a", points: 3, outcome: "done" },
+            { userId: "b", points: 3, outcome: "covered", coveredBy: "a" },
+          ],
+        },
+      ],
+      ["a", "b"],
+    );
+    expect(Object.fromEntries(out)).toEqual({ a: 3, b: -3 });
+  });
+
   it("feeds back into a fairer next week", () => {
     const history = [
       {
@@ -273,6 +312,23 @@ describe("carryOver", () => {
     const ms = members(johns, ["a", "b", "c"], ["a", "b", "c"].map((id) => balance.get(id)!));
     const l = loads(fairShares(johns, ms, "w2"), johns);
     expect(l.get("a")!).toBeLessThan(l.get("b")!);
+  });
+});
+
+describe("creditedTo", () => {
+  it("is the holder for done, late, excused and still open, the coverer for a cover, nobody for a miss", () => {
+    const j = { userId: "a", points: 2 };
+    expect(["done", "late", "excused", null, undefined].map((outcome) => creditedTo({ ...j, outcome }))).toEqual([
+      "a",
+      "a",
+      "a",
+      "a",
+      "a",
+    ]);
+    expect(creditedTo({ ...j, outcome: "missed" })).toBeNull();
+    expect(creditedTo({ ...j, outcome: "covered", coveredBy: "b" })).toBe("b");
+    // A cover still being checked counts for the coverer too.
+    expect(creditedTo({ ...j, outcome: null, coveredBy: "b" })).toBe("b");
   });
 });
 
@@ -306,6 +362,21 @@ describe("recentBalances", () => {
       { week_id: "w0", user_id: "ben", points: 100 },
     ],
   };
+
+  it("reads how each John ended: a miss counts for nobody, a cover for the coverer", () => {
+    const { balances } = recentBalances(
+      {
+        weekIds: ["w1"],
+        shares: rows.shares.filter((s) => s.week_id === "w1"),
+        handed: [
+          { week_id: "w1", user_id: "ava", points: 2, outcome: "missed", covered_by: null },
+          { week_id: "w1", user_id: "ben", points: 6, outcome: "covered", covered_by: "ava" },
+        ],
+      },
+      ["ava", "ben"],
+    );
+    expect(balances).toEqual(new Map([["ava", 2], ["ben", -4]]));
+  });
 
   it("balances what each was handed against their share, over the weeks asked for", () => {
     const { balances } = recentBalances(rows, ["ava", "ben"]);

@@ -315,7 +315,7 @@ export const TABLE_COPY = {
   record: (r: { done: number; late: number; missed: number; covered?: number }) =>
     `${r.done} done${r.late ? ` · ${r.late} late` : ""}${r.missed ? ` · ${r.missed} missed` : ""}${r.covered ? ` · ${r.covered} covered` : ""}`,
   shares: "Fair shares",
-  sharesBody: `What each of you was handed over the last ${BALANCE_WEEKS} weeks, against your share. Each deal hands a little more to whoever is behind, never more than half a week extra, until it evens out.`,
+  sharesBody: `What each of you did over the last ${BALANCE_WEEKS} weeks, against your share. A missed John comes back to whoever missed it, and covering for someone counts as yours. Each deal hands a little more to whoever is behind, never more than half a week extra, until it evens out.`,
   sharesKey: "Below zero is behind, above is ahead. Time away is made up:",
   streaks: "Streaks and perks",
   weeks: (n: number) => `${n} ${n === 1 ? "week" : "weeks"}`,
@@ -532,6 +532,55 @@ export const REMINDERS_COPY = {
   blocked: "Notifications are blocked for this site in your browser settings.",
   failed: "Couldn’t turn reminders on. Try again.",
   turnedOn: "Reminders on for this device",
+} as const;
+
+/** What the pushes say, their buttons, and the settings for them. */
+export const NOTIFY_COPY = {
+  dueTomorrowTitle: (john: string) => `${john} is due tomorrow`,
+  dueSoonTitle: (john: string) => `${john} is due soon`,
+  dueTomorrowBody: (due: string) => `Due ${due}. Tick it here when it’s done.`,
+  dueSoonBody: (due: string) => `Due ${due}. A few hours left to do it on time.`,
+  needsPhoto: "It needs a photo, so tick it in the app.",
+  dealTitle: "This week’s Johns",
+  disputedTitle: (john: string) => `Your ${john} tick is disputed`,
+  voteTitle: (john: string) => `Vote: was ${john} really done?`,
+  // The buttons. Short: a phone shows a few words at most.
+  done: "Done",
+  held: "It was done",
+  struck: "It wasn’t",
+  // What the notification says once a button worked.
+  ticked: (john: string) => `${john} ticked`,
+  tickedBody: "The house can check it now.",
+  alreadyTicked: (john: string) => `${john} was already ticked`,
+  voted: (john: string) => `Vote counted on ${john}`,
+  votedHeld: "You said it was done.",
+  votedStruck: "You said it wasn’t done.",
+  // Settings.
+  settings: "What to send",
+  kinds: {
+    reminders: "Johns due soon",
+    checks: "Housemate checks",
+    flags: "On-call flags",
+    deal: "The week’s deal",
+  },
+  kindHints: {
+    reminders: "The day before and a few hours before. Tick from the notification.",
+    checks: "A tick of yours disputed, or a vote for you to answer.",
+    flags: "When a housemate flags an on-call John you have.",
+    deal: "Your Johns, when the week is handed out.",
+  },
+  quiet: "Quiet hours",
+  quietHint: "Reminders wait until morning. Anything else arrives without a sound.",
+  on: "On",
+  off: "Off",
+  /** The quiet hours on offer, from and until, on the hour. */
+  quietOptions: [
+    { label: "Off", from: null, until: null },
+    { label: "22:00–07:00", from: 22, until: 7 },
+    { label: "23:00–08:00", from: 23, until: 8 },
+  ],
+  saved: "Saved",
+  failed: "Couldn’t save that. Try again.",
 } as const;
 
 export const ME_COPY = {
@@ -898,7 +947,7 @@ export const HOUSE_PAGE_COPY = {
   rulesSwapBody: "Top the week and you earn a swap: trade one of your open Johns for a housemate’s open John that week.",
   rulesShares: "Fair shares",
   rulesSharesBody: (weeks: number, makeup: string) =>
-    `Johns are dealt so that everyone does their share over the last ${weeks} weeks. Whoever is behind is handed a little more, never more than half as much again. Time away is made up ${makeup}.`,
+    `Johns are dealt so that everyone does their share over the last ${weeks} weeks. What counts is what you did: a missed John comes back to you, and one you cover for someone counts as yours. Whoever is behind is handed a little more, never more than half as much again. Time away is made up ${makeup}.`,
   /** How time away is made up, by the house's setting (houses.away_makeup). */
   makeup: { 100: "in full", 50: "by half", 0: "not at all" } as Record<number, string>,
 } as const;

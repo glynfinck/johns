@@ -77,10 +77,13 @@ appear only in the laptop board.
   on 8205 locally; phones send no Origin. `proxy.ts` doesn't touch `/api/`.
   Today: `POST /api/fresh` (catch a house up, at most once a minute),
   `POST /api/disputes`, `POST /api/disputes/:id/votes`, `POST /api/deal`
-  (an admin hands out or re-deals the week) and `POST /api/setup/draft`
+  (an admin hands out or re-deals the week), `POST /api/setup/draft`
   (Describe your house: Claude drafts a John list for an admin to review,
   `lib/moves/draft.ts` and `lib/ai/house-draft.ts`, the only code that
-  calls Claude; `docs/specs/describe-your-house.md`). A database
+  calls Claude; `docs/specs/describe-your-house.md`), and
+  `POST /api/push-actions` (a button on a notification: the one route with
+  no bearer token, because the push's own signed token, `lib/push-token.ts`,
+  stands in for it). A database
   refusal answers through `refused`: 403 when it isn't the caller's to make
   (42501), 409 when the rules say not now (P0001), in `humanError`'s words.
 - `lib/moves/`: a move that needs the service role after the caller's own
@@ -97,7 +100,13 @@ appear only in the laptop board.
 - `lib/engine/`: the tick (`tick.ts`) and the page-load catch-up
   (`fresh.ts`). The only code that uses the service role, apart from the cron
   route and push.
-- `lib/push.ts`: Web Push with VAPID, the engine's `Notify`.
+- `lib/push.ts`: Web Push with VAPID, the engine's `Notify`. It reads each
+  person's `notification_prefs` (skip a kind they turned off, no sound in
+  quiet hours) and gives each push its buttons and that person's token.
+- `lib/push-token.ts`: the signed token a push's buttons carry (who, and
+  which John or dispute), keyed from the VAPID private key, good for 8 days.
+  `lib/moves/push-actions.ts` checks it, then calls `push_action`, which
+  makes the move as that person through `mark_done` or `cast_vote`.
 - `@app/core` for every rule; nothing here re-implements one.
 
 ## Tests
