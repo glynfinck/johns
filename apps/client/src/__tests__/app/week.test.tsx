@@ -242,6 +242,22 @@ describe('on a phone', () => {
     expect(within(screen.getByTestId('person-sam')).getByText('0 of 2 done · 4 pts')).toBeOnTheScreen();
   });
 
+  it('shows a John done together once, under Together, and counts it in each person\'s group', async () => {
+    const garden = (id: string, user: string) =>
+      assignment({ id, user_id: user, name: 'Garden tidy', category: 'outside', points: 4, job_id: 'job1', due_at: at(20) });
+    read.mockResolvedValue(snapshot({ assignments: [garden('g1', 'priya'), garden('g2', 'sam')] }));
+    await open();
+    const together = within(screen.getByTestId('week-together'));
+    expect(together.getAllByTestId('week-row')).toHaveLength(1);
+    expect(together.getByText('Garden tidy')).toBeOnTheScreen();
+    expect(together.getByText(/with Sam/)).toBeOnTheScreen();
+    expect(within(screen.getByTestId('person-priya')).getByText('0 of 1 done · 0 pts')).toBeOnTheScreen();
+    expect(within(screen.getByTestId('person-priya')).queryByText('Garden tidy')).toBeNull();
+    // Ticked from its sheet, with who did it: no circle to tick it from.
+    await fireEvent.press(together.getByText('Garden tidy'));
+    expect(mockOpen).toHaveBeenCalledWith('g1', undefined);
+  });
+
   it('folds finished Johns away, counting the late ones', async () => {
     read.mockResolvedValue(
       busyWeek({

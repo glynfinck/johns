@@ -1,5 +1,7 @@
 import {
   canSwap,
+  CREW_COPY,
+  oneRowPerJob,
   passUnlocked,
   liveWeekFilter,
   ON_CALL_COPY,
@@ -14,6 +16,7 @@ import {
   weekPeople,
   weekRangeLine,
   weekSummary,
+  weekTogether,
   weekUnticked,
   whoDeals,
   type JohnDef,
@@ -23,10 +26,11 @@ import { RepeatIcon } from 'lucide-react-native';
 import { useState } from 'react';
 import { StyleSheet, useWindowDimensions, View } from 'react-native';
 
-import type { JohnRowContext } from '@/components/john-row';
+import { JohnRow, type JohnRowContext } from '@/components/john-row';
 import { PageTitle } from '@/components/page-title';
 import { Reading, ReadFailed } from '@/components/read-state';
 import { Columns, Screen, useColumns } from '@/components/screen';
+import { Section } from '@/components/section';
 import { Chip } from '@/components/status-mark';
 import { TextButton } from '@/components/text-button';
 import { MoreButton, TitleBar } from '@/components/title-bar';
@@ -50,8 +54,8 @@ import { INSET, WIDE } from '@/theme';
 /**
  * Week: how the whole house's week is going. The title bar's "•••" holds
  * time away and, for admins, the John list and re-dealing. Then the summary,
- * whose legend filters the list; one group per person, you first, finished
- * Johns folded (from WIDE on the web, one table row per John instead, with
+ * whose legend filters the list; Johns done together, one row each; one
+ * group per person, you first, finished Johns folded (from WIDE on the web, one table row per John instead, with
  * who's away and your swap under the summary); and the deal's fairness in a
  * sentence, which opens the fair shares, and the way to the track record.
  * Tapping any John opens its sheet.
@@ -190,20 +194,31 @@ function Board({
       }
     />
   );
+  // Johns done together: one row each, under Together on a phone, in the table's one list on a laptop.
+  const together = weekTogether(board.items, userId, shown);
   const johnRows = wide ? (
-    <WeekTable {...weekList(board.items, shown)} context={context} />
+    <WeekTable {...weekList(oneRowPerJob(board.items, userId), shown)} context={context} />
   ) : (
-    weekPeople(board.items, memberIds, userId, shown).map((person) => (
-      <PersonSection
-        key={person.userId}
-        person={person}
-        context={context}
-        points={pointsOf(person.userId)}
-        away={awayOf(person.userId)}
-        onCall={onCallOf(person.userId)}
-        swapReady={person.userId === userId && swapReady}
-      />
-    ))
+    <>
+      {together.length > 0 ? (
+        <Section label={CREW_COPY.together} testID="week-together">
+          {together.map((item) => (
+            <JohnRow key={item.id} item={item} context={context} testID="week-row" />
+          ))}
+        </Section>
+      ) : null}
+      {weekPeople(board.items, memberIds, userId, shown).map((person) => (
+        <PersonSection
+          key={person.userId}
+          person={person}
+          context={context}
+          points={pointsOf(person.userId)}
+          away={awayOf(person.userId)}
+          onCall={onCallOf(person.userId)}
+          swapReady={person.userId === userId && swapReady}
+        />
+      ))}
+    </>
   );
   const fair =
     fairness && shares ? (

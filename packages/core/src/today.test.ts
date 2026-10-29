@@ -398,7 +398,7 @@ describe("standingPlace", () => {
 });
 
 describe("standingLine", () => {
-  const row = (userId: string, points: number, rank: number): TableRow => ({ userId, points, rank, done: 0, late: 0, missed: 0, covered: 0 });
+  const row = (userId: string, points: number, rank: number): TableRow => ({ userId, points, rank, done: 0, late: 0, missed: 0, covered: 0, helped: 0 });
   const table = [row("priya", 9, 1), row(ME, 6, 2), row("megan", 6, 2), row("tom", 1, 4)];
   const share = (userId: string, net: number) => ({ userId, forfeitedRaw: 0, forfeited: 0, received: 0, net });
   const stake = (net: number, month = "2026-10") => ({ month, projection: [share("priya", -net), share(ME, net)] });
@@ -762,8 +762,8 @@ describe("todayPage", () => {
 
   it("says where you stand once the week is out", () => {
     const table: TableRow[] = [
-      { userId: ME, points: 4, rank: 1, done: 2, late: 0, missed: 0, covered: 0 },
-      { userId: "priya", points: 2, rank: 2, done: 1, late: 0, missed: 0, covered: 0 },
+      { userId: ME, points: 4, rank: 1, done: 2, late: 0, missed: 0, covered: 0, helped: 0 },
+      { userId: "priya", points: 2, rank: 2, done: 1, late: 0, missed: 0, covered: 0, helped: 0 },
     ];
     expect(page({ board: board([], { table }), stake }).standing).toBe("1st this week · square in October");
     expect(page({ board: board([], { week: null, table }), stake }).standing).toBeNull();

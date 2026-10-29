@@ -1,5 +1,6 @@
 import {
   CATEGORY_LABEL,
+  CREW_COPY,
   DEAL_COPY,
   FOCUS_SHELL_COPY,
   HOUSE_LOWER_COPY,
@@ -271,6 +272,27 @@ describe('an admin', () => {
     );
   });
 
+  it('makes a John one done together, saying what its points add up to', async () => {
+    await open();
+    await fireEvent.press(screen.getByRole('button', { name: JOHN_LIST_COPY.add }));
+    const form = within(screen.getByTestId('john-form'));
+    expect(form.getByRole('button', { name: `${CREW_COPY.doneBy}, ${CREW_COPY.choice(1)}` })).toBeOnTheScreen();
+    expect(form.queryByTestId('crew-note')).toBeNull();
+    await fireEvent.changeText(form.getByTestId('john-name'), 'Garden tidy');
+    await pick(form, JOHN_LIST_COPY.effort, '4 pts');
+    await pick(form, CREW_COPY.doneBy, CREW_COPY.choice(3));
+    expect(form.getByTestId('crew-note')).toHaveTextContent(`4 pts each, so 12 pts in all. ${CREW_COPY.hint}`);
+    await pick(form, CREW_COPY.doneBy, CREW_COPY.choice(0));
+    expect(form.getByTestId('crew-note')).toHaveTextContent(`4 pts each, for everyone at home that day. ${CREW_COPY.hint}`);
+    await fireEvent.press(form.getByTestId('save-john'));
+    expect(saveJohn).toHaveBeenCalledWith(
+      'h1',
+      snapshot().rules,
+      { ...NEW_JOHN, name: 'Garden tidy', points: 4, crew: 0 },
+      expect.any(Date),
+    );
+  });
+
   it('switches a John to on call, with how often it comes up and how long whoever has it gets', async () => {
     await open();
     await fireEvent.press(screen.getByRole('button', { name: JOHN_LIST_COPY.add }));
@@ -279,6 +301,8 @@ describe('an admin', () => {
     await fireEvent.press(within(form.getByTestId('john-timing')).getByRole('radio', { name: JOHN_LIST_COPY.onCall }));
     expect(sentence()).toBe('On call, up to 2 times a week, done within 12 hours');
     expect(form.getByTestId('on-call-note')).toBeOnTheScreen();
+    // Whoever is on call does it: on call is never done together.
+    expect(form.queryByRole('button', { name: new RegExp(`^${CREW_COPY.doneBy}, `) })).toBeNull();
     expect(form.queryByTestId('john-next')).toBeNull();
     await word(form, REPEAT_COPY.timesAWeek, REPEAT_COPY.times(2));
     await fireEvent.press(form.getByRole('button', { name: `${REPEAT_COPY.more}: ${REPEAT_COPY.timesAWeek}` }));

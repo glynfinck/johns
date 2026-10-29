@@ -216,6 +216,13 @@ already due a day's grace (`graceDue`).
   `covered`: the coverer earns its points, the assignee is treated as having
   missed it (no points, the missed forfeit, a broken streak), and that
   forfeit is paid to the coverer at month close instead of being shared.
+- **Shared Jonz** (`johns.crew`, `docs/specs/shared-jonz.md`): a John's
+  points are shared evenly by everyone who did it. A John done by 2 to 6
+  (or everyone home) is dealt as one place each on one job
+  (`assignments.job_id`) and ticked by a roll call (`roll_call`) that says
+  who did it, helpers included; it settles every place at once, and a
+  holder it leaves off (`absent_at`) has a miss whose part and forfeit go
+  to whoever did it (`ledger.doers`). Any John can be done with help.
 - **The Table**: on time earns full points, late half, missed nothing.
 - **Streaks and perks**: a clean week is every John on time or excused.
   Every 4 clean weeks in a row earns an immunity token (cap 2), spent to
@@ -254,7 +261,9 @@ stamped once final); `away` (local first and last dates, inclusive) →
 `reactions`; `push_subscriptions` + `notification_prefs` (each person's
 kinds of push on or off, and quiet hours; no row is everything on). On-call Johns add `johns.kind`, `respond_hours` and
 `per_week`, `on_call` (who holds each one each week), and
-`assignments.flagged_at` and `flagged_by`. Photos live in the private `proofs` bucket
+`assignments.flagged_at` and `flagged_by`. Shared Jonz add `johns.crew`,
+`assignments.job_id` and `absent_at`, `crew` (who did a John and each share)
+and `ledger.doers`. Photos live in the private `proofs` bucket
 at `<house>/<assignment>/<file>`.
 
 - Schema changes only through migration files (`supabase migration new

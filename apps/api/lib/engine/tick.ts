@@ -1,6 +1,7 @@
 import {
   awayOn,
   comesBack,
+  crewByJob,
   dueAt,
   dueInLine,
   earnsImmunity,
@@ -25,6 +26,8 @@ import {
   settleMonth,
   settleOutcome,
   standings,
+  tableInputs,
+  togetherPlaces,
   USUAL_WEEKS,
   verdict,
   weekShares,
@@ -262,7 +265,15 @@ export async function dealWeek(
   ]).then(([g, a, r]) => [must(g, "groups"), must(a, "away"), must(r, "recent assignments")] as const);
 
   const lastBy = new Map<string, string>();
-  for (const r of recent) if (r.john_id && !lastBy.has(r.john_id)) lastBy.set(r.john_id, r.user_id);
+  // A John done together: everyone with a place in its last turn.
+  const lastTurn = new Map<string, { dueAt: string; userIds: string[] }>();
+  for (const r of recent) {
+    if (!r.john_id) continue;
+    if (!lastBy.has(r.john_id)) lastBy.set(r.john_id, r.user_id);
+    const turn = lastTurn.get(r.john_id);
+    if (!turn) lastTurn.set(r.john_id, { dueAt: r.due_at, userIds: [r.user_id] });
+    else if (turn.dueAt === r.due_at) turn.userIds.push(r.user_id);
+  }
   const away: AwayPeriod[] = awayRows.map((a) => ({
     id: a.id,
     userId: a.user_id,
@@ -288,10 +299,13 @@ export async function dealWeek(
         johnId: j.id,
         points: j.points,
         lastUserId: lastBy.get(j.id) ?? null,
+        ...(j.crew !== 1 ? { lastUserIds: lastTurn.get(j.id)?.userIds ?? [] } : {}),
         sharers,
         home: sharers.filter((id) => !awayOn(away, id, day)),
       };
-      return { john: j, due, groupName, deal };
+      // Done together: a place per person, sharing a job (crew.ts).
+      const jobId = j.crew !== 1 ? crypto.randomUUID() : null;
+      return { john: j, due, groupName, deal, jobId, places: togetherPlaces(deal, j.crew, jobId ?? "") };
     });
 
   // An on-call John puts someone on call for the week. It weighs in the deal
@@ -324,7 +338,7 @@ export async function dealWeek(
     };
   });
 
-  const dayDeals = planned.map((p) => p.deal);
+  const dayDeals = planned.flatMap((p) => p.places);
   const makeup = house.away_makeup / 100;
   const shares = weekShares(dayDeals, memberIds, makeup);
   const weighed = weekShares([...dayDeals, ...onCallDeals], memberIds, makeup);
@@ -336,7 +350,7 @@ export async function dealWeek(
   );
 
   const assignments = dealt.flatMap((d) => {
-    const p = planned.find((x) => x.john.id === d.johnId);
+    const p = planned.find((x) => x.places.some((place) => place.johnId === d.johnId));
     if (!p) return [];
     byUser.set(d.userId, [...(byUser.get(d.userId) ?? []), p.john.name]);
     return [
@@ -350,6 +364,7 @@ export async function dealWeek(
         due_at: p.due.toISOString(),
         group_name: p.groupName,
         dealt: d.why,
+        job_id: p.jobId,
       },
     ];
   });
@@ -453,7 +468,7 @@ async function settleDue(db: Db, house: HouseRow, now: Date, notify?: Notify) {
   const open = must(
     await db
       .from("assignments")
-      .select("id, john_id, due_at, done_at, excused, flagged_at, closes_at, covered_by, weeks(ends_at)")
+      .select("id, john_id, job_id, due_at, done_at, absent_at, excused, flagged_at, closes_at, covered_by, weeks(ends_at)")
       .eq("house_id", house.id)
       .is("outcome", null),
     "open assignments",
@@ -465,6 +480,8 @@ async function settleDue(db: Db, house: HouseRow, now: Date, notify?: Notify) {
       "disputed",
     ).map((d) => d.assignment_id),
   );
+  // A job has one check: a dispute on any of its places holds them all.
+  const disputedJobs = new Set(open.filter((a) => a.job_id && disputed.has(a.id)).map((a) => a.job_id!));
 
   const items: { id: string; outcome: Outcome; forfeit: number; month: string }[] = [];
   for (const a of open) {
@@ -473,11 +490,12 @@ async function settleDue(db: Db, house: HouseRow, now: Date, notify?: Notify) {
         dueAt: new Date(a.due_at),
         doneAt: a.done_at ? new Date(a.done_at) : null,
         excused: a.excused,
-        disputeOpen: disputed.has(a.id),
+        disputeOpen: disputed.has(a.id) || (a.job_id !== null && disputedJobs.has(a.job_id)),
         weekEndsAt: new Date(a.weeks!.ends_at),
         flaggedAt: a.flagged_at ? new Date(a.flagged_at) : null,
         closesAt: a.closes_at ? new Date(a.closes_at) : null,
         coveredBy: a.covered_by,
+        absentAt: a.absent_at ? new Date(a.absent_at) : null,
       },
       now,
       rules.disputeHours,
@@ -544,16 +562,30 @@ async function closeWeeks(db: Db, house: HouseRow, members: readonly MemberRow[]
 
   for (const week of due) {
     const rows = must(
-      await db.from("assignments").select("user_id, points, outcome, covered_by").eq("week_id", week.id),
+      await db
+        .from("assignments")
+        .select("id, user_id, points, outcome, covered_by, job_id, absent_at, crew(user_id, helper, points)")
+        .eq("week_id", week.id),
       "week assignments",
     );
     // Weeks close in order, so a streak always counts the week before it.
     if (rows.some((r) => r.outcome === null)) break;
 
-    const table = standings(
-      rows.map((r) => ({ userId: r.user_id, points: r.points, status: r.outcome as Outcome, coveredBy: r.covered_by })),
-      members.map((m) => m.user_id),
+    // A John ticked by roll call shares its points among everyone on it (crew.ts).
+    const crews = crewByJob(rows);
+    const { rows: places, jobs } = tableInputs(
+      rows.map((r) => ({
+        id: r.id,
+        jobId: r.job_id,
+        userId: r.user_id,
+        points: r.points,
+        status: r.outcome as Outcome,
+        coveredBy: r.covered_by,
+        absentAt: r.absent_at ? new Date(r.absent_at) : null,
+        crew: crews.get(r.job_id ?? r.id) ?? null,
+      })),
     );
+    const table = standings(places, members.map((m) => m.user_id), jobs);
     // A skipped week tops nobody and leaves streaks as they were.
     const winners = new Set(week.skipped_at ? [] : weekWinners(table));
 
@@ -584,7 +616,7 @@ async function closeMonths(db: Db, house: HouseRow, members: readonly MemberRow[
   const forfeitRows = must(
     await db
       .from("ledger")
-      .select("user_id, amount_minor, month, counterparty, kind")
+      .select("user_id, amount_minor, month, counterparty, doers, kind")
       .eq("house_id", house.id)
       // A month with only an admin's corrections in it closes too, so they count.
       .in("kind", ["forfeit", "correction"])
@@ -617,7 +649,7 @@ async function closeMonths(db: Db, house: HouseRow, members: readonly MemberRow[
       rules.stakeMinor,
       forfeitRows
         .filter((r) => r.month === month && r.kind === "forfeit")
-        .map((r) => ({ userId: r.user_id, amount: -r.amount_minor, to: r.counterparty })),
+        .map((r) => ({ userId: r.user_id, amount: -r.amount_minor, to: r.counterparty ?? r.doers })),
       month,
     );
     const applied = must(
@@ -649,10 +681,11 @@ async function sendReminders(db: Db, house: HouseRow, now: Date, notify: Notify)
   const soon = must(
     await db
       .from("assignments")
-      .select("id, user_id, name, due_at, needs_photo, reminded")
+      .select("id, user_id, name, due_at, needs_photo, reminded, job_id")
       .eq("house_id", house.id)
       .is("outcome", null)
       .is("done_at", null)
+      .is("absent_at", null)
       .lt("reminded", 2)
       .gt("due_at", now.toISOString())
       .lte("due_at", new Date(now.getTime() + 24 * HOUR).toISOString()),
@@ -692,7 +725,8 @@ async function sendReminders(db: Db, house: HouseRow, now: Date, notify: Notify)
       url: "/today",
       kind: "reminders",
       zone,
-      ...(a.needs_photo ? {} : { act: { assignmentId: a.id } }),
+      // A John done together is ticked with who did it, in the app.
+      ...(a.needs_photo || a.job_id ? {} : { act: { assignmentId: a.id } }),
       tag: `john:${a.id}`,
     });
     sent += 1;

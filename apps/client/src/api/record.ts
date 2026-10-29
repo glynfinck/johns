@@ -13,7 +13,7 @@ const MOST_WEEKS = 260;
 export type RecordRows = Omit<RecordInput, 'memberIds' | 'now' | 'zone'>;
 
 export async function loadRecord(houseId: string): Promise<RecordRows> {
-  const [weeks, away, shares, johns] = await Promise.all([
+  const [weeks, away, shares, johns, crew] = await Promise.all([
     supabase
       .from('weeks')
       .select('id, starts_on, starts_at, ends_at, skipped_at')
@@ -27,9 +27,19 @@ export async function loadRecord(houseId: string): Promise<RecordRows> {
     allPages((from, to) =>
       supabase
         .from('assignments')
-        .select('id, week_id, user_id, name, points, due_at, done_at, outcome, excused, covered_by, changed_by')
+        .select('id, week_id, user_id, name, points, due_at, done_at, outcome, excused, covered_by, changed_by, job_id, absent_at')
         .eq('house_id', houseId)
         .order('id')
+        .range(from, to),
+    ),
+    // Who did each John ticked by roll call (crew.ts): their shares and who helped.
+    allPages((from, to) =>
+      supabase
+        .from('crew')
+        .select('job_id, assignment_id, user_id, helper, points')
+        .eq('house_id', houseId)
+        .order('job_id')
+        .order('user_id')
         .range(from, to),
     ),
   ]);
@@ -40,6 +50,7 @@ export async function loadRecord(houseId: string): Promise<RecordRows> {
     weeks: weeks.data ?? [],
     shares,
     johns,
+    crew,
     away: (away.data ?? []).map(awayPeriod),
   };
 }

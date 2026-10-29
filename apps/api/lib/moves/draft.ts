@@ -70,7 +70,7 @@ export async function chatTurn(
     caller.db.from("members").select("user_id, joined_at, profiles(display_name)").eq("house_id", houseId).order("joined_at"),
     caller.db
       .from("johns")
-      .select("id, name, category, points, every_weeks, every_months, week_of_month, anchor_month, due_dow, due_time, needs_photo, group_id, kind, respond_hours, per_week")
+      .select("id, name, category, points, every_weeks, every_months, week_of_month, anchor_month, due_dow, due_time, needs_photo, group_id, kind, respond_hours, per_week, crew")
       .eq("house_id", houseId)
       .is("archived_at", null)
       .order("created_at"),

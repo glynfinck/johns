@@ -1,6 +1,7 @@
 import {
   BIN_NIGHT,
   buildStake,
+  CREW_COPY,
   DISPUTE_COPY,
   FOCUS_SHELL_COPY,
   JOHN_COPY,
@@ -19,7 +20,7 @@ import { Pressable, ScrollView, Text } from 'react-native';
 import type { Housemate, HouseSnapshot } from '@/api/board';
 import { loadHouse } from '@/api/board';
 import { castVote } from '@/api/disputes';
-import { coverJohn, markDone, spendImmunity, spendSwap, undoCover, undoDone } from '@/api/johns';
+import { coverJohn, markDone, rollCall, spendImmunity, spendSwap, undoCover, undoDone } from '@/api/johns';
 import { pickPhoto } from '@/api/photos';
 import { applyReset, previewReset } from '@/api/resets';
 import { signPhoto } from '@/api/wall';
@@ -35,6 +36,7 @@ jest.mock('@/api/board', () => ({ loadHouse: jest.fn() }));
 jest.mock('@/api/house', () => ({ catchUp: jest.fn(() => Promise.resolve(false)) }));
 jest.mock('@/api/johns', () => ({
   markDone: jest.fn(),
+  rollCall: jest.fn(),
   undoDone: jest.fn(),
   coverJohn: jest.fn(),
   undoCover: jest.fn(),
@@ -53,7 +55,7 @@ const at = (hours: number) => new Date(Date.now() + hours * HOUR).toISOString();
 const MEGAN: Housemate = { userId: 'megan', name: 'Megan', photo: null, role: 'member', streak: 0, immunityTokens: 0, swapTokens: 0 };
 
 /** Where the sheet is opened from, and what for. */
-const OPENERS: [string, JohnSheetFocus?][] = [['a1'], ['a3'], ['a4'], ['gone'], ['a1', 'swap'], ['a1', 'cant'], ['a4', 'dispute']];
+const OPENERS: [string, JohnSheetFocus?][] = [['a1'], ['a3'], ['a4'], ['a5'], ['gone'], ['a1', 'swap'], ['a1', 'cant'], ['a4', 'dispute']];
 
 /** Somewhere in the house: buttons that open the sheet on a John, and put it away. */
 function Opener() {
@@ -113,6 +115,7 @@ beforeEach(() => {
   jest.clearAllMocks();
   (loadHouse as jest.Mock).mockResolvedValue(house([binsOut(), samsBath({ done_at: at(-1) })]));
   (markDone as jest.Mock).mockResolvedValue(undefined);
+  (rollCall as jest.Mock).mockResolvedValue(2);
   (undoDone as jest.Mock).mockResolvedValue(undefined);
   (coverJohn as jest.Mock).mockResolvedValue(undefined);
   (undoCover as jest.Mock).mockResolvedValue(undefined);
@@ -398,6 +401,88 @@ describe('your open John', () => {
       expect(await within(body).findByRole('alert')).toHaveTextContent('Sam has ticked that one.');
       expect(screen.getByTestId('john-sheet-body')).toBeOnTheScreen();
     });
+  });
+});
+
+describe('a John done together, and help', () => {
+  const MEGAN_HOME: Housemate = { ...MEGAN };
+  const people = [...snapshot().members, MEGAN_HOME];
+  /** Garden tidy for two: Priya's place (a1) and Sam's (a5), 4 pts each. */
+  const garden = (mine: Parameters<typeof assignment>[0] = {}, sams: Parameters<typeof assignment>[0] = {}) => [
+    assignment({ id: 'a1', name: 'Garden tidy', category: 'outside', points: 4, job_id: 'job1', ...mine }),
+    assignment({ id: 'a5', user_id: 'sam', name: 'Garden tidy', category: 'outside', points: 4, job_id: 'job1', ...sams }),
+  ];
+
+  it('says who is on it, and ticks it with its roll call', async () => {
+    await show(house(garden(), people));
+    const body = await openOn('Open a1');
+    const onIt = within(body).getByTestId('crew-part');
+    expect(within(onIt).getByText(JOHN_SHEET_COPY.you)).toBeOnTheScreen();
+    expect(within(onIt).getByText('Sam')).toBeOnTheScreen();
+    // No one-tap tick: Mark done asks who did it.
+    expect(within(body).queryByRole('button', { name: CREW_COPY.withHelp })).toBeNull();
+    await fireEvent.press(within(body).getByRole('button', { name: JOHN_COPY.markDone }));
+    const call = within(body).getByTestId('roll-call');
+    expect(within(body).getByTestId('roll-call-sub')).toHaveTextContent('8 pts, shared by whoever did it');
+    expect(within(call).getByRole('checkbox', { name: `You, ${CREW_COPY.youDidIt}` })).toBeDisabled();
+    expect(within(call).getByRole('checkbox', { name: 'Sam' })).toBeChecked();
+    expect(within(call).getByTestId('roll-call-split')).toHaveTextContent('8 pts ÷ 2 · 4 pts each');
+    expect(within(body).queryByTestId('crew-part')).toBeNull();
+
+    // Sam wasn't there: a miss for Sam, and Sam's part comes to whoever did it.
+    await fireEvent.press(within(call).getByRole('checkbox', { name: 'Sam' }));
+    expect(within(call).getByRole('checkbox', { name: `Sam, ${CREW_COPY.leftOff('Sam')}` })).not.toBeChecked();
+    expect(within(call).getByTestId('roll-call-split')).toHaveTextContent('8 pts ÷ 1 · 8 pts each');
+
+    // Megan helped.
+    await fireEvent.press(within(call).getByRole('button', { name: CREW_COPY.addHelper }));
+    await fireEvent.press(within(call).getByRole('button', { name: 'Megan' }));
+    expect(within(call).getByRole('checkbox', { name: `Megan, ${CREW_COPY.helped}` })).toBeChecked();
+    expect(within(call).getByTestId('roll-call-split')).toHaveTextContent('8 pts ÷ 2 · 4 pts each');
+
+    await fireEvent.press(within(body).getByRole('button', { name: CREW_COPY.markDone }));
+    expect(rollCall).toHaveBeenCalledWith('a1', ['priya', 'megan'], undefined);
+    expect(markDone).not.toHaveBeenCalled();
+  });
+
+  it('goes back to the sheet on Cancel', async () => {
+    await show(house(garden(), people));
+    const body = await openOn('Open a1');
+    await fireEvent.press(within(body).getByRole('button', { name: JOHN_COPY.markDone }));
+    await fireEvent.press(within(body).getByRole('button', { name: FOCUS_SHELL_COPY.cancel }));
+    expect(within(body).queryByTestId('roll-call')).toBeNull();
+    expect(within(body).getByTestId('crew-part')).toBeOnTheScreen();
+  });
+
+  it('adds a helper to a John done by one, and has nobody left to add once everyone is on it', async () => {
+    await show(house([binsOut()]));
+    const body = await openOn('Open a1');
+    await fireEvent.press(within(body).getByRole('button', { name: CREW_COPY.withHelp }));
+    const call = within(body).getByTestId('roll-call');
+    expect(within(call).getByTestId('roll-call-split')).toHaveTextContent('2 pts ÷ 1 · 2 pts each');
+    await fireEvent.press(within(call).getByRole('button', { name: CREW_COPY.addHelper }));
+    await fireEvent.press(within(call).getByRole('button', { name: 'Sam' }));
+    expect(within(call).getByTestId('roll-call-split')).toHaveTextContent('2 pts ÷ 2 · 1 pt each');
+    await fireEvent.press(within(call).getByRole('button', { name: CREW_COPY.addHelper }));
+    expect(within(call).getByText(CREW_COPY.noMoreHelpers)).toBeOnTheScreen();
+    await fireEvent.press(within(body).getByRole('button', { name: CREW_COPY.markDone }));
+    expect(rollCall).toHaveBeenCalledWith('a1', ['priya', 'sam'], undefined);
+  });
+
+  it('says who did it once ticked, and takes the whole roll call back from any of its places', async () => {
+    const crew = [
+      { user_id: 'priya', helper: false, points: 4 },
+      { user_id: 'megan', helper: true, points: '4' },
+    ];
+    await show(house(garden({ done_at: at(-1), crew }, { absent_at: at(-1) }), people));
+    const body = await openOn('Open a5');
+    const did = within(body).getByTestId('crew-part');
+    expect(within(did).getAllByTestId('crew-member')).toHaveLength(2);
+    expect(within(did).getByText(CREW_COPY.helped)).toBeOnTheScreen();
+    expect(within(did).getByText(CREW_COPY.wasntThere)).toBeOnTheScreen();
+    expect(within(body).getByTestId('ticked-line')).toHaveTextContent(/^You ticked it .+ without Sam/);
+    await fireEvent.press(within(body).getByRole('button', { name: JOHN_COPY.undo }));
+    expect(undoDone).toHaveBeenCalledWith('a1');
   });
 });
 
