@@ -148,10 +148,13 @@ it("reads the house under Focus's title bar, and leaves signing out to House", a
 });
 
 describe('Next up', () => {
-  it('shows your next John, what it is, when it is due and what late costs', async () => {
+  it('posts your next John on a plate, with what it is, when it is due and what late costs', async () => {
     const card = await open();
-    expect(within(card).getByText(NEXT_UP_COPY.label)).toBeOnTheScreen();
+    // The plate says it's next: "Next up" is heard, not shown.
+    expect(within(card).queryByText(NEXT_UP_COPY.label)).toBeNull();
+    expect(within(card).getByRole('button', { name: `${NEXT_UP_COPY.label}: Bins out` })).toBeOnTheScreen();
     expect(within(card).getByText('Bins out')).toBeOnTheScreen();
+    expect(within(card).getByTestId('plate-border')).toBeOnTheScreen();
     expect(screen.getByTestId('next-up-meta')).toHaveTextContent(/^Bins · due .+ · £1 if late$/);
     expect(within(card).getByRole('button', { name: JOHN_COPY.markDone })).toBeOnTheScreen();
     expect(within(card).getByRole('button', { name: NEXT_UP_COPY.photo })).toBeOnTheScreen();
@@ -199,10 +202,11 @@ describe('Next up', () => {
     expect(await within(card).findByRole('alert')).toHaveTextContent('That week has closed.');
   });
 
-  it('wears the hazard edge when overdue, keeps its kind, and says what it costs now', async () => {
+  it("draws the plate's border in hazard when overdue, keeps its kind, and says what it costs now", async () => {
     read.mockResolvedValue(snapshot({ assignments: [assignment({ due_at: at(-3) })] }));
     await open();
-    expect(screen.getByTestId('overdue-edge', { includeHiddenElements: true })).toBeOnTheScreen();
+    expect(screen.getByTestId('overdue-edge')).toBeOnTheScreen();
+    expect(screen.queryByTestId('plate-border')).toBeNull();
     expect(screen.getByTestId('next-up-meta')).toHaveTextContent(/^Bins$/);
     expect(screen.getByTestId('next-up-overdue')).toHaveTextContent(/^Overdue since .+ · £1 now, £3 if missed$/);
   });

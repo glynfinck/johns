@@ -118,6 +118,11 @@ export interface Theme {
     tabLabel: TextStyle;
     /** 12/16 ExtraBold caps, a little tracked: an avatar's initials and a count badge's figure. The plate colours it. */
     initials: TextStyle;
+    /**
+     * 24/26 Black caps: the words on a street-name plate (StreetPlate), the
+     * link cards' sign brought indoors. Today's next John, and nothing else.
+     */
+    plate: TextStyle;
 
     // Bin Night's older roles, kept for the brand screens (the front door,
     // sign-in, joining) and the pages for a missing link or a screen that
@@ -169,6 +174,15 @@ export function themeFor(scheme: string | null | undefined): Theme {
         lineHeight: 16,
         letterSpacing: 0.5,
         textTransform: 'uppercase',
+        ...TABULAR,
+      },
+      plate: {
+        fontFamily: FONT.black,
+        fontSize: 24,
+        lineHeight: 26,
+        letterSpacing: 0.5,
+        textTransform: 'uppercase',
+        color: colors.foreground,
         ...TABULAR,
       },
       heading: (level) => ({

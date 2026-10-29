@@ -53,6 +53,13 @@ describe("Focus's type", () => {
     expect(type.rowTitle.textTransform).toBeUndefined();
   });
 
+  it('sets the street plate in Black caps, smaller than the title it sits under', () => {
+    expect(type.plate).toMatchObject({ fontFamily: FONT.black, textTransform: 'uppercase', fontVariant: ['tabular-nums'] });
+    expect(type.plate.fontSize).toBeLessThan(type.title.fontSize ?? 0);
+    expect(type.plate.fontSize).toBeGreaterThan(type.lead.fontSize ?? 0);
+    expect(dark.plate.color).toBe(BIN_NIGHT.dark.foreground);
+  });
+
   it('follows the scheme into the dark', () => {
     expect(dark.title.color).toBe(BIN_NIGHT.dark.foreground);
     expect(dark.meta.color).toBe(BIN_NIGHT.dark.mutedForeground);
