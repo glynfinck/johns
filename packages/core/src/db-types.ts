@@ -455,6 +455,35 @@ export type Database = {
           },
         ]
       }
+      house_pass_billing: {
+        Row: {
+          house_id: string
+          stripe_customer: string
+          stripe_subscription: string | null
+          updated_at: string
+        }
+        Insert: {
+          house_id: string
+          stripe_customer: string
+          stripe_subscription?: string | null
+          updated_at?: string
+        }
+        Update: {
+          house_id?: string
+          stripe_customer?: string
+          stripe_subscription?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "house_pass_billing_house_id_fkey"
+            columns: ["house_id"]
+            isOneToOne: true
+            referencedRelation: "houses"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       houses: {
         Row: {
           away_makeup: number

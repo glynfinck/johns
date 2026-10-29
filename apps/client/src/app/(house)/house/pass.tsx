@@ -1,11 +1,25 @@
-import { PAGE_TITLE, PASS_COPY, PASS_FREE_HISTORY_WEEKS, passLine, passOffers } from '@app/core';
-import { CameraIcon, CoinsIcon, HistoryIcon, TrophyIcon } from 'lucide-react-native';
+import {
+  PAGE_TITLE,
+  PASS_COPY,
+  PASS_FREE_HISTORY_WEEKS,
+  passFirstChargeNote,
+  passLine,
+  passOffers,
+  passPurchaseRefusal,
+  type PassPurchase,
+} from '@app/core';
+import { useLocalSearchParams } from 'expo-router';
+import { CameraIcon, CoinsIcon, CreditCardIcon, HistoryIcon, TrophyIcon } from 'lucide-react-native';
+import { useEffect, useState } from 'react';
 import { StyleSheet, View } from 'react-native';
 
+import { ApiRequestError } from '@/api/http';
+import { leaveFor, passBillingUrl, passCheckoutOpen, passCheckoutUrl } from '@/api/pass';
 import { HousePage } from '@/components/house/house-page';
 import { Row, RowIcon } from '@/components/row';
 import { Section } from '@/components/section';
 import { Body, Meta } from '@/components/text';
+import { useToast } from '@/components/toast';
 import { useHouse } from '@/hooks/use-house';
 import { useMembership } from '@/hooks/use-membership';
 import { usePull, useReadOnFocus } from '@/hooks/use-refresh';
@@ -14,8 +28,10 @@ import { INSET, SPACE } from '@/theme';
 /**
  * The House Pass, pushed from House: where the house stands, what the Pass
  * gives everyone in it, and the plans. A Founding house sees its thanks in
- * place of the plans. Buying waits for the store release, so the plans are
- * shown, not sold, and the page says so.
+ * place of the plans. On the web, with EXPO_PUBLIC_PASS_CHECKOUT=on, a plan
+ * opens Stripe Checkout and the buyer can manage the plan; everywhere else
+ * buying waits for the store release, so the plans are shown, not sold, and
+ * the page says so.
  */
 export default function PassScreen() {
   const { session, house } = useMembership();
@@ -23,11 +39,46 @@ export default function PassScreen() {
   return <PassFor houseId={house!.id} userId={session!.user.id} />;
 }
 
+/** How often, and how many times, the page reads the house again after Checkout, until the webhook has landed. */
+const BOUGHT_READ_MS = 3000;
+const BOUGHT_READS = 10;
+
 function PassFor({ houseId, userId }: { houseId: string; userId: string }) {
   const { query, view } = useHouse(houseId, userId);
   // A purchase lands from the store's webhook, not over Realtime.
   useReadOnFocus(query.refetch);
   const { refreshing, pull } = usePull(houseId, query.refetch);
+  const toast = useToast();
+  const selling = passCheckoutOpen();
+  const [leaving, setLeaving] = useState(false);
+
+  // Back from Checkout: read again until the Pass shows, a few times at most.
+  const bought = useLocalSearchParams<{ bought?: string }>().bought === '1';
+  const waiting = bought && view?.snapshot.house.pass.plan === 'trial';
+  const { refetch } = query;
+  useEffect(() => {
+    if (!waiting) return;
+    let reads = 0;
+    const timer = setInterval(() => {
+      reads += 1;
+      void refetch();
+      if (reads >= BOUGHT_READS) clearInterval(timer);
+    }, BOUGHT_READ_MS);
+    return () => clearInterval(timer);
+  }, [waiting, refetch]);
+
+  /** Off to Stripe, or a toast saying why not. */
+  async function go(url: () => Promise<string>) {
+    setLeaving(true);
+    try {
+      leaveFor(await url());
+    } catch (e) {
+      setLeaving(false);
+      toast.show(e instanceof ApiRequestError ? e.message : PASS_COPY.checkoutClosed);
+    }
+  }
+  const buy = (plan: PassPurchase) => void go(() => passCheckoutUrl(houseId, plan));
+  const manage = () => void go(() => passBillingUrl(houseId));
 
   return (
     <HousePage
@@ -41,16 +92,26 @@ function PassFor({ houseId, userId }: { houseId: string; userId: string }) {
     >
       {() => {
         const { house, rules, members } = view!.snapshot;
+        const { now } = view!;
         const { pass } = house;
         const founding = pass.plan === 'founding';
         const buyer = pass.buyerId ? members.find((m) => m.userId === pass.buyerId)?.name : undefined;
+        // Selling, a house sees only what it can buy now: a house on a paid plan changes it from Manage.
+        const offers = passOffers(rules.currency).filter(
+          (o) => !selling || passPurchaseRefusal(pass, o.plan, now) === null,
+        );
+        const canManage = selling && pass.buyerId === userId && (pass.plan === 'monthly' || pass.plan === 'yearly');
+        const firstCharge = selling ? passFirstChargeNote(pass, now, rules.timezone) : null;
         return (
           <>
             <View style={styles.words}>
               <Body testID="pass-lead">{founding ? PASS_COPY.foundingLead : PASS_COPY.lead}</Body>
               <Meta testID="pass-line">
-                {buyer ? `${passLine(pass, view!.now, rules.timezone)} · ${PASS_COPY.boughtBy(buyer)}` : passLine(pass, view!.now, rules.timezone)}
+                {buyer
+                  ? `${passLine(pass, now, rules.timezone)} · ${PASS_COPY.boughtBy(buyer)}`
+                  : passLine(pass, now, rules.timezone)}
               </Meta>
+              {waiting ? <Meta testID="pass-bought">{PASS_COPY.bought}</Meta> : null}
             </View>
 
             <Section label={PASS_COPY.includes}>
@@ -66,13 +127,25 @@ function PassFor({ houseId, userId }: { houseId: string; userId: string }) {
 
             {founding ? null : (
               <Section label={PASS_COPY.plans} testID="pass-plans">
-                {passOffers(rules.currency).map((offer) => (
+                {canManage ? (
+                  <Row
+                    leading={<RowIcon icon={CreditCardIcon} />}
+                    title={PASS_COPY.manage}
+                    meta={PASS_COPY.manageMeta}
+                    onPress={manage}
+                    disabled={leaving}
+                    chevron
+                    testID="pass-manage"
+                  />
+                ) : null}
+                {offers.map((offer) => (
                   <Row
                     key={offer.plan}
                     title={offer.label}
                     meta={offer.meta}
                     trailing={offer.price}
-                    disabled
+                    onPress={selling ? () => buy(offer.plan) : undefined}
+                    disabled={!selling || leaving}
                     testID={`plan-${offer.plan}`}
                   />
                 ))}
@@ -80,7 +153,8 @@ function PassFor({ houseId, userId }: { houseId: string; userId: string }) {
             )}
 
             <View style={styles.words}>
-              {founding ? null : <Meta testID="pass-soon">{PASS_COPY.buyingSoon}</Meta>}
+              {firstCharge ? <Meta testID="pass-first-charge">{firstCharge}</Meta> : null}
+              {founding || selling ? null : <Meta testID="pass-soon">{PASS_COPY.buyingSoon}</Meta>}
               <Meta>{PASS_COPY.free}</Meta>
             </View>
           </>
