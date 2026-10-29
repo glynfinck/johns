@@ -1,10 +1,10 @@
 import {
-  BALANCE_WEEKS,
   balanceRows,
   monthOf,
   monthStandings,
   monthWindow,
   recentBalances,
+  USUAL_WEEKS,
   weekWindow,
   type BalanceRow,
   type HouseRules,
@@ -48,23 +48,24 @@ export async function loadTable(
       .eq('house_id', houseId)
       .lt('starts_on', thisWeek.startsOn)
       .order('starts_on', { ascending: false })
-      .limit(BALANCE_WEEKS),
+      .limit(USUAL_WEEKS),
   ]);
   if (monthRows.error) throw monthRows.error;
   if (pastWeeks.error) throw pastWeeks.error;
 
+  // Every week before this one, summed by the database; the recent weeks' shares, for a usual week.
   const weekIds = (pastWeeks.data ?? []).map((w) => w.id);
-  const [shares, handed] = weekIds.length
-    ? await Promise.all([
-        supabase.from('week_shares').select('week_id, user_id, share').in('week_id', weekIds),
-        supabase.from('assignments').select('week_id, user_id, points, outcome, covered_by').in('week_id', weekIds),
-      ])
-    : [{ data: [], error: null }, { data: [], error: null }];
+  const [totals, shares] = await Promise.all([
+    supabase.rpc('house_balances', { p_house: houseId, p_before: thisWeek.startsOn }),
+    weekIds.length
+      ? supabase.from('week_shares').select('user_id, share').in('week_id', weekIds)
+      : Promise.resolve({ data: [], error: null }),
+  ]);
+  if (totals.error) throw totals.error;
   if (shares.error) throw shares.error;
-  if (handed.error) throw handed.error;
 
   const { balances, usualShare } = recentBalances(
-    { weekIds, shares: shares.data ?? [], handed: handed.data ?? [] },
+    { totals: totals.data ?? [], recentShares: shares.data ?? [] },
     memberIds,
   );
   return {

@@ -59,8 +59,11 @@ export interface MonthForfeit {
 
 /**
  * Close a month. `memberIds` is everyone sharing in it, in a stable order
- * (join order): the order decides who gets the odd penny when a forfeit does
- * not split evenly, so it must not change between runs.
+ * (join order), and `month` is which one ("2026-10"): together they decide
+ * who gets the odd penny when a forfeit does not split evenly, so neither
+ * may change between runs. The odd pennies take turns, a place further down
+ * the order each month, so over a year they land evenly rather than always
+ * on whoever joined first.
  *
  * A forfeit with a `to` (a covered John) goes whole to that housemate rather
  * than round the house. When the cap trims someone's forfeits, each covered
@@ -72,7 +75,9 @@ export function settleMonth(
   memberIds: readonly string[],
   stakeMinor: number,
   forfeits: readonly MonthForfeit[],
+  month: string,
 ): MonthSettlement {
+  const turn = monthNumber(month);
   const ids = [...memberIds];
   for (const f of forfeits) if (!ids.includes(f.userId)) ids.push(f.userId);
 
@@ -104,7 +109,9 @@ export function settleMonth(
       amount -= cut;
     }
     if (amount === 0) continue;
-    const others = ids.filter((id) => id !== payer);
+    const inOrder = ids.filter((id) => id !== payer);
+    const start = turn % inOrder.length;
+    const others = [...inOrder.slice(start), ...inOrder.slice(0, start)];
     const base = Math.floor(amount / others.length);
     let remainder = amount - base * others.length;
     for (const id of others) {
@@ -119,6 +126,12 @@ export function settleMonth(
   }
 
   return { forfeited, received, entries };
+}
+
+/** Months since year 0 for "2026-10", so each month starts the odd pennies one place on. */
+function monthNumber(month: string): number {
+  const [year, m] = month.split("-").map(Number);
+  return Number.isFinite(year) && Number.isFinite(m) ? year * 12 + m - 1 : 0;
 }
 
 /** Sum entries into balances. */
@@ -222,7 +235,7 @@ export function buildStake(input: {
   const thisMonthForfeits = ledger
     .filter((r) => r.month === month && r.kind === "forfeit")
     .map((r) => ({ userId: r.user_id, amount: -r.amount_minor, to: r.counterparty }));
-  const live = settleMonth(memberIds, stakeMinor, thisMonthForfeits);
+  const live = settleMonth(memberIds, stakeMinor, thisMonthForfeits, month);
   const raw = new Map<string, number>();
   for (const f of thisMonthForfeits) raw.set(f.userId, (raw.get(f.userId) ?? 0) + f.amount);
 

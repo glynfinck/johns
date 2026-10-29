@@ -1,7 +1,6 @@
 import { describe, expect, it } from "vitest";
 
 import {
-  BALANCE_WEEKS,
   CATCH_UP_PACE,
   carryOver,
   fairShares,
@@ -15,8 +14,8 @@ import { balances, settleMonth, settleUp, type LedgerEntry } from "./stake";
 /**
  * Fair shares over months and years. deal.test.ts pins one week at a time;
  * these run the deal the way the engine does, week after week: each week's
- * shares (weekShares), balances from the last BALANCE_WEEKS weeks
- * (carryOver), the deal (fairShares), then how each John ended, fed back into
+ * shares (weekShares), balances over every week so far (carryOver, as the
+ * database's house_balances adds them up), the deal (fairShares), then how each John ended, fed back into
  * the next week. Then they ask whether, over a year or five, everybody did
  * their share, whatever the house threw at the deal: time away, misses,
  * covering, people coming and going.
@@ -86,7 +85,7 @@ function simulate(sim: Sim): Run {
       };
     });
     const shares = weekShares(johns, ids, makeup);
-    const balance = carryOver(history.slice(-BALANCE_WEEKS), ids);
+    const balance = carryOver(history, ids);
     const dealt = fairShares(
       johns,
       ids.map((userId) => ({ userId, balance: balance.get(userId)!, share: shares.get(userId)! })),
@@ -215,13 +214,10 @@ describe("time away, over the months after", () => {
   /** b away for `length` weeks from week 10. */
   const awayFor = (length: number) => (w: number, id: string) => id === "b" && w >= 10 && w < 10 + length;
 
-  // Known issue. b pays the month back by week 21, but at week 22 the away
-  // weeks fall out of the 12-week window while the weeks b caught up in are
-  // still in it, so b looks ahead and is dealt next to nothing for a month.
-  // That echo comes back every 12 weeks and never dies: over five years b
-  // sits 10 to 15 points behind on average, and up to 24. Remove `.fails`
-  // once balances stop forgetting debts that aren't paid yet.
-  it.fails("pays back a month away in full, then stays level", () => {
+  // A balance that only remembered 12 weeks forgot the away weeks just as
+  // they were paid back, so the catch-up made b look ahead and the debt came
+  // back every 12 weeks, for good: 10 to 15 points behind on average.
+  it("pays back a month away in full, then stays level", () => {
     const run = simulate({ weeks: A_YEAR, johns: HOUSE, members: always(FOUR), away: awayFor(4) });
     // Behind by about a month's share on the way back...
     expect(run.lifetime[13].get("b")!).toBeLessThan(-3 * BIGGEST);
@@ -290,11 +286,9 @@ describe("misses and covers, over months", () => {
     expect(after).toBeLessThan(0);
   });
 
-  // Known issue. Covering once a month, c ends year one 6 points ahead of
-  // their share, year three 24, year five 40, while b falls 48 behind: the
-  // deal starts paying c back, but the 12-week window forgets each cover
-  // before it is paid off. Remove `.fails` once covers are paid back in full.
-  it.fails("never leaves a regular coverer doing more than their share, however many years", () => {
+  // A 12-week balance forgot each cover before it was paid back: c ended
+  // five years 40 points over their share, and b 48 under.
+  it("never leaves a regular coverer doing more than their share, however many years", () => {
     // c covers whatever b is handed in the first week of each month.
     const run = simulate({
       weeks: FIVE_YEARS,
@@ -333,7 +327,7 @@ describe("the Stake, over a year of months", () => {
     for (let m = 0; m < 12; m++) {
       const month = forfeits(m);
       for (const f of month) entries.push({ userId: f.userId, kind: "forfeit", amount: -f.amount });
-      entries.push(...settleMonth(ids, 2000, month).entries);
+      entries.push(...settleMonth(ids, 2000, month, `2026-${String(m + 1).padStart(2, "0")}`).entries);
     }
     return entries;
   }
@@ -366,11 +360,9 @@ describe("the Stake, over a year of months", () => {
     expect(balances(entries).get("a")).toBe(-2000 * 12);
   });
 
-  // Known issue. When a forfeit doesn't split evenly, settleMonth gives the
-  // odd penny to the first in join order, every month. Four people missing
-  // one 500 John each a month: a and b end the year 12p up, d 24p down.
-  // Remove `.fails` once the odd penny takes turns.
-  it.fails("treats everyone the same when everyone does the same: a year of equal misses comes out even", () => {
+  // The odd penny used to go to the first in join order every month: a and
+  // b ended the year 12p up, d 24p down. Now it takes turns.
+  it("treats everyone the same when everyone does the same: a year of equal misses comes out even", () => {
     // Everyone misses one 500 John a month. Nobody should be up or down.
     const entries = aYear(FOUR, () => FOUR.map((userId) => ({ userId, amount: 500 })));
     const owed = balances(entries);
