@@ -8,7 +8,7 @@ import {
   PASS_COPY,
   stakeRules,
 } from '@app/core';
-import { router } from 'expo-router';
+import { router, Slot } from 'expo-router';
 import { Tabs } from 'expo-router/js-tabs';
 import { act, fireEvent, screen, waitFor, within } from 'expo-router/testing-library';
 import { Platform, Share, Text, useWindowDimensions } from 'react-native';
@@ -20,6 +20,7 @@ import { resetJoinCode } from '@/api/settings';
 import { confirmPayment, loadStake, type StakeRead } from '@/api/stake';
 import { loadTable } from '@/api/table';
 import HouseScreen from '@/app/(house)/house';
+import { HouseWorkspace } from '@/components/house/workspace';
 import { assignment, snapshot } from '@/testing/house';
 import { renderPages, untilRead } from '@/testing/pages';
 
@@ -78,9 +79,19 @@ const OWED_TO_YOU = stakeRead(
 );
 
 /** House, with the pages it pushes standing in as their names. */
-async function open() {
+async function open({ workspace = false } = {}) {
   await renderPages(
     {
+      // House's workspace, as its stack's layout puts it round each page.
+      ...(workspace
+        ? {
+            'house/_layout': () => (
+              <HouseWorkspace>
+                <Slot />
+              </HouseWorkspace>
+            ),
+          }
+        : {}),
       'house/index': HouseScreen,
       'house/stake': () => <Text>Stake page</Text>,
       'house/wall': () => <Text>Wall page</Text>,
@@ -428,6 +439,13 @@ describe('on a laptop', () => {
     expect(main.getByTestId('month-card')).toBeOnTheScreen();
     expect(main.getByTestId('house-table')).toBeOnTheScreen();
     expect(side.getAllByTestId('lower').map((node) => node.props.children)).toEqual(['the Wall', 'House setup', 'You', 'Leaving']);
+  });
+
+  it('leaves the setup and the Pass to the list of House’s pages beside it', async () => {
+    await open({ workspace: true });
+    expect(screen.getByTestId('house-nav')).toBeOnTheScreen();
+    expect(screen.getAllByTestId('lower').map((node) => node.props.children)).toEqual(['the Wall', 'You', 'Leaving']);
+    expect(screen.queryByTestId('pass-section')).toBeNull();
   });
 
   it('stays in one column at the narrowest laptop', async () => {

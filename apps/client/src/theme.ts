@@ -77,6 +77,12 @@ export const PAGE_MAX = 1120;
 export const ASIDE = 380;
 /** The page's own width from which a page that spreads goes to two columns. */
 export const COLUMNS_MIN = 1000;
+/** House's list of its pages down the left of its pages on a laptop. */
+export const HOUSE_NAV = 240;
+/** The House tab's width from which its pages are listed beside them: room for the list and a phone's column. */
+export const WORKSPACE_MIN = 960;
+/** A panel down the right of House's pages on a laptop (a John's details), as wide as the chat with Jonz. */
+export const PANEL = 400;
 /** Between one section and the next. */
 export const SECTION_GAP = 32;
 /** From a section's label to its group. */
