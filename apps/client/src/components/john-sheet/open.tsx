@@ -1,6 +1,7 @@
 import {
   cantOptions,
   coverOffer,
+  CREW_COPY,
   firstName,
   FOCUS_SHELL_COPY,
   JOHN_COPY,
@@ -11,7 +12,7 @@ import {
   type BoardItem,
   type CantOptions,
 } from '@app/core';
-import { CameraIcon, CheckIcon, ImagesIcon, RepeatIcon, ShieldIcon } from 'lucide-react-native';
+import { CameraIcon, CheckIcon, ImagesIcon, RepeatIcon, ShieldIcon, UsersIcon } from 'lucide-react-native';
 import { useState } from 'react';
 import { StyleSheet, View } from 'react-native';
 
@@ -34,13 +35,15 @@ import { SheetLines, SheetSection } from './parts';
 
 /**
  * Your open John: amber "Mark done" and a photo with it (a photo John
- * leads with the camera, then the library), and, while you hold a token,
- * "If you can't": skip it with immunity, or swap it for a housemate's. The
- * swap takes over the sheet's content until it's done or cancelled. Opened
- * at "If you can't" with only one of the two to offer, it starts on that
- * one: the skip's sentence, or the swap.
+ * leads with the camera, then the library), then "Done with help", which
+ * opens the roll call; a John done together is ticked by its roll call, so
+ * its one button opens that. While you hold a token, "If you can't": skip
+ * it with immunity, or swap it for a housemate's. The swap takes over the
+ * sheet's content until it's done or cancelled. Opened at "If you can't"
+ * with only one of the two to offer, it starts on that one: the skip's
+ * sentence, or the swap.
  */
-export function YoursOpen({ item, context }: { item: BoardItem; context: JohnSheetContext }) {
+export function YoursOpen({ item, context, onRollCall }: { item: BoardItem; context: JohnSheetContext; onRollCall: () => void }) {
   const tick = useTick(context.houseId, item.id);
   const cant = cantOptions(item, context.board, context.me);
   const atCant = context.focus === 'cant' && cant !== null;
@@ -55,7 +58,14 @@ export function YoursOpen({ item, context }: { item: BoardItem; context: JohnShe
   return (
     <>
       <SheetLines testID="tick-actions">
-        {item.needsPhoto ? (
+        {item.jobId ? (
+          <Button
+            icon={item.needsPhoto ? CameraIcon : CheckIcon}
+            label={JOHN_COPY.markDone}
+            onPress={onRollCall}
+            testID="sheet-mark-done"
+          />
+        ) : item.needsPhoto ? (
           <>
             <Button
               icon={CameraIcon}
@@ -89,6 +99,9 @@ export function YoursOpen({ item, context }: { item: BoardItem; context: JohnShe
               onPress={() => void tick.tickWithPhoto('camera')}
             />
           </>
+        )}
+        {item.jobId ? null : (
+          <Button variant="ghost" icon={UsersIcon} label={CREW_COPY.withHelp} disabled={tick.busy} onPress={onRollCall} testID="done-with-help" />
         )}
         {tick.problem ? <Alert message={tick.problem} /> : null}
       </SheetLines>

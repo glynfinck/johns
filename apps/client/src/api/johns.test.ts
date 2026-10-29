@@ -1,9 +1,12 @@
-import { markDone, spendImmunity, spendSwap, undoDone } from './johns';
+import { apiPost } from './http';
+import { markDone, rollCall, spendImmunity, spendSwap, undoDone } from './johns';
 import { supabase } from './supabase';
 
 jest.mock('./supabase', () => ({ supabase: { rpc: jest.fn() } }));
+jest.mock('./http', () => ({ apiPost: jest.fn() }));
 
 const rpc = supabase.rpc as unknown as jest.Mock;
+const post = apiPost as jest.Mock;
 
 beforeEach(() => {
   jest.clearAllMocks();
@@ -15,6 +18,19 @@ it('ticks a John through mark_done, with or without a photo', async () => {
   expect(rpc).toHaveBeenCalledWith('mark_done', { p_assignment: 'a1', p_photo_path: undefined });
   await markDone('a1', 'h1/a1/receipt.jpg');
   expect(rpc).toHaveBeenLastCalledWith('mark_done', { p_assignment: 'a1', p_photo_path: 'h1/a1/receipt.jpg' });
+});
+
+it('ticks a John with who did it through the roll call route, which tells them', async () => {
+  const crew = ['00000000-0000-4000-8000-000000000001', '00000000-0000-4000-8000-000000000002'];
+  post.mockResolvedValue({ ok: true, people: 2 });
+  await expect(rollCall('00000000-0000-4000-8000-0000000000a1', crew)).resolves.toBe(2);
+  expect(post).toHaveBeenCalledWith('/api/roll-call', { assignmentId: '00000000-0000-4000-8000-0000000000a1', crew }, expect.anything());
+  await rollCall('00000000-0000-4000-8000-0000000000a1', crew, 'h1/a1/receipt.jpg');
+  expect(post).toHaveBeenLastCalledWith(
+    '/api/roll-call',
+    { assignmentId: '00000000-0000-4000-8000-0000000000a1', crew, photoPath: 'h1/a1/receipt.jpg' },
+    expect.anything(),
+  );
 });
 
 it('takes a tick back, and spends immunity, through their own functions', async () => {

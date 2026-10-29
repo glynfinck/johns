@@ -119,6 +119,34 @@ export function tableInputs(places: readonly CreditPlace[]): { rows: TableInput[
   return { rows, jobs };
 }
 
+/** A John's places on the board: its job's, or just itself for a John done by one. */
+export function jobPlaces<T extends { id: string; jobId?: string | null }>(item: T, items: readonly T[]): T[] {
+  if (!item.jobId) return [item];
+  const places = items.filter((i) => i.jobId === item.jobId);
+  return places.length > 0 ? places : [item];
+}
+
+/** A place on the board, as the roll call weighs it. */
+export function rollCallPlace(i: {
+  userId: string;
+  points: number;
+  status: LiveStatus;
+  doneAt: Date | null;
+  absentAt?: Date | null;
+  coveredBy: string | null;
+  outcome: string | null;
+}): RollCallPlace {
+  return {
+    userId: i.userId,
+    points: i.points,
+    doneAt: i.doneAt,
+    absentAt: i.absentAt ?? null,
+    coveredBy: i.coveredBy,
+    outcome: i.outcome,
+    excused: i.status === "excused",
+  };
+}
+
 /** A place, as the roll call weighs it. */
 export interface RollCallPlace {
   userId: string;

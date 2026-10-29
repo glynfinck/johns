@@ -183,3 +183,43 @@ describe("readDealt", () => {
     expect(readDealt([1, 2])).toBeNull();
   });
 });
+
+describe("johnWhy: a John done together", () => {
+  const first: DealWhy = {
+    to: ME,
+    by: "behind",
+    weighed: [
+      { userId: ME, standing: -5 },
+      { userId: "priya", standing: -3 },
+      { userId: "megan", standing: 2 },
+    ],
+    away: [],
+  };
+  const second: DealWhy = { to: "priya", by: "behind", weighed: first.weighed.slice(1), away: [] };
+  const mine = item(first, { id: "a1", jobId: "job", points: 4 });
+  const priyas = item(second, { id: "a2", jobId: "job", userId: "priya", points: 4 });
+
+  it("says how many it needs and who was furthest behind of everyone home", () => {
+    const view = johnWhy(mine, PEOPLE, ME, RULES, now, [mine, priyas]);
+    expect(view.answer).toBe("Needs 2. You and Priya were furthest behind of the 3 home.");
+    expect(view.rows.filter((r) => r.chosen).map((r) => r.userId)).toEqual([ME, "priya"]);
+  });
+
+  it("says whose work it counts as once the roll call has said who did it", () => {
+    const crew = {
+      tickedFrom: "a1",
+      tickedBy: ME,
+      total: 8,
+      people: [
+        { userId: ME, helper: false, points: 4 },
+        { userId: "megan", helper: true, points: 4 },
+      ],
+    };
+    const done = { ...mine, status: "done" as const, doneAt: at(-30), outcome: "done" as const, crew };
+    expect(johnWhy(done, PEOPLE, ME, RULES, now, [done]).stakes).toBe("You and Megan did it, so it counts as 4 pts of work each.");
+    const left = { ...priyas, status: "missed" as const, absentAt: at(-30), outcome: "missed" as const, crew };
+    expect(johnWhy(left, PEOPLE, ME, RULES, now, [left]).stakes).toBe(
+      "Priya wasn’t there, so it’s Priya’s miss: the part goes to whoever did it, and the work comes back in the next deals.",
+    );
+  });
+});

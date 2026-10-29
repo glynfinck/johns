@@ -1,4 +1,4 @@
-import { johnWhy, WHY_COPY, type BoardItem } from '@app/core';
+import { jobPlaces, johnWhy, WHY_COPY, type BoardItem } from '@app/core';
 
 import { Avatar } from '@/components/avatar';
 import { Fold } from '@/components/fold';
@@ -18,7 +18,7 @@ import { SheetSection } from './parts';
  * been handed the most extra a week gives.
  */
 export function JohnWhy({ item, context }: { item: BoardItem; context: JohnSheetContext }) {
-  const why = johnWhy(item, context.members, context.userId, context.rules, context.now);
+  const why = johnWhy(item, context.members, context.userId, context.rules, context.now, jobPlaces(item, context.board.items));
   return (
     <SheetSection>
       <Section label={WHY_COPY.label} testID="john-why">

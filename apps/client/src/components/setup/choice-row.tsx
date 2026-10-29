@@ -16,7 +16,8 @@ const TWO_LINES = 64;
  * and at the end a tick when it's chosen; a checkbox shows its empty box
  * too, edged in muted ink so it reads on the card colour. With `meta` it's
  * a setting of its own ("Needs a photo"): its name as a RowTitle over one
- * line on what it means, from the leading edge. The state is `aria-checked`.
+ * line on what it means, from the leading edge, or after `leading` when it
+ * has one (someone on a roll call). The state is `aria-checked`.
  */
 export function ChoiceRow({
   role,
@@ -64,10 +65,14 @@ export function ChoiceRow({
     >
       <Hairline />
       {meta ? (
-        <View style={styles.words}>
-          <RowTitle numberOfLines={1}>{label}</RowTitle>
-          <Meta numberOfLines={metaLines}>{meta}</Meta>
-        </View>
+        <>
+          {/* A setting has no leading slot; someone to pick, with a line about them, has their avatar. */}
+          {leading ? <View style={styles.leading}>{leading}</View> : null}
+          <View style={styles.words}>
+            <RowTitle numberOfLines={1}>{label}</RowTitle>
+            <Meta numberOfLines={metaLines}>{meta}</Meta>
+          </View>
+        </>
       ) : (
         <>
           <View style={styles.leading}>{leading}</View>
