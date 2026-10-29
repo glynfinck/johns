@@ -27,7 +27,7 @@ import {
 import { router } from 'expo-router';
 import { ArrowUpIcon, CheckIcon } from 'lucide-react-native';
 import { useRef, useState } from 'react';
-import { KeyboardAvoidingView, Platform, ScrollView, StyleSheet, Text, TextInput, View, type ScrollViewInstance } from 'react-native';
+import { KeyboardAvoidingView, Platform, Pressable, ScrollView, StyleSheet, Text, TextInput, View, type ScrollViewInstance } from 'react-native';
 
 import { applyDraft, sendChat } from '@/api/draft';
 import { Alert } from '@/components/alert';
@@ -54,8 +54,15 @@ type Turn =
   | { role: 'assistant'; text: string; ask: ChatAsk | null; draft: HouseDraft | null }
   | { role: 'done'; added: number };
 
+/** The box's inside height for one line: a thumb tall with its edge. */
+const LINE = TAP - 2;
 /** The message box at its tallest: five lines, then it scrolls. */
-const BOX_MAX = TAP + 4 * 24;
+const BOX_MAX = LINE + 4 * 24;
+/** No focus ring of the browser's own round the words: the bubble round them darkens instead. */
+const NO_RING = Platform.OS === 'web' ? ({ outlineStyle: 'none' } as object) : null;
+/** The send arrow's round, and its room from the bubble's edge (the same all round, one line tall). */
+const SEND = 34;
+const SEND_INSET = (LINE - SEND) / 2;
 
 /** How many of the draft's Johns show before "See all". */
 const FOLDED = 3;
@@ -121,6 +128,8 @@ export function SetupChat({
   const [text, setText] = useState('');
   // How tall the words in the box come out, measured off-screen: the box grows to fit them, up to BOX_MAX.
   const [wordsHeight, setWordsHeight] = useState(0);
+  // The bubble shows the focus, not the words inside it.
+  const [focused, setFocused] = useState(false);
   const [sending, setSending] = useState(false);
   const [problem, setProblem] = useState<string | null>(null);
 
@@ -276,7 +285,11 @@ export function SetupChat({
         <View style={[styles.composer, { borderColor: colors.border, backgroundColor: colors.background }]}>
           <View style={styles.composerLine}>
             {problem ? <Alert message={problem} /> : null}
-            <View style={styles.box}>
+            {/* One bubble, as in the Claude app: the words, and the send arrow inside it at the bottom right. */}
+            <View
+              style={[styles.box, { borderColor: focused ? colors.foreground : colors.mutedForeground, backgroundColor: colors.card }]}
+              testID="chat-box"
+            >
               <View style={styles.field}>
                 {/* The words as the box would wrap them, unseen, so the box can be as tall as they are. */}
                 <Text
@@ -300,6 +313,8 @@ export function SetupChat({
                   placeholderTextColor={withAlpha(colors.mutedForeground, 0.7)}
                   value={text}
                   onChangeText={setText}
+                  onFocus={() => setFocused(true)}
+                  onBlur={() => setFocused(false)}
                   maxLength={MESSAGE_MAX}
                   // As in other chat apps: one line while empty, the hint cut short rather than spilling; as you
                   // write it grows to show the whole message, up to BOX_MAX, then scrolls inside itself.
@@ -309,26 +324,40 @@ export function SetupChat({
                   style={[
                     styles.input,
                     { fontFamily: type.body.fontFamily, fontSize: type.body.fontSize, lineHeight: type.body.lineHeight },
-                    { height: text ? Math.min(Math.max(wordsHeight, TAP), BOX_MAX) : TAP },
-                    { borderColor: colors.mutedForeground, color: colors.foreground, backgroundColor: colors.card },
+                    { height: text ? Math.min(Math.max(wordsHeight, LINE), BOX_MAX) : LINE },
+                    { color: colors.foreground },
+                    NO_RING,
                   ]}
                   testID="chat-input"
                 />
               </View>
-              <Button
-                variant="outline"
-                icon={ArrowUpIcon}
-                iconOnly
-                label={HOUSE_DRAFT_COPY.send}
-                onPress={() => void send(text)}
-                disabled={busy || !text.trim()}
-                testID="chat-send"
-              />
+              <SendButton onPress={() => void send(text)} disabled={busy || !text.trim()} />
             </View>
           </View>
         </View>
       )}
     </KeyboardAvoidingView>
+  );
+}
+
+/** The send arrow inside the message box: amber once there's something to send, quiet until then. */
+function SendButton({ onPress, disabled }: { onPress: () => void; disabled: boolean }) {
+  const { colors } = useTheme();
+  return (
+    <Pressable
+      accessibilityRole="button"
+      accessibilityLabel={HOUSE_DRAFT_COPY.send}
+      accessibilityState={{ disabled }}
+      disabled={disabled}
+      onPress={onPress}
+      hitSlop={SEND_INSET}
+      testID="chat-send"
+      style={({ pressed }) => [styles.send, pressed && { opacity: 0.85 }]}
+    >
+      <View style={[styles.sendDot, { backgroundColor: disabled ? colors.secondary : colors.hivis }]}>
+        <ArrowUpIcon size={18} color={disabled ? colors.mutedForeground : colors.onHivis} aria-hidden />
+      </View>
+    </Pressable>
   );
 }
 
@@ -508,15 +537,12 @@ const styles = StyleSheet.create({
     paddingVertical: SPACE.sm,
     gap: SPACE.sm,
   },
-  // The send button stays at the foot of a box that has grown, as in other chat apps.
-  box: { flexDirection: 'row', alignItems: 'flex-end', gap: SPACE.sm },
+  // The bubble: its edge round the words and the send arrow, which stays at its foot as the words grow.
+  box: { flexDirection: 'row', alignItems: 'flex-end', borderWidth: 1, borderRadius: RADIUS * 2, paddingRight: SEND_INSET },
   field: { flex: 1 },
-  input: {
-    borderWidth: 1,
-    borderRadius: RADIUS,
-    paddingHorizontal: SPACE.md,
-    paddingVertical: SPACE.md,
-  },
-  // Edge-less, with the edge's width added to its padding, so one line measures exactly TAP.
-  measure: { position: 'absolute', left: 0, right: 0, opacity: 0, borderWidth: 0, paddingHorizontal: SPACE.md + 1, paddingVertical: SPACE.md },
+  input: { paddingLeft: SPACE.md, paddingRight: SPACE.sm, paddingVertical: SPACE.md - 1 },
+  measure: { position: 'absolute', left: 0, right: 0, opacity: 0 },
+  // A thumb-sized target round a round arrow, sitting in the bubble's bottom-right corner.
+  send: { width: SEND, height: LINE, alignItems: 'center', justifyContent: 'center' },
+  sendDot: { width: SEND, height: SEND, borderRadius: SEND / 2, alignItems: 'center', justifyContent: 'center' },
 });
