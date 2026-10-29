@@ -6,10 +6,12 @@ import { weeklyEffort, type JohnDef } from "./board";
 import { FOCUS_SHELL_COPY, HOUSE_LOWER_COPY, WALL_FEED_COPY } from "./copy";
 import type { Currency, HouseRules } from "./domain";
 import { dateRange, dayLabel, firstName, STATUS_MARK, type StatusIcon } from "./format";
+import { undoneWhat } from "./history";
 import { formatMoney } from "./money";
 import type { LiveStatus } from "./outcome";
+import { resetWhat } from "./resets";
 import type { Transfer } from "./stake";
-import { REACTABLE, REACTIONS, type ReactionKind, type WallEvent, type WallIcon } from "./wall";
+import { REACTABLE, REACTIONS, type Part, type ReactionKind, type WallEvent, type WallIcon } from "./wall";
 import { addDaysTo, localDate } from "./week";
 
 // House's lower half, as both the House tab and the whole Wall show it: each
@@ -40,6 +42,14 @@ export interface WallScene {
   clock?: boolean;
 }
 
+/**
+ * The five kinds of news on the Wall, each with one plate colour: done
+ * (green), trouble (hazard: a miss, a dispute, a tick struck out), needs
+ * doing (amber, only while a flag is open), perks (ink: immunity and swaps)
+ * and notices (pavement: everything else, a settled flag too).
+ */
+export type WallFamily = "done" | "trouble" | "flag" | "perk" | "notice";
+
 /** One event as a row: who leads it, one sentence, and one meta line. */
 export interface WallFeedRow {
   id: string;
@@ -48,7 +58,13 @@ export interface WallFeedRow {
   /** Whose plate leads the row: null for the house's own news, or someone who has left (an icon leads instead). */
   actor: { userId: string; name: string; me: boolean } | null;
   icon: WallIcon;
+  /** Which of the five kinds of news it is: its plate's colour. */
+  family: WallFamily;
   title: string;
+  /** The sentence in runs, names and Johns in bold. */
+  parts: Part[];
+  /** A flag still open: how long is left ("11h left"), or how late it is. Null once it's settled. */
+  open: { left: string; late: boolean } | null;
   /** The meta line's words before the time (a dispute's reason in quotes): they truncate, the time never does. */
   detail: string | null;
   /**
@@ -71,7 +87,7 @@ export interface WallFeedRow {
    * opens its John sheet, at the vote while its dispute waits on the viewer.
    */
   board: { assignmentId: string; vote: boolean } | null;
-  /** The meta line's words in full, with the day and the time: "“Shower drain's…” · Today, 09:39". */
+  /** The meta line's words in full, then the day and the time on a line of their own. */
   full: string;
   /** What a screen reader says for the row: the sentence, then the meta line. */
   label: string;
@@ -190,7 +206,8 @@ const ICON: Record<string, WallIcon> = {
   late: "check",
   missed: "x",
   covered: "check",
-  disputed: "flag",
+  disputed: "gavel",
+  flagged: "flag",
   upheld: "gavel",
   rejected: "gavel",
   immunity_earned: "shield",
@@ -201,7 +218,45 @@ const ICON: Record<string, WallIcon> = {
   joined: "user-plus",
   month_closed: "calendar-check",
   paid: "banknote",
+  undone: "undo",
+  reset: "undo",
 };
+
+const FAMILY: Record<string, WallFamily> = {
+  done: "done",
+  late: "done",
+  covered: "done",
+  rejected: "done",
+  missed: "trouble",
+  disputed: "trouble",
+  upheld: "trouble",
+  immunity_earned: "perk",
+  immunity_used: "perk",
+  swap_earned: "perk",
+  swap_used: "perk",
+};
+
+const OPEN: ReadonlySet<LiveStatus> = new Set(["upcoming", "due-soon", "overdue"]);
+
+/** "11h left", "40 min late": from now to when a flag is due. */
+function countdown(due: Date, now: Date): { left: string; late: boolean } {
+  const minutes = Math.round((due.getTime() - now.getTime()) / 60_000);
+  const late = minutes < 0;
+  const m = Math.abs(minutes);
+  const say = late ? WALL_FEED_COPY.lateBy : WALL_FEED_COPY.left;
+  return { left: m >= 60 ? say(Math.floor(m / 60), "h") : say(Math.max(m, 1), "min"), late };
+}
+
+/** The sentence in runs: each of `bold` (names, Johns) set in bold wherever it appears. */
+function boldRuns(title: string, bold: readonly string[]): Part[] {
+  const words = [...new Set(bold.filter((w) => w.length > 0))].sort((a, b) => b.length - a.length);
+  if (words.length === 0) return [{ text: title }];
+  const pattern = new RegExp(`(${words.map((w) => w.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")).join("|")})`, "g");
+  return title
+    .split(pattern)
+    .filter((text) => text.length > 0)
+    .map((text) => (words.includes(text) ? { text, bold: true } : { text }));
+}
 
 /** The house's own news: nobody's plate leads it. */
 const HOUSE_NEWS = new Set(["upheld", "rejected", "month_closed"]);
@@ -222,6 +277,11 @@ export function wallFeedRow(event: WallEvent, scene: WallScene): WallFeedRow {
 
   let title: string;
   let detail: string | null = null;
+  // The names and Johns the sentence sets in bold.
+  let bold: string[] = [who.subject, johnName];
+  let open: WallFeedRow["open"] = null;
+  // Who leads the row, when it isn't whoever the event is about.
+  let lead = event.userId;
   let mark: StatusIcon | null = null;
   let repeat: string | null = null;
   // Whose John it is: the ticker, or the one a dispute or a verdict is against.
@@ -237,6 +297,7 @@ export function wallFeedRow(event: WallEvent, scene: WallScene): WallFeedRow {
       // The John was someone else's: theirs is the miss, the coverer's the tick.
       const whose = named(text("for") || null, me, members);
       title = WALL_FEED_COPY.covered(who.subject, whose.possessive, johnName);
+      bold.push(whose.subject);
       ({ detail, mark } = tickDetail(event, scene));
       if (detail === WALL_FEED_COPY.onTime) detail = WALL_FEED_COPY.coveredWord;
       repeat = `covered:${event.userId}`;
@@ -252,6 +313,7 @@ export function wallFeedRow(event: WallEvent, scene: WallScene): WallFeedRow {
       owner = text("against") || null;
       const against = named(owner, me, members);
       title = WALL_FEED_COPY.disputed(who.subject, against.possessive, johnName);
+      bold.push(against.subject);
       detail = text("reason") ? `“${text("reason")}”` : null;
       break;
     }
@@ -259,6 +321,7 @@ export function wallFeedRow(event: WallEvent, scene: WallScene): WallFeedRow {
     case "rejected": {
       owner = text("against") || null;
       const whose = upperFirst(named(owner, me, members).possessive);
+      bold = [johnName, named(owner, me, members).subject];
       title = event.kind === "upheld" ? WALL_FEED_COPY.struckOut(whose, johnName) : WALL_FEED_COPY.stands(whose, johnName);
       detail = WALL_FEED_COPY.voted;
       break;
@@ -277,13 +340,67 @@ export function wallFeedRow(event: WallEvent, scene: WallScene): WallFeedRow {
       break;
     case "swap_used":
       title = WALL_FEED_COPY.swapped(who.subject, text("gave"), named(text("with") || null, me, members).possessive, text("took"));
+      bold = [who.subject, text("gave"), text("took"), named(text("with") || null, me, members).subject];
       detail = WALL_FEED_COPY.swap;
       break;
     case "away": {
       const range = dateRange(text("starts_on"), text("ends_on"));
       const moved = Number(event.data.moved ?? 0);
       title = who.you ? WALL_FEED_COPY.youAway(range) : WALL_FEED_COPY.away(who.subject, range);
-      detail = moved > 0 ? `${WALL_FEED_COPY.timeAway} · ${WALL_FEED_COPY.dueBefore(moved, who.you)}` : WALL_FEED_COPY.timeAway;
+      detail = moved > 0 ? WALL_FEED_COPY.awayMoved(WALL_FEED_COPY.dueBefore(moved, who.you)) : WALL_FEED_COPY.timeAway;
+      break;
+    }
+    case "flagged": {
+      // The event is the holder's; `by` flagged it, null when the clock flagged it again after a miss.
+      const by = text("by") || null;
+      const flagger = named(by, me, members);
+      if (!by) title = WALL_FEED_COPY.flaggedAgain(johnName);
+      else if (by === event.userId) title = WALL_FEED_COPY.flaggedOwn(who.subject, johnName);
+      else title = WALL_FEED_COPY.flagged(flagger.subject, johnName, who.object);
+      bold = [johnName, who.subject, who.object, ...(by ? [flagger.subject] : [])];
+      lead = by;
+      const status = event.assignmentId ? scene.statusOf?.(event.assignmentId) : undefined;
+      const due = text("due_at") ? new Date(text("due_at")) : null;
+      if (status && OPEN.has(status)) {
+        const onCall = WALL_FEED_COPY.onCall(who.subject, who.you);
+        if (due && !Number.isNaN(due.getTime())) {
+          const sameDay = localDate(due, scene.zone) === localDate(scene.now, scene.zone);
+          const clock = format(due, sameDay ? "HH:mm" : "EEE HH:mm", { in: tz(scene.zone) });
+          detail = WALL_FEED_COPY.dueBy(onCall, clock);
+          open = countdown(due, scene.now);
+        } else {
+          detail = onCall;
+          open = { left: WALL_FEED_COPY.onCallWord, late: status === "overdue" };
+        }
+        if (status === "overdue") open = { ...open, late: true };
+      } else if (status === "done" || status === "late") {
+        detail = WALL_FEED_COPY.flagDid(who.subject);
+      } else if (status === "checking" || status === "disputed") {
+        detail = WALL_FEED_COPY.flagTicked(who.subject);
+      } else if (status === "missed") {
+        detail = WALL_FEED_COPY.flagMissed(who.subject);
+        mark = STATUS_MARK.missed.icon;
+      } else if (status === "covered") {
+        detail = WALL_FEED_COPY.flagCovered;
+      } else {
+        detail = WALL_FEED_COPY.flagWas(who.subject);
+      }
+      break;
+    }
+    case "undone": {
+      // An admin took back someone else's move: the admin leads.
+      const by = named(text("by") || null, me, members);
+      title = WALL_FEED_COPY.undid(by.subject, who.possessive, undoneWhat(text("what"), john));
+      bold = [by.subject, who.subject, johnName];
+      lead = text("by") || null;
+      detail = WALL_FEED_COPY.adminFix;
+      break;
+    }
+    case "reset": {
+      const subject = named(text("subject") || null, me, members);
+      title = `${who.subject} ${resetWhat(event.data, subject.subject)}`;
+      bold = [who.subject, subject.subject, johnName];
+      detail = WALL_FEED_COPY.adminFix;
       break;
     }
     case "joined":
@@ -309,7 +426,7 @@ export function wallFeedRow(event: WallEvent, scene: WallScene): WallFeedRow {
       title = event.kind;
   }
 
-  const member = members.find((m) => m.userId === event.userId);
+  const member = members.find((m) => m.userId === lead);
   const status = event.assignmentId ? scene.statusOf?.(event.assignmentId) : undefined;
   const when = scene.clock
     ? format(event.createdAt, "HH:mm", { in: tz(scene.zone) })
@@ -323,11 +440,12 @@ export function wallFeedRow(event: WallEvent, scene: WallScene): WallFeedRow {
     kind: event.kind,
     at: event.createdAt,
     actor:
-      HOUSE_NEWS.has(event.kind) || !event.userId || !member
-        ? null
-        : { userId: event.userId, name: member.name, me: event.userId === me },
+      HOUSE_NEWS.has(event.kind) || !lead || !member ? null : { userId: lead, name: member.name, me: lead === me },
     icon: ICON[event.kind] ?? "badge-check",
+    family: open ? "flag" : (FAMILY[event.kind] ?? "notice"),
     title,
+    parts: boldRuns(title, bold),
+    open,
     detail,
     mark,
     when,
@@ -340,7 +458,7 @@ export function wallFeedRow(event: WallEvent, scene: WallScene): WallFeedRow {
         ? { assignmentId: event.assignmentId, vote: status === "disputed" && owner !== me }
         : null,
     full: WALL_FEED_COPY.meta(detail, stamp),
-    label: WALL_FEED_COPY.row(title, WALL_FEED_COPY.meta(detail, when)),
+    label: WALL_FEED_COPY.row(title, open ? `${detail ?? ""}, ${open.left}` : detail, when),
     john,
     photoPath: event.photoPath,
     repeat,
@@ -359,6 +477,8 @@ export interface WallFold {
 export interface WallDay {
   date: string;
   label: string;
+  /** The date beside "Today" or "Yesterday" ("Thu 29 Oct"); null when the label is the date. */
+  sub: string | null;
   items: ({ row: WallFeedRow } | { fold: WallFold })[];
 }
 
@@ -391,7 +511,9 @@ export function wallDays(rows: readonly WallFeedRow[], zone: string, now: Date):
       items.push(run.length > 1 ? { fold: { id: `fold:${row.id}`, label: foldLabel(run), rows: run } } : { row });
       i = end;
     }
-    return { date, label: dayName(dayRows[0].at, zone, now), items };
+    const label = dayName(dayRows[0].at, zone, now);
+    const sub = dayLabel(dayRows[0].at, zone);
+    return { date, label, sub: sub === label ? null : sub, items };
   });
 }
 

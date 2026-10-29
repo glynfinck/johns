@@ -53,6 +53,7 @@ function looksLikeControl(node: ReactNode): boolean {
  */
 export function Row({
   title,
+  sentence,
   meta,
   lid,
   leading,
@@ -75,6 +76,12 @@ export function Row({
   accessibilityLabel,
 }: {
   title: string;
+  /**
+   * The title as a sentence in Body with runs of its own (a Wall row's, its
+   * names and Johns in bold), in place of the bold title. `title` is still
+   * what it says.
+   */
+  sentence?: ReactNode;
   /** One line under the title, truncated: a string, or Meta text with spans of its own. */
   meta?: ReactNode;
   /** A John's category: its lid dot leads the meta line. */
@@ -87,8 +94,8 @@ export function Row({
   href?: Href;
   /** Pushes a page: a muted chevron at the end. */
   chevron?: boolean;
-  /** The neutral tint behind your own row (the Table's "You"). */
-  tint?: boolean;
+  /** The neutral tint behind your own row (the Table's "You"); `hivis`, a faint amber, behind a Wall flag still open. */
+  tint?: boolean | 'hivis';
   /** The 4pt hazard-tape edge of an overdue or missed John: the only coloured edge in the app. */
   hazardEdge?: boolean;
   /** `hazard` sets the title in hazard: a destructive row (Leave, Remove), on the card colour only. */
@@ -109,14 +116,14 @@ export function Row({
   testID?: string;
   accessibilityLabel?: string;
 }) {
-  const { colors } = useTheme();
+  const { colors, scheme } = useTheme();
   const inset = useRowInset();
   const [pressed, setPressed] = useState(false);
   const pressable = onPress != null || onLongPress != null || href != null;
   const leadingOutside = pressable && (leadingControl ?? looksLikeControl(leading));
   const trailingOutside = pressable && (trailingControl ?? looksLikeControl(trailing));
   const hasMeta = (meta != null && meta !== '') || lid != null;
-  const tinted = tint || selected === true;
+  const tinted = tint === true || selected === true;
 
   const leadingSlot = leading != null ? <View style={styles.leading}>{leading}</View> : null;
   const trailingItem =
@@ -132,9 +139,13 @@ export function Row({
     <>
       {leadingOutside ? null : leadingSlot}
       <View style={styles.words}>
-        <RowTitle numberOfLines={titleLines} style={tone === 'hazard' ? { color: colors.hazard } : undefined}>
-          {title}
-        </RowTitle>
+        {sentence != null ? (
+          <Body numberOfLines={titleLines}>{sentence}</Body>
+        ) : (
+          <RowTitle numberOfLines={titleLines} style={tone === 'hazard' ? { color: colors.hazard } : undefined}>
+            {title}
+          </RowTitle>
+        )}
         {hasMeta ? (
           <View style={styles.metaLine}>
             {/* The dot stays on the meta's first line. */}
@@ -192,6 +203,7 @@ export function Row({
         styles.row,
         { minHeight: hasMeta ? TWO_LINES : ROW_MIN, paddingHorizontal: inset },
         tinted && { backgroundColor: colors.secondary },
+        tint === 'hivis' && { backgroundColor: withAlpha(colors.hivis, scheme === 'dark' ? 0.12 : 0.16) },
       ]}
     >
       {pressed ? (

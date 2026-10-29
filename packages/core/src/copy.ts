@@ -1311,20 +1311,44 @@ export const WALL_FEED_COPY = {
   immunityUsed: "Immunity used",
   swap: "Swap",
   timeAway: "Time away",
+  /** Time away that moved Johns forward: "Time away. 2 Johns due before they go". */
+  awayMoved: (due: string) => `Time away. ${due}`,
   dueBefore: (n: number, you: boolean) =>
     `${n} ${n === 1 ? "John" : "Johns"} due before ${you ? "you go" : "they go"}`,
   newHousemate: "New housemate",
+  // An on-call John someone flagged: who flagged it, for whom, and how it went.
+  flagged: (by: string, john: string, whom: string) => `${by} flagged ${john} for ${whom}`,
+  flaggedOwn: (who: string, john: string) => `${who} flagged ${john}`,
+  /** The clock flagged it again after a miss: nobody did. */
+  flaggedAgain: (john: string) => `${john} was flagged again after a miss`,
+  /** "Ben’s on call", "You’re on call". */
+  onCall: (who: string, you: boolean) => (you ? "You’re on call" : `${who}’s on call`),
+  /** When it's due: "02:10" today, else "Fri 02:10". */
+  dueBy: (onCall: string, when: string) => `${onCall}, due by ${when}`,
+  flagDid: (who: string) => `${who} did it`,
+  flagTicked: (who: string) => `${who} ticked it`,
+  flagMissed: (who: string) => `${who} missed it`,
+  flagCovered: "Someone covered it",
+  flagWas: (who: string) => `${who} was on call`,
+  /** An open flag's chip when it doesn't say when it's due. */
+  onCallWord: "Open",
+  /** An open flag's chip: how long is left, or how late it is. */
+  left: (n: number, unit: "h" | "min") => (unit === "h" ? `${n}h left` : `${n} min left`),
+  lateBy: (n: number, unit: "h" | "min") => (unit === "h" ? `${n}h late` : `${n} min late`),
+  /** An admin took back or reset someone's move. */
+  undid: (by: string, whose: string, what: string) => `${by} undid ${whose} ${what}`,
+  adminFix: "An admin’s fix",
   sharedOut: "The Stake is shared out",
   settled: "Settled up",
   // Several in a row by one person, folded into one.
   tickedMany: (who: string, n: number) => `${who} ticked ${n} Johns`,
   missedMany: (who: string, n: number) => `${who} missed ${n} Johns`,
-  /** The meta line: its words, if any, then the time. */
-  meta: (detail: string | null, when: string) => (detail ? `${detail} · ${when}` : when),
+  /** An event's sheet: its meta words, then on a line of their own the day and the time. */
+  meta: (detail: string | null, when: string) => (detail ? `${detail}\n${when}` : when),
   /** When, in full, in an event's sheet: "Today, 09:39", "Sat 24 Oct, 18:40". */
   stamp: (day: string, clock: string) => `${day}, ${clock}`,
   /** A row, to a screen reader: the sentence, then its meta line. */
-  row: (title: string, meta: string) => `${title}, ${meta}`,
+  row: (title: string, detail: string | null, when: string) => (detail ? `${title}, ${detail}, ${when}` : `${title}, ${when}`),
   // Reactions.
   /** The way to all four reactions on a row that has none yet. */
   react: "React",

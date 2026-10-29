@@ -4,7 +4,7 @@ import { StyleSheet, View } from 'react-native';
 import { CountBadge } from '@/components/badge';
 import { Group } from '@/components/group';
 import { Meta, SectionLabel } from '@/components/text';
-import { INSET, LABEL_GAP, ROW_GAP, SPACE, TAP } from '@/theme';
+import { INSET, LABEL_GAP, ROW_GAP, SPACE, TAP, useTheme } from '@/theme';
 
 /** The label's line. */
 const LINE = 24;
@@ -33,10 +33,13 @@ export function Section({
   leading,
   tag,
   right,
+  plain = false,
   children,
   testID,
 }: {
   label: string;
+  /** The label in sentence case, as a day is named on the Wall ("Today"), rather than in small caps. */
+  plain?: boolean;
   /** What waits, as a badge after the label ("Needs you", 1). Nothing at zero. */
   count?: number;
   /** Before the label: an Avatar of size 24 (Week's person header). */
@@ -52,6 +55,7 @@ export function Section({
   children: ReactNode;
   testID?: string;
 }) {
+  const { type } = useTheme();
   const lines = metaLines(right);
   const control = right != null && lines === null;
   return (
@@ -63,7 +67,7 @@ export function Section({
             numberOfLines={1}
             // The badge is silent: the heading says the count.
             accessibilityLabel={count ? `${label}, ${count}` : undefined}
-            style={styles.words}
+            style={[styles.words, plain && [type.rowTitle, styles.plain]]}
           >
             {label}
           </SectionLabel>
@@ -117,5 +121,7 @@ const styles = StyleSheet.create({
   // Pushed to the right, on the label's line or the one under it: a 20pt line centred on the 24pt one.
   meta: { flexShrink: 1, marginLeft: 'auto', alignItems: 'flex-end', paddingTop: 2 },
   end: { textAlign: 'right' },
+  // A day's name sits on the label's 24pt line, a little smaller than a row's title.
+  plain: { fontSize: 15, lineHeight: 20, textTransform: 'none', letterSpacing: 0 },
   control: { flexShrink: 0, marginLeft: 'auto', marginVertical: -OVERHANG },
 });

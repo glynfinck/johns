@@ -103,7 +103,7 @@ it('tells what the house did a day at a time, latest first, by the clock', async
   const [bath] = day(WALL_FEED_COPY.today).getAllByTestId('wall-event');
   expect(bath).toHaveTextContent(/Sam ticked Clean the bath.*14:10/);
   expect(day(WALL_FEED_COPY.yesterday).getAllByTestId('wall-event').at(-1)).toHaveTextContent(
-    /Alex moved in.*New housemate · 09:00/,
+    /Alex moved in.*New housemate.*09:00/,
   );
 });
 
@@ -164,7 +164,7 @@ it("opens this week's John in the John sheet, and anything else in full", async 
   await fireEvent.press(within(theirs).getByRole('button'));
   const sheet = within(screen.getByTestId('wall-sheet'));
   expect(sheet.getByRole('header', { name: 'Alex paid Sam' })).toBeOnTheScreen();
-  expect(sheet.getByText(`${WALL_FEED_COPY.settled} · Today, 10:00`)).toBeOnTheScreen();
+  expect(sheet.getByText(`${WALL_FEED_COPY.settled} Today, 10:00`)).toBeOnTheScreen();
 });
 
 it('puts a reaction back and says why under the row it was made on', async () => {

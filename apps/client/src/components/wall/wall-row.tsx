@@ -6,6 +6,7 @@ import {
   type ReactionKind,
   type StatusIcon,
   type WallEvent,
+  type WallFamily,
   type WallFeedRow,
   type WallIcon,
   type WallScene,
@@ -16,6 +17,7 @@ import {
   BellRingIcon,
   CalendarCheckIcon,
   CheckIcon,
+  ClockIcon,
   EyeIcon,
   FlagIcon,
   FlameIcon,
@@ -31,16 +33,17 @@ import {
   XIcon,
   type LucideIcon,
 } from 'lucide-react-native';
-import { Image, Platform, Pressable, StyleSheet, View } from 'react-native';
+import type { ReactNode } from 'react';
+import { Image, Platform, Pressable, StyleSheet, Text, View } from 'react-native';
 
 import { Alert } from '@/components/alert';
 import { Avatar } from '@/components/avatar';
 import { GroupItem } from '@/components/group';
-import { Row, RowIcon } from '@/components/row';
+import { Row } from '@/components/row';
 import { STATUS_ICON } from '@/components/status-mark';
 import { Meta } from '@/components/text';
 import type { HouseView } from '@/hooks/use-house';
-import { INSET, LEADING, RADIUS, ROW_GAP, SPACE, TAP, useTheme } from '@/theme';
+import { FONT, INSET, LEADING, RADIUS, ROW_GAP, SPACE, TABULAR, TAP, useTheme, type Theme } from '@/theme';
 
 // Core says what happened and which icon fits; these draw it.
 const WALL_ICON: Record<WallIcon, LucideIcon> = {
@@ -58,6 +61,63 @@ const WALL_ICON: Record<WallIcon, LucideIcon> = {
   'badge-check': BadgeCheckIcon,
   undo: Undo2Icon,
 };
+
+/**
+ * A family's plate: its ground, the icon's ink, and the ink border inset
+ * from the edge that the road sign has, where the ground needs one.
+ */
+function plateColours(family: WallFamily, colors: Theme['colors']): { ground: string; ink: string; edge: string | null } {
+  switch (family) {
+    case 'done':
+      return { ground: colors.good, ink: colors.card, edge: null };
+    case 'trouble':
+      return { ground: colors.hazard, ink: colors.onHazard, edge: null };
+    case 'flag':
+      return { ground: colors.hivis, ink: colors.onHivis, edge: colors.onHivis };
+    case 'perk':
+      return { ground: colors.foreground, ink: colors.hivis, edge: null };
+    default:
+      return { ground: colors.secondary, ink: colors.foreground, edge: colors.border };
+  }
+}
+
+/**
+ * What kind of news a row is, as a square plate in its family's colour with
+ * the icon drawn heavy: on the corner of whoever leads the row (`badge`), or
+ * on its own where the house's own news leads.
+ */
+export function WallPlate({ family, icon, badge = false }: { family: WallFamily; icon: WallIcon; badge?: boolean }) {
+  const { colors } = useTheme();
+  const { ground, ink, edge } = plateColours(family, colors);
+  const Icon = WALL_ICON[icon];
+  const size = badge ? 18 : LEADING;
+  return (
+    <View
+      aria-hidden
+      testID={badge ? `wall-badge-${family}` : `wall-plate-${family}`}
+      style={[
+        badge ? styles.badge : null,
+        {
+          width: size,
+          height: size,
+          borderRadius: badge ? 5 : 7,
+          backgroundColor: ground,
+          alignItems: 'center',
+          justifyContent: 'center',
+        },
+        badge && { borderWidth: 2, borderColor: colors.card },
+      ]}
+    >
+      {edge ? (
+        <View
+          pointerEvents="none"
+          style={[StyleSheet.absoluteFill, { margin: badge ? 0 : 2, borderRadius: badge ? 3 : 5, borderWidth: 1.5, borderColor: edge }]}
+        />
+      ) : null}
+      <Icon size={badge ? 10 : 18} color={ink} strokeWidth={3} strokeLinecap="square" strokeLinejoin="miter" />
+    </View>
+  );
+}
 
 /** Icons, not emoji: the house style has none. */
 export const REACTION_ICON: Record<ReactionKind, LucideIcon> = {
@@ -114,29 +174,42 @@ export function WallEventRow({
   onReactions: () => void;
 }) {
   const nice = row.reactions.nice;
-  let trailing = null;
-  if (row.reactable && row.nice) {
-    trailing = (
+  let control = null;
+  if (row.open) {
+    control = <FlagChip left={row.open.left} late={row.open.late} />;
+  } else if (row.reactable && row.nice) {
+    control = (
       <View style={styles.pair}>
         <ReactButton compact onPress={onReactions} />
         <NiceToggle count={nice.count} mine={nice.mine} onPress={() => onReact('nice', !nice.mine)} onLongPress={onReactions} />
       </View>
     );
   } else if (row.reactable && row.top) {
-    trailing = <ReactionTally kind={row.top.kind} count={row.top.count} onPress={onReactions} />;
+    control = <ReactionTally kind={row.top.kind} count={row.top.count} onPress={onReactions} />;
   } else if (row.reactable && row.board) {
-    trailing = <ReactButton onPress={onReactions} />;
+    control = <ReactButton onPress={onReactions} />;
   }
   return (
     <>
       <Row
-        leading={row.actor ? <Avatar name={row.actor.name} userId={row.actor.userId} me={row.actor.me} /> : <RowIcon icon={WALL_ICON[row.icon]} />}
+        leading={
+          row.actor ? (
+            <View>
+              <Avatar name={row.actor.name} userId={row.actor.userId} me={row.actor.me} />
+              <WallPlate family={row.family} icon={row.icon} badge />
+            </View>
+          ) : (
+            <WallPlate family={row.family} icon={row.icon} />
+          )
+        }
         title={row.title}
+        sentence={<Sentence parts={row.parts} />}
         // A sentence: two lines, so it isn't cut off mid-way.
         titleLines={2}
-        meta={<WallMeta detail={row.detail} mark={row.mark} when={row.when} />}
-        trailing={trailing}
+        meta={<WallMeta detail={row.detail} mark={row.mark} />}
+        trailing={<WallSide when={row.when}>{control}</WallSide>}
         trailingControl
+        tint={row.open ? 'hivis' : undefined}
         onPress={onPress}
         onLongPress={onReactions}
         accessibilityLabel={row.label}
@@ -151,25 +224,68 @@ export function WallEventRow({
   );
 }
 
+/** A row's sentence: the names and Johns in bold, the rest in regular. */
+function Sentence({ parts }: { parts: WallFeedRow['parts'] }) {
+  return (
+    <>
+      {parts.map((part, i) =>
+        part.bold ? (
+          <Text key={i} style={styles.bold}>
+            {part.text}
+          </Text>
+        ) : (
+          part.text
+        ),
+      )}
+    </>
+  );
+}
+
 /**
- * The meta line: the words truncate, the time after them never does. A
- * John that went wrong (`mark`) leads with its status mark, its words in
- * hazard on the card colour.
+ * The row's trailing column: the time at the top, always shown, and under it
+ * the row's one control (a reaction, or an open flag's time left).
  */
-function WallMeta({ detail, mark, when }: { detail: string | null; mark: StatusIcon | null; when: string }) {
+function WallSide({ when, children }: { when: string; children: ReactNode }) {
+  return (
+    <View style={styles.side}>
+      <Meta numberOfLines={1} style={styles.when}>
+        {when}
+      </Meta>
+      {children}
+    </View>
+  );
+}
+
+/** An open flag's time left, on an amber plate; how late it is, on hazard. */
+function FlagChip({ left, late }: { left: string; late: boolean }) {
+  const { colors } = useTheme();
+  const ground = late ? colors.hazard : colors.hivis;
+  const ink = late ? colors.onHazard : colors.onHivis;
+  return (
+    <View
+      testID="flag-left"
+      style={[styles.chip, { backgroundColor: ground }, !late && { borderWidth: 1.5, borderColor: colors.onHivis }]}
+    >
+      <ClockIcon size={13} color={ink} strokeWidth={3} aria-hidden />
+      <Text style={[styles.chipText, { color: ink }]}>{left}</Text>
+    </View>
+  );
+}
+
+/**
+ * The meta line: its words, which are a short sentence of their own. A John
+ * that went wrong (`mark`) leads with its status mark, its words in hazard
+ * on the card colour.
+ */
+function WallMeta({ detail, mark }: { detail: string | null; mark: StatusIcon | null }) {
   const { colors } = useTheme();
   const Mark = mark ? STATUS_ICON[mark] : null;
+  if (!detail) return null;
   return (
     <View style={styles.meta}>
       {Mark ? <Mark size={14} color={colors.hazard} aria-hidden style={styles.mark} /> : null}
-      {detail ? (
-        <Meta numberOfLines={1} style={[styles.detail, Mark && { color: colors.hazard }]}>
-          {detail}
-        </Meta>
-      ) : null}
-      {/* A no-break space: a browser drops an ordinary one at the start of a line of its own. */}
-      <Meta numberOfLines={1} style={styles.when}>
-        {detail ? `\u00a0· ${when}` : when}
+      <Meta numberOfLines={2} style={[styles.detail, Mark && { color: colors.hazard }]}>
+        {detail}
       </Meta>
     </View>
   );
@@ -283,10 +399,25 @@ export function WallPhoto({ uri, john }: { uri: string; john: string | null }) {
 }
 
 const styles = StyleSheet.create({
-  meta: { flexDirection: 'row', alignItems: 'center', minWidth: 0 },
-  mark: { marginRight: SPACE.xs, flexShrink: 0 },
+  meta: { flexDirection: 'row', alignItems: 'flex-start', minWidth: 0 },
+  mark: { marginRight: SPACE.xs, marginTop: 3, flexShrink: 0 },
   detail: { flexShrink: 1 },
-  when: { flexShrink: 0 },
+  bold: { fontFamily: FONT.bold },
+  // The time over the control, at the row's trailing edge.
+  side: { alignItems: 'flex-end', alignSelf: 'flex-start', paddingTop: SPACE.sm + 2, gap: 2 },
+  when: { fontSize: 13, lineHeight: 18 },
+  // Sits on the avatar's corner, ringed in the card colour.
+  badge: { position: 'absolute', right: -7, bottom: -6 },
+  chip: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    height: 26,
+    paddingHorizontal: SPACE.sm,
+    borderRadius: RADIUS,
+    marginTop: SPACE.xs,
+  },
+  chipText: { fontFamily: FONT.extrabold, fontSize: 13, lineHeight: 16, paddingTop: 2, ...TABULAR },
   // The icon and its count end at the row's trailing edge, the room for a
   // count kept, so the icons down a group line up.
   pill: {
