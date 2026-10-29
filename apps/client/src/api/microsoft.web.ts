@@ -11,7 +11,9 @@ import { supabase } from './supabase';
 export async function signInWithMicrosoft(returnTo: string = SIGN_IN): Promise<SignInResult> {
   const { error } = await supabase.auth.signInWithOAuth({
     provider: 'azure',
-    options: { redirectTo: `${window.location.origin}${returnTo}`, scopes: 'email' },
+    // User.Read lets the app read the account's photo from Microsoft Graph
+    // (microsoft-photo.ts, once the page comes back signed in).
+    options: { redirectTo: `${window.location.origin}${returnTo}`, scopes: 'email User.Read' },
   });
   if (error) throw error;
   // The browser is already on its way to Microsoft.

@@ -108,7 +108,7 @@ function RecordLine({
     >
       <Hairline />
       <View style={styles.head}>
-        <Avatar name={name} me={you} size={24} />
+        <Avatar name={name} userId={row.userId} me={you} size={24} />
         <RowTitle numberOfLines={1} style={styles.name}>
           {title}
         </RowTitle>

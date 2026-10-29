@@ -130,7 +130,7 @@ export function WallEventRow({
   return (
     <>
       <Row
-        leading={row.actor ? <Avatar name={row.actor.name} me={row.actor.me} /> : <RowIcon icon={WALL_ICON[row.icon]} />}
+        leading={row.actor ? <Avatar name={row.actor.name} userId={row.actor.userId} me={row.actor.me} /> : <RowIcon icon={WALL_ICON[row.icon]} />}
         title={row.title}
         // A sentence: two lines, so it isn't cut off mid-way.
         titleLines={2}

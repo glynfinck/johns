@@ -31,7 +31,7 @@ export function JohnWhy({ item, context }: { item: BoardItem; context: JohnSheet
             {why.rows.map((row) => (
               <Row
                 key={row.userId}
-                leading={<Avatar name={context.nameOf(row.userId)} me={row.userId === context.userId} />}
+                leading={<Avatar name={context.nameOf(row.userId)} userId={row.userId} me={row.userId === context.userId} />}
                 title={row.name}
                 meta={row.meta ?? undefined}
                 trailing={row.value}

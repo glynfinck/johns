@@ -14,6 +14,7 @@ import type { GroupDef, JohnDef } from "./board";
 import { CATEGORIES, CATEGORY_LABEL, DOW_LABEL, JOHN_WHEN, type Category, type IsoDow } from "./domain";
 import { firstName } from "./format";
 import { dueWords, LAST_OF_MONTH, MAX_EVERY_MONTHS, MAX_EVERY_WEEKS, oftenWords } from "./repeat";
+import { CHAT_RESETS_MAX, ChatReset } from "./resets";
 import type { JohnDraft } from "./schemas";
 
 /** The most a draft holds: a long list is a list nobody reads. */
@@ -121,6 +122,8 @@ export const ChatResponse = z.object({
   ask: ChatAsk.nullable(),
   draft: HouseDraft.nullable(),
   source: z.enum(DRAFT_SOURCES),
+  /** Resets Jonz offers an admin, each with its numbers, for the Resets card. Nothing is reset until they tap. */
+  resets: z.array(ChatReset).max(CHAT_RESETS_MAX).optional(),
 });
 export type ChatResponse = z.infer<typeof ChatResponse>;
 

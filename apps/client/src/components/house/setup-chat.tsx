@@ -16,6 +16,7 @@ import {
   weeklyEffort,
   type ChatAsk,
   type ChatMessage,
+  type ChatReset,
   type DraftChange,
   type DraftedJohn,
   type GroupDef,
@@ -37,6 +38,7 @@ import { Group } from '@/components/group';
 import { Row, RowIcon } from '@/components/row';
 import { Section } from '@/components/section';
 import { Segmented } from '@/components/segmented';
+import { ResetsCard } from '@/components/house/resets-card';
 import { ChoiceRow } from '@/components/setup/choice-row';
 import { Body, Meta } from '@/components/text';
 import { TextButton } from '@/components/text-button';
@@ -47,12 +49,12 @@ type Person = { userId: string; name: string };
 
 /**
  * One line of the chat: what the admin said, what Jonz said back (with a
- * question to tap an answer to, and the draft when that turn changed it),
- * or the Johns being added.
+ * question to tap an answer to, the draft when that turn changed it, and
+ * any resets it offers an admin), or the Johns being added.
  */
 type Turn =
   | { role: 'user'; text: string }
-  | { role: 'assistant'; text: string; ask: ChatAsk | null; draft: HouseDraft | null }
+  | { role: 'assistant'; text: string; ask: ChatAsk | null; draft: HouseDraft | null; resets?: ChatReset[] }
   | { role: 'done'; added: number };
 
 /** The box's inside height for one line: a thumb tall with its edge. */
@@ -166,7 +168,7 @@ export function SetupChat({
         .flatMap((t) => (t.role === 'done' || !t.text ? [] : [{ role: t.role, text: t.text }]))
         .slice(-CHAT_MAX_MESSAGES);
       const answer = await sendChat(houseId, messages, draft);
-      answered({ role: 'assistant', text: answer.reply, ask: answer.ask, draft: answer.draft }, next);
+      answered({ role: 'assistant', text: answer.reply, ask: answer.ask, draft: answer.draft, resets: answer.resets }, next);
     } catch (reason) {
       // Refused (too many today, say): what was said goes back in the box to try again.
       setTurns(before);
@@ -193,6 +195,7 @@ export function SetupChat({
 
   const toggle = (key: string) => setKeep((was) => (was.includes(key) ? was.filter((k) => k !== key) : [...was, key]));
   const gated = editing && !passOpen;
+  const nameOf = (id: string) => (id === me ? 'You' : (people.find((p) => p.userId === id)?.name ?? 'Someone'));
 
   return (
     <KeyboardAvoidingView style={styles.fill} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
@@ -270,6 +273,9 @@ export function SetupChat({
                   people={people}
                   me={me}
                 />
+              ) : null}
+              {turn.resets && turn.resets.length > 0 ? (
+                <ResetsCard houseId={houseId} items={turn.resets} me={me} nameOf={nameOf} currency={rules.currency} zone={rules.timezone} />
               ) : null}
             </View>
           );

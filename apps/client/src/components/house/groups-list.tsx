@@ -153,7 +153,7 @@ function GroupForm({
             role="checkbox"
             label={p.userId === me ? SETUP_COPY.you : firstName(p.name)}
             checked={picked.has(p.userId)}
-            leading={<Avatar name={p.name} me={p.userId === me} />}
+            leading={<Avatar name={p.name} userId={p.userId} me={p.userId === me} />}
             onPress={() => toggle(p.userId)}
           />
         ))}

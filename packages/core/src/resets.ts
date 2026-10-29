@@ -61,6 +61,35 @@ export const ResetResponse = z.object({
 });
 export type ResetResponse = z.infer<typeof ResetResponse>;
 
+/** What Ask Jonz offers an admin to reset, worked out by the server: a reset with its numbers, or an undo from History. */
+export const ChatReset = z.discriminatedUnion("kind", [
+  z.object({
+    kind: z.literal("reset"),
+    ask: ResetRequest.omit({ houseId: true, apply: true }),
+    preview: ResetPreview,
+    words: z.object({
+      person: z.string().optional(),
+      john: z.string().optional(),
+      outcome: z.enum(RESULT_CHOICES).optional(),
+      was: z.string().nullable().optional(),
+      month: z.string().optional(),
+    }),
+  }),
+  z.object({
+    kind: z.literal("undo"),
+    /** The History row. */
+    action: z.string(),
+    /** What it was, in History's words: "Sam ticked Bathroom clean". */
+    line: z.string(),
+    /** Whose move it was, to say who is told. */
+    actor: z.string().nullable(),
+  }),
+]);
+export type ChatReset = z.infer<typeof ChatReset>;
+
+/** The most resets one answer offers. */
+export const CHAT_RESETS_MAX = 6;
+
 export const RESET_COPY = {
   fix: "Fix this week",
   resetWeek: "Reset this week…",
@@ -91,6 +120,15 @@ export const RESET_COPY = {
   removed: (money: string) => `${money} of forfeits removed`,
   added: (money: string) => `${money} of forfeits added`,
   asCorrection: "as a correction this month",
+  card: "Resets",
+  cardMeta: "Untick anything to keep",
+  applyN: (n: number) => (n === 1 ? "Reset 1 thing" : `Reset ${n} things`),
+  applying: "Resetting…",
+  appliedN: (n: number) => (n === 1 ? "Done. 1 thing reset." : `Done. ${n} things reset.`),
+  undoAll: "Undo",
+  putBack: "Put back as it was.",
+  undoLine: (line: string) => `Undo: ${line}`,
+  undoMeta: "Back as it was before",
   told: (names: string) => `${names} ${names.includes(" and ") ? "get" : "gets"} a notification`,
   toldNobody: "Nobody else is told",
   you: "you",
@@ -279,6 +317,31 @@ function trackLine(preview: ResetPreview, w: ResetWords): string {
     case "letoff":
       return "Marks stay; the month shows “Let off”";
   }
+}
+
+/** One row of Ask Jonz's Resets card: what it is, and its numbers in a line. */
+export function resetItemLine(
+  item: ChatReset,
+  w: Pick<ResetWords, "nameOf" | "viewerId" | "currency" | "zone">,
+): { title: string; meta: string; told: string[] } {
+  if (item.kind === "undo") {
+    return { title: RESET_COPY.undoLine(item.line), meta: RESET_COPY.undoMeta, told: item.actor && item.actor !== w.viewerId ? [item.actor] : [] };
+  }
+  const sheet = resetSheet(item.preview, { ...w, ...item.words, kind: item.ask.kind });
+  const parts = sheet.lines
+    .filter((l) => l.key !== "track" && l.value !== RESET_COPY.noChange)
+    .map((l) => (l.key === "ticks" ? l.label : l.key === "cleared" ? `${l.value} cleared` : l.value));
+  return {
+    title: sheet.confirm,
+    meta: parts.length > 0 ? parts.join(" · ") : RESET_COPY.noChange,
+    told: item.preview.told.filter((id) => id !== w.viewerId),
+  };
+}
+
+/** "Ada and Sam get a notification", for a whole card. */
+export function toldLine(ids: readonly string[], nameOf: (id: string) => string): string {
+  const names = [...new Set(ids)].map((id) => firstName(nameOf(id))).sort();
+  return names.length === 0 ? RESET_COPY.toldNobody : RESET_COPY.told(and(names));
 }
 
 /** History's and the Wall's words for a reset: "reset Sam’s week", "marked Bins done". */

@@ -77,7 +77,7 @@ function SettleUp({ houseId, row }: { houseId: string; row: SettleRow }) {
   return (
     <View testID="transfer">
       {/* The months it's from are in the title: two lines, so it isn't cut off. */}
-      <Row leading={<Avatar name={row.name} />} title={row.title} titleLines={2} meta={row.meta} />
+      <Row leading={<Avatar name={row.name} userId={row.userId} />} title={row.title} titleLines={2} meta={row.meta} />
       {row.action ? (
         <View style={styles.action}>
           <Button

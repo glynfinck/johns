@@ -2,6 +2,7 @@ import type { Session } from '@supabase/supabase-js';
 import { createContext, useCallback, useContext, useEffect, useState, type ReactNode } from 'react';
 
 import { getMyHouse, type MyHouse } from '@/api/house';
+import { followMicrosoftSignIns } from '@/api/microsoft-photo';
 import { useSession } from '@/hooks/use-session';
 
 /** Who is signed in and which house they're in: what every screen's guard needs. */
@@ -26,6 +27,9 @@ export function MembershipProvider({ children }: { children: ReactNode }) {
   const { session, loading: sessionLoading, ended } = useSession();
   const userId = session?.user.id;
   const [known, setKnown] = useState<Known | null>(null);
+
+  // A Microsoft sign-in brings its photo along (microsoft-photo.ts).
+  useEffect(() => followMicrosoftSignIns(), []);
 
   useEffect(() => {
     if (!userId) return;

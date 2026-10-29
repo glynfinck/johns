@@ -135,7 +135,7 @@ function Standing({ line }: { line: TableLine }) {
   const saysLateOrMissed = line.meta.some((part) => part.hazard);
   return (
     <Row
-      leading={<Avatar name={line.name} me={line.me} />}
+      leading={<Avatar name={line.name} userId={line.userId} me={line.me} />}
       title={line.title}
       meta={<MetaLine parts={line.meta} tinted={line.me} />}
       trailing={

@@ -44,8 +44,8 @@ export function snapshot(overrides: Partial<HouseSnapshot> = {}): HouseSnapshot 
       lateHours: 24,
     },
     members: [
-      { userId: 'priya', name: 'Priya', role: 'admin', streak: 3, immunityTokens: 0, swapTokens: 0 },
-      { userId: 'sam', name: 'Sam', role: 'member', streak: 0, immunityTokens: 0, swapTokens: 0 },
+      { userId: 'priya', name: 'Priya', photo: null, role: 'admin', streak: 3, immunityTokens: 0, swapTokens: 0 },
+      { userId: 'sam', name: 'Sam', photo: null, role: 'member', streak: 0, immunityTokens: 0, swapTokens: 0 },
     ],
     week: { id: 'w1', starts_on: '2026-10-19', starts_at: at(-48), ends_at: at(120) },
     assignments: [

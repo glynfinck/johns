@@ -1,7 +1,7 @@
 import "server-only";
 
 import { generateText, Output } from "ai";
-import { APP_NAME, CATEGORIES, DOW_LABEL, type ChatMessage, type IsoDow, type RawAsk, type RawDraft } from "@app/core";
+import { APP_NAME, CATEGORIES, DOW_LABEL, RESET_KINDS, RESULT_CHOICES, type ChatMessage, type IsoDow, type RawAsk, type RawDraft } from "@app/core";
 import { z } from "zod";
 
 // Describe your house: Jonz (Claude) talks an admin through setting up the
@@ -37,6 +37,16 @@ const ModelJohn = z.object({
   why: z.string(),
 });
 
+/** A reset an admin asked for, in the refs of <house_now> (lib/moves/ask-resets.ts makes them ids). */
+const ModelReset = z.object({
+  what: z.enum([...RESET_KINDS, "undo"]),
+  ref: z.string().nullable(),
+  person: z.string().nullable(),
+  outcome: z.enum(RESULT_CHOICES).nullable(),
+  week: z.enum(["this", "last"]).nullable(),
+  month: z.enum(["this", "last"]).nullable(),
+});
+
 /** One turn of Jonz's side of the chat, as Claude is asked to return it. */
 const ModelTurn = z.object({
   reply: z.string(),
@@ -48,6 +58,7 @@ const ModelTurn = z.object({
       note: z.string().nullable(),
     })
     .nullable(),
+  resets: z.array(ModelReset),
 });
 
 /** The house and the chat as Claude is told about them. */
@@ -61,6 +72,8 @@ export interface DraftContext {
   draft: RawDraft | null;
   /** Whether the house has a list already, which the draft started as and the chat changes. */
   editing: boolean;
+  /** The last two weeks and what can be undone, in words with refs (resetState), when the admin can reset; null otherwise. */
+  now: string | null;
 }
 
 /** Fixed, so it caches: how Jonz talks and what makes a good John list. The house itself goes in the messages. */
@@ -95,6 +108,17 @@ Changing a list that's already there:
 - Each John already on the list has a ref. Keep the same ref on a John you keep or change; leave a John out to take it off the list; a new John has ref null. Never give a ref to a John you made up.
 - If someone is moving out or in, the deal already shares Johns between whoever lives there, so only change Johns that name them or a group they're in, and say so.
 
+Fixing mistakes (only when <house_now> is given):
+- Admins can ask you to put right what was filled in wrong: a John marked done that wasn't, a week dealt badly, a tick by mistake. Offer the fix in resets and say in a sentence what you've offered; the app shows each with its numbers and nothing changes until they tap it. When you offer resets, return draft null.
+- what "result" changes one John's result: ref is the John (j…) and outcome is done, late, missed or excused (let off).
+- what "person_week" puts one person's Johns this week back to open: person is their first name ("me" for the person writing), week "this" or "last".
+- what "week" puts everyone's Johns back to open, "redeal" does that and deals the week again (this week only), "skip" makes the week count for nothing: week "this" or "last".
+- what "letoff" takes a month's forfeits away: month "this" or "last".
+- what "undo" takes back one move from History: ref is the move (h…). Prefer an undo when the mistake is one move ("I ticked Bins by mistake").
+- Offer the smallest fix that does what they ask, at most six. Use only refs from <house_now>; if what they mean isn't there, say so and offer nothing. Unused fields are null.
+- You can't start the house over, delete it, or wipe its history; if they ask, say an admin can reset a week or a month at a time.
+- If <house_now> isn't given, return resets [] and, if they ask to fix something, say only an admin can do that.
+
 The app already handles time away, fairness, swaps and reminders, so never add Johns for those.`;
 
 /** The house's context, then the chat; the draft as it stands rides on the admin's latest message. */
@@ -113,12 +137,13 @@ function chatMessages(ctx: DraftContext): { role: "user" | "assistant"; content:
   chat[0] = { role: "user", content: `<house>\n${house}\n</house>\n\n${chat[0].content}` };
   const last = chat.length - 1;
   const draft = ctx.draft ? JSON.stringify(ctx.draft) : "none yet";
-  chat[last] = { role: "user", content: `${chat[last].content}\n\n<current_draft>${draft}</current_draft>` };
+  const now = ctx.now ? `\n\n<house_now>\n${ctx.now}\n</house_now>` : "";
+  chat[last] = { role: "user", content: `${chat[last].content}\n\n<current_draft>${draft}</current_draft>${now}` };
   return chat;
 }
 
 export interface DraftAnswer {
-  raw: { reply: string; ask: RawAsk; draft: RawDraft | null };
+  raw: { reply: string; ask: RawAsk; draft: RawDraft | null; resets?: z.infer<typeof ModelReset>[] };
   inputTokens: number;
   outputTokens: number;
 }

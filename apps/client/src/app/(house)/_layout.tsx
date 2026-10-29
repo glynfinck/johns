@@ -1,5 +1,6 @@
 import { SECTION_LABEL } from "@app/core";
 import { Tabs } from "expo-router/js-tabs";
+import { useMemo } from "react";
 import { StyleSheet, useWindowDimensions, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
@@ -9,6 +10,7 @@ import { SheetRailContext } from "@/components/sheet";
 import { HouseTabBar, type ShellHouse } from "@/components/shell/house-tab-bar";
 import { ToastProvider } from "@/components/toast";
 import { AskPanelProvider } from "@/hooks/use-ask-jonz";
+import { PhotosContext } from "@/hooks/photos";
 import { useHouse, useLiveHouse } from "@/hooks/use-house";
 import { useMembership } from "@/hooks/use-membership";
 import { RAIL, SPACE, useTheme, WIDE } from "@/theme";
@@ -21,7 +23,8 @@ const TAB_BAR = 56;
  * a phone and a rail from laptop width on the web. House is a stack of its
  * own (house/_layout), so the pages it pushes keep the tabs. Each screen
  * draws its own title bar. The house is followed live here, once for every
- * tab, and the John sheet and the toasts are mounted here for all of them.
+ * tab, and the John sheet, the toasts and everyone's photos are mounted
+ * here for all of them.
  * From WIDE every sheet centres itself on the page beside the rail, and the
  * chat with Jonz opens as a panel down the right (AskPanel) with the page
  * still beside it.
@@ -40,51 +43,63 @@ export default function HouseLayout() {
     memberCount: view?.snapshot.members.length ?? 1,
   };
   const toVote = view?.today.toVote.length ?? 0;
+  const members = view?.snapshot.members;
+  const photos = useMemo(
+    () =>
+      new Map(
+        (members ?? []).flatMap((m) =>
+          m.photo ? [[m.userId, m.photo] as const] : [],
+        ),
+      ),
+    [members],
+  );
 
   return (
-    <SheetRailContext.Provider value={wide ? RAIL : 0}>
-      <ToastProvider
-        bottom={wide ? SPACE.xl : TAB_BAR + insets.bottom + SPACE.lg}
-      >
-        <JohnSheetProvider houseId={house!.id} userId={session!.user.id}>
-          <AskPanelProvider>
-            <View style={styles.row}>
-              <View style={styles.page}>
-                <Tabs
-                  tabBar={(props) => (
-                    <HouseTabBar
-                      {...props}
-                      wide={wide}
-                      house={view ? shell : null}
-                      toVote={toVote}
+    <PhotosContext.Provider value={photos}>
+      <SheetRailContext.Provider value={wide ? RAIL : 0}>
+        <ToastProvider
+          bottom={wide ? SPACE.xl : TAB_BAR + insets.bottom + SPACE.lg}
+        >
+          <JohnSheetProvider houseId={house!.id} userId={session!.user.id}>
+            <AskPanelProvider>
+              <View style={styles.row}>
+                <View style={styles.page}>
+                  <Tabs
+                    tabBar={(props) => (
+                      <HouseTabBar
+                        {...props}
+                        wide={wide}
+                        house={view ? shell : null}
+                        toVote={toVote}
+                      />
+                    )}
+                    screenOptions={{
+                      tabBarPosition: wide ? "left" : "bottom",
+                      headerShown: false,
+                      sceneStyle: { backgroundColor: colors.background },
+                    }}
+                  >
+                    <Tabs.Screen
+                      name="today"
+                      options={{ title: SECTION_LABEL.today }}
                     />
-                  )}
-                  screenOptions={{
-                    tabBarPosition: wide ? "left" : "bottom",
-                    headerShown: false,
-                    sceneStyle: { backgroundColor: colors.background },
-                  }}
-                >
-                  <Tabs.Screen
-                    name="today"
-                    options={{ title: SECTION_LABEL.today }}
-                  />
-                  <Tabs.Screen
-                    name="week"
-                    options={{ title: SECTION_LABEL.week }}
-                  />
-                  <Tabs.Screen
-                    name="house"
-                    options={{ title: SECTION_LABEL.house }}
-                  />
-                </Tabs>
+                    <Tabs.Screen
+                      name="week"
+                      options={{ title: SECTION_LABEL.week }}
+                    />
+                    <Tabs.Screen
+                      name="house"
+                      options={{ title: SECTION_LABEL.house }}
+                    />
+                  </Tabs>
+                </View>
+                <AskPanel houseId={house!.id} userId={session!.user.id} />
               </View>
-              <AskPanel houseId={house!.id} userId={session!.user.id} />
-            </View>
-          </AskPanelProvider>
-        </JohnSheetProvider>
-      </ToastProvider>
-    </SheetRailContext.Provider>
+            </AskPanelProvider>
+          </JohnSheetProvider>
+        </ToastProvider>
+      </SheetRailContext.Provider>
+    </PhotosContext.Provider>
   );
 }
 
