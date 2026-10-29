@@ -21,6 +21,7 @@ import { loadHouse } from '@/api/board';
 import { castVote } from '@/api/disputes';
 import { coverJohn, markDone, spendImmunity, spendSwap, undoCover, undoDone } from '@/api/johns';
 import { pickPhoto } from '@/api/photos';
+import { applyReset, previewReset } from '@/api/resets';
 import { signPhoto } from '@/api/wall';
 import { ToastProvider } from '@/components/toast';
 import { houseKey, stakeKey } from '@/hooks/keys';
@@ -43,6 +44,7 @@ jest.mock('@/api/johns', () => ({
 jest.mock('@/api/disputes', () => ({ castVote: jest.fn(), raiseDispute: jest.fn() }));
 jest.mock('@/api/photos', () => ({ pickPhoto: jest.fn(), uploadProof: jest.fn() }));
 jest.mock('@/api/wall', () => ({ signPhoto: jest.fn() }));
+jest.mock('@/api/resets', () => ({ previewReset: jest.fn(), applyReset: jest.fn() }));
 jest.mock('@/api/supabase', () => ({ supabase: {} }));
 
 const HOUR = 3_600_000;
@@ -120,6 +122,13 @@ beforeEach(() => {
   (pickPhoto as jest.Mock).mockResolvedValue(null);
   (signPhoto as jest.Mock).mockResolvedValue('https://photos.test/a3.jpg');
 });
+
+/** The sheet's buttons, but for an admin's Change result. */
+function notChangeResult(body: ReturnType<typeof screen.getByTestId>) {
+  const change = within(body).queryByTestId('change-result');
+  const theirs = change ? within(change).queryAllByRole('button') : [];
+  return within(body).queryAllByRole('button').filter((b) => !theirs.includes(b));
+}
 
 describe('the header', () => {
   it('says what the John is, its name, when it is due and what lateness costs', async () => {
@@ -412,11 +421,38 @@ describe('your tick, being checked', () => {
 });
 
 describe("a housemate's John", () => {
+  it("lets an admin change its result, through the reset's numbers and its hazard button", async () => {
+    (previewReset as jest.Mock).mockResolvedValue({
+      kind: 'result',
+      week: null,
+      month: '2026-10',
+      people: { sam: { points: 2 } },
+      told: ['sam'],
+      reopened: 0,
+      past_due: 0,
+      flags: 0,
+      disputes: 0,
+      correction: false,
+      nothing: false,
+    });
+    (applyReset as jest.Mock).mockResolvedValue('action-1');
+    await show(house([binsOut(), samsBath()]));
+    const body = await openOn('Open a4');
+    await fireEvent.press(within(body).getByTestId('result-done'));
+    const panel = within(await within(body).findByTestId('reset-panel'));
+    expect(await panel.findByText('Sam gets a notification')).toBeOnTheScreen();
+    await fireEvent.press(panel.getByRole('button', { name: 'Mark it done' }));
+    await waitFor(() =>
+      expect(applyReset).toHaveBeenCalledWith({ houseId: 'h1', kind: 'result', assignment: 'a4', outcome: 'done' }),
+    );
+  });
+
   it('says whose it is while it is open, with nothing to do', async () => {
     await show(house([binsOut(), samsBath()]));
     const body = await openOn('Open a4');
     expect(within(body).getByText(JOHN_SHEET_COPY.theirs('Sam'))).toBeOnTheScreen();
-    expect(within(body).queryByRole('button')).toBeNull();
+    // Only an admin's Change result, which every John has.
+    expect(notChangeResult(body)).toEqual([]);
   });
 
   it('says who ticked it and when it stands, and disputes it in place', async () => {
@@ -539,7 +575,8 @@ describe('a settled John', () => {
     const photo = await within(body).findByTestId('sheet-photo');
     expect(photo.props.source).toEqual({ uri: 'https://photos.test/a3.jpg' });
     expect(signPhoto).toHaveBeenCalledWith('h1/a3.jpg');
-    expect(within(body).queryByRole('button')).toBeNull();
+    // Only an admin's Change result, which every John has.
+    expect(notChangeResult(body)).toEqual([]);
   });
 
   it.each([

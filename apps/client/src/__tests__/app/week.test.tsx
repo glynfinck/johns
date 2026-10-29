@@ -40,6 +40,7 @@ jest.mock('@/api/settings', () => ({ dealThisWeek: jest.fn(), loadJohnList: jest
 jest.mock('@/api/house', () => ({ catchUp: jest.fn() }));
 jest.mock('@/api/johns', () => ({ markDone: jest.fn(), undoDone: jest.fn(), spendImmunity: jest.fn(), spendSwap: jest.fn() }));
 jest.mock('@/api/photos', () => ({ pickPhoto: jest.fn(), uploadProof: jest.fn() }));
+jest.mock('@/api/resets', () => ({ previewReset: jest.fn(), applyReset: jest.fn() }));
 jest.mock('@/api/supabase', () => ({ supabase: {} }));
 // Whoever's looking: Priya (the admin) unless a test says otherwise.
 const mockViewer = { id: 'priya' };

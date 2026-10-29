@@ -1,13 +1,5 @@
 import type { HistoryKind, HistoryMonth } from '@app/core';
-import {
-  BanknoteIcon,
-  ClockIcon,
-  CoinsIcon,
-  TriangleAlertIcon,
-  Undo2Icon,
-  XIcon,
-  type LucideIcon,
-} from 'lucide-react-native';
+import { BanknoteIcon, ClockIcon, CoinsIcon, RotateCcwIcon, TriangleAlertIcon, Undo2Icon, XIcon, type LucideIcon } from 'lucide-react-native';
 
 import { Money } from '@/components/house-page/money';
 import { Row } from '@/components/row';
@@ -22,6 +14,7 @@ const KIND_ICON: Record<HistoryKind, LucideIcon> = {
   share: CoinsIcon,
   cap_refund: Undo2Icon,
   payment: BanknoteIcon,
+  correction: RotateCcwIcon,
   other: CoinsIcon,
 };
 

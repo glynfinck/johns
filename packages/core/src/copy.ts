@@ -1090,6 +1090,22 @@ export const HOUSE_PAGE_COPY = {
 } as const;
 
 /** A housemate's page. */
+/** House › Admins: who looks after the house. */
+export const ADMINS_COPY = {
+  title: "Admins",
+  meta: (admins: number, everyone: number) => `${admins} of ${everyone}`,
+  note: "Admins change the list, the rules and who’s in, and fix mistakes. What they change is posted on the Wall.",
+  started: "You",
+  add: "Add an admin",
+  addTitle: "Add an admin",
+  addBody: "They can change the list and the rules, and fix anyone’s mistakes.",
+  everyoneIs: "Everyone here is an admin already.",
+  make: (name: string) => `Make ${name} admin`,
+  remove: "Remove",
+  removeLabel: (name: string) => `Remove ${name} as an admin`,
+  onlyAdmin: "The only admin can’t step down. Leaving hands the house over.",
+} as const;
+
 export const PERSON_COPY = {
   /** Under their name: "Admin", or "You · Admin" on your own page. */
   sub: (admin: boolean, you: boolean) => `${you ? "You · " : ""}${admin ? "Admin" : "Housemate"}`,
@@ -1162,6 +1178,11 @@ export const STAKE_HISTORY_COPY = {
   forfeit: "Forfeit",
   share: "Share of forfeits",
   capRefund: "Over the stake, returned",
+  /** An admin's fix to a month already shared out. */
+  correction: "Correction",
+  correctionOf: (john: string) => `Correction: ${john}`,
+  /** Under a month an admin let off. */
+  letOff: "Let off",
   /** A payment, from whoever is looking: "You paid Priya", "Tom paid you", "Tom paid Priya". */
   paid: (from: string, to: string) => `${from} paid ${to}`,
   yourself: "you",
@@ -1301,8 +1322,9 @@ export const HOUSE_LOWER_COPY = {
   owesYou: (who: string, amount: string) => `${who} still owes you ${amount}`,
   youOwe: (whom: string, amount: string) => `you still owe ${whom} ${amount}`,
   costsNothing: "You’re square with everyone, so it costs you nothing.",
-  /** The only admin, with others still in the house: the database won't let them go yet. */
-  lastAdmin: "You’re the only admin, so you can’t leave yet. Make someone else an admin first, from their page.",
+  /** The only admin, with others still in the house: they hand over as they go. */
+  lastAdmin: "You’re the only admin. Pick who looks after the house when you go.",
+  handOver: (name: string) => `Make ${name} admin and leave`,
   /** The last one out, after what it costs. The house closes behind them: its join link opens nothing. */
   lastOne: "Nobody will be left, and the house’s join link will stop working.",
   /** Until the Stake is read, and if it can't be. */
@@ -1581,6 +1603,8 @@ export const PASS_COPY = {
 /** The track record, opened from Week: the grid, and one person's breakdown. */
 export const RECORD_COPY = {
   title: "Track record",
+  /** The key's line for the amber dot. */
+  changed: "Changed by an admin",
   /** Week's way in. */
   open: "Track record",
   intro: "One square per week. A streak, or a slide, shows at a glance.",

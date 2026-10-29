@@ -180,6 +180,12 @@ export async function removeMember(houseId: string, userId: string) {
   if (error) throw new Error(humanError(error));
 }
 
+/** The only admin leaving: make someone else admin, then go, in one step. */
+export async function handOver(houseId: string, to: string) {
+  const { error } = await supabase.rpc('hand_over', { p_house: houseId, p_to: to });
+  if (error) throw new Error(humanError(error));
+}
+
 /** A fresh join code for the house, so the old link stops working: admins only (the database checks). */
 export async function resetJoinCode(houseId: string) {
   const { error } = await supabase.rpc('reset_join_code', { p_house: houseId });

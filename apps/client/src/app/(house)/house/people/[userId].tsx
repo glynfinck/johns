@@ -69,7 +69,7 @@ function PersonFor({ houseId, userId, personId }: { houseId: string; userId: str
       ) : (
         <>
           <PersonSections userId={userId} person={person} view={view} table={table} stake={stake} away={away} />
-          {view.me?.role === 'admin' && person.userId !== userId ? <PersonAdmin houseId={houseId} person={person} /> : null}
+          {view.me?.role === 'admin' && person.userId !== userId ? <PersonAdmin houseId={houseId} userId={userId} person={person} /> : null}
         </>
       )}
     </Screen>

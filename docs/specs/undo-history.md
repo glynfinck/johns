@@ -26,7 +26,7 @@ One rule for every move (`undo_reach` in the migration):
   (missed, if its John has closed). The person whose move it was sees
   "Glyn undid your tick on Bins." on the Wall.
 - **After that, nothing.** Shared-out money isn't rewritten; fixing a
-  closed month is a correction (step 2).
+  closed month is a correction (`docs/specs/admin-resets.md`).
 
 Still blocked, as before: a tick under dispute, and your own tick once a
 housemate has covered it.

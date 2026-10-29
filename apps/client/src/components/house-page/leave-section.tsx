@@ -1,13 +1,15 @@
-import { FOCUS_SHELL_COPY, HOUSE_LOWER_COPY, leaveBar, leaveCost } from '@app/core';
+import { firstName, FOCUS_SHELL_COPY, HOUSE_LOWER_COPY, leaveBar, leaveCost } from '@app/core';
 import { useQueryClient } from '@tanstack/react-query';
 import { DoorOpenIcon, RefreshCwIcon } from 'lucide-react-native';
 import { useState } from 'react';
 import { StyleSheet, View } from 'react-native';
 
-import { removeMember } from '@/api/settings';
+import { handOver, removeMember } from '@/api/settings';
+import { Avatar } from '@/components/avatar';
 import { ConfirmSheet } from '@/components/confirm-sheet';
 import { Group } from '@/components/group';
 import { Row } from '@/components/row';
+import { ChoiceRow } from '@/components/setup/choice-row';
 import { Meta } from '@/components/text';
 import { TextButton } from '@/components/text-button';
 import { houseKey } from '@/hooks/keys';
@@ -24,8 +26,8 @@ import { INSET, SPACE, useTheme } from '@/theme';
  * behind you as the guard moves you on. Until the Stake is read it says so,
  * and if it can't be, it says that instead, with Try again under it, and
  * asks again the next time the sheet opens. The only admin of a house with
- * others in it is told to make someone else an admin first, with nothing
- * to press, as the database would refuse it; the last one out is told the
+ * others in it picks who looks after it, and leaves by handing over
+ * ("Make Sam admin and leave"), one step; the last one out is told the
  * house will be empty.
  */
 export function LeaveSection({ houseId, userId, view }: { houseId: string; userId: string; view: HouseView }) {
@@ -36,6 +38,7 @@ export function LeaveSection({ houseId, userId, view }: { houseId: string; userI
   const [asking, setAsking] = useState(false);
   const [busy, setBusy] = useState(false);
   const [problem, setProblem] = useState<string | null>(null);
+  const [heir, setHeir] = useState<string | null>(null);
   const { house, members, rules } = view.snapshot;
 
   // A read that failed, and isn't being tried again right now.
@@ -54,13 +57,15 @@ export function LeaveSection({ houseId, userId, view }: { houseId: string; userI
     cost = HOUSE_LOWER_COPY.costUnread;
   }
   const bar = leaveBar(userId, members);
-  const body = bar === 'last-admin' ? HOUSE_LOWER_COPY.lastAdmin : bar === 'last-one' ? `${cost} ${HOUSE_LOWER_COPY.lastOne}` : cost;
+  const body = bar === 'last-admin' ? `${cost} ${HOUSE_LOWER_COPY.lastAdmin}` : bar === 'last-one' ? `${cost} ${HOUSE_LOWER_COPY.lastOne}` : cost;
+  const heirName = heir ? firstName(members.find((m) => m.userId === heir)?.name ?? '') : null;
 
   async function leave() {
     setBusy(true);
     setProblem(null);
     try {
-      await removeMember(houseId, userId);
+      if (bar === 'last-admin') await handOver(houseId, heir!);
+      else await removeMember(houseId, userId);
     } catch (reason) {
       setProblem(reason instanceof Error ? reason.message : String(reason));
       setBusy(false);
@@ -95,7 +100,7 @@ export function LeaveSection({ houseId, userId, view }: { houseId: string; userI
         visible={asking}
         title={HOUSE_LOWER_COPY.leaveAsk(house.name)}
         body={body}
-        confirmLabel={bar === 'last-admin' ? null : HOUSE_LOWER_COPY.leaveConfirm}
+        confirmLabel={bar === 'last-admin' ? (heirName ? HOUSE_LOWER_COPY.handOver(heirName) : null) : HOUSE_LOWER_COPY.leaveConfirm}
         icon={DoorOpenIcon}
         busy={busy}
         problem={problem}
@@ -103,7 +108,24 @@ export function LeaveSection({ houseId, userId, view }: { houseId: string; userI
         onClose={() => setAsking(false)}
         testID="leave-sheet"
       >
-        {unread && bar !== 'last-admin' ? (
+        {bar === 'last-admin' ? (
+          <Group testID="hand-over">
+            {members
+              .filter((m) => m.userId !== userId)
+              .map((m) => (
+                <ChoiceRow
+                  key={m.userId}
+                  role="radio"
+                  label={m.name}
+                  leading={<Avatar name={m.name} />}
+                  checked={heir === m.userId}
+                  onPress={() => setHeir(m.userId)}
+                  testID="heir"
+                />
+              ))}
+          </Group>
+        ) : null}
+        {unread ? (
           <TextButton
             label={FOCUS_SHELL_COPY.retry}
             icon={RefreshCwIcon}
