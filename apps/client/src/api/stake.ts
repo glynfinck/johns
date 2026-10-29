@@ -62,7 +62,7 @@ async function readLedger(houseId: string) {
   const page = (below: number | null) => {
     const query = supabase
       .from('ledger')
-      .select('id, user_id, kind, amount_minor, month, counterparty, created_at, assignments(name, outcome, due_at)')
+      .select('id, user_id, kind, amount_minor, month, counterparty, doers, created_at, assignments(name, outcome, due_at)')
       .eq('house_id', houseId);
     return (below === null ? query : query.lt('id', below)).order('id', { ascending: false }).limit(PAGE);
   };

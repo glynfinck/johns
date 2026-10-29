@@ -176,6 +176,22 @@ export type RaiseFlag = z.infer<typeof RaiseFlag>;
 export const FlagResponse = z.object({ ok: z.literal(true), assignmentId: z.uuid() });
 export type FlagResponse = z.infer<typeof FlagResponse>;
 
+/**
+ * POST /api/roll-call: tick a John with who did it (crew.ts). `crew` is
+ * everyone on it, you among them: holders left off are absent, anyone else
+ * helped.
+ */
+export const RollCallRequest = z.object({
+  assignmentId: z.uuid(),
+  crew: z.array(z.uuid()).min(1).max(20),
+  photoPath: z.string().min(1).max(300).optional(),
+});
+export type RollCallRequest = z.infer<typeof RollCallRequest>;
+
+/** How many did it. */
+export const RollCallResponse = z.object({ ok: z.literal(true), people: z.number().int() });
+export type RollCallResponse = z.infer<typeof RollCallResponse>;
+
 /** POST /api/pass/checkout: buy the House Pass for a house, on the web. */
 export const PassCheckoutRequest = z.object({ houseId: z.uuid(), plan: z.enum(PASS_PURCHASES) });
 export type PassCheckoutRequest = z.infer<typeof PassCheckoutRequest>;
