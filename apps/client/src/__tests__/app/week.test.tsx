@@ -101,6 +101,7 @@ async function open(): Promise<QueryClient> {
       week: Week,
       'house/away': () => <Text>Time away page</Text>,
       'house/johns': () => <Text>John list page</Text>,
+      'week/record': () => <Text>Track record page</Text>,
     },
     { initialUrl: '/week' },
   );
@@ -212,6 +213,14 @@ describe('the summary', () => {
     await fireEvent.press(overdue);
     expect(overdue).not.toBeSelected();
     expect(screen.getAllByTestId('week-row')).toHaveLength(4);
+  });
+});
+
+describe('the track record', () => {
+  it('opens from under the week', async () => {
+    await open();
+    await fireEvent.press(screen.getByTestId('week-record'));
+    expect(await screen.findByText('Track record page')).toBeOnTheScreen();
   });
 });
 

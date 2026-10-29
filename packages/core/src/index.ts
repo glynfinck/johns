@@ -29,6 +29,7 @@ export * from "./week";
 export * from "./john-row";
 export * from "./today";
 export * from "./why";
+export * from "./record";
 export * from "./week-summary";
 export * from "./house-page";
 export * from "./house-lower";

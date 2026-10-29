@@ -3,6 +3,7 @@ import {
   liveWeekFilter,
   ON_CALL_COPY,
   PAGE_TITLE,
+  RECORD_COPY,
   toggleWeekFilter,
   WEEK_SUMMARY_COPY,
   weekAwayLine,
@@ -18,13 +19,14 @@ import {
 } from '@app/core';
 import { RepeatIcon } from 'lucide-react-native';
 import { useState } from 'react';
-import { useWindowDimensions } from 'react-native';
+import { StyleSheet, useWindowDimensions, View } from 'react-native';
 
 import type { JohnRowContext } from '@/components/john-row';
 import { PageTitle } from '@/components/page-title';
 import { Reading, ReadFailed } from '@/components/read-state';
 import { Screen } from '@/components/screen';
 import { Chip } from '@/components/status-mark';
+import { TextButton } from '@/components/text-button';
 import { MoreButton, TitleBar } from '@/components/title-bar';
 import { FairnessFooter } from '@/components/week/fair-shares';
 import { PersonSection } from '@/components/week/person-section';
@@ -38,7 +40,7 @@ import { useJohnList } from '@/hooks/use-john-list';
 import { useMembership } from '@/hooks/use-membership';
 import { usePull, useReadOnFocus } from '@/hooks/use-refresh';
 import { useTable } from '@/hooks/use-table';
-import { WIDE } from '@/theme';
+import { INSET, WIDE } from '@/theme';
 
 /**
  * Week: how the whole house's week is going. The title bar's "•••" holds
@@ -46,7 +48,8 @@ import { WIDE } from '@/theme';
  * whose legend filters the list; one group per person, you first, finished
  * Johns folded (from WIDE on the web, one table row per John instead, with
  * who's away and your swap under the summary); and the deal's fairness in a
- * sentence, which opens the fair shares. Tapping any John opens its sheet.
+ * sentence, which opens the fair shares, and the way to the track record.
+ * Tapping any John opens its sheet.
  */
 export default function Week() {
   const { session, house } = useMembership();
@@ -192,6 +195,14 @@ function Board({
           awayMakeup={house.awayMakeup}
         />
       ) : null}
+      <View style={styles.record}>
+        <TextButton label={RECORD_COPY.open} href="/week/record" chevron align="start" testID="week-record" />
+      </View>
     </>
   );
 }
+
+const styles = StyleSheet.create({
+  // On the leading edge, where the sections' labels start.
+  record: { paddingHorizontal: INSET, alignItems: 'flex-start' },
+});
