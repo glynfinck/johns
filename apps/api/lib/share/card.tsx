@@ -8,9 +8,10 @@ import { BIN_NIGHT, PLATE, SHARE_IMAGE, SHIELD, signLegendSize, signSvg, signWid
 
 /**
  * A join link's card, drawn by `next/og` (Satori) at 1200×630, the way
- * scripts/brand.mjs draws every other card: a sign posted on tarmac. The
- * amber plate carries the J like a route shield and the house's name in
- * Overpass Black caps; the pavement plate under it says who's in. Satori lays
+ * scripts/brand.mjs draws every other card: a sign posted on the pavement.
+ * The amber plate carries the J like a route shield and the house's name in
+ * Overpass Black caps; the plate under it says who's in. Never on black: an
+ * amber plate with black words on black reads as another brand's logo. Satori lays
  * out with flexbox only and can't read the app's theme, so the colours come
  * from Bin Night directly, and every element with more than one child says
  * `display: flex`.
@@ -19,7 +20,7 @@ import { BIN_NIGHT, PLATE, SHARE_IMAGE, SHIELD, signLegendSize, signSvg, signWid
 const INK = BIN_NIGHT.light.foreground;
 const AMBER = BIN_NIGHT.light.hivis;
 const PAVEMENT = BIN_NIGHT.light.background;
-const TARMAC = BIN_NIGHT.dark.background;
+const CARD = BIN_NIGHT.light.card;
 
 /** Overpass, vendored beside the API (next.config.ts keeps it in the bundle). */
 export async function cardFonts() {
@@ -63,7 +64,7 @@ export function Card({ sign }: { sign: ShareSign }) {
         display: "flex",
         alignItems: "center",
         justifyContent: "center",
-        backgroundColor: TARMAC,
+        backgroundColor: PAVEMENT,
         fontFamily: "Overpass",
       }}
     >
@@ -86,7 +87,7 @@ export function Card({ sign }: { sign: ShareSign }) {
           </div>
         </Plate>
         <div style={{ display: "flex", height: PLATE.gap }} />
-        <Plate ground={PAVEMENT} height={116}>
+        <Plate ground={CARD} height={116}>
           <div style={{ paddingTop: 4, fontSize: 44, fontWeight: 700 }}>{sign.plate}</div>
         </Plate>
       </div>

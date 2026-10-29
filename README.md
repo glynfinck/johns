@@ -1,9 +1,6 @@
 <p align="center">
   <a href="https://jonz.app">
-    <picture>
-      <source media="(prefers-color-scheme: dark)" srcset="docs/brand/readme-banner-dark.png">
-      <img alt="Jonz. Fair shares of the housework, and a house that keeps score." src="docs/brand/readme-banner-light.png" width="720">
-    </picture>
+    <img alt="Jonz. Fair shares of the housework, and a house that keeps score." src="docs/brand/readme-banner.png" width="720">
   </a>
 </p>
 

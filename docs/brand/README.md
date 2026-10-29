@@ -1,9 +1,6 @@
 # The Jonz brand
 
-<picture>
-  <source media="(prefers-color-scheme: dark)" srcset="readme-banner-dark.png">
-  <img alt="Jonz" src="readme-banner-light.png" width="640">
-</picture>
+<img alt="Jonz" src="readme-banner.png" width="640">
 
 Jonz wears Bin Night, the app's house style: council signage on a street at
 night. This page is how the brand is used outside the app's own screens, and
@@ -17,10 +14,11 @@ and run it again.
 | | |
 | --- | --- |
 | ![The sign](icon-512.png) | **The sign** is the J in its road-sign frame on hi-vis amber. It stands alone wherever the name is already said: the app icon, the favicon, a profile picture, a notification. |
-| ![The lockup](lockup.png) | **The lockup** is the sign beside JONZ in Overpass Black, in caps. Use it where people meet Jonz for the first time: the front door, a card, an email, the README. On dark grounds use `lockup-on-dark.png`. |
+| ![The lockup](lockup.png) | **The lockup** is the sign beside JONZ in Overpass Black, in caps. Use it where people meet Jonz for the first time: the front door, a card, an email, the README. On dark grounds use `lockup-on-dark.png`, where the sign is drawn in amber on the ground. |
 
 - Give it clear space all round about one J stroke wide, the frame's corner radius.
-- Never recolour, stretch, outline or rotate the sign. On amber it is inked in tarmac; on tarmac, the sign keeps its amber tile.
+- Never recolour, stretch or rotate the sign. On amber it is inked in tarmac. On a dark ground it is drawn in amber with no tile, as the dark app icon and the app's own lockup after dark are.
+- Never put an amber box with black or white words on black. That pairing is another brand's logo (an adult site's), and an amber sign on black reads as it at a chat's thumbnail size. Signs go on the pavement.
 - Below 48px the small-size master takes over (`SIGN_SMALL`), with a heavier frame and a bigger J, so the lines hold up in a browser tab. `favicon.svg`, `favicon.ico` and the app's own lockup at small sizes use it.
 - The name is "Jonz" in a sentence and JONZ in the lockup. One chore is a John.
 
@@ -29,10 +27,10 @@ and run it again.
 Anything Jonz says out loud is posted as a road sign: a link's card, the
 README banner, the email header, a store headline. The amber plate carries
 the J at its left like a route shield, and the legend in Overpass Black
-caps; under it hangs a pavement plate with the small print, as a
+caps; under it hangs a pale plate with the small print, as a
 supplementary plate hangs under a road sign. Both plates have an ink border
 inset from the edge (`PLATE` in `packages/core/src/mark.ts`), and the
-assembly is posted on tarmac, the street at night.
+assembly is posted on the pavement, never on black.
 
 ![The JONZ sign, every jonz.app link's card](../../apps/client/public/og.png)
 
@@ -47,15 +45,15 @@ assembly is posted on tarmac, the street at night.
 
 | Colour | Hex | Job |
 | --- | --- | --- |
-| Hi-vis amber | `#F3AA00` (`#FFB81C` after dark) | The one thing to do, the sign, buttons that matter. A fill with tarmac on it, never text on a light ground (1.6:1). |
-| Tarmac | `#16181A` | Ink, and the ground of the join link's card. |
-| Pavement | `#E7E9E5` | The light ground. |
+| Hi-vis amber | `#F6B800` (`#FFC21A` after dark) | The one thing to do, the sign, buttons that matter. A fill with tarmac on it, never text on a light ground (1.5:1). Road-sign amber, kept on the yellow side of orange. |
+| Tarmac | `#16181A` | Ink. Never the ground of a sign. |
+| Pavement | `#E7E9E5` | The light ground, and the ground every sign is posted on. |
 | Wet tarmac | `#111315` | The dark ground. |
 | Hazard | `#C8410C` | Late and missed only. |
 | Done | `#2E7D32` | Done only. |
 
 The bin-lid colours (one per kind of John) live in the app and stay out of
-marketing. Amber on tarmac is 9:1, tarmac on pavement 14.6:1.
+marketing. Tarmac on amber is 10:1, tarmac on pavement 14.6:1.
 
 ## Type
 
@@ -96,7 +94,7 @@ form is "Fair shares of the housework." The social handle is @jonz.app.
 | A join link pasted in a chat | drawn per house by `apps/api/app/api/og/join/[code]` | 1200×630 |
 | Email header | `email-header.png`, shown at 600×120 | 1200×240 |
 | Repo social preview | `social-preview.png` | 1280×640 |
-| README banner | `readme-banner-light.png`, `readme-banner-dark.png` | 1280×360 |
+| README banner | `readme-banner.png`, the same in GitHub's light and dark | 1280×360 |
 | Stripe, App Store and Play icon | `icon-512.png`, `icon-1024.png` | 512, 1024 |
 | Google sign-in screen | `logo-120.png` | 120 |
 | Profile picture (Instagram, TikTok, X) | `profile-400.png` | 400 |
@@ -131,7 +129,7 @@ For GitHub in Safari, tap **aA**, then **Request Desktop Website**.
 
 1. **Stripe** (Checkout, the billing page and receipts). Open
    [Branding settings](https://dashboard.stripe.com/settings/branding):
-   icon `icon-512.png`, logo `lockup.png`, brand colour `#F3AA00`, accent
+   icon `icon-512.png`, logo `lockup.png`, brand colour `#F6B800`, accent
    `#16181A`. Do the same in the sandbox. Under
    [Emails](https://dashboard.stripe.com/settings/emails), turn on
    successful payment receipts so they carry the brand.

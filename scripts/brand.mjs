@@ -14,11 +14,14 @@ import { chromium } from "@playwright/test";
 
 import { PLATE, SHIELD, SIGN_SMALL, TILE_RADIUS, signLegendSize, signSvg } from "../packages/core/src/mark.ts";
 
-const AMBER = "#f3aa00";
-const AMBER_DARK = "#ffb81c";
+// Road-sign amber, a little yellow of orange: an amber plate with black words
+// on black reads as another brand's logo, so signs are posted on the pavement.
+const AMBER = "#f6b800";
+const AMBER_DARK = "#ffc21a";
 const INK = "#16181a";
 const PAVEMENT = "#e7e9e5";
-const TARMAC = "#111315";
+/** The plate under a sign, a shade lighter than the pavement it's posted on. */
+const CARD = "#f7f8f5";
 const ON_TARMAC = "#edefeb";
 
 const PUBLIC = "apps/client/public";
@@ -79,9 +82,9 @@ const ICO_SIZES = [16, 32, 48];
 // ── Cards: what Jonz says out loud is posted as a sign ────────────────────
 //
 // An amber plate with an ink border, the J at its left like a route shield
-// and the legend in caps; under it, the small print on a pavement plate, as
-// a supplementary plate hangs under a road sign (PLATE in mark.ts). Posted on
-// tarmac, the street at night. apps/api/lib/share/card.tsx draws the join
+// and the legend in caps; under it, the small print on a pale plate, as a
+// supplementary plate hangs under a road sign (PLATE in mark.ts). Posted on
+// the pavement, never on black. apps/api/lib/share/card.tsx draws the join
 // links' cards the same way.
 
 const FONTS = [
@@ -113,9 +116,13 @@ html,body{background:transparent}
 
 const BRAND_SIGN = { legend: "Jonz", plate: "Fair shares of the housework." };
 
-/** The lockup on clear: the sign's tile and JONZ beside it, for anywhere it's placed by hand. */
-function lockup({ size, ink }) {
-  return `<div class="lock" style="font-size:${size}px;color:${ink}"><img src="${svgUri(icon.tile)}" alt=""><span class="wm">Jonz</span></div>`;
+/**
+ * The lockup on clear: the sign and JONZ beside it, for anywhere it's placed
+ * by hand. On dark grounds the sign is drawn in amber on clear, as the dark
+ * app icon is, never an amber tile beside a light word.
+ */
+function lockup({ size, ink, mark = icon.tile }) {
+  return `<div class="lock" style="font-size:${size}px;color:${ink}"><img src="${svgUri(mark)}" alt=""><span class="wm">Jonz</span></div>`;
 }
 
 /**
@@ -136,7 +143,7 @@ function sign({ legend, plate, width, height = 300, plateHeight = 116, scale = 1
         <div class="legend" style="font-size:${px(size)}">${legend}</div>
       </div></div>`;
   const under = plate
-    ? `<div class="plate" style="background:${PAVEMENT};height:${px(plateHeight)};border-radius:${px(PLATE.radius)};padding:${px(PLATE.inset)}">
+    ? `<div class="plate" style="background:${CARD};height:${px(plateHeight)};border-radius:${px(PLATE.radius)};padding:${px(PLATE.inset)}">
       <div class="face" style="${face(40)}"><div class="line" style="font-size:${px(44)}">${plate}</div></div></div>`
     : "";
   // A sign is as wide as its words, up to `width`; the plate under it matches.
@@ -144,34 +151,27 @@ function sign({ legend, plate, width, height = 300, plateHeight = 116, scale = 1
   return `<div class="assembly" style="${across};gap:${px(PLATE.gap)}">${amber}${under}</div>`;
 }
 
-/** A card: a sign posted on `ground`. */
+/** A card: a sign posted on `ground`, the pavement wherever it's ours to choose. */
 const card = (width, height, ground, inner, style = "") =>
   `<div class="card" style="width:${width}px;height:${height}px;background:${ground};${style}">${inner}</div>`;
 
 const CARDS = [
   // Every jonz.app link's card in a chat, and the repo's own.
-  [`${PUBLIC}/og.png`, 1200, 630, card(1200, 630, TARMAC, sign({ ...BRAND_SIGN, width: 1056 }))],
-  [`${BRAND}/social-preview.png`, 1280, 640, card(1280, 640, TARMAC, sign({ ...BRAND_SIGN, width: 1100 }))],
-  // The README's banner, one per GitHub theme: the same sign on the page's ground.
-  ...[
-    ["light", PAVEMENT],
-    ["dark", TARMAC],
-  ].map(([look, ground]) => [
-    `${BRAND}/readme-banner-${look}.png`,
-    1280,
-    360,
-    card(1280, 360, ground, sign({ ...BRAND_SIGN, width: 860, scale: 0.62 })),
-  ]),
+  [`${PUBLIC}/og.png`, 1200, 630, card(1200, 630, PAVEMENT, sign({ ...BRAND_SIGN, width: 1056 }))],
+  [`${BRAND}/social-preview.png`, 1280, 640, card(1280, 640, PAVEMENT, sign({ ...BRAND_SIGN, width: 1100 }))],
+  // The README's banner: on the pavement in GitHub's light and dark alike.
+  [`${BRAND}/readme-banner.png`, 1280, 360, card(1280, 360, PAVEMENT, sign({ ...BRAND_SIGN, width: 860, scale: 0.62 }))],
   // An email's header strip, shown at 600×120: the amber plate alone.
-  [`${BRAND}/email-header.png`, 1200, 240, card(1200, 240, TARMAC, sign({ legend: "Jonz", width: 560, scale: 0.55 }), "align-items:flex-start;padding:0 64px")],
+  [`${BRAND}/email-header.png`, 1200, 240, card(1200, 240, PAVEMENT, sign({ legend: "Jonz", width: 560, scale: 0.55 }), "align-items:flex-start;padding:0 64px")],
   // Google Play's feature graphic, which it shows over the listing.
-  [`${BRAND}/play-feature.png`, 1024, 500, card(1024, 500, TARMAC, sign({ ...BRAND_SIGN, width: 900, scale: 0.86 }))],
+  [`${BRAND}/play-feature.png`, 1024, 500, card(1024, 500, PAVEMENT, sign({ ...BRAND_SIGN, width: 900, scale: 0.86 }))],
 ];
 
 const LOCKUPS = [
-  [`${BRAND}/lockup.png`, INK],
-  [`${BRAND}/lockup-on-dark.png`, ON_TARMAC],
-].map(([path, ink]) => [path, 1200, 300, `<div style="width:1200px;height:300px;display:flex;align-items:center;justify-content:center;font-family:Overpass">${lockup({ size: 150, ink })}</div>`]);
+  [`${BRAND}/lockup.png`, INK, icon.tile],
+  // On a dark ground: the sign in amber with no tile, its frame out to the tile's edge.
+  [`${BRAND}/lockup-on-dark.png`, ON_TARMAC, signSvg({ ink: AMBER_DARK, safe: SHIELD })],
+].map(([path, ink, mark]) => [path, 1200, 300, `<div style="width:1200px;height:300px;display:flex;align-items:center;justify-content:center;font-family:Overpass">${lockup({ size: 150, ink, mark })}</div>`]);
 
 // ── Store frames ──────────────────────────────────────────────────────────
 
@@ -188,12 +188,12 @@ const STORES = [
   ["play", 1080, 1920],
 ];
 
-/** A store screenshot: the headline on a sign, the phone under it, on tarmac. */
+/** A store screenshot: the headline on a sign, the phone under it, on the pavement. */
 function storeFrame(width, height, screen, headline) {
   const scale = width / 1200;
   const margin = Math.round(width * 0.07);
   const phone = Math.round(width * 0.09);
-  return `<div class="card" style="width:${width}px;height:${height}px;background:${TARMAC};justify-content:flex-start;padding-top:${Math.round(height * 0.04)}px;gap:${Math.round(height * 0.035)}px">
+  return `<div class="card" style="width:${width}px;height:${height}px;background:${PAVEMENT};justify-content:flex-start;padding-top:${Math.round(height * 0.04)}px;gap:${Math.round(height * 0.035)}px">
     ${sign({ legend: headline, width: width - margin * 2, scale, height: 380, legendSize: 78, shield: 150, fit: false })}
     <div style="flex:1;align-self:stretch;margin:0 ${phone}px;background:#2c3135;border-radius:${phone}px ${phone}px 0 0;padding:${Math.round(width * 0.024)}px ${Math.round(width * 0.024)}px 0;overflow:hidden">
       <img src="data:image/png;base64,${readFileSync(screen).toString("base64")}" style="width:100%;display:block;border-radius:${Math.round(width * 0.07)}px ${Math.round(width * 0.07)}px 0 0">

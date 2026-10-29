@@ -6,15 +6,21 @@ import { FONT, useTheme } from '@/theme';
 
 /**
  * The sign: the J in its road-sign frame on its amber tile, the app icon's
- * drawing (packages/core/src/mark.ts). Below 48 it draws the small-size
+ * drawing (packages/core/src/mark.ts). After dark it is drawn in amber on
+ * the ground, as the dark app icon is: an amber tile beside a light word on
+ * black reads as another brand's logo. Below 48 it draws the small-size
  * master, whose lines hold up at a tab's size.
  */
 export function SignMark({ size = 32 }: { size?: number }) {
-  const { colors } = useTheme();
+  const { colors, scheme } = useTheme();
   const { frame, j } = signParts(size < SIGN_SMALL_BELOW ? SIGN_SMALL : SIGN);
+  const night = scheme === 'dark';
+  const ink = night ? colors.hivis : colors.onHivis;
+  // After dark the frame alone fills the box the tile would, less a hair.
+  const from = night ? frame.x - frame.stroke / 2 - 12 : 0;
   return (
-    <Svg width={size} height={size} viewBox="0 0 512 512" aria-hidden>
-      <Rect width={512} height={512} rx={TILE_RADIUS} fill={colors.hivis} />
+    <Svg width={size} height={size} viewBox={`${from} ${from} ${512 - 2 * from} ${512 - 2 * from}`} aria-hidden>
+      {night ? null : <Rect width={512} height={512} rx={TILE_RADIUS} fill={colors.hivis} />}
       <Rect
         x={frame.x}
         y={frame.y}
@@ -22,10 +28,10 @@ export function SignMark({ size = 32 }: { size?: number }) {
         height={frame.size}
         rx={frame.radius}
         fill="none"
-        stroke={colors.onHivis}
+        stroke={ink}
         strokeWidth={frame.stroke}
       />
-      <Path d={j.d} transform={j.transform} fill="none" stroke={colors.onHivis} strokeWidth={j.stroke} strokeLinejoin="round" />
+      <Path d={j.d} transform={j.transform} fill="none" stroke={ink} strokeWidth={j.stroke} strokeLinejoin="round" />
     </Svg>
   );
 }
