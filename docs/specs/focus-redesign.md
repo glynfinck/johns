@@ -81,12 +81,15 @@ waits for your vote.
   or a text button), 56 to 64pt tall with 48pt targets. 16pt gutter plus 16pt
   inset; 8 from a section label to its group, 32 between sections.
 - **Chrome**: no wordmark strip inside the house. One 52pt title bar per
-  screen with a slot on the right (the date, `•••`, a back button on pushed
-  pages). Content capped at 680pt on every tab.
+  screen, the same on every tab: the page's name on the left and, on the
+  right, the sparkles that open Jonz (admins) always at the edge with the
+  screen's own `•••` just inside them. What a tab says about itself (Today's
+  date, House's housemates) is the page's first line, under the bar, as
+  Week's range line already is. Pushed pages put "‹ House" above the title. Content capped at 680pt on every tab.
 
 ### Today
 
-1. Title bar: TODAY, and the date on the right.
+1. Title bar: TODAY. The date is the page's first line, under it.
 2. **Next up** (the one card): your next open John as the Lead, a meta line
    (lid dot, category, due time, what lateness costs: "£1 if late"), amber
    "Mark done" with an outline "Photo" beside it (a photo John leads with
@@ -142,7 +145,8 @@ flexible and the action in the status cell.
 
 ### House
 
-Title bar: the house's name, "4 housemates · £20 a month each" under it.
+Title bar: the house's name. "4 housemates · £20 a month each" is the page's
+first line, under the bar.
 
 1. **The month card**: your net so far as the Lead ("You're up £4.01", the
    figure green only when positive), what you've forfeited and when it's

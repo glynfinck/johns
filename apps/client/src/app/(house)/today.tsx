@@ -5,7 +5,7 @@ import type { JohnList } from '@/api/settings';
 import { PageTitle } from '@/components/page-title';
 import { Reading, ReadFailed } from '@/components/read-state';
 import { Screen } from '@/components/screen';
-import { TitleBar } from '@/components/title-bar';
+import { TitleBar, TopLine } from '@/components/title-bar';
 import { NeedsYou } from '@/components/today/needs-you';
 import { NextUp } from '@/components/today/next-up';
 import { OnCall } from '@/components/today/on-call';
@@ -46,18 +46,13 @@ function TodayFor({ houseId, userId }: { houseId: string; userId: string }) {
 
   return (
     <Screen
-      bar={
-        <TitleBar
-          title={PAGE_TITLE.today}
-          right={view ? dayLabel(view.now, view.snapshot.rules.timezone) : undefined}
-          ask={view?.me?.role === 'admin'}
-        />
-      }
+      bar={<TitleBar title={PAGE_TITLE.today} ask={view?.me?.role === 'admin'} />}
       refreshing={refreshing}
       onRefresh={pull}
       testID="today-screen"
     >
       <PageTitle page={PAGE_TITLE.today} />
+      {view ? <TopLine>{dayLabel(view.now, view.snapshot.rules.timezone)}</TopLine> : null}
       {view ? (
         <TodayView view={view} away={away.data ?? null} stake={stake.data ?? null} list={list.data ?? null} />
       ) : query.isError ? (

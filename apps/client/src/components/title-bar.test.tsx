@@ -1,4 +1,4 @@
-import { FOCUS_SHELL_COPY, SECTION_LABEL } from '@app/core';
+import { FOCUS_SHELL_COPY, HOUSE_DRAFT_COPY, SECTION_LABEL } from '@app/core';
 import { Link } from 'expo-router';
 import { fireEvent, renderRouter, screen, within } from 'expo-router/testing-library';
 import { View } from 'react-native';
@@ -17,16 +17,28 @@ const routes = {
     </View>
   ),
   'house/wall': () => <TitleBar title="The Wall" back="/house" />,
-  today: () => <TitleBar title="Today" right="Thu 8 Oct" />,
+  today: () => <TitleBar title="Today" ask />,
+  week: () => <TitleBar title="This week" right={<MoreButton onPress={more} />} ask />,
 };
 
-it("is the screen's one heading, with its line beneath and the date beside", async () => {
+it("is the screen's one heading", async () => {
   await renderRouter(routes, { initialUrl: '/today' });
   const bar = within(screen.getByTestId('title-bar'));
   expect(bar.getAllByRole('header')).toHaveLength(1);
   expect(bar.getByRole('header', { name: 'Today' })).toBeOnTheScreen();
-  expect(bar.getByText('Thu 8 Oct')).toBeOnTheScreen();
   expect(bar.queryByRole('button', { name: FOCUS_SHELL_COPY.back })).toBeNull();
+});
+
+it("keeps the sparkles at the edge on every tab, with the screen's menu inside them", async () => {
+  for (const initialUrl of ['/today', '/week']) {
+    await renderRouter(routes, { initialUrl });
+    const bar = within(screen.getByTestId('title-bar'));
+    expect(bar.getByLabelText(HOUSE_DRAFT_COPY.open)).toBeOnTheScreen();
+    // The sparkles come last, at the edge, wherever there's a menu too.
+    const right = bar.getAllByTestId(/^(more|ask-jonz)$/).map((b) => b.props.testID);
+    expect(right.at(-1)).toBe('ask-jonz');
+  }
+  expect(within(screen.getByTestId('title-bar')).getAllByTestId(/^(more|ask-jonz)$/)).toHaveLength(2);
 });
 
 it('carries a sub line and the screen menu', async () => {
