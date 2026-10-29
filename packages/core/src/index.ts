@@ -31,6 +31,7 @@ export * from "./john-row";
 export * from "./today";
 export * from "./why";
 export * from "./record";
+export * from "./repeat";
 export * from "./week-summary";
 export * from "./house-page";
 export * from "./house-lower";

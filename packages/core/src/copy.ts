@@ -406,7 +406,7 @@ export const JOHN_LIST_COPY = {
     `About ${Math.round(points)} points a week across the house. Changes apply from the next deal.`,
   add: "Add a John",
   edit: (name: string) => `Edit ${name}`,
-  hint: "Points are effort: 1 for taking the bins out, 5 for a deep clean.",
+  hint: "Points are effort: 1 for taking the bins out, 5 for a deep clean, up to 20 for a half-day job.",
   name: "Name",
   namePlaceholder: "Bathroom clean",
   kind: "Kind",
@@ -437,6 +437,78 @@ export const JOHN_LIST_COPY = {
   create: "Add John",
   saving: "Saving…",
   remove: "Remove",
+} as const;
+
+/**
+ * How often a John comes round, as the John editor's sentence says it ("Every
+ * [3 months] from [November], on the [first] [Saturday] by [21:00]"), the
+ * sheets each word opens, and Week's "Coming up".
+ */
+export const REPEAT_COPY = {
+  twiceAYear: "Twice a year",
+  /** Which of its weekday in the month: 5 is the last. */
+  places: { 1: "first", 2: "second", 3: "third", 4: "fourth", 5: "last" } as Record<number, string>,
+  /** The editor's switch between the two ways a John comes round. */
+  timing: "When",
+  onSchedule: "On a schedule",
+  // The sentence, around its words.
+  every: "Every",
+  on: "on",
+  onThe: "on the",
+  by: "by",
+  /** Before the month a John that repeats every few months starts in: "from [November]", "in [March]" for a yearly one. */
+  from: "from",
+  in: "in",
+  onCallUpTo: "On call, up to",
+  aWeekWithin: "a week, done within",
+  /** A word in the sentence, spoken: "How often: 3 months. Change". */
+  word: (what: string, value: string) => `${what}: ${value}. Change`,
+  /** "2 times", "once": the on-call sentence's word. */
+  times: (n: number) => (n === 1 ? "once" : `${n} times`),
+  // The sheets the words open.
+  often: "How often",
+  anyPeriod: "Or any period",
+  units: { weeks: "Weeks", months: "Months", years: "Years" },
+  fewer: "Fewer",
+  more: "More",
+  /** "Which Saturday". */
+  which: (day: string) => `Which ${day}`,
+  whichSub: "of the month it lands in",
+  day: "Which day",
+  time: "By what time",
+  anyTime: "Or any time",
+  startsIn: "Starting in",
+  startsInSub: "The first month it lands in. It then comes round from there.",
+  timesAWeek: "Up to how many times a week",
+  timesAWeekSub: "The deal counts it this many times, so it’s handed out fairly.",
+  within: "Done within",
+  withinSub: "of someone tapping Needs doing",
+  done: "Done",
+  /** Under the sentence: "Next: Sat 7 Nov, then 6 Feb, 1 May, 7 Aug". */
+  next: (first: string, rest: readonly string[]) => (rest.length ? `Next: ${first}, then ${rest.join(", ")}` : `Next: ${first}`),
+  /** Under the time sheet: when it turns late and missed. */
+  lateAfter: (hours: number) => `Late after this. Missed ${hours === 1 ? "an hour" : `${hours} hours`} later.`,
+  /** The quick picks at the top of How often, in the order they show. */
+  quick: [
+    { label: "Every week", everyWeeks: 1, everyMonths: null },
+    { label: "Every 2 weeks", everyWeeks: 2, everyMonths: null },
+    { label: "Monthly", everyWeeks: 1, everyMonths: 1 },
+    { label: "Every 3 months", everyWeeks: 1, everyMonths: 3 },
+    { label: "Twice a year", everyWeeks: 1, everyMonths: 6 },
+    { label: "Yearly", everyWeeks: 1, everyMonths: 12 },
+  ] as readonly { label: string; everyWeeks: number; everyMonths: number | null }[],
+  /** The time sheet's quick picks. */
+  clock: [
+    { label: "Morning", time: "09:00" },
+    { label: "Midday", time: "12:00" },
+    { label: "Evening", time: "18:00" },
+    { label: "Night", time: "21:00" },
+  ] as readonly { label: string; time: string }[],
+  // Week's Johns that come round every few weeks or months, before they're dealt.
+  comingUp: "Coming up",
+  comingUpNote: "Dealt each week as it comes",
+  /** A coming-up row's meta line: "Sat 7 Nov · every 3 months". */
+  comingUpWhen: (date: string, often: string) => `${date} · ${often.toLocaleLowerCase()}`,
 } as const;
 
 /** On-call Johns on Today, the John sheet and Week: who has them, and flagging them. */

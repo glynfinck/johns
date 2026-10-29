@@ -1,4 +1,4 @@
-import { weekIndex, weekWindow, type Category, type IsoDow, type WeekWindow } from "@app/core";
+import { dateInWeek, monthIndex, weekIndex, weekWindow, type Category, type IsoDow, type WeekWindow } from "@app/core";
 import { expect } from "vitest";
 
 import { dealWeek, loadHouse } from "@/lib/engine/tick";
@@ -47,6 +47,8 @@ export interface JohnSpec {
   dueDow?: IsoDow;
   dueTime?: string;
   everyWeeks?: number;
+  /** Every N months on the Nth of its due day in the month, counting from the month its date in the anchor week falls in. */
+  monthly?: { everyMonths: number; weekOfMonth: number };
   needsPhoto?: boolean;
   /** Only this group shares it. */
   groupId?: string;
@@ -66,6 +68,9 @@ export async function addJohns(houseId: string, specs: JohnSpec[], anchor: WeekW
         due_dow: s.dueDow ?? 7,
         due_time: s.dueTime ?? "21:00",
         every_weeks: s.everyWeeks ?? 1,
+        every_months: s.monthly?.everyMonths ?? null,
+        week_of_month: s.monthly?.weekOfMonth ?? null,
+        anchor_month: s.monthly ? monthIndex(dateInWeek(anchor.startsOn, 1, s.dueDow ?? 7)) : null,
         needs_photo: s.needsPhoto ?? false,
         group_id: s.groupId ?? null,
         anchor_week: weekIndex(anchor.startsOn),

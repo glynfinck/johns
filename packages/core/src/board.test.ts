@@ -79,6 +79,9 @@ describe("johnDef", () => {
       category: "bins",
       points: 2,
       everyWeeks: 2,
+      everyMonths: null,
+      weekOfMonth: null,
+      anchorMonth: null,
       dueDow: 7,
       dueTime: "21:00",
       needsPhoto: true,
@@ -87,6 +90,26 @@ describe("johnDef", () => {
       respondHours: 12,
       perWeek: 2,
     });
+  });
+
+  it("reads a John that repeats in months, with the month it counts from", () => {
+    expect(
+      johnDef({
+        id: "j3",
+        name: "Fridge deep clean",
+        category: "kitchen",
+        points: 8,
+        every_weeks: 1,
+        every_months: 3,
+        week_of_month: 1,
+        anchor_month: 24322,
+        anchor_week: 2900,
+        due_dow: 6,
+        due_time: "21:00:00",
+        needs_photo: false,
+        group_id: null,
+      }),
+    ).toMatchObject({ everyMonths: 3, weekOfMonth: 1, anchorMonth: 24322, anchorWeek: 2900 });
   });
 
   it("reads an on-call John with its window and how often it needs doing", () => {
@@ -133,6 +156,11 @@ describe("weeklyEffort", () => {
     expect(weeklyEffort([])).toBe(0);
     expect(weeklyEffort([{ points: 4, everyWeeks: 1 }])).toBe(4);
     expect(weeklyEffort([{ points: 4, everyWeeks: 2 }, { points: 3, everyWeeks: 3 }])).toBe(3);
+  });
+
+  it("counts a monthly John by how many times a year it comes round", () => {
+    // Every 3 months is 4 times a year: 13 points a time is a point a week.
+    expect(weeklyEffort([{ points: 13, everyWeeks: 1, everyMonths: 3 }])).toBeCloseTo(0.997, 3);
   });
 
   it("counts an on-call John as often as it needs doing", () => {

@@ -88,8 +88,16 @@ export const JohnDraft = z.object({
   id: z.uuid().optional(),
   name: z.string().trim().min(1, "Name the John.").max(60),
   category: z.enum(CATEGORIES),
-  points: z.coerce.number().int().min(1).max(10),
-  everyWeeks: z.coerce.number().int().min(1).max(4),
+  points: z.coerce.number().int().min(1).max(20),
+  everyWeeks: z.coerce.number().int().min(1).max(26),
+  // A John that repeats in months (repeat.ts): how many apart, which of its
+  // weekday in the month (5 the last), and a month it lands in (null: from the
+  // next one). All null for a John that repeats in weeks.
+  everyMonths: z.number().int().min(1).max(60).nullable().default(null),
+  weekOfMonth: z.number().int().min(1).max(5).nullable().default(null),
+  anchorMonth: z.number().int().nullable().default(null),
+  /** The week a weekly John counts from: set when it's added, and kept. */
+  anchorWeek: z.number().int().optional(),
   dueDow: z.coerce.number().int().min(1).max(7),
   dueTime: z.string().regex(/^([01]\d|2[0-3]):[0-5]\d$/, "Give a time like 21:00."),
   needsPhoto: z.boolean(),
@@ -99,8 +107,10 @@ export const JohnDraft = z.object({
   when: z.enum(JOHN_WHEN).default("day"),
   respondHours: z.coerce.number().int().min(1, "Give between 1 and 72 hours.").max(72, "Give between 1 and 72 hours.").default(12),
   perWeek: z.coerce.number().int().min(1).max(14).default(2),
-});
+}).refine((j) => (j.everyMonths === null) === (j.weekOfMonth === null), "Say which week of the month it lands in.");
 export type JohnDraft = z.infer<typeof JohnDraft>;
+/** A JohnDraft before it is checked: the monthly fields may be left out (a weekly John). */
+export type JohnDraftInput = z.input<typeof JohnDraft>;
 
 /** A group of housemates who share some Johns (one of two bathrooms): what save_group takes. */
 export const GroupDraft = z.object({

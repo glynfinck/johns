@@ -1,5 +1,6 @@
 import {
   awayOn,
+  comesBack,
   dueAt,
   dueInLine,
   earnsImmunity,
@@ -8,7 +9,8 @@ import {
   graceDue,
   homeForWeek,
   isCleanWeek,
-  isDueInWeek,
+  isLong,
+  landsInWeek,
   localDate,
   monthOf,
   monthWindow,
@@ -25,7 +27,6 @@ import {
   standings,
   USUAL_WEEKS,
   verdict,
-  weekIndex,
   weekShares,
   weekWindow,
   weekWinners,
@@ -205,12 +206,37 @@ export async function dealWeek(
   replace: boolean,
 ): Promise<{ weekId: string | null; byUser: Map<string, string[]> }> {
   const rules = rulesOf(house);
-  const index = weekIndex(week.startsOn);
   const memberIds = members.map((m) => m.user_id);
-  const johns = must(
-    await db.from("johns").select("*").eq("house_id", house.id).is("archived_at", null),
-    "johns",
-  ).filter((j) => isDueInWeek(j.every_weeks, j.anchor_week, index));
+  const list = must(await db.from("johns").select("*").eq("house_id", house.id).is("archived_at", null), "johns");
+  const repeatOf = (j: (typeof list)[number]) => ({
+    everyWeeks: j.every_weeks,
+    everyMonths: j.every_months,
+    weekOfMonth: j.week_of_month,
+    anchorMonth: j.anchor_month,
+    anchorWeek: j.anchor_week,
+    dueDow: j.due_dow as IsoDow,
+  });
+  const due = list.filter((j) => landsInWeek(repeatOf(j), week.startsOn, rules.weekStarts));
+  // A long John that was missed comes back the next week rather than waiting for its turn (repeat.ts comesBack).
+  const waiting = list.filter((j) => j.kind !== "on_call" && isLong(repeatOf(j)) && !due.includes(j));
+  const back = new Set<string>();
+  if (waiting.length > 0) {
+    const lastOf = must(
+      await db
+        .from("assignments")
+        .select("john_id, due_at, outcome")
+        .in("john_id", waiting.map((j) => j.id))
+        .lt("due_at", week.startsAt.toISOString())
+        .order("due_at", { ascending: false })
+        .limit(200),
+      "long Johns' last turns",
+    );
+    for (const j of waiting) {
+      const last = lastOf.find((a) => a.john_id === j.id);
+      if (comesBack(last && { outcome: last.outcome, dueAt: new Date(last.due_at) }, week.startsAt)) back.add(j.id);
+    }
+  }
+  const johns = list.filter((j) => due.includes(j) || back.has(j.id));
 
   const byUser = new Map<string, string[]>();
   if (johns.length === 0 || members.length === 0) return { weekId: null, byUser };

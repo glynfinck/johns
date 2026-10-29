@@ -563,12 +563,14 @@ export type Database = {
       }
       johns: {
         Row: {
+          anchor_month: number | null
           anchor_week: number
           archived_at: string | null
           category: string
           created_at: string
           due_dow: number
           due_time: string
+          every_months: number | null
           every_weeks: number
           group_id: string | null
           house_id: string
@@ -579,14 +581,17 @@ export type Database = {
           per_week: number
           points: number
           respond_hours: number
+          week_of_month: number | null
         }
         Insert: {
+          anchor_month?: number | null
           anchor_week: number
           archived_at?: string | null
           category?: string
           created_at?: string
           due_dow?: number
           due_time?: string
+          every_months?: number | null
           every_weeks?: number
           group_id?: string | null
           house_id: string
@@ -597,14 +602,17 @@ export type Database = {
           per_week?: number
           points?: number
           respond_hours?: number
+          week_of_month?: number | null
         }
         Update: {
+          anchor_month?: number | null
           anchor_week?: number
           archived_at?: string | null
           category?: string
           created_at?: string
           due_dow?: number
           due_time?: string
+          every_months?: number | null
           every_weeks?: number
           group_id?: string | null
           house_id?: string
@@ -615,6 +623,7 @@ export type Database = {
           per_week?: number
           points?: number
           respond_hours?: number
+          week_of_month?: number | null
         }
         Relationships: [
           {

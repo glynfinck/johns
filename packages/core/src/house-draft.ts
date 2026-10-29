@@ -13,6 +13,7 @@ import { HOUSE_DRAFT_COPY } from "./copy";
 import type { GroupDef, JohnDef } from "./board";
 import { CATEGORIES, CATEGORY_LABEL, DOW_LABEL, JOHN_WHEN, type Category, type IsoDow } from "./domain";
 import { firstName } from "./format";
+import { dueWords, LAST_OF_MONTH, MAX_EVERY_MONTHS, MAX_EVERY_WEEKS, oftenWords } from "./repeat";
 import type { JohnDraft } from "./schemas";
 
 /** The most a draft holds: a long list is a list nobody reads. */
@@ -46,8 +47,12 @@ export const DraftedJohn = z.object({
   id: z.uuid().optional(),
   name: z.string().min(1).max(60),
   category: z.enum(CATEGORIES),
-  points: z.number().int().min(1).max(10),
-  everyWeeks: z.number().int().min(1).max(4),
+  points: z.number().int().min(1).max(20),
+  everyWeeks: z.number().int().min(1).max(26),
+  /** Every N months (12 a year) on a weekday of the month, or null for a John that repeats in weeks (repeat.ts). */
+  everyMonths: z.number().int().min(1).max(60).nullable().default(null),
+  /** Which of its due day in the month (5 the last); null for a John that repeats in weeks. */
+  weekOfMonth: z.number().int().min(1).max(5).nullable().default(null),
   dueDow: z.number().int().min(1).max(7),
   dueTime: z.string().regex(/^([01]\d|2[0-3]):[0-5]\d$/),
   needsPhoto: z.boolean(),
@@ -130,6 +135,8 @@ export interface RawDraft {
     category?: unknown;
     points?: unknown;
     everyWeeks?: unknown;
+    everyMonths?: unknown;
+    weekOfMonth?: unknown;
     dueDow?: unknown;
     dueTime?: unknown;
     needsPhoto?: unknown;
@@ -151,6 +158,12 @@ function text(value: unknown, max: number): string {
 function whole(value: unknown, min: number, max: number, fallback: number): number {
   const n = typeof value === "number" ? value : typeof value === "string" ? Number(value) : NaN;
   return Number.isFinite(n) ? Math.min(max, Math.max(min, Math.round(n))) : fallback;
+}
+
+/** A whole number in range, or null when it's missing, zero or not a number. */
+function wholeOrNull(value: unknown, min: number, max: number): number | null {
+  const n = typeof value === "number" ? value : typeof value === "string" && value.trim() ? Number(value) : NaN;
+  return Number.isFinite(n) && Math.round(n) > 0 ? Math.min(max, Math.max(min, Math.round(n))) : null;
 }
 
 function time(value: unknown): string {
@@ -226,16 +239,21 @@ export function tidyDraft(
       groups.push({ name: there.name, memberIds: [...there.memberIds], waitingFor: [...there.waitingFor] });
       group = there.name;
     }
+    // Monthly and longer: every N months on a weekday of the month. An on-call John has no period.
+    const onCall = j.onCall === true;
+    const everyMonths = onCall ? null : wholeOrNull(j.everyMonths, 1, MAX_EVERY_MONTHS);
     johns.push({
       ...(id ? { id } : {}),
       name,
       category: (CATEGORIES as readonly string[]).includes(j.category as string) ? (j.category as Category) : "other",
-      points: whole(j.points, 1, 10, 2),
-      everyWeeks: whole(j.everyWeeks, 1, 4, 1),
+      points: whole(j.points, 1, 20, 2),
+      everyWeeks: everyMonths ? 1 : whole(j.everyWeeks, 1, MAX_EVERY_WEEKS, 1),
+      everyMonths,
+      weekOfMonth: everyMonths ? whole(j.weekOfMonth, 1, LAST_OF_MONTH, 1) : null,
       dueDow: whole(j.dueDow, 1, 7, 7),
       dueTime: time(j.dueTime),
       needsPhoto: j.needsPhoto === true,
-      when: j.onCall === true ? "on_call" : "day",
+      when: onCall ? "on_call" : "day",
       respondHours: whole(j.respondHours, 1, 72, 12),
       perWeek: whole(j.perWeek, 1, 14, 2),
       group,
@@ -255,8 +273,13 @@ export function tidyDraft(
 export interface DraftPlan {
   /** New groups, by name, with who is in them. */
   makeGroups: { name: string; members: string[] }[];
-  /** The Johns to add, as the John list takes them, each with its group's name (made or already there), or null for everyone. */
-  johns: { john: Omit<JohnDraft, "id" | "groupId">; groupName: string | null }[];
+  /**
+   * The Johns to add, as the John list takes them, each with its group's name
+   * (made or already there), or null for everyone. Without a month to start
+   * from: a new monthly John starts from its next one, and a changed one keeps
+   * the month it had.
+   */
+  johns: { john: Omit<JohnDraft, "id" | "groupId" | "anchorMonth" | "anchorWeek">; groupName: string | null }[];
   /** Johns that go to everyone for now because nobody in their group has joined yet, by name. */
   everyoneForNow: string[];
 }
@@ -277,6 +300,8 @@ export function draftPlan(draft: HouseDraft, keep: readonly number[], existingGr
       category: j.category,
       points: j.points,
       everyWeeks: j.everyWeeks,
+      everyMonths: j.everyMonths,
+      weekOfMonth: j.weekOfMonth,
       dueDow: j.dueDow,
       dueTime: j.dueTime,
       needsPhoto: j.needsPhoto,
@@ -364,6 +389,8 @@ export function listAsDraft(johns: readonly JohnDef[], groups: readonly GroupDef
       category: j.category,
       points: j.points,
       everyWeeks: j.everyWeeks,
+      everyMonths: j.everyMonths,
+      weekOfMonth: j.weekOfMonth,
       dueDow: j.dueDow,
       dueTime: j.dueTime,
       needsPhoto: j.needsPhoto,
@@ -379,7 +406,7 @@ export function listAsDraft(johns: readonly JohnDef[], groups: readonly GroupDef
 }
 
 /** The fields a change can touch, in the order a change line names them. */
-const CHANGEABLE = ["name", "category", "points", "everyWeeks", "dueDow", "dueTime", "needsPhoto", "when", "respondHours", "perWeek", "group"] as const;
+const CHANGEABLE = ["name", "category", "points", "everyWeeks", "everyMonths", "weekOfMonth", "dueDow", "dueTime", "needsPhoto", "when", "respondHours", "perWeek", "group"] as const;
 
 /** One thing a draft does to the list: a John to add (its place in the draft), one to change, or one to take off. */
 export type DraftChange =
@@ -412,15 +439,16 @@ export function draftChanges(base: HouseDraft | null, next: HouseDraft): DraftCh
 export function changedLine(before: DraftedJohn, after: DraftedJohn): string {
   const parts: string[] = [];
   if (before.name !== after.name) parts.push(`was “${before.name}”`);
-  const timing = (j: DraftedJohn) => (j.when === "on_call" ? "on call" : `${cadenceWords(j.everyWeeks)}, ${DOW_LABEL[j.dueDow as IsoDow].slice(0, 3)} ${j.dueTime}`);
+  const timing = (j: DraftedJohn) =>
+    j.when === "on_call"
+      ? "on call"
+      : `${oftenWords(j).toLocaleLowerCase()}, ${dueWords(j, j.dueTime, DOW_LABEL[j.dueDow as IsoDow].slice(0, 3))}`;
   if (timing(before) !== timing(after)) parts.push(`was ${timing(before)}`);
   if (before.points !== after.points) parts.push(`was ${before.points} ${before.points === 1 ? "pt" : "pts"}`);
   if (before.group !== after.group) parts.push(`was ${before.group ?? "everyone’s"}`);
   if (before.category !== after.category) parts.push(`was ${CATEGORY_LABEL[before.category]}`);
   return parts.join(" · ");
 }
-
-const cadenceWords = (everyWeeks: number) => (everyWeeks === 1 ? "every week" : `every ${everyWeeks} weeks`);
 
 // --- Starter lists ------------------------------------------------------------
 
@@ -436,6 +464,8 @@ function starter(rows: readonly Starter[]): DraftedJohn[] {
     points,
     everyWeeks,
     dueDow,
+    everyMonths: null,
+    weekOfMonth: null,
     dueTime,
     needsPhoto: false,
     when: "day",
