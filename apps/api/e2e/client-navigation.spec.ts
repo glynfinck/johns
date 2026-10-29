@@ -20,7 +20,11 @@ test.beforeEach(({ page }) => {
   errors.set(page, seen);
   page.on("pageerror", (e) => seen.push(`${e.name}: ${e.message} ${e.stack ?? ""}`.slice(0, 800)));
   page.on("console", (m) => {
-    if (m.type() === "error") seen.push(m.text().slice(0, 800));
+    if (m.type() !== "error") return;
+    // React logs what a screen threw as an object, so ask the page to spell it out.
+    void Promise.all(
+      m.args().map((a) => a.evaluate((v) => (v instanceof Error ? `${v.name}: ${v.message} ${v.stack ?? ""}` : String(v))).catch(() => "?")),
+    ).then((parts) => seen.push(parts.join(" ").slice(0, 1500)));
   });
 });
 
@@ -67,6 +71,7 @@ const PUSHED = [
   { row: "to-johns", path: "/house/johns", title: PAGE_TITLE.johnList },
   { row: "to-rules", path: "/house/rules", title: PAGE_TITLE.rules },
   { row: "to-away", path: "/house/away", title: PAGE_TITLE.away },
+  { row: "to-pass", path: "/house/pass", title: PAGE_TITLE.pass },
 ];
 
 test.describe("a house with its week dealt", () => {
