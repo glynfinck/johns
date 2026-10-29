@@ -20,6 +20,7 @@ export * from "./pass";
 export * from "./proof";
 export * from "./schemas";
 export * from "./stake";
+export * from "./staging";
 export * from "./streak";
 export * from "./wall";
 export * from "./week";

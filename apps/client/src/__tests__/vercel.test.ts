@@ -15,6 +15,7 @@ interface Rule {
 const config = JSON.parse(readFileSync(join(__dirname, '../../vercel.json'), 'utf8')) as {
   framework: null;
   buildCommand: string;
+  relatedProjects: string[];
   outputDirectory: string;
   redirects: Rule[];
   rewrites: Rule[];
@@ -25,8 +26,19 @@ const headersFor = (source: string) => config.headers.find((h) => h.source === s
 describe("jonz.app's web build on Vercel", () => {
   it('builds the single-page export, with no framework guessed', () => {
     expect(config.framework).toBeNull();
-    expect(config.buildCommand).toBe('npm run export:web');
+    // scripts/build-web.mjs runs `npm run export:web`, first pointing a
+    // preview at staging's API (or its own branch's: the related project).
+    expect(config.buildCommand).toBe('node scripts/build-web.mjs');
+    expect(config.relatedProjects).toEqual(['prj_7iAOREFWVIdf2Xi5TAoyO9a9ma7R']);
     expect(config.outputDirectory).toBe('dist');
+  });
+
+  it('keeps staging out of search engines', () => {
+    expect(config.headers).toContainEqual({
+      source: '/(.*)',
+      has: [{ type: 'host', value: 'staging.jonz.app' }],
+      headers: [{ key: 'X-Robots-Tag', value: 'noindex, nofollow' }],
+    });
   });
 
   it("passes /api/* on to apps/api before anything else, so the clock's URL and the app's calls stay put", () => {

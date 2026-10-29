@@ -1,3 +1,4 @@
+import { env } from "@/lib/env";
 import { applyPassEvent } from "@/lib/pass/events";
 import { passStripe, stripeSdk } from "@/lib/pass/stripe";
 import { createAdminClient } from "@/lib/supabase/admin";
@@ -21,6 +22,6 @@ export async function POST(request: Request) {
     return Response.json({ error: "That isn't signed by Stripe." }, { status: 400 });
   }
 
-  const done = await applyPassEvent(createAdminClient(), passStripe(sdk)!, event, new Date());
+  const done = await applyPassEvent(createAdminClient(), passStripe(sdk)!, event, new Date(), env.stage());
   return Response.json({ received: true, done });
 }

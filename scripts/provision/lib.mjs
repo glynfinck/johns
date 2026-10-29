@@ -295,3 +295,119 @@ export function summaryMarkdown({ app, site, results, todo, stopped = "" }) {
   }
   return `${out.join("\n")}\n`;
 }
+
+// --- Staging (scripts/staging.mjs) ------------------------------------------------------
+
+export const stagingUrl = (c) => `https://${c.staging.domain}`;
+export const stagingApiUrl = (c) => `https://${c.staging.apiDomain}`;
+
+/**
+ * The web origins staging's sign-in may return to and its API answers:
+ * staging itself, and any preview of the web build.
+ */
+export const stagingOrigins = (c) => [stagingUrl(c), c.staging.previews];
+
+/**
+ * Staging's auth settings. Like production's, plus email and password for
+ * the seeded demo housemates. Sign-up stays open for Google and Microsoft,
+ * so an email sign-up is possible too, but it waits on a confirmation email
+ * that Supabase's own mailer only sends to the organisation's members, so a
+ * stranger can't finish one. Redirects may return to any preview.
+ */
+export function stagingAuthSettings(c, { google, azure }) {
+  const body = {
+    site_url: stagingUrl(c),
+    uri_allow_list: [...stagingOrigins(c).map((o) => `${o}/**`), "jonz://**"].join(","),
+    external_email_enabled: true,
+    mailer_autoconfirm: false,
+    disable_signup: false,
+  };
+  if (google) {
+    body.external_google_enabled = true;
+    body.external_google_client_id = googleClientIds(c, google);
+    body.external_google_secret = google.secret;
+    body.external_google_skip_nonce_check = googleSkipsNonce(c);
+  }
+  if (azure) {
+    body.external_azure_enabled = true;
+    body.external_azure_client_id = azure.clientId;
+    body.external_azure_secret = azure.secret;
+    body.external_azure_url = "";
+  }
+  return body;
+}
+
+/** What is wrong with staging's auth settings as read back. */
+export function stagingAuthProblems(actual, c, { google, azure }) {
+  const problems = [];
+  if (actual.site_url !== stagingUrl(c)) problems.push(`site URL is ${actual.site_url || "unset"}, not ${stagingUrl(c)}`);
+  const allowed = String(actual.uri_allow_list ?? "")
+    .split(",")
+    .map((s) => s.trim());
+  for (const origin of stagingOrigins(c)) {
+    if (!allowed.includes(`${origin}/**`)) problems.push(`redirect URLs don't include ${origin}/**`);
+  }
+  if (!actual.external_email_enabled) problems.push("email and password sign-in is off, so the demo housemates can't sign in");
+  if (actual.mailer_autoconfirm) problems.push("email sign-ups are confirmed without an email");
+  if (google && !actual.external_google_enabled) problems.push("Google sign-in is off");
+  if (google && actual.external_google_client_id !== googleClientIds(c, google)) problems.push("the Google client IDs aren't the ones given");
+  if (azure && !actual.external_azure_enabled) problems.push("Microsoft sign-in is off");
+  return problems;
+}
+
+/**
+ * apps/api's Preview environment: every preview of it, and staging's own,
+ * runs on the staging branch. Stripe's keys are left alone: the sandbox key
+ * and staging's webhook secret are set by hand (DEPLOYMENT.md).
+ */
+export function stagingApiEnvPlan(c, { supabaseUrl, anonKey, serviceKey, cronSecret, vapid }) {
+  const plain = (key, value) => ({ key, value, type: "plain", target: ["preview"] });
+  const secret = (key, value) => ({ key, value, type: "sensitive", target: ["preview"] });
+  const plan = [
+    plain("NEXT_PUBLIC_SUPABASE_URL", supabaseUrl),
+    plain("NEXT_PUBLIC_SUPABASE_ANON_KEY", anonKey),
+    secret("SUPABASE_SERVICE_ROLE_KEY", serviceKey),
+    plain("NEXT_PUBLIC_SITE_URL", stagingUrl(c)),
+    plain("APP_URL", stagingUrl(c)),
+    plain("ALLOWED_ORIGINS", stagingOrigins(c).join(",")),
+    plain("VAPID_SUBJECT", stagingUrl(c)),
+  ];
+  if (cronSecret) plan.push(secret("CRON_SECRET", cronSecret));
+  if (vapid) plan.push(plain("NEXT_PUBLIC_VAPID_PUBLIC_KEY", vapid.publicKey), secret("VAPID_PRIVATE_KEY", vapid.privateKey));
+  return plan;
+}
+
+/**
+ * The web build's Preview environment: public values only. It calls
+ * staging's API (or the same branch's preview of it: apps/client/scripts/
+ * build-web.mjs), shows the staging ribbon and demo sign-in, and sells the
+ * Pass in Stripe's sandbox.
+ */
+export function stagingWebEnvPlan(c, { supabaseUrl, anonKey, vapidPublicKey }) {
+  const plain = (key, value) => ({ key, value, type: "plain", target: ["preview"] });
+  const plan = [
+    plain("EXPO_PUBLIC_SUPABASE_URL", supabaseUrl),
+    plain("EXPO_PUBLIC_SUPABASE_PUBLISHABLE_KEY", anonKey),
+    plain("EXPO_PUBLIC_API_URL", stagingApiUrl(c)),
+    plain("EXPO_PUBLIC_STAGE", "staging"),
+    plain("EXPO_PUBLIC_PASS_CHECKOUT", "on"),
+  ];
+  if (vapidPublicKey) plan.push(plain("EXPO_PUBLIC_VAPID_PUBLIC_KEY", vapidPublicKey));
+  return plan;
+}
+
+/** The persistent Supabase branch called `name` from the Management API's list, or null. */
+export function findBranch(branches, name) {
+  return (branches ?? []).find((b) => (b.name ?? b.branch_name) === name && !b.is_default) ?? null;
+}
+
+/**
+ * supabase/seeds/staging.sql with the staging password in place, as a SQL
+ * string literal inside its dollar-quoted block. Refuses a short password,
+ * or one that could end the block early.
+ */
+export function seedSql(template, password) {
+  if (typeof password !== "string" || password.length < 8) throw new Error("the staging password must be 8 characters or more");
+  if (password.includes("$seed$")) throw new Error("the staging password can't contain $seed$");
+  return template.replaceAll("'{{DEMO_PASSWORD}}'", sqlString(password));
+}

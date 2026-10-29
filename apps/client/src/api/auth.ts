@@ -1,6 +1,7 @@
 import type { Session } from '@supabase/supabase-js';
 
 import { signOutOfGoogle } from './google';
+import { ON_STAGING, rememberStagingPassword } from './staging';
 import { supabase } from './supabase';
 
 // All sign-in goes through this file: Google and Microsoft everywhere, and
@@ -15,6 +16,18 @@ export type SignInResult = 'signed-in' | 'cancelled' | 'redirected';
 export { signInWithGoogle } from './google';
 export { signInWithMicrosoft } from './microsoft';
 export { appleSignInAvailable, signInWithApple } from './apple';
+
+/**
+ * Staging only: signs in as one of the demo house's housemates
+ * (DEMO_HOUSEMATES), with the password staging's seed gave them all, and
+ * remembers it once it worked. Throws when it's wrong, or this isn't staging.
+ */
+export async function signInAsDemo(email: string, password: string): Promise<void> {
+  if (!ON_STAGING) throw new Error('Demo housemates only live on staging.');
+  const { error } = await supabase.auth.signInWithPassword({ email, password });
+  if (error) throw error;
+  rememberStagingPassword(password);
+}
 
 export async function signOut(): Promise<void> {
   const { error } = await supabase.auth.signOut();

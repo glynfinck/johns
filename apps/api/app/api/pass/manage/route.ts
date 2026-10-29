@@ -21,7 +21,7 @@ export async function POST(request: Request) {
   const stripe = passStripe();
   if (!stripe) return error(request, 503, PASS_COPY.checkoutClosed);
 
-  const answer = await openBilling({ db: auth.supabase, userId: auth.user.id }, stripe, body.data.houseId, env.appUrl());
+  const answer = await openBilling({ db: auth.supabase, userId: auth.user.id }, stripe, body.data.houseId, env.appUrlFor(request));
   if ("status" in answer) return error(request, answer.status, answer.message);
   return json(request, PassRedirect.parse(answer));
 }

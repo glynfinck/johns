@@ -38,6 +38,18 @@ export const CONFIG = {
     iosClientId: null,
     androidClientIds: [],
   },
+  // Staging (`node scripts/staging.mjs`, DEPLOYMENT.md "Staging"): a
+  // persistent Supabase branch of the project above, built from the git
+  // branch of the same name, which both Vercel projects deploy as a preview
+  // under these names. Every other preview shares its database. `previews`
+  // is the web build's preview addresses, `*` one DNS label (apps/api's
+  // lib/cors.ts).
+  staging: {
+    branch: "staging",
+    domain: "staging.jonz.app",
+    apiDomain: "api.staging.jonz.app",
+    previews: "https://*-glynfincks-projects.vercel.app",
+  },
   // The names supabase/migrations/*_tick_schedule.sql reads.
   vault: { url: "johns_tick_url", secret: "johns_tick_secret" },
   cronJob: "johns-tick",

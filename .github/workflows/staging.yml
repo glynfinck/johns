@@ -1,0 +1,115 @@
+name: Staging
+
+# Staging is the `staging` git branch: Vercel deploys it at staging.jonz.app
+# and api.staging.jonz.app, and the Supabase integration applies its
+# migrations to the persistent `staging` branch database. DEPLOYMENT.md,
+# "Staging", says how it fits together.
+#
+# - Every merge to main: staging becomes main again.
+# - "Put a PR on staging": staging becomes main with that PR merged in, so
+#   its migrations reach staging's database (and only staging's) before it
+#   merges. It stays there until the next merge to main.
+# - "Set up and check", "Seed the demo house", "Reset the database":
+#   scripts/staging.mjs, with these repository secrets:
+#     SUPABASE_ACCESS_TOKEN, VERCEL_TOKEN        always
+#     STAGING_DEMO_PASSWORD                      seeding and resetting
+#     GOOGLE_CLIENT_ID, GOOGLE_CLIENT_SECRET     Google sign-in (optional)
+#     AZURE_CLIENT_ID, AZURE_CLIENT_SECRET       Microsoft sign-in (optional)
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+    inputs:
+      action:
+        description: What to do
+        type: choice
+        options:
+          - Put a PR on staging
+          - Make staging match main
+          - Set up and check
+          - Check only
+          - Seed the demo house
+          - Reset the database (wipes staging's data)
+        default: Put a PR on staging
+      pr:
+        description: The PR's number (for "Put a PR on staging")
+        type: string
+        required: false
+
+# One change to staging at a time, in the order asked.
+concurrency:
+  group: staging
+  cancel-in-progress: false
+
+jobs:
+  branch:
+    if: github.event_name == 'push' || inputs.action == 'Put a PR on staging' || inputs.action == 'Make staging match main'
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: main
+          fetch-depth: 0
+
+      - name: Move staging
+        env:
+          ACTION: ${{ inputs.action }}
+          PR: ${{ inputs.pr }}
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          if [ "$ACTION" = "Put a PR on staging" ]; then
+            case "$PR" in ''|*[!0-9]*) echo "::error::Give the PR's number."; exit 1 ;; esac
+            git fetch origin "pull/$PR/head:pr-$PR"
+            if ! git merge --no-ff --no-edit -m "Staging: main with #$PR" "pr-$PR"; then
+              echo "::error::#$PR doesn't merge cleanly into main. Update it from main first."
+              exit 1
+            fi
+            echo "### Staging is now main with #$PR" >> "$GITHUB_STEP_SUMMARY"
+          else
+            echo "### Staging is now main ($(git rev-parse --short HEAD))" >> "$GITHUB_STEP_SUMMARY"
+          fi
+          git push --force origin HEAD:refs/heads/staging
+          echo "" >> "$GITHUB_STEP_SUMMARY"
+          echo "Vercel builds it at https://staging.jonz.app in a few minutes, and Supabase applies its migrations to staging's database." >> "$GITHUB_STEP_SUMMARY"
+
+  accounts:
+    if: github.event_name == 'workflow_dispatch' && inputs.action != 'Put a PR on staging' && inputs.action != 'Make staging match main'
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          # The migrations staging's database should have are staging's own.
+          ref: staging
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Staging
+        env:
+          SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+          VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
+          STAGING_DEMO_PASSWORD: ${{ secrets.STAGING_DEMO_PASSWORD }}
+          GOOGLE_CLIENT_ID: ${{ secrets.GOOGLE_CLIENT_ID }}
+          GOOGLE_CLIENT_SECRET: ${{ secrets.GOOGLE_CLIENT_SECRET }}
+          AZURE_CLIENT_ID: ${{ secrets.AZURE_CLIENT_ID }}
+          AZURE_CLIENT_SECRET: ${{ secrets.AZURE_CLIENT_SECRET }}
+          ACTION: ${{ inputs.action }}
+        run: |
+          case "$ACTION" in
+            "Check only") node scripts/staging.mjs --check ;;
+            "Seed the demo house") node scripts/staging.mjs --seed ;;
+            "Reset the database (wipes staging's data)") node scripts/staging.mjs --reset ;;
+            *) node scripts/staging.mjs ;;
+          esac

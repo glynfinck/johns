@@ -79,7 +79,7 @@ describe("Checkout", () => {
   it("sends a housemate on the free month to Stripe for a plan, first charging when the free month ends", async () => {
     const house = await makeHouse(["Ava", "Ben"]);
     const { stripe, calls } = fakeStripe();
-    const answer = await startCheckout(caller(house.members[0]), stripe, house.id, "yearly", APP, now());
+    const answer = await startCheckout(caller(house.members[0]), stripe, house.id, "yearly", APP, "local", now());
     expect(answer).toEqual({ url: "https://checkout.stripe.com/c/pay/cs_test_1" });
 
     const row = await passOfHouse(house.id);
@@ -88,7 +88,7 @@ describe("Checkout", () => {
       price: "price_pass_yearly",
       currency: "gbp",
       email: "Ben@test.local",
-      metadata: { house_id: house.id, plan: "yearly", buyer: house.members[0].userId },
+      metadata: { house_id: house.id, plan: "yearly", buyer: house.members[0].userId, stage: "local" },
       trialEnd: secs(new Date(row.pass_until!)),
       successUrl: `${APP}/house/pass?bought=1`,
       cancelUrl: `${APP}/house/pass`,
@@ -100,7 +100,7 @@ describe("Checkout", () => {
   it("sells Founding as one payment", async () => {
     const house = await makeHouse(["Ava"]);
     const { stripe, calls } = fakeStripe();
-    await startCheckout(caller(house.admin), stripe, house.id, "founding", APP, now());
+    await startCheckout(caller(house.admin), stripe, house.id, "founding", APP, "local", now());
     expect(calls.checkout[0]).toMatchObject({ mode: "payment", price: "price_pass_founding", trialEnd: null });
   });
 
@@ -108,10 +108,10 @@ describe("Checkout", () => {
     const house = await makeHouse(["Ava"]);
     const stranger = await signedInUser("Zed");
     const { stripe, calls } = fakeStripe();
-    expect(await startCheckout(caller(stranger), stripe, house.id, "yearly", APP, now())).toMatchObject({ status: 403 });
+    expect(await startCheckout(caller(stranger), stripe, house.id, "yearly", APP, "local", now())).toMatchObject({ status: 403 });
 
     await db.from("houses").update({ pass_plan: "founding", pass_until: null }).eq("id", house.id);
-    expect(await startCheckout(caller(house.admin), stripe, house.id, "founding", APP, now())).toMatchObject({ status: 409 });
+    expect(await startCheckout(caller(house.admin), stripe, house.id, "founding", APP, "local", now())).toMatchObject({ status: 409 });
     expect(calls.checkout).toHaveLength(0);
   });
 });
@@ -123,7 +123,7 @@ describe("Stripe's events", () => {
     const end = new Date(Date.now() + 365 * DAY);
     subs.sub_1 = sub(house, "sub_1", "active", end);
 
-    const done = await applyPassEvent(db, stripe, checkoutEvent({ mode: "subscription", subscription: "sub_1" }), now());
+    const done = await applyPassEvent(db, stripe, checkoutEvent({ mode: "subscription", subscription: "sub_1" }), now(), "local");
     expect(done).toBe("subscription");
     const row = await passOfHouse(house.id);
     expect(row.pass_plan).toBe("yearly");
@@ -139,7 +139,7 @@ describe("Stripe's events", () => {
     const house = await makeHouse(["Ava"]);
     const { stripe, subs } = fakeStripe();
     subs.sub_1 = sub(house, "sub_1", "incomplete", new Date(Date.now() + 30 * DAY));
-    expect(await applyPassEvent(db, stripe, subscriptionEvent("sub_1", "customer.subscription.created"), now())).toBe("ignored");
+    expect(await applyPassEvent(db, stripe, subscriptionEvent("sub_1", "customer.subscription.created"), now(), "local")).toBe("ignored");
     expect((await passOfHouse(house.id)).pass_plan).toBe("trial");
     expect(await billingOf(house.id)).toBeNull();
   });
@@ -149,11 +149,11 @@ describe("Stripe's events", () => {
     const { stripe, subs } = fakeStripe();
     const created = new Date((await passOfHouse(house.id)).created_at);
     subs.sub_1 = sub(house, "sub_1", "trialing", passFreeUntil(created));
-    await applyPassEvent(db, stripe, subscriptionEvent("sub_1"), now());
+    await applyPassEvent(db, stripe, subscriptionEvent("sub_1"), now(), "local");
     expect((await passOfHouse(house.id)).pass_plan).toBe("yearly");
 
     subs.sub_1 = { ...subs.sub_1, status: "canceled", endedAt: secs(new Date()) };
-    expect(await applyPassEvent(db, stripe, subscriptionEvent("sub_1", "customer.subscription.deleted"), now())).toBe("subscription");
+    expect(await applyPassEvent(db, stripe, subscriptionEvent("sub_1", "customer.subscription.deleted"), now(), "local")).toBe("subscription");
     const row = await passOfHouse(house.id);
     expect(row.pass_plan).toBe("trial");
     expect(Date.parse(row.pass_until!)).toBe(passFreeUntil(created).getTime());
@@ -166,10 +166,10 @@ describe("Stripe's events", () => {
     const { stripe, subs } = fakeStripe();
     const end = new Date(Date.now() + 30 * DAY);
     subs.sub_new = sub(house, "sub_new", "active", end, { lookupKey: "pass_monthly" });
-    await applyPassEvent(db, stripe, subscriptionEvent("sub_new"), now());
+    await applyPassEvent(db, stripe, subscriptionEvent("sub_new"), now(), "local");
 
     subs.sub_old = sub(house, "sub_old", "canceled", new Date(), { endedAt: secs(new Date()) });
-    expect(await applyPassEvent(db, stripe, subscriptionEvent("sub_old", "customer.subscription.deleted"), now())).toBe("ignored");
+    expect(await applyPassEvent(db, stripe, subscriptionEvent("sub_old", "customer.subscription.deleted"), now(), "local")).toBe("ignored");
     const row = await passOfHouse(house.id);
     expect(row.pass_plan).toBe("monthly");
     expect(Date.parse(row.pass_until!)).toBe(secs(end) * 1000);
@@ -179,7 +179,7 @@ describe("Stripe's events", () => {
     const house = await makeHouse(["Ava", "Ben"]);
     const { stripe, subs, calls } = fakeStripe();
     subs.sub_1 = sub(house, "sub_1", "active", new Date(Date.now() + 30 * DAY));
-    await applyPassEvent(db, stripe, subscriptionEvent("sub_1"), now());
+    await applyPassEvent(db, stripe, subscriptionEvent("sub_1"), now(), "local");
 
     const paid = checkoutEvent({
       mode: "payment",
@@ -187,13 +187,13 @@ describe("Stripe's events", () => {
       customer: "cus_test_2",
       metadata: { house_id: house.id, plan: "founding", buyer: house.members[0].userId },
     });
-    expect(await applyPassEvent(db, stripe, paid, now())).toBe("founding");
+    expect(await applyPassEvent(db, stripe, paid, now(), "local")).toBe("founding");
     expect(calls.stopped).toEqual(["sub_1"]);
     expect(await passOfHouse(house.id)).toMatchObject({ pass_plan: "founding", pass_until: null, pass_buyer: house.members[0].userId });
 
     // The old plan running out later changes nothing.
     subs.sub_1 = { ...subs.sub_1, status: "canceled", endedAt: secs(new Date()) };
-    expect(await applyPassEvent(db, stripe, subscriptionEvent("sub_1", "customer.subscription.deleted"), now())).toBe("ignored");
+    expect(await applyPassEvent(db, stripe, subscriptionEvent("sub_1", "customer.subscription.deleted"), now(), "local")).toBe("ignored");
     expect((await passOfHouse(house.id)).pass_plan).toBe("founding");
   });
 
@@ -201,10 +201,23 @@ describe("Stripe's events", () => {
     const house = await makeHouse(["Ava"]);
     const { stripe, subs } = fakeStripe();
     const unpaid = checkoutEvent({ mode: "payment", payment_status: "unpaid", customer: "cus_1", metadata: { house_id: house.id } });
-    expect(await applyPassEvent(db, stripe, unpaid, now())).toBe("ignored");
+    expect(await applyPassEvent(db, stripe, unpaid, now(), "local")).toBe("ignored");
     subs.sub_1 = sub(house, "sub_1", "active", new Date(Date.now() + 30 * DAY), { lookupKey: "something_else" });
-    expect(await applyPassEvent(db, stripe, subscriptionEvent("sub_1"), now())).toBe("ignored");
+    expect(await applyPassEvent(db, stripe, subscriptionEvent("sub_1"), now(), "local")).toBe("ignored");
     expect((await passOfHouse(house.id)).pass_plan).toBe("trial");
+  });
+
+  it("leaves a purchase made on another stage to that stage's webhook", async () => {
+    const house = await makeHouse(["Ava"]);
+    const { stripe, subs } = fakeStripe();
+    const end = new Date(Date.now() + 365 * DAY);
+    subs.sub_1 = sub(house, "sub_1", "active", end, { metadata: { house_id: house.id, plan: "yearly", stage: "staging" } });
+    const session = checkoutEvent({ mode: "subscription", subscription: "sub_1", metadata: { house_id: house.id, stage: "staging" } });
+    expect(await applyPassEvent(db, stripe, session, now(), "production")).toBe("ignored");
+    expect(await applyPassEvent(db, stripe, subscriptionEvent("sub_1"), now(), "production")).toBe("ignored");
+    expect((await passOfHouse(house.id)).pass_plan).toBe("trial");
+
+    expect(await applyPassEvent(db, stripe, subscriptionEvent("sub_1"), now(), "staging")).toBe("subscription");
   });
 });
 
@@ -215,7 +228,7 @@ describe("Manage plan", () => {
     expect(await openBilling(caller(house.admin), stripe, house.id, APP)).toMatchObject({ status: 403 });
 
     subs.sub_1 = sub(house, "sub_1", "active", new Date(Date.now() + 30 * DAY));
-    await applyPassEvent(db, stripe, subscriptionEvent("sub_1"), now());
+    await applyPassEvent(db, stripe, subscriptionEvent("sub_1"), now(), "local");
     expect(await openBilling(caller(house.admin), stripe, house.id, APP)).toEqual({ url: "https://billing.stripe.com/p/session/test_1" });
     expect(calls.portal).toEqual(["cus_test_1"]);
     expect(await openBilling(caller(house.members[0]), stripe, house.id, APP)).toMatchObject({ status: 403 });

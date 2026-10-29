@@ -27,7 +27,8 @@ export async function POST(request: Request) {
     stripe,
     body.data.houseId,
     body.data.plan,
-    env.appUrl(),
+    env.appUrlFor(request),
+    env.stage(),
     new Date(),
   );
   if ("status" in answer) return error(request, answer.status, answer.message);

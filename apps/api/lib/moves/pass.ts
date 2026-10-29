@@ -10,6 +10,7 @@ import {
   type PassPurchase,
 } from "@app/core";
 
+import type { Stage } from "@/lib/env";
 import type { PassStripe } from "@/lib/pass/stripe";
 import { createAdminClient } from "@/lib/supabase/admin";
 
@@ -41,7 +42,9 @@ async function houseOf(caller: Caller, houseId: string) {
  * in the house's currency, carrying the house and the buyer for the webhook.
  * Any housemate can buy it. A plan bought during the free month first charges
  * when the free month ends. Nothing is written here; the webhook gives the
- * house its Pass once Stripe says it's paid.
+ * house its Pass once Stripe says it's paid. `stage` goes with the purchase
+ * so only this copy's webhook acts on it (staging and production can share a
+ * Stripe sandbox).
  */
 export async function startCheckout(
   caller: Caller & { email: string | undefined },
@@ -49,6 +52,7 @@ export async function startCheckout(
   houseId: string,
   plan: PassPurchase,
   appUrl: string,
+  stage: Stage,
   now: Date,
 ): Promise<PassAnswer> {
   const house = await houseOf(caller, houseId);
@@ -67,7 +71,7 @@ export async function startCheckout(
     price,
     currency: house.currency.toLowerCase(),
     email: caller.email,
-    metadata: { house_id: house.id, plan, buyer: caller.userId },
+    metadata: { house_id: house.id, plan, buyer: caller.userId, stage },
     trialEnd: firstCharge ? Math.floor(firstCharge.getTime() / 1000) : null,
     successUrl: passPage(appUrl, true),
     cancelUrl: passPage(appUrl, false),

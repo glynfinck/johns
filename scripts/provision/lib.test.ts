@@ -9,6 +9,12 @@ import {
   authSettings,
   authorizeProblems,
   envPlan,
+  findBranch,
+  seedSql,
+  stagingApiEnvPlan,
+  stagingAuthProblems,
+  stagingAuthSettings,
+  stagingWebEnvPlan,
   webEnvPlan,
   googleClientIds,
   googleConsoleValues,
@@ -309,5 +315,74 @@ describe("the run's summary", () => {
     expect(text).toContain("- Connect the integration: https://supabase.com/dashboard/project/x/settings/integrations");
     expect(text).toContain("  3. Audience: External, then Publish app: https://console.cloud.google.com/auth/audience");
     expect(text).toContain(`Authorised redirect URIs: https://${REF}.supabase.co/auth/v1/callback`);
+  });
+});
+
+describe("staging", () => {
+  const google = { clientId: "web.apps.googleusercontent.com", secret: "s" };
+  const azure = { clientId: "azure-id", secret: "a" };
+
+  it("lets staging and every preview of the web build sign in, with demo passwords", () => {
+    const body = stagingAuthSettings(CONFIG, { google, azure });
+    expect(body.site_url).toBe("https://staging.jonz.app");
+    expect(body.uri_allow_list.split(",")).toEqual([
+      "https://staging.jonz.app/**",
+      "https://*-glynfincks-projects.vercel.app/**",
+      "jonz://**",
+    ]);
+    expect(body).toMatchObject({ external_email_enabled: true, mailer_autoconfirm: false, external_google_enabled: true, external_azure_enabled: true });
+    expect(stagingAuthProblems(body, CONFIG, { google, azure })).toEqual([]);
+    expect(stagingAuthSettings(CONFIG, { google: null, azure: null })).not.toHaveProperty("external_google_enabled");
+  });
+
+  it("says what's wrong with staging's sign-in as read back", () => {
+    const body = { ...stagingAuthSettings(CONFIG, { google, azure: null }), external_email_enabled: false, mailer_autoconfirm: true, uri_allow_list: "https://staging.jonz.app/**" };
+    expect(stagingAuthProblems(body, CONFIG, { google, azure })).toEqual([
+      "redirect URLs don't include https://*-glynfincks-projects.vercel.app/**",
+      "email and password sign-in is off, so the demo housemates can't sign in",
+      "email sign-ups are confirmed without an email",
+      "Microsoft sign-in is off",
+    ]);
+  });
+
+  it("puts only the Preview environment on staging, keeping production's names out of it", () => {
+    const api = stagingApiEnvPlan(CONFIG, { supabaseUrl: "https://st.supabase.co", anonKey: "anon", serviceKey: "svc", cronSecret: "tick", vapid: null });
+    expect(api.every((e) => e.target.length === 1 && e.target[0] === "preview")).toBe(true);
+    const value = (key: string) => api.find((e) => e.key === key)?.value;
+    expect(value("APP_URL")).toBe("https://staging.jonz.app");
+    expect(value("ALLOWED_ORIGINS")).toBe("https://staging.jonz.app,https://*-glynfincks-projects.vercel.app");
+    expect(api.find((e) => e.key === "SUPABASE_SERVICE_ROLE_KEY")?.type).toBe("sensitive");
+    expect(api.some((e) => e.key.startsWith("STRIPE_"))).toBe(false);
+    expect(stagingApiEnvPlan(CONFIG, { supabaseUrl: "u", anonKey: "a", serviceKey: "s", cronSecret: null, vapid: null }).some((e) => e.key === "CRON_SECRET")).toBe(false);
+
+    const web = stagingWebEnvPlan(CONFIG, { supabaseUrl: "https://st.supabase.co", anonKey: "anon", vapidPublicKey: "pub" });
+    expect(Object.fromEntries(web.map((e) => [e.key, e.value]))).toEqual({
+      EXPO_PUBLIC_SUPABASE_URL: "https://st.supabase.co",
+      EXPO_PUBLIC_SUPABASE_PUBLISHABLE_KEY: "anon",
+      EXPO_PUBLIC_API_URL: "https://api.staging.jonz.app",
+      EXPO_PUBLIC_STAGE: "staging",
+      EXPO_PUBLIC_PASS_CHECKOUT: "on",
+      EXPO_PUBLIC_VAPID_PUBLIC_KEY: "pub",
+    });
+    expect(web.every((e) => e.type === "plain" && e.target[0] === "preview")).toBe(true);
+  });
+
+  it("finds the staging branch, never the default one", () => {
+    const branches = [
+      { name: "main", is_default: true, project_ref: "prod" },
+      { name: "staging", is_default: false, persistent: true, project_ref: "st" },
+    ];
+    expect(findBranch(branches, "staging")?.project_ref).toBe("st");
+    expect(findBranch(branches, "main")).toBeNull();
+    expect(findBranch(undefined, "staging")).toBeNull();
+  });
+
+  it("puts the staging password into the seed as one SQL string, and refuses a weak or dangerous one", () => {
+    const template = readFileSync(new URL("../../supabase/seeds/staging.sql", import.meta.url), "utf8");
+    const seeded = seedSql(template, "it's-a-secret");
+    expect(seeded).toContain("password constant text := 'it''s-a-secret';");
+    expect(seeded).not.toContain("'{{DEMO_PASSWORD}}'");
+    expect(() => seedSql(template, "short")).toThrow(/8 characters/);
+    expect(() => seedSql(template, "long enough $seed$ drop")).toThrow(/\$seed\$/);
   });
 });
