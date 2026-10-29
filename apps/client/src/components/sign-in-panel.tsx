@@ -111,8 +111,8 @@ export function SignInPanel({ next, failed: failedBefore = false }: { next?: str
       <DoorFoot>
         <Meta>{SIGN_IN_COPY.terms}</Meta>
         <View style={styles.legal}>
-          <TextLink href="/privacy" label={SIGN_IN_COPY.privacy} muted />
-          <TextLink href="/terms" label={SIGN_IN_COPY.termsLink} muted />
+          <TextLink href="/privacy" label={SIGN_IN_COPY.privacy} small />
+          <TextLink href="/terms" label={SIGN_IN_COPY.termsLink} small />
         </View>
       </DoorFoot>
     </>

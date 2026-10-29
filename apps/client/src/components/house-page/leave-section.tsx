@@ -12,6 +12,7 @@ import { Row } from '@/components/row';
 import { ChoiceRow } from '@/components/setup/choice-row';
 import { Meta } from '@/components/text';
 import { TextButton } from '@/components/text-button';
+import { TextLink } from '@/components/text-link';
 import { houseKey } from '@/hooks/keys';
 import type { HouseView } from '@/hooks/use-house';
 import { useMembership } from '@/hooks/use-membership';
@@ -94,8 +95,8 @@ export function LeaveSection({ houseId, userId, view }: { houseId: string; userI
       </Group>
       <View style={styles.footer}>
         <Meta>{HOUSE_LOWER_COPY.noMoney}</Meta>
-        <TextButton label={HOUSE_LOWER_COPY.privacy} href="/privacy" chevron testID="to-privacy" />
-        <TextButton label={HOUSE_LOWER_COPY.terms} href="/terms" chevron testID="to-terms" />
+        <TextLink href="/privacy" label={HOUSE_LOWER_COPY.privacy} small testID="to-privacy" />
+        <TextLink href="/terms" label={HOUSE_LOWER_COPY.terms} small testID="to-terms" />
       </View>
       <ConfirmSheet
         visible={asking}
@@ -142,6 +143,6 @@ export function LeaveSection({ houseId, userId, view }: { houseId: string; userI
 
 const styles = StyleSheet.create({
   stack: { gap: SPACE.lg },
-  // The words on the leading edge; Privacy's and Terms' own padding sets them off.
-  footer: { flexDirection: 'row', flexWrap: 'wrap', alignItems: 'center', paddingLeft: INSET },
+  // The small print on the leading edge, the two links at its size after it.
+  footer: { flexDirection: 'row', flexWrap: 'wrap', alignItems: 'center', columnGap: SPACE.lg, paddingLeft: INSET },
 });
