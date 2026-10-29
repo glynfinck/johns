@@ -138,8 +138,10 @@ it("reads the house under Focus's title bar, and leaves signing out to House", a
   await open();
   const bar = within(screen.getByTestId('title-bar'));
   expect(bar.getByRole('header', { name: PAGE_TITLE.today })).toBeOnTheScreen();
-  // The day it is in the house, on the right.
-  expect(bar.getByText(/^(Mon|Tue|Wed|Thu|Fri|Sat|Sun) \d{1,2} [A-Z][a-z]{2}$/)).toBeOnTheScreen();
+  // The day it is in the house, first on the page rather than in the bar.
+  const day = /^(Mon|Tue|Wed|Thu|Fri|Sat|Sun) \d{1,2} [A-Z][a-z]{2}$/;
+  expect(bar.queryByText(day)).toBeNull();
+  expect(within(screen.getByTestId('top-line')).getByText(day)).toBeOnTheScreen();
   expect(read).toHaveBeenCalledWith('h1', expect.any(Date));
   expect(screen.queryByTestId('sign-out')).toBeNull();
 });

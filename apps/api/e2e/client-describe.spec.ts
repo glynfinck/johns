@@ -4,13 +4,20 @@ import { expect, test, type Page } from "@playwright/test";
 import { CLIENT_URL, cleanUp, signInToClient } from "./auth";
 
 // The Expo app's web build: Describe your house, a chat with Jonz, from
-// Today's setup card to the John list. The e2e stack has no AI Gateway, so a
+// Today's setup card to the John list. On a phone the chat is a page; from
+// laptop width it opens in a panel beside the page. The e2e stack has no AI Gateway, so a
 // message gets the starter list that fits, as production does when the
 // gateway is down.
 test.use({ baseURL: CLIENT_URL });
 
 const made: string[] = [];
 test.afterAll(async () => cleanUp(made));
+
+/** Where the chat opened: its own page on a phone, the panel beside the page from laptop width. */
+async function chatOpened(page: Page) {
+  if ((page.viewportSize()?.width ?? 0) >= 1024) await expect(page.getByTestId("ask-panel")).toBeVisible();
+  else await expect(page).toHaveURL(/\/house\/describe$/);
+}
 
 async function newHouse(page: Page, name: string) {
   await page.goto("/house/new");
@@ -24,7 +31,7 @@ test("describe the house, keep most of the draft, and find it on the list", asyn
   await newHouse(page, `Terrace ${Date.now() % 10_000}`);
 
   await page.getByTestId("setup-describe").click();
-  await expect(page).toHaveURL(/\/house\/describe$/);
+  await chatOpened(page);
   await expect(page.getByRole("heading", { name: PAGE_TITLE.describe })).toBeVisible();
 
   await page.getByTestId("chat-input").fill("Me, my husband and our two kids in a semi. Bins go out Tuesday night.");
@@ -91,7 +98,7 @@ test("ask Jonz from Today to change the list, and apply what's ticked", async ({
 
   await page.goto("/today");
   await page.getByTestId("ask-jonz").click();
-  await expect(page).toHaveURL(/\/house\/describe$/);
+  await chatOpened(page);
   await expect(page.getByRole("heading", { name: PAGE_TITLE.ask })).toBeVisible();
   await page.getByTestId("chat-input").fill(`${couple[0].name} is more work, no ${couple[1].name}, and add windows`);
   await page.getByTestId("chat-send").click();
@@ -105,6 +112,6 @@ test("ask Jonz from Today to change the list, and apply what's ticked", async ({
 
   await expect(page).toHaveURL(/\/house\/johns$/);
   await expect(page.getByTestId("john-def")).toHaveCount(couple.length);
-  await expect(page.getByText("Windows")).toBeVisible();
+  await expect(page.getByTestId("john-def").filter({ hasText: "Windows" })).toBeVisible();
   await expect(page.getByText(couple[1].name, { exact: true })).toHaveCount(0);
 });

@@ -7,20 +7,24 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { useContentWidth } from '@/components/screen';
 import { Meta, Title } from '@/components/text';
-import { FONT, GUTTER, INSET, SPACE, TAP, TITLE_BAR, useTheme } from '@/theme';
+import { useAskJonz, useAskPanelOpen } from '@/hooks/use-ask-jonz';
+import { FONT, GUTTER, INSET, SECTION_GAP, SPACE, TAP, TITLE_BAR, useTheme } from '@/theme';
 
 /**
  * The top of every house screen, in place of the old wordmark strip: the
  * screen's one Title (caps, one line) on the pavement with a hairline under
- * it, `sub` as a Meta line beneath (House: "4 housemates · £20 a month
- * each"), and one thing on the right: the date (a string is set as Meta), a
- * MoreButton, or nothing. 52 tall; 74 with a sub line, which brings its own
- * room above the Title and under the sub. A pushed page passes `back`, the page its
- * back goes to, whatever came before it: a link-like "‹ House"
- * (`backLabel`, the place it goes back to) sits on its own line above the
- * Title, which stays on the leading edge. It keeps clear of the notch and
- * lines up with the content below it. `ask` puts the sparkles that open
- * Jonz (Describe your house, or Ask Jonz once there's a list) before it.
+ * it, and on the right the screen's own button (`right`, a MoreButton) and
+ * the sparkles that open Jonz (`ask`: Describe your house, or Ask Jonz once
+ * there's a list). The sparkles always sit at the edge, with the screen's
+ * button just inside them, so switching tabs moves nothing: every tab's bar
+ * is the same 52 tall. What a tab says about itself (Today's date, House's
+ * housemates) is its page's TopLine, not a second line here. A pushed page
+ * passes `back`, the page its back goes to, whatever came before it: a
+ * link-like "‹ House" (`backLabel`, the place it goes back to) sits on its
+ * own line above the Title, which stays on the leading edge, and may carry
+ * `sub` as a Meta line under the Title (74 tall, with its own room above
+ * the Title and under the sub). It keeps clear of the notch and lines up
+ * with the content below it.
  */
 export function TitleBar({
   title,
@@ -31,7 +35,9 @@ export function TitleBar({
   ask = false,
 }: {
   title: string;
+  /** A pushed page's line under the Title ("Sam · admin"). */
   sub?: string;
+  /** The screen's own button, just inside the sparkles. */
   right?: ReactNode;
   back?: Href;
   /** Where back goes, in words ("House"); "Back" when left out. */
@@ -56,18 +62,25 @@ export function TitleBar({
             </Title>
             {sub ? <Meta numberOfLines={1}>{sub}</Meta> : null}
           </View>
-          {/* The sparkles sit at the edge, unless the screen's own button is there. */}
-          {ask && typeof right === 'object' && right != null ? <AskButton /> : null}
-          {right == null ? null : typeof right === 'string' ? (
-            <Meta numberOfLines={1} style={styles.date}>
-              {right}
-            </Meta>
-          ) : (
-            <View style={styles.right}>{right}</View>
-          )}
-          {ask && (right == null || typeof right === 'string') ? <AskButton edge /> : null}
+          {/* The sparkles hold the edge on every tab; the screen's own button sits inside them. */}
+          {right == null ? null : <View style={[styles.right, ask && styles.inside]}>{right}</View>}
+          {ask ? <AskButton /> : null}
         </View>
       </View>
+    </View>
+  );
+}
+
+/**
+ * What a tab says about itself, first on its page under the bar: Today's
+ * date, House's "4 housemates · £20 a month each". Meta on the card's
+ * leading edge, 24 tall like Week's range line, with the page's first card
+ * 8 under it rather than a section gap.
+ */
+export function TopLine({ children }: { children: string }) {
+  return (
+    <View testID="top-line" style={styles.topLine}>
+      <Meta numberOfLines={1}>{children}</Meta>
     </View>
   );
 }
@@ -100,19 +113,36 @@ function BackLink({ to, label }: { to: Href; label: string }) {
 }
 
 /** The title bar's sparkles: open the chat with Jonz, to start or change the list. */
-function AskButton({ edge = false }: { edge?: boolean }) {
+function AskButton() {
   const { colors } = useTheme();
-  return (
-    <Link href="/house/describe" asChild>
-      <Pressable
-        accessibilityRole="button"
-        accessibilityLabel={HOUSE_DRAFT_COPY.open}
-        testID="ask-jonz"
-        style={({ pressed }) => [styles.icon, styles.ask, edge && styles.more, pressed && styles.pressed]}
-      >
-        <SparklesIcon size={22} color={colors.foreground} aria-hidden />
-      </Pressable>
+  // From WIDE the sparkles open and close the panel beside the page; on a phone they open the chat's page.
+  const ask = useAskJonz('toggle');
+  const open = useAskPanelOpen();
+  const button = (
+    <Pressable
+      accessibilityRole="button"
+      accessibilityLabel={HOUSE_DRAFT_COPY.open}
+      accessibilityState={'onPress' in ask ? { expanded: open } : undefined}
+      onPress={'onPress' in ask ? ask.onPress : undefined}
+      testID="ask-jonz"
+      style={({ pressed }) => [
+        styles.icon,
+        styles.ask,
+        styles.more,
+        // Lit while the panel beside the page is open.
+        open && { backgroundColor: colors.secondary },
+        pressed && styles.pressed,
+      ]}
+    >
+      <SparklesIcon size={22} color={colors.foreground} aria-hidden />
+    </Pressable>
+  );
+  return 'href' in ask ? (
+    <Link href={ask.href} asChild>
+      {button}
     </Link>
+  ) : (
+    button
   );
 }
 
@@ -149,8 +179,9 @@ const styles = StyleSheet.create({
   words: { flex: 1, minWidth: 0 },
   // Overpass's caps sit high in their line, so the title comes down a little.
   title: { paddingTop: 4 },
-  date: { flexShrink: 0 },
   right: { flexShrink: 0, marginVertical: -SPACE.xs },
+  // Before the sparkles: cancels the dots' pull to the edge, so the two sit side by side.
+  inside: { marginRight: SPACE.md },
   back: {
     alignSelf: 'flex-start',
     minHeight: TAP,
@@ -168,4 +199,5 @@ const styles = StyleSheet.create({
   // Sits in the bar's own 4 above and below, like the dots.
   ask: { flexShrink: 0, marginVertical: -SPACE.xs },
   pressed: { opacity: 0.6 },
+  topLine: { minHeight: 24, justifyContent: 'center', paddingHorizontal: INSET, marginBottom: SPACE.sm - SECTION_GAP },
 });
