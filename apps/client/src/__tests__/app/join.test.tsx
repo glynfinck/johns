@@ -12,6 +12,7 @@ jest.mock('@/api/auth', () => ({
   appleSignInAvailable: jest.fn(async () => false),
   signInWithApple: jest.fn(),
   signInWithGoogle: jest.fn(),
+  signInWithMicrosoft: jest.fn(),
 }));
 jest.mock('@/hooks/use-membership', () => ({ useMembership: jest.fn() }));
 
@@ -53,7 +54,7 @@ it('brings the web back to the same link from Google', async () => {
 it('says so when Google turns the web back to the link', async () => {
   as(null);
   await open('AB3DEF7H', '?error=access_denied');
-  expect(screen.getByRole('alert')).toHaveTextContent(SIGN_IN_COPY.failed('Google'));
+  expect(screen.getByRole('alert')).toHaveTextContent(SIGN_IN_COPY.returnFailed);
   expect(screen.getByText(signInReason('/join/AB3DEF7H'))).toBeOnTheScreen();
 });
 

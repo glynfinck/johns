@@ -103,6 +103,7 @@ export function SetupChat({
   people,
   me,
   passOpen,
+  onOpenList = () => router.dismissTo('/house/johns'),
 }: {
   houseId: string;
   rules: HouseRules;
@@ -114,6 +115,8 @@ export function SetupChat({
   me: string;
   /** Whether the House Pass's extras are open to this house: changing a list with Jonz is one. */
   passOpen: boolean;
+  /** The done row's way to the John list: back down the stack on a page, across to it from the side panel. */
+  onOpenList?: () => void;
 }) {
   const { colors, type } = useTheme();
   const scroll = useRef<ScrollViewInstance>(null);
@@ -238,7 +241,7 @@ export function SetupChat({
                   title={editing ? HOUSE_DRAFT_COPY.applied(turn.added) : HOUSE_DRAFT_COPY.added(turn.added)}
                   meta={editing ? HOUSE_DRAFT_COPY.appliedMeta : HOUSE_DRAFT_COPY.addedMeta}
                   leading={<RowIcon icon={CheckIcon} />}
-                  onPress={() => router.dismissTo('/house/johns')}
+                  onPress={onOpenList}
                   accessibilityLabel={`${editing ? HOUSE_DRAFT_COPY.applied(turn.added) : HOUSE_DRAFT_COPY.added(turn.added)}. ${HOUSE_DRAFT_COPY.openList}`}
                   chevron
                   testID="chat-open-list"

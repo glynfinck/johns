@@ -38,7 +38,7 @@ export const PAGE_TITLE = {
 export const PRIVACY_COPY = {
   title: "Privacy",
   paragraphs: [
-    "Jonz keeps what it needs to share out your house’s Johns and nothing more: your name from Google, the house you belong to, the Johns you were given and when you ticked them, any photos you add, disputes and votes, and the Stake ledger.",
+    "Jonz keeps what it needs to share out your house’s Johns and nothing more: your name from the account you sign in with, the house you belong to, the Johns you were given and when you ticked them, any photos you add, disputes and votes, and the Stake ledger.",
     "Only people in your house can see any of it. Photos are stored privately and shown to your housemates through links that expire after an hour.",
     "Jonz never moves money. The ledger records what housemates owe each other; you settle up however you like, outside the app.",
     `If you ask ${APP_NAME} to draft your house’s Johns, what you write about the house is sent to Anthropic’s Claude, through Vercel, to draft the list. It isn’t stored with your house, and Anthropic doesn’t train on it.`,
@@ -91,23 +91,28 @@ export const FRONT_DOOR = {
 
 export type FrontDoorPoint = (typeof FRONT_DOOR.points)[number]["key"];
 
-export type SignInProvider = "Google" | "Apple";
+export type SignInProvider = "Google" | "Apple" | "Microsoft";
 
 /**
  * The sign-in screen's words. The reason line under the heading comes from
- * `signInReason` (auth-paths.ts) where only Google is offered; iOS also
- * offers Apple, so it says `eitherAccount` instead, and warns that a second
- * account starts with no house (Hide My Email makes a new person).
+ * `signInReason` (auth-paths.ts); iOS also offers Apple, so it says
+ * `eitherAccount` instead (Hide My Email makes a new person). Every screen
+ * offers more than one account, so `sameAccount` warns that a second one
+ * starts with no house.
  */
 export const SIGN_IN_COPY = {
   heading: "Sign in",
   google: "Continue with Google",
   googleBusy: "Opening Google…",
+  microsoft: "Continue with Microsoft",
+  microsoftBusy: "Opening Microsoft…",
   eitherAccount: "Your house’s Johns are kept with the account you sign in with.",
   sameAccount: "Already in a house? Use the account you joined with.",
   terms: "By signing in you agree to the house rules your housemates set.",
   privacy: "Privacy",
   failed: (provider: SignInProvider) => `${provider} didn’t finish signing you in. Try again.`,
+  /** The web came back from Google or Microsoft with an error, and can't tell which. */
+  returnFailed: "That sign-in didn’t finish. Try again.",
   signOut: "Sign out",
 } as const;
 
@@ -210,6 +215,9 @@ export const INVITE_COPY = {
   copy: "Copy",
   copied: "Link copied",
   shareTitle: (house: string) => `Join ${house} on Jonz`,
+  /** Admins only: a fresh code, for when a link has gone somewhere it shouldn't. */
+  newCode: "New code",
+  newCodeNote: "The old link and code stop working. Removing someone changes the code too.",
 } as const;
 
 /** The week's board: everyone's Johns, and where each has got to. */
@@ -1060,7 +1068,7 @@ export const PERSON_COPY = {
   remove: (name: string) => `Remove ${name} from the house`,
   removeTitle: (name: string) => `Remove ${name} from the house?`,
   removeBody: (name: string) =>
-    `${name} won’t be in the house any more. Their history stays on the Wall and in Stake history, and they can join again with an invite.`,
+    `${name} won’t be in the house any more. Their history stays on the Wall and in Stake history. The invite code changes, so they’d need a new invite to join again.`,
   removeConfirm: (name: string) => `Remove ${name}`,
 } as const;
 
@@ -1473,6 +1481,18 @@ export const PASS_COPY = {
   foundingMeta: "The Pass for life, for houses that start at launch",
   /** Until the stores are set up there is nothing to press. */
   buyingSoon: "Buying opens with the app store release. Until then every house keeps everything.",
+  /** Under the plans during the free month, when Stripe can put the first charge off. */
+  firstCharge: (day: string) => `Nothing to pay until your free month ends on ${day}.`,
+  /** Back from Stripe Checkout, before the webhook has landed. */
+  bought: "Thanks for buying the House Pass. It shows here in a moment.",
+  manage: "Manage plan",
+  manageMeta: "Change plan, change card or cancel",
+  // The API's refusals.
+  checkoutClosed: "Buying the House Pass isn’t open yet.",
+  alreadyFounding: "This house has the House Pass for life already.",
+  alreadyPaid: "This house has the House Pass already. Whoever bought it can change the plan from Manage plan.",
+  notBuyer: "Only the housemate who bought the House Pass can change it.",
+  nothingToManage: "There’s no plan to manage yet.",
   free: "Free for every house, always: the deal, the housemate check, reminders, covering and time away. No ads.",
   /** Where a locked extra was, once the Pass is enforced. */
   locked: (feature: string) => `${feature} comes with the House Pass`,

@@ -1,10 +1,11 @@
-import { CHAT_TURNS_PER_DAY, HOUSE_DRAFT_COPY, HouseDraft, starterDraft } from "@app/core";
+import { CHAT_TURNS_PER_DAY, CHAT_TURNS_PER_PERSON_PER_DAY, HOUSE_DRAFT_COPY, HouseDraft, starterDraft } from "@app/core";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 
 import { OPTIONS, POST } from "@/app/api/setup/draft/route";
 import type { DraftAnswer, DraftContext } from "@/lib/ai/house-draft";
 import { chatTurn } from "@/lib/moves/draft";
 import { adminClient, signedInUser, type Actor } from "@/tests/support/clients";
+import { expectOk } from "@/tests/support/expect";
 import { addJohns, makeHouse, thisWeek } from "@/tests/support/factories";
 
 /**
@@ -202,6 +203,42 @@ describe("chatTurn, with Claude stood in for", () => {
     const ask = async () => answer;
     expect("reply" in (await chatTurn(caller, house.id, said(A_HOUSE), null, now, ask))).toBe(true);
     expect(await chatTurn(caller, house.id, said(A_HOUSE), null, now, ask)).toEqual({ refusal: { code: "P0001", message: "draft_limit" } });
+  });
+
+  it("holds a burst of turns sent together to the day's limit", async () => {
+    const house = await makeHouse(["Ava"]);
+    const { error } = await db
+      .from("house_drafts")
+      .insert(Array.from({ length: CHAT_TURNS_PER_DAY - 2 }, () => ({ house_id: house.id, outcome: "ai" })));
+    expect(error).toBeNull();
+    const caller = { db: house.admin.db, userId: house.admin.userId };
+    // Claude takes a moment, as it does: every turn is in flight before any answers.
+    const slow = () => new Promise<DraftAnswer>((resolve) => setTimeout(() => resolve(answer), 300));
+    const results = await Promise.all(Array.from({ length: 6 }, () => chatTurn(caller, house.id, said(A_HOUSE), null, new Date(), slow)));
+    expect(results.filter((r) => "reply" in r)).toHaveLength(2);
+    expect(results.filter((r) => "refusal" in r)).toHaveLength(4);
+    expect(await turnsIn(house.id)).toHaveLength(CHAT_TURNS_PER_DAY);
+  });
+
+  it(`stops a person at ${CHAT_TURNS_PER_PERSON_PER_DAY} turns a day, whichever house they asked from`, async () => {
+    const before = await makeHouse(["Ava"]);
+    const { error } = await db.from("house_drafts").insert(
+      Array.from({ length: CHAT_TURNS_PER_PERSON_PER_DAY }, () => ({ house_id: before.id, user_id: before.admin.userId, outcome: "ai" })),
+    );
+    expect(error).toBeNull();
+    // They leave and start another house: a new house, but the same person's day.
+    expectOk(await before.admin.db.rpc("remove_member", { p_house: before.id, p_user: before.admin.userId }));
+    const { data: fresh } = await before.admin.db.rpc("create_house", {
+      p_name: "Another",
+      p_timezone: "Europe/London",
+      p_currency: "GBP",
+      p_week_starts: 1,
+    });
+    const caller = { db: before.admin.db, userId: before.admin.userId };
+    expect(await chatTurn(caller, fresh!, said(A_HOUSE), null, new Date(), async () => answer)).toEqual({
+      refusal: { code: "P0001", message: "draft_limit" },
+    });
+    expect(await turnsIn(fresh!)).toEqual([]);
   });
 
   it("keeps the turns from housemates", async () => {

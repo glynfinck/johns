@@ -32,6 +32,33 @@ their own local prices.
 - House shows a House Pass row (`PassSection`) that pushes `/house/pass`:
   where the house stands, what the Pass includes, and the plans.
 
+## Buying on the web
+
+Built straight on Stripe, so it doesn't wait for the stores. The iOS and
+Android apps never link out to the web price.
+
+- On the web, with `EXPO_PUBLIC_PASS_CHECKOUT=on`, the plans on the Pass
+  page are buttons. One sends the browser to Stripe Checkout
+  (`POST /api/pass/checkout`), in the house's currency, carrying the house
+  and the buyer. Any housemate can buy.
+- Bought during the free month, Yearly and Monthly first charge when the
+  free month ends (`passFirstCharge`; Stripe needs at least two days), so
+  nobody pays for days the house already has. Founding is one payment.
+- Stripe's webhook (`POST /api/stripe/webhook`) checks Stripe's signature,
+  reads the subscription again from Stripe, and writes the house's Pass by
+  `passAfterSubscription`: a live subscription (active, trialing, past due)
+  runs the Pass to the end of its period; an ended one stops it then, and a
+  house still in its free month keeps the rest of it. A Founding payment
+  makes the house Founding and stops any plan it was paying for renewing.
+- `house_pass_billing` (service role only) holds the house's Stripe
+  customer and its current subscription. Events for any other subscription
+  leave the Pass alone, so an old plan ending can't undo a new one.
+- The buyer, and only the buyer, gets Manage plan: Stripe's billing page,
+  to switch plan, change card or cancel (`POST /api/pass/manage`).
+- A house on a paid plan is offered only Founding; a Founding house nothing.
+- Back from Checkout (`/house/pass?bought=1`) the page says thanks and reads
+  the house again every few seconds until the Pass shows.
+
 ## What happens without the Pass (once `PASS_ENFORCED` is on)
 
 - The Stake: settled Johns forfeit nothing (the engine's `settleDue`).
@@ -50,11 +77,10 @@ their own local prices.
 2. Store purchases: RevenueCat (`react-native-purchases`, a development
    build), one RevenueCat customer per house (`house_<id>`), Restore
    purchases.
-3. Web purchases: Stripe Checkout through RevenueCat. The iOS app never links
-   out to the web price.
-4. A RevenueCat webhook to `apps/api` that writes the three columns, and a
-   refresh on open so a missed webhook heals itself.
-5. At the store release, a migration that makes every house made before it
+3. A RevenueCat webhook to `apps/api` that writes the three columns for
+   store purchases, and a refresh on open so a missed webhook heals itself.
+   RevenueCat can import the web's Stripe subscriptions then.
+4. At the store release, a migration that makes every house made before it
    a Founding house, then `PASS_ENFORCED = true`.
 
 ## Edge cases
@@ -75,4 +101,5 @@ phones, Stripe on the web) and waits for the store release.
 - [x] Nobody but the service role can write the Pass.
 - [x] House shows the Pass row and page on every platform.
 - [x] With the switch on, a house without the Pass forfeits nothing and earns no perks.
-- [ ] Buying works on iOS, Android and web.
+- [x] Buying works on the web (Stripe), behind `EXPO_PUBLIC_PASS_CHECKOUT`.
+- [ ] Buying works on iOS and Android.

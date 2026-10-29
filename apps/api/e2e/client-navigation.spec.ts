@@ -13,6 +13,12 @@ test.use({ baseURL: CLIENT_URL });
 const made: string[] = [];
 test.afterAll(async () => cleanUp(made));
 
+/** Where the chat with Jonz opened: its own page on a phone, the panel beside the page from laptop width. */
+async function chatOpened(page: Page) {
+  if ((page.viewportSize()?.width ?? 0) >= 1024) await expect(page.getByTestId("ask-panel")).toBeVisible();
+  else await expect(page).toHaveURL(/\/house\/describe$/);
+}
+
 // What the page threw or logged as an error, said when a back is missing.
 const errors = new WeakMap<Page, string[]>();
 test.beforeEach(({ page }) => {
@@ -217,7 +223,7 @@ test.describe("a house just started", () => {
     const name = `Describe ${Date.now() % 100_000}`;
     await newHouse(page, name);
     await page.getByTestId("setup-describe").click();
-    await expect(page).toHaveURL(/\/house\/describe$/);
+    await chatOpened(page);
     await page.getByTestId("starter-flat_share").click();
     await expect(page.getByText(HOUSE_DRAFT_COPY.fromStarter)).toBeVisible();
     await page.getByTestId("describe-keep").click();
@@ -241,7 +247,7 @@ test.describe("a house just started", () => {
     await page.getByRole("tab", { name: SECTION_LABEL.house }).click();
     await page.getByTestId("to-johns").click();
     await page.getByTestId("describe-house").click();
-    await expect(page).toHaveURL(/\/house\/describe$/);
+    await chatOpened(page);
     await page.getByTestId("starter-flat_share").click();
     await page.getByTestId("describe-keep").click();
     await page.getByTestId("chat-open-list").click();

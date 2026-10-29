@@ -1,6 +1,7 @@
 import { z } from "zod";
 
 import { CATEGORIES, CURRENCIES, JOHN_WHEN } from "./domain";
+import { PASS_PURCHASES } from "./pass";
 
 // Shapes the apps and the API agree on. The API validates requests with
 // these and the native app parses responses with them; the web's server
@@ -161,6 +162,18 @@ export type RaiseFlag = z.infer<typeof RaiseFlag>;
 /** The flag it opened, or the one already open: whoever is on call ticks that. */
 export const FlagResponse = z.object({ ok: z.literal(true), assignmentId: z.uuid() });
 export type FlagResponse = z.infer<typeof FlagResponse>;
+
+/** POST /api/pass/checkout: buy the House Pass for a house, on the web. */
+export const PassCheckoutRequest = z.object({ houseId: z.uuid(), plan: z.enum(PASS_PURCHASES) });
+export type PassCheckoutRequest = z.infer<typeof PassCheckoutRequest>;
+
+/** POST /api/pass/manage: the buyer changes or cancels the house's plan. */
+export const PassManageRequest = z.object({ houseId: z.uuid() });
+export type PassManageRequest = z.infer<typeof PassManageRequest>;
+
+/** Where to send the browser next: Stripe's checkout or its billing page. */
+export const PassRedirect = z.object({ url: z.url() });
+export type PassRedirect = z.infer<typeof PassRedirect>;
 
 /** What a move answers when the database took it. */
 export const MoveResponse = z.object({ ok: z.literal(true) });

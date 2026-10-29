@@ -16,6 +16,7 @@ import { Platform, Share, Text, useWindowDimensions } from 'react-native';
 import { loadAway } from '@/api/away';
 import { loadHouse } from '@/api/board';
 import { catchUp } from '@/api/house';
+import { resetJoinCode } from '@/api/settings';
 import { confirmPayment, loadStake, type StakeRead } from '@/api/stake';
 import { loadTable } from '@/api/table';
 import HouseScreen from '@/app/(house)/house';
@@ -27,6 +28,7 @@ jest.mock('@/api/board', () => ({ loadHouse: jest.fn() }));
 jest.mock('@/api/house', () => ({ catchUp: jest.fn() }));
 jest.mock('@/api/stake', () => ({ loadStake: jest.fn(), confirmPayment: jest.fn() }));
 jest.mock('@/api/table', () => ({ loadTable: jest.fn() }));
+jest.mock('@/api/settings', () => ({ resetJoinCode: jest.fn() }));
 jest.mock('@/api/supabase', () => ({ supabase: {} }));
 
 // The lower half of the page is the lower House track's, with its own tests:
@@ -354,6 +356,28 @@ describe('the Table', () => {
     expect(share).not.toHaveBeenCalled();
     expect(writeText).toHaveBeenCalledWith(expect.stringContaining('/join/AB3DEF7H'));
     expect(await screen.findByText(INVITE_COPY.copied)).toBeOnTheScreen();
+  });
+
+  it('gives an admin a new code, and reads the house again to show it', async () => {
+    (resetJoinCode as jest.Mock).mockResolvedValue(undefined);
+    await open();
+    await fireEvent.press(screen.getByTestId('invite'));
+    expect(screen.getByText(INVITE_COPY.newCodeNote)).toBeOnTheScreen();
+    const reads = (loadHouse as jest.Mock).mock.calls.length;
+    (loadHouse as jest.Mock).mockResolvedValue(snapshot({ house: { ...snapshot().house, joinCode: 'ZX9KPQ2M' } }));
+    await fireEvent.press(screen.getByTestId('new-code'));
+    expect(resetJoinCode).toHaveBeenCalledWith('h1');
+    await waitFor(() => expect(screen.getByTestId('invite-code')).toHaveTextContent('ZX9KPQ2M'));
+    expect((loadHouse as jest.Mock).mock.calls.length).toBeGreaterThan(reads);
+  });
+
+  it("doesn't offer a housemate a new code", async () => {
+    const members = snapshot().members.map((m) => ({ ...m, role: m.userId === 'priya' ? ('member' as const) : ('admin' as const) }));
+    (loadHouse as jest.Mock).mockResolvedValue(snapshot({ members }));
+    await open();
+    await fireEvent.press(screen.getByTestId('invite'));
+    expect(screen.getByTestId('share-invite')).toBeOnTheScreen();
+    expect(screen.queryByTestId('new-code')).toBeNull();
   });
 
   it('says how points and the stake work, in the house’s own numbers', async () => {

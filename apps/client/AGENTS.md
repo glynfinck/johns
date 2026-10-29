@@ -197,7 +197,9 @@ permanent once a store has seen them.
   it pushes, `wall`, `stake`, `people/[userId]` (a housemate's page) and
   the setup pages `johns`, `rules`, `away`, `groups` and `describe`
   (Describe your house, or Ask Jonz once there's a list, opened from the
-  title bar's sparkles, `TitleBar`'s `ask`; a chat: `components/house/setup-chat.tsx`, the one
+  title bar's sparkles, `TitleBar`'s `ask`, through `useAskJonz()`, which from
+  `WIDE` opens the same chat as a right-hand panel, `AskPanel`, instead; a chat:
+  `components/house/setup-chat.tsx`, the one
   setup page not on `HousePage`, as its message box stays put under the chat). A new page goes in
   `(house)/house/`, built on `HousePage` (whose back goes to `/house`),
   keeping the tabs; one opened straight from a link still has House under

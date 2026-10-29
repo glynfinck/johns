@@ -455,6 +455,35 @@ export type Database = {
           },
         ]
       }
+      house_pass_billing: {
+        Row: {
+          house_id: string
+          stripe_customer: string
+          stripe_subscription: string | null
+          updated_at: string
+        }
+        Insert: {
+          house_id: string
+          stripe_customer: string
+          stripe_subscription?: string | null
+          updated_at?: string
+        }
+        Update: {
+          house_id?: string
+          stripe_customer?: string
+          stripe_subscription?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "house_pass_billing_house_id_fkey"
+            columns: ["house_id"]
+            isOneToOne: true
+            referencedRelation: "houses"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       houses: {
         Row: {
           away_makeup: number
@@ -1018,6 +1047,10 @@ export type Database = {
         Args: { p_dispute: string; p_uphold: boolean }
         Returns: undefined
       }
+      claim_draft_turn: {
+        Args: { p_house: string; p_house_limit: number; p_user: string; p_user_limit: number }
+        Returns: string
+      }
       close_month: {
         Args: { p_entries: Json; p_house: string; p_month: string }
         Returns: boolean
@@ -1154,6 +1187,7 @@ export type Database = {
         Args: { p_house: string; p_user: string }
         Returns: undefined
       }
+      reset_join_code: { Args: { p_house: string }; Returns: string }
       request_tick: { Args: never; Returns: undefined }
       require_user: { Args: never; Returns: string }
       resolve_dispute: {
