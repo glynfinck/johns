@@ -76,6 +76,12 @@ test("each place spreads out on a laptop, and a narrow window keeps the phone's 
   const week = page.getByTestId("week-screen");
   await expect(week.getByTestId("column-main").getByTestId("week-table")).toBeVisible();
   await expect(week.getByTestId("column-side").getByTestId("house-table")).toBeVisible();
+  // The summary runs across both columns; under it the board and the Table start level, and so do their rows.
+  const summary = await week.getByTestId("week-summary").boundingBox();
+  const columns = await week.getByTestId("columns").boundingBox();
+  expect(summary?.width).toBeCloseTo(columns?.width ?? 0, 0);
+  expect(await topOf(groupOf(week.getByTestId("week-table")))).toBeCloseTo(await topOf(groupOf(week.getByTestId("house-table"))), 0);
+  expect(await topOf(week.getByTestId("week-row").nth(1))).toBeCloseTo(await topOf(week.getByTestId("standing").nth(1)), 0);
   await shoot(page, "week");
 
   await page.getByRole("tab", { name: SECTION_LABEL.house }).click();

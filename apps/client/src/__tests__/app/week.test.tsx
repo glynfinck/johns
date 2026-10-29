@@ -657,11 +657,13 @@ describe('on a laptop', () => {
     (loadStake as jest.Mock).mockResolvedValue({ ...stake, ledger: [], closedMonths: [] });
   });
 
-  it('keeps the board in the main column and puts the Table beside it, over the way to the track record', async () => {
+  it('runs the summary across the page, then the board with the Table beside it, over the way to the track record', async () => {
     await open();
+    const columns = screen.getByTestId('columns');
     const main = within(screen.getByTestId('column-main'));
     const side = within(screen.getByTestId('column-side'));
-    expect(main.getByTestId('week-summary')).toBeOnTheScreen();
+    expect(screen.getByTestId('week-summary')).toBeOnTheScreen();
+    expect(within(columns).queryByTestId('week-summary')).toBeNull();
     expect(main.getByTestId('week-table')).toBeOnTheScreen();
     expect(await side.findByTestId('house-table')).toBeOnTheScreen();
     expect(side.getByTestId('week-record')).toBeOnTheScreen();
