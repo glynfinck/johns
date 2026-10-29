@@ -123,7 +123,11 @@ is exactly what local development needs and production must not have.
   webhook (`POST /api/stripe/webhook`, `apps/api/lib/pass/events.ts`) writes
   the house's `pass_*` columns. The three prices live on the `house_pass`
   product with the lookup keys `pass_yearly`, `pass_monthly` and
-  `pass_founding`, each with GBP, EUR and CAD alongside USD. On `jonz-api`
+  `pass_founding`, each with GBP, EUR and CAD alongside USD, prices
+  including tax. The product's tax code is `txcd_10103000` (SaaS, personal
+  use): Checkout refuses a product without one while Managed Payments
+  (Stripe as merchant of record, collecting and paying the sales tax and
+  VAT) is on, as it is by default on a new account. On `jonz-api`
   set `STRIPE_SECRET_KEY` (a restricted key is enough: write on Checkout
   Sessions, Customer portal and Subscriptions, read on Prices),
   `STRIPE_WEBHOOK_SECRET` and `APP_URL=https://jonz.app`. The webhook
