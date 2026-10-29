@@ -13,6 +13,17 @@ test.use({ baseURL: CLIENT_URL });
 const made: string[] = [];
 test.afterAll(async () => cleanUp(made));
 
+// What the page threw or logged as an error, said when a back is missing.
+const errors = new WeakMap<Page, string[]>();
+test.beforeEach(({ page }) => {
+  const seen: string[] = [];
+  errors.set(page, seen);
+  page.on("pageerror", (e) => seen.push(`${e.name}: ${e.message} ${e.stack ?? ""}`.slice(0, 800)));
+  page.on("console", (m) => {
+    if (m.type() === "error") seen.push(m.text().slice(0, 800));
+  });
+});
+
 /** On House itself: its URL, and its title bar naming the house. */
 async function expectOnHouse(page: Page, houseName: string, url: RegExp = /\/house$/) {
   await expect(page).toHaveURL(url);
@@ -39,7 +50,7 @@ async function tapBack(page: Page, label: string) {
     const all = page.getByTestId("back");
     const labels = await all.evaluateAll((els) => els.map((el) => `${el.getAttribute("aria-label")} (${el.getBoundingClientRect().width}x${el.getBoundingClientRect().height})`));
     const text = (await page.locator("body").innerText()).slice(0, 600);
-    throw new Error(`No "Back to ${label}" on ${page.url()}. Backs: ${JSON.stringify(labels)}. The page says: ${JSON.stringify(text)}`);
+    throw new Error(`No "Back to ${label}" on ${page.url()}. Backs: ${JSON.stringify(labels)}. The page says: ${JSON.stringify(text)}. Errors: ${JSON.stringify(errors.get(page) ?? [])}`);
   }
   await back.click();
 }
