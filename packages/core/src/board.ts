@@ -1,3 +1,4 @@
+import { crewByJob, jobKey, tableInputs, type Crew, type CrewRow } from "./crew";
 import type { Database, Json } from "./db-types";
 import type { DealWhy } from "./deal";
 import type { Category, Currency, HouseRules, IsoDow, JohnWhen, Outcome } from "./domain";
@@ -42,6 +43,8 @@ export interface JohnDef {
   respondHours: number;
   /** On call: about how many times a week it needs doing, which is what the deal weighs it as. */
   perWeek: number;
+  /** Done by: how many do it together (1 to 6), or 0 for everyone home (crew.ts). Its points are per person. */
+  crew: number;
 }
 
 /** Where a new John starts in the editor: a weekly kitchen John, due Sunday night, for the whole house. */
@@ -60,12 +63,15 @@ export const NEW_JOHN: Omit<JohnDef, "id"> = {
   when: "day",
   respondHours: 12,
   perWeek: 2,
+  crew: 1,
 };
 
 /** A John on the list, from its row (a read without the on-call or monthly columns gets a weekly John due on a day). */
 export function johnDef(
   row: Pick<Row<"johns">, "id" | "name" | "category" | "points" | "every_weeks" | "due_dow" | "due_time" | "needs_photo" | "group_id"> &
-    Partial<Pick<Row<"johns">, "kind" | "respond_hours" | "per_week" | "every_months" | "week_of_month" | "anchor_month" | "anchor_week">>,
+    Partial<
+      Pick<Row<"johns">, "kind" | "respond_hours" | "per_week" | "every_months" | "week_of_month" | "anchor_month" | "anchor_week" | "crew">
+    >,
 ): JohnDef {
   return {
     id: row.id,
@@ -84,6 +90,7 @@ export function johnDef(
     when: row.kind === "on_call" ? "on_call" : "day",
     respondHours: row.respond_hours ?? NEW_JOHN.respondHours,
     perWeek: row.per_week ?? NEW_JOHN.perWeek,
+    crew: row.kind === "on_call" ? 1 : (row.crew ?? 1),
   };
 }
 
@@ -102,21 +109,23 @@ export function groupDef(row: Pick<Row<"groups">, "id" | "name"> & { group_membe
 /**
  * How much effort the list asks of the house in an average week: a
  * fortnightly John counts half, a quarterly one a thirteenth, an on-call one
- * as often as it needs doing.
+ * as often as it needs doing, and one done together once per person (for
+ * everyone home, `people`: the house).
  */
 export function weeklyEffort(
-  johns: readonly (Pick<JohnDef, "points" | "everyWeeks"> & Partial<Pick<JohnDef, "when" | "perWeek" | "everyMonths">>)[],
+  johns: readonly (Pick<JohnDef, "points" | "everyWeeks"> & Partial<Pick<JohnDef, "when" | "perWeek" | "everyMonths" | "crew">>)[],
+  people = 1,
 ): number {
-  return johns.reduce(
-    (sum, j) =>
-      sum +
-      (j.when === "on_call"
+  return johns.reduce((sum, j) => {
+    const each =
+      j.when === "on_call"
         ? j.points * (j.perWeek ?? 1)
         : j.everyMonths
           ? (j.points * timesAYear({ everyWeeks: j.everyWeeks, everyMonths: j.everyMonths })) / WEEKS_A_YEAR
-          : j.points / j.everyWeeks),
-    0,
-  );
+          : j.points / j.everyWeeks;
+    const crew = j.when === "on_call" ? 1 : (j.crew ?? 1);
+    return sum + each * (crew === 0 ? Math.max(1, people) : crew);
+  }, 0);
 }
 
 /** The house's rules, from its row. */
@@ -179,6 +188,12 @@ export type AssignmentRow = Pick<
   closes_at?: string | null;
   /** Why the deal gave it to whom it did (deal.ts DealWhy), when read; null on a flag or one dealt before the deal kept it. */
   dealt?: Json | null;
+  /** On a Together John's place: the job its places share (crew.ts), when read. */
+  job_id?: string | null;
+  /** When a roll call left its holder off, when read. */
+  absent_at?: string | null;
+  /** Who did it, on the place a roll call was ticked from (`crew(user_id, helper, points)`), when read. */
+  crew?: CrewRow[] | null;
 };
 
 /** An open dispute, with its votes: `disputes` and `dispute_votes` as read. */
@@ -239,6 +254,14 @@ export interface BoardItem {
   carried: boolean;
   /** Why the deal gave it to whom it did; null on a flag, or a John dealt before the deal kept it. */
   dealt: DealWhy | null;
+  /** On a Together John: the job its places share (crew.ts); null on a John done by one. */
+  jobId?: string | null;
+  /** Everyone with a place in its job on the board, its holder among them, in the board's order; null on a John done by one. */
+  together?: string[] | null;
+  /** When the roll call left its holder off: a miss once that stands. */
+  absentAt?: Date | null;
+  /** Who did it, once a roll call ticked it: on every place it settled. */
+  crew?: Crew | null;
 }
 
 export interface WeekBoard {
@@ -268,10 +291,12 @@ export function buildWeekBoard(input: {
   const { week, now, disputeHours, memberIds } = input;
   if (!week) return { week: null, items: [], table: standings([], memberIds), notStarted: !input.everDealt };
 
+  // A job has one check, raised on one of its places: every place shows it.
+  const jobOf = new Map(input.assignments.map((a) => [a.id, jobKey({ id: a.id, jobId: a.job_id })]));
   const disputeBy = new Map<string, DisputeView>();
   for (const d of input.disputes) {
     const votes = d.dispute_votes ?? [];
-    disputeBy.set(d.assignment_id, {
+    disputeBy.set(jobOf.get(d.assignment_id) ?? d.assignment_id, {
       id: d.id,
       assignmentId: d.assignment_id,
       raisedBy: d.raised_by,
@@ -284,11 +309,14 @@ export function buildWeekBoard(input: {
   }
 
   const endsAt = new Date(week.ends_at);
-  const items: BoardItem[] = [...input.assignments]
-    .sort((a, b) => Date.parse(a.due_at) - Date.parse(b.due_at))
+  const crews = crewByJob(input.assignments);
+  const sorted = [...input.assignments].sort((a, b) => Date.parse(a.due_at) - Date.parse(b.due_at));
+  const items: BoardItem[] = sorted
     .map((a) => {
-      const dispute = disputeBy.get(a.id) ?? null;
+      const job = jobKey({ id: a.id, jobId: a.job_id });
+      const dispute = disputeBy.get(job) ?? null;
       const doneAt = a.done_at ? new Date(a.done_at) : null;
+      const absentAt = a.absent_at ? new Date(a.absent_at) : null;
       const outcome = a.outcome as Outcome | null;
       const dueAt = new Date(a.due_at);
       const flaggedAt = a.flagged_at ? new Date(a.flagged_at) : null;
@@ -302,8 +330,10 @@ export function buildWeekBoard(input: {
         weekEndsAt: carried ? new Date(week.starts_at) : endsAt,
         flaggedAt,
         closesAt: a.closes_at ? new Date(a.closes_at) : null,
+        absentAt,
       };
       const status = liveStatus({ ...facts, outcome, coveredBy: a.covered_by }, now, disputeHours);
+      const checkedFrom = doneAt ?? absentAt;
       return {
         id: a.id,
         johnId: a.john_id ?? null,
@@ -322,23 +352,25 @@ export function buildWeekBoard(input: {
         coveredBy: a.covered_by,
         outcome,
         status,
-        standsAt: doneAt && !outcome ? standsAt(doneAt, disputeHours) : null,
+        standsAt: checkedFrom && !outcome ? standsAt(checkedFrom, disputeHours) : null,
         dispute,
         flaggedAt,
         flaggedBy: a.flagged_by ?? null,
         closesAt: closesAt(facts),
         carried,
         dealt: readDealt(a.dealt),
+        jobId: a.job_id ?? null,
+        together: a.job_id ? sorted.filter((x) => x.job_id === a.job_id).map((x) => x.user_id) : null,
+        absentAt,
+        crew: crews.get(job) ?? null,
       };
     });
 
+  const { rows, jobs } = tableInputs(items.filter((i) => !i.carried));
   return {
     week: { id: week.id, startsOn: week.starts_on, startsAt: new Date(week.starts_at), endsAt },
     items,
-    table: standings(
-      items.filter((i) => !i.carried).map((i) => ({ userId: i.userId, points: i.points, status: i.status, coveredBy: i.coveredBy })),
-      memberIds,
-    ),
+    table: standings(rows, memberIds, jobs),
     notStarted: false,
   };
 }
@@ -427,18 +459,42 @@ export function todayView(board: WeekBoard, userId: string, cover?: { now: Date;
   return {
     mine,
     left: mine.filter((i) => isOpen(i.status)).length,
-    toVote: board.items.filter((i) => i.dispute && (i.coveredBy ?? i.userId) !== userId && i.dispute.myVote === null),
+    toVote: toVote(board, userId),
     toCover: cover ? toCover(board, userId, cover.now, cover.graceHours) : [],
   };
 }
 
 /**
+ * Disputes waiting for the viewer's vote: anyone's tick but their own (a
+ * cover of their John included). A job's one check is listed once, on the
+ * place it was raised on.
+ */
+function toVote(board: WeekBoard, userId: string): BoardItem[] {
+  return board.items.filter((i) => {
+    const d = i.dispute;
+    if (!d || d.myVote !== null) return false;
+    const checked = board.items.find((x) => x.id === d.assignmentId) ?? i;
+    return checked === i && (i.coveredBy ?? i.userId) !== userId;
+  });
+}
+
+/**
  * Housemates' Johns the viewer could cover now (outcome.ts canCover), most
- * overdue first: what Today's "Needs covering" lists.
+ * overdue first: what Today's "Needs covering" lists. A Together John is
+ * covered whole, once, and never by someone with a place in it (they tick
+ * it with the roll call).
  */
 export function toCover(board: WeekBoard, userId: string, now: Date, graceHours: number): BoardItem[] {
+  const seen = new Set<string>();
   return board.items
     .filter((i) => canCover({ ...i, excused: i.status === "excused" }, userId, now, graceHours))
+    .filter((i) => !(i.together ?? []).includes(userId))
+    .filter((i) => {
+      const job = jobKey(i);
+      if (seen.has(job)) return false;
+      seen.add(job);
+      return true;
+    })
     .sort((a, b) => a.dueAt.getTime() - b.dueAt.getTime());
 }
 
@@ -452,6 +508,11 @@ export type MonthRow = Pick<
   flagged_at?: string | null;
   /** When it turns missed, when the read has it. */
   closes_at?: string | null;
+  /** For a John done together or with help (crew.ts), when the read has them. */
+  id?: string;
+  job_id?: string | null;
+  absent_at?: string | null;
+  crew?: CrewRow[] | null;
 };
 
 /** The month's Table: every John due this month, each at its live status. */
@@ -461,10 +522,18 @@ export function monthStandings(
   disputeHours: number,
   now: Date,
 ): TableRow[] {
-  return standings(
-    rows.map((a) => ({
+  const crews = crewByJob(rows.flatMap((a) => (a.id ? [{ ...a, id: a.id }] : [])));
+  const places = rows.map((a, i) => {
+    const id = a.id ?? `row:${i}`;
+    const absentAt = a.absent_at ? new Date(a.absent_at) : null;
+    return {
+      id,
+      jobId: a.job_id ?? null,
       userId: a.user_id,
       points: a.points,
+      coveredBy: a.covered_by,
+      absentAt,
+      crew: crews.get(jobKey({ id, jobId: a.job_id })) ?? null,
       status: liveStatus(
         {
           dueAt: new Date(a.due_at),
@@ -477,14 +546,15 @@ export function monthStandings(
           closesAt: a.closes_at ? new Date(a.closes_at) : null,
           outcome: a.outcome as Outcome | null,
           coveredBy: a.covered_by,
+          absentAt,
         },
         now,
         disputeHours,
       ),
-      coveredBy: a.covered_by,
-    })),
-    memberIds,
-  );
+    };
+  });
+  const { rows: table, jobs } = tableInputs(places);
+  return standings(table, memberIds, jobs);
 }
 
 const DEALT_BY: ReadonlySet<string> = new Set(["only", "behind", "fewer", "draw"]);

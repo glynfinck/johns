@@ -10,6 +10,7 @@ import {
   type StakeView,
   type WeekBoard,
 } from '@app/core';
+import { useState } from 'react';
 import { StyleSheet, Text, View } from 'react-native';
 
 import type { Housemate } from '@/api/board';
@@ -21,6 +22,7 @@ import { INSET, SPACE, useTheme } from '@/theme';
 import { ChangeResult } from './change-result';
 import { TheirsChecking, YoursChecking } from './checking';
 import { TheirsOpen, YoursOpen } from './open';
+import { CrewPart, RollCall } from './roll-call';
 import { Settled } from './settled';
 import { Disputed } from './vote';
 import { JohnWhy } from './why';
@@ -67,25 +69,38 @@ export interface JohnSheetContext {
  * johnSheetMode). Yours and open: the tick, and "If you can't" while you
  * hold a token. Being checked: when it stands, and Undo for yours or
  * Dispute for a housemate's. Disputed: the reason, the tally and the vote.
- * Settled: the photo, if it had one (the header says what happened). Then,
- * whatever its state, an admin's "Change result", and "Why?": why it's
- * whose it is, and what's at stake.
+ * Settled: the photo, if it had one (the header says what happened). A John
+ * done together, or with help, says who's on it (crew.ts); ticking one is
+ * its roll call, "Who did it?", in place of the rest. Then, whatever its
+ * state, an admin's "Change result", and "Why?": why it's whose it is, and
+ * what's at stake.
  */
 export function JohnSheetBody({ item, context }: { item: BoardItem; context: JohnSheetContext }) {
+  const mode = johnSheetMode(item, context.userId);
+  // "Who did it?" takes over the content until it's sent or cancelled; once sent, the John is being checked.
+  const [rollCalling, setRollCalling] = useState(false);
+  const calling = rollCalling && mode === 'yours-open';
   return (
     <View testID="john-sheet-body">
       <JohnSheetHeader item={item} context={context} />
-      <ModeContent item={item} context={context} />
-      <ChangeResult item={item} context={context} />
+      {calling ? (
+        <RollCall item={item} context={context} onCancel={() => setRollCalling(false)} />
+      ) : (
+        <>
+          <ModeContent item={item} context={context} onRollCall={() => setRollCalling(true)} />
+          <CrewPart item={item} context={context} />
+          <ChangeResult item={item} context={context} />
+        </>
+      )}
       <JohnWhy item={item} context={context} />
     </View>
   );
 }
 
-function ModeContent({ item, context }: { item: BoardItem; context: JohnSheetContext }) {
+function ModeContent({ item, context, onRollCall }: { item: BoardItem; context: JohnSheetContext; onRollCall: () => void }) {
   switch (johnSheetMode(item, context.userId)) {
     case 'yours-open':
-      return <YoursOpen item={item} context={context} />;
+      return <YoursOpen item={item} context={context} onRollCall={onRollCall} />;
     case 'theirs-open':
       return <TheirsOpen item={item} context={context} />;
     case 'yours-checking':

@@ -9,7 +9,7 @@
 // grants, as if by hand.
 import { z } from "zod";
 
-import { HOUSE_DRAFT_COPY } from "./copy";
+import { CREW_COPY, HOUSE_DRAFT_COPY } from "./copy";
 import type { GroupDef, JohnDef } from "./board";
 import { CATEGORIES, CATEGORY_LABEL, DOW_LABEL, JOHN_WHEN, type Category, type IsoDow } from "./domain";
 import { firstName } from "./format";
@@ -60,6 +60,8 @@ export const DraftedJohn = z.object({
   when: z.enum(JOHN_WHEN),
   respondHours: z.number().int().min(1).max(72),
   perWeek: z.number().int().min(1).max(14),
+  /** Done by: how many do it together (1 to 6), or 0 for everyone home (crew.ts). One for an on-call John. */
+  crew: z.number().int().min(0).max(6).default(1),
   /** The drafted group that shares it, by name; null for everyone. */
   group: z.string().nullable(),
   /** A few words on why: "two bathrooms, so one each". Empty when it's obvious. */
@@ -146,6 +148,7 @@ export interface RawDraft {
     onCall?: unknown;
     respondHours?: unknown;
     perWeek?: unknown;
+    crew?: unknown;
     group?: unknown;
     why?: unknown;
   }[];
@@ -259,6 +262,7 @@ export function tidyDraft(
       when: onCall ? "on_call" : "day",
       respondHours: whole(j.respondHours, 1, 72, 12),
       perWeek: whole(j.perWeek, 1, 14, 2),
+      crew: onCall ? 1 : whole(j.crew, 0, 6, 1),
       group,
       why: text(j.why, 120),
     });
@@ -311,6 +315,7 @@ export function draftPlan(draft: HouseDraft, keep: readonly number[], existingGr
       when: j.when,
       respondHours: j.respondHours,
       perWeek: j.perWeek,
+      crew: j.crew,
     };
     let groupName: string | null = null;
     if (j.group) {
@@ -400,6 +405,7 @@ export function listAsDraft(johns: readonly JohnDef[], groups: readonly GroupDef
       when: j.when,
       respondHours: j.respondHours,
       perWeek: j.perWeek,
+      crew: j.crew,
       group: used.find((g) => g.id === j.groupId)?.name ?? null,
       why: "",
     })),
@@ -409,7 +415,7 @@ export function listAsDraft(johns: readonly JohnDef[], groups: readonly GroupDef
 }
 
 /** The fields a change can touch, in the order a change line names them. */
-const CHANGEABLE = ["name", "category", "points", "everyWeeks", "everyMonths", "weekOfMonth", "dueDow", "dueTime", "needsPhoto", "when", "respondHours", "perWeek", "group"] as const;
+const CHANGEABLE = ["name", "category", "points", "everyWeeks", "everyMonths", "weekOfMonth", "dueDow", "dueTime", "needsPhoto", "when", "respondHours", "perWeek", "crew", "group"] as const;
 
 /** One thing a draft does to the list: a John to add (its place in the draft), one to change, or one to take off. */
 export type DraftChange =
@@ -448,6 +454,7 @@ export function changedLine(before: DraftedJohn, after: DraftedJohn): string {
       : `${oftenWords(j).toLocaleLowerCase()}, ${dueWords(j, j.dueTime, DOW_LABEL[j.dueDow as IsoDow].slice(0, 3))}`;
   if (timing(before) !== timing(after)) parts.push(`was ${timing(before)}`);
   if (before.points !== after.points) parts.push(`was ${before.points} ${before.points === 1 ? "pt" : "pts"}`);
+  if (before.crew !== after.crew) parts.push(`was ${CREW_COPY.choice(before.crew).toLocaleLowerCase()}`);
   if (before.group !== after.group) parts.push(`was ${before.group ?? "everyone’s"}`);
   if (before.category !== after.category) parts.push(`was ${CATEGORY_LABEL[before.category]}`);
   return parts.join(" · ");
@@ -474,6 +481,7 @@ function starter(rows: readonly Starter[]): DraftedJohn[] {
     when: "day",
     respondHours: 12,
     perWeek: 2,
+    crew: 1,
     group: null,
     why: "",
     ...extra,

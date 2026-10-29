@@ -78,6 +78,12 @@ const OWED_TO_YOU = stakeRead(
   ['2026-09'],
 );
 
+/** Shows the Table's week or month, from the menu in its header. */
+async function showSpan(name: string) {
+  await fireEvent.press(screen.getByTestId('table-span'));
+  await fireEvent.press(screen.getByRole('radio', { name }));
+}
+
 /** House, with the pages it pushes standing in as their names. */
 async function open({ workspace = false } = {}) {
   await renderPages(
@@ -304,13 +310,15 @@ describe('the Table', () => {
     );
   });
 
-  it('switches to the month, and back', async () => {
+  it('shows the month from the menu in its header, and back', async () => {
     await open();
-    await fireEvent.press(screen.getByRole('radio', { name: 'October' }));
+    expect(screen.getByTestId('table-span')).toHaveTextContent(HOUSE_PAGE_COPY.week);
+    await showSpan('October');
+    expect(screen.getByTestId('table-span')).toHaveTextContent('October');
     const month = screen.getAllByTestId('standing');
     expect(month[0]).toHaveTextContent(new RegExp(`Sam12 pts ·${HOUSE_PAGE_COPY.lateMissed(1, 0)} in Oct−£3`));
     expect(month[1]).toHaveTextContent(new RegExp(`${HOUSE_PAGE_COPY.you}9 pts`));
-    await fireEvent.press(screen.getByRole('radio', { name: HOUSE_PAGE_COPY.week }));
+    await showSpan(HOUSE_PAGE_COPY.week);
     expect(screen.getAllByTestId('standing')[0]).toHaveTextContent(/3 pts/);
   });
 
@@ -324,7 +332,7 @@ describe('the Table', () => {
   it("says when it can't read the month's Table", async () => {
     (loadTable as jest.Mock).mockRejectedValue(new Error('offline'));
     await open();
-    await fireEvent.press(screen.getByRole('radio', { name: 'October' }));
+    await showSpan('October');
     expect(screen.getByRole('alert')).toHaveTextContent(HOUSE_PAGE_COPY.tableUnreadable);
   });
 
@@ -436,6 +444,8 @@ describe('on a laptop', () => {
     await open();
     const main = within(screen.getByTestId('column-main'));
     const side = within(screen.getByTestId('column-side'));
+    // The house's line heads the main column, so the month card lines up with the Wall's group beside it.
+    expect(main.getByTestId('top-line')).toBeOnTheScreen();
     expect(main.getByTestId('month-card')).toBeOnTheScreen();
     expect(main.getByTestId('house-table')).toBeOnTheScreen();
     expect(side.getAllByTestId('lower').map((node) => node.props.children)).toEqual(['the Wall', 'House setup', 'You', 'Leaving']);

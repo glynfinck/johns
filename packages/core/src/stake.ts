@@ -16,7 +16,8 @@ import type { HouseRules, Outcome } from "./domain";
  *
  *   forfeit     written as each late, missed or covered John is settled
  *               (negative); a covered John's names its coverer as the
- *               counterparty
+ *               counterparty, and a no-show's on a John done together names
+ *               everyone who did it (doers)
  *   cap_refund  at month end, gives back anything forfeited beyond the stake
  *   share       at month end, each person's cut of everyone else's forfeits,
  *               plus the whole of any forfeit for a John they covered
@@ -52,11 +53,15 @@ export interface MonthSettlement {
   entries: LedgerEntry[];
 }
 
-/** One forfeit going into a month's close. `to` is the coverer, for a covered John. */
+/**
+ * One forfeit going into a month's close. `to` is the coverer, for a covered
+ * John, or everyone who did a John done together that its holder didn't turn
+ * up for (crew.ts), who share it.
+ */
 export interface MonthForfeit {
   userId: string;
   amount: number;
-  to?: string | null;
+  to?: string | readonly string[] | null;
 }
 
 /**
@@ -68,10 +73,11 @@ export interface MonthForfeit {
  * on whoever joined first.
  *
  * A forfeit with a `to` (a covered John) goes whole to that housemate rather
- * than round the house. When the cap trims someone's forfeits, each covered
- * one shrinks in the same proportion (rounded down) and the rest of what
- * they keep is shared as usual. A coverer who has left the house gets
- * nothing: their cut is shared like any other forfeit.
+ * than round the house; with several (a no-show's), it's split evenly among
+ * them, the odd penny to whoever comes first. When the cap trims someone's
+ * forfeits, each covered one shrinks in the same proportion (rounded down)
+ * and the rest of what they keep is shared as usual. A coverer who has left
+ * the house gets nothing: their cut is shared like any other forfeit.
  */
 export function settleMonth(
   memberIds: readonly string[],
@@ -105,9 +111,14 @@ export function settleMonth(
     const total = raw.get(payer)!;
     let amount = kept;
     for (const f of forfeits) {
-      if (f.userId !== payer || !f.to || f.to === payer || !memberIds.includes(f.to)) continue;
+      if (f.userId !== payer || !f.to) continue;
+      const to = (typeof f.to === "string" ? [f.to] : f.to).filter((id) => id !== payer && memberIds.includes(id));
+      if (to.length === 0) continue;
       const cut = Math.floor((f.amount * kept) / total);
-      received[f.to] += cut;
+      const base = Math.floor(cut / to.length);
+      to.forEach((id, i) => {
+        received[id] += base + (i < cut - base * to.length ? 1 : 0);
+      });
       amount -= cut;
     }
     if (amount === 0) continue;
@@ -186,6 +197,8 @@ export interface LedgerRow {
   amount_minor: number;
   month: string;
   counterparty: string | null;
+  /** A no-show's forfeit on a John done together: everyone who did it. Absent when not read. */
+  doers?: string[] | null;
   created_at: string;
 }
 
@@ -236,7 +249,7 @@ export function buildStake(input: {
   const { ledger, memberIds, stakeMinor, month } = input;
   const thisMonthForfeits = ledger
     .filter((r) => r.month === month && r.kind === "forfeit")
-    .map((r) => ({ userId: r.user_id, amount: -r.amount_minor, to: r.counterparty }));
+    .map((r) => ({ userId: r.user_id, amount: -r.amount_minor, to: r.counterparty ?? r.doers ?? null }));
   const live = settleMonth(memberIds, stakeMinor, thisMonthForfeits, month);
   const raw = new Map<string, number>();
   for (const f of thisMonthForfeits) raw.set(f.userId, (raw.get(f.userId) ?? 0) + f.amount);

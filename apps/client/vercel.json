@@ -11,6 +11,16 @@
   ],
   "rewrites": [
     { "source": "/api/:path*", "destination": "https://api.jonz.app/api/:path*" },
+    {
+      "source": "/",
+      "has": [{ "type": "header", "key": "user-agent", "value": ".*(facebookexternalhit|Facebot|Twitterbot|WhatsApp|Slackbot|TelegramBot|Discordbot|LinkedInBot|SkypeUriPreview|Snapchat|Pinterestbot|redditbot|Embedly|Iframely|Viber|Bluesky|Mastodon|vkShare|Google-PageRenderer).*" }],
+      "destination": "https://api.jonz.app/api/share"
+    },
+    {
+      "source": "/:path((?!api/|_expo/)[^.]*)",
+      "has": [{ "type": "header", "key": "user-agent", "value": ".*(facebookexternalhit|Facebot|Twitterbot|WhatsApp|Slackbot|TelegramBot|Discordbot|LinkedInBot|SkypeUriPreview|Snapchat|Pinterestbot|redditbot|Embedly|Iframely|Viber|Bluesky|Mastodon|vkShare|Google-PageRenderer).*" }],
+      "destination": "https://api.jonz.app/api/share/:path"
+    },
     { "source": "/(.*)", "destination": "/index.html" }
   ],
   "headers": [

@@ -1,6 +1,9 @@
 import {
   CATEGORIES,
   CATEGORY_LABEL,
+  CREW_CHOICES,
+  CREW_COPY,
+  crewLine,
   JOHN_LIST_COPY,
   NEXT_UP_COPY,
   johnFacts,
@@ -41,6 +44,7 @@ type Draft = Omit<JohnDef, 'id'> & { id?: string };
 
 const KINDS = CATEGORIES.map((c) => ({ value: c, label: CATEGORY_LABEL[c] }));
 const EFFORT = Array.from({ length: 20 }, (_, i) => ({ value: i + 1, label: pointsLabel(i + 1) }));
+const CREW = CREW_CHOICES.map((n) => ({ value: n, label: CREW_COPY.choice(n) }));
 
 /**
  * The house's list of Johns, a section per kind ("Kitchen · 3"), each John a
@@ -121,7 +125,8 @@ export function JohnList({
         johnsByKind(johns).map((kind) => (
           <Section key={kind.category} label={kind.label} testID={`kind-${kind.category}`}>
             {kind.johns.map((j) => {
-              const line = scheduleLine(j, groupName(j.groupId));
+              const schedule = scheduleLine(j, groupName(j.groupId));
+              const line = j.crew === 1 ? schedule : `${schedule} · ${CREW_COPY.choice(j.crew)}`;
               return (
                 <Row
                   key={j.id}
@@ -189,8 +194,9 @@ function JohnFacts({ john, group }: { john: JohnDef; group: string | null }) {
  * what sharing means; then when, as a sentence under a switch between on a
  * schedule and on call ("Every 3 months from November on the first Saturday
  * by 21:00"), each of whose words opens its choices in place of the form;
- * then how much effort and whether the tick needs a photo. Save is the
- * sheet's one amber button.
+ * then how much effort, how many do it (a John on a set day: one, 2 to 6, or
+ * everyone home, with what that adds up to under it), and whether the tick
+ * needs a photo. Save is the sheet's one amber button.
  */
 function JohnForm({
   houseId,
@@ -213,6 +219,9 @@ function JohnForm({
   // What "Shared by" means, under it: how to share with fewer when there's no
   // group yet, and what a group's John does once one is picked.
   const sharing = groups.length === 0 ? JOHN_LIST_COPY.noGroups : v.groupId ? JOHN_LIST_COPY.groupOnly : null;
+  // Done together: what its points add up to, and who shares them.
+  const line = v.when === 'day' ? crewLine(v.crew, v.points) : null;
+  const together = line ? `${line}. ${CREW_COPY.hint}` : null;
 
   async function save() {
     if (await move.run(() => saveJohn(houseId, rules, v, new Date()))) onDone();
@@ -257,17 +266,28 @@ function JohnForm({
         ) : null}
       </View>
       <TimingSentence value={v} rules={rules} now={new Date()} onChange={set} onPick={setPicking} />
-      <Group>
-        <PickRow label={JOHN_LIST_COPY.effort} options={EFFORT} value={v.points} onChange={(points) => set({ points })} />
-        <ChoiceRow
-          role="checkbox"
-          label={JOHN_LIST_COPY.photo}
-          meta={SETUP_COPY.photoMeta}
-          checked={v.needsPhoto}
-          onPress={() => set({ needsPhoto: !v.needsPhoto })}
-          testID="john-photo"
-        />
-      </Group>
+      <View style={styles.noted}>
+        <Group>
+          <PickRow label={JOHN_LIST_COPY.effort} options={EFFORT} value={v.points} onChange={(points) => set({ points })} />
+          {/* On call stays one person: whoever is on call. */}
+          {v.when === 'day' ? (
+            <PickRow label={CREW_COPY.doneBy} options={CREW} value={v.crew} onChange={(crew) => set({ crew })} testID="john-crew" />
+          ) : null}
+          <ChoiceRow
+            role="checkbox"
+            label={JOHN_LIST_COPY.photo}
+            meta={SETUP_COPY.photoMeta}
+            checked={v.needsPhoto}
+            onPress={() => set({ needsPhoto: !v.needsPhoto })}
+            testID="john-photo"
+          />
+        </Group>
+        {together ? (
+          <Meta style={styles.note} testID="crew-note">
+            {together}
+          </Meta>
+        ) : null}
+      </View>
       <View style={styles.actions}>
         {move.problem ? <Alert message={move.problem} /> : null}
         <Button

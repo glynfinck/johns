@@ -54,7 +54,6 @@ function TodayFor({ houseId, userId }: { houseId: string; userId: string }) {
       testID="today-screen"
     >
       <PageTitle page={PAGE_TITLE.today} />
-      {view ? <TopLine>{dayLabel(view.now, view.snapshot.rules.timezone)}</TopLine> : null}
       {view ? (
         <TodayView view={view} away={away.data ?? null} stake={stake.data ?? null} list={list.data ?? null} />
       ) : query.isError ? (
@@ -83,6 +82,7 @@ function TodayView({
   const page = todayPage({ board, mine: today.mine, userId, me, members, rules, away, stake });
   const nameOf = (id: string) => members.find((m) => m.userId === id)?.name ?? null;
   const two = useColumns();
+  const day = <TopLine>{dayLabel(now, rules.timezone)}</TopLine>;
 
   const next =
     page.state.kind === 'setup' ? (
@@ -148,11 +148,14 @@ function TodayView({
     ) : null;
 
   // On a laptop your own Johns keep the main column; what the house wants of you sits beside them, over its week.
+  // The day's line heads the main column, a section label's height, so Next up's card and the first group beside
+  // it share a top edge.
   if (two) {
     return (
       <Columns
         main={
           <>
+            {day}
             {next}
             {rest}
             {lines}
@@ -170,6 +173,7 @@ function TodayView({
   }
   return (
     <>
+      {day}
       {next}
       {needsYou}
       {onCall}

@@ -1,5 +1,6 @@
 import { isOpen, type BoardItem } from "./board";
-import { FOCUS_SHELL_COPY, JOHN_SHEET_COPY, NEXT_UP_COPY, ON_CALL_COPY, WEEK_SUMMARY_COPY } from "./copy";
+import { CREW_COPY, FOCUS_SHELL_COPY, JOHN_SHEET_COPY, NEXT_UP_COPY, ON_CALL_COPY, WEEK_SUMMARY_COPY } from "./copy";
+import { andNames } from "./crew";
 import { CATEGORY_SHORT } from "./domain";
 import { dueInLine, firstName, relative, sinceLabel, STATUS_LABEL } from "./format";
 import type { LiveStatus } from "./outcome";
@@ -48,14 +49,14 @@ export interface JohnRowPlan {
   hazardEdge: boolean;
 }
 
-/** Whose tick it is: the housemate who covered it, or whoever it was dealt to. */
-function tickerOf(item: Pick<BoardItem, "userId"> & { coveredBy?: string | null }): string {
-  return item.coveredBy ?? item.userId;
+/** Whose tick it is: the housemate who covered it, whoever ticked its roll call, or whoever it was dealt to. */
+function tickerOf(item: Pick<BoardItem, "userId"> & Partial<Pick<BoardItem, "coveredBy" | "crew">>): string {
+  return item.coveredBy ?? item.crew?.tickedBy ?? item.userId;
 }
 
 /** A dispute on someone else's tick that you haven't voted on yet. */
 function waitsForYourVote(
-  item: Pick<BoardItem, "userId" | "status" | "dispute"> & { coveredBy?: string | null },
+  item: Pick<BoardItem, "userId" | "status" | "dispute"> & Partial<Pick<BoardItem, "coveredBy" | "crew">>,
   viewerId: string,
 ): boolean {
   return tickerOf(item) !== viewerId && item.status === "disputed" && item.dispute !== null && item.dispute.myVote === null;
@@ -93,7 +94,7 @@ export function johnRow(
     BoardItem,
     "userId" | "name" | "category" | "points" | "needsPhoto" | "status" | "dueAt" | "movedFrom" | "doneAt" | "standsAt" | "dispute"
   > &
-    Partial<Pick<BoardItem, "flaggedAt" | "flaggedBy" | "coveredBy" | "outcome">>,
+    Partial<Pick<BoardItem, "flaggedAt" | "flaggedBy" | "coveredBy" | "outcome" | "together" | "crew" | "absentAt">>,
   viewerId: string,
   now: Date,
   zone: string,
@@ -115,8 +116,13 @@ export function johnRow(
         : status === "excused"
           ? "excused"
           : "open";
-  const ticks = mine && toDo;
+  // A John done together is ticked with its roll call, in its sheet.
+  const ticks = mine && toDo && (item.together?.length ?? 1) <= 1;
   const { meta, lid } = metaLine(item, viewerId, now, zone, nameOf);
+  // Ticked by roll call, a place earns its holder's share of the job.
+  const share = item.crew?.people.some((c) => c.userId === item.userId)
+    ? pointsEarned(status, item.crew.total) / item.crew.people.length
+    : null;
   return {
     circle,
     circleLabel: ticks
@@ -129,7 +135,7 @@ export function johnRow(
     lid,
     trailing:
       status === "checking" || coverChecking
-        ? (coverChecking ? myTick : mine)
+        ? (coverChecking || item.crew ? myTick : mine)
           ? "undo"
           : "status"
         : status === "disputed"
@@ -141,12 +147,12 @@ export function johnRow(
             : status === "upcoming" || status === "done"
               ? "points"
               : "status",
-    points: isOpen(status) ? item.points : pointsEarned(status, item.points),
+    points: isOpen(status) ? item.points : (share ?? pointsEarned(status, item.points)),
     // Everyone but the ticker votes, so your own dispute opens on nothing in particular.
     focus:
       status === "disputed" && !myTick
         ? "vote"
-        : (status === "checking" && !mine) || (coverChecking && !myTick)
+        : (status === "checking" && !myTick) || (coverChecking && !myTick)
           ? "dispute"
           : null,
     hazardEdge: status === "overdue" || status === "missed",
@@ -156,7 +162,7 @@ export function johnRow(
 /** The row's meta line, and whether its lid dot leads it. */
 function metaLine(
   item: Pick<BoardItem, "userId" | "category" | "status" | "dueAt" | "movedFrom" | "doneAt" | "standsAt" | "dispute"> &
-    Partial<Pick<BoardItem, "flaggedAt" | "flaggedBy">> & {
+    Partial<Pick<BoardItem, "flaggedAt" | "flaggedBy" | "together" | "crew">> & {
     coveredBy?: string | null;
   },
   viewerId: string,
@@ -172,8 +178,13 @@ function metaLine(
         ? ON_CALL_COPY.flaggedByInline(item.flaggedBy === viewerId ? WEEK_SUMMARY_COPY.byYou : called(nameOf(item.flaggedBy)))
         : ON_CALL_COPY.flaggedAgainInline
       : null;
+  // Done together: who with ("with Sam and Ada"), or once ticked, who did it.
+  const others = (item.crew ? item.crew.people.map((c) => c.userId) : (item.together ?? [])).filter((id) => id !== item.userId);
+  const together = others.length
+    ? CREW_COPY.with(andNames(others.map((id) => (id === viewerId ? WEEK_SUMMARY_COPY.byYou : called(nameOf(id))))))
+    : null;
   const line = (...parts: string[]) => ({
-    meta: [johnKind(item.category), ...(flagged ? [flagged] : []), ...parts].join(" · "),
+    meta: [johnKind(item.category), ...(flagged ? [flagged] : []), ...parts, ...(together ? [together] : [])].join(" · "),
     lid: true,
   });
   const due = dueInLine(item.dueAt, now, zone);

@@ -1,4 +1,4 @@
-import { HOUSE_PAGE_COPY, localDate, monthAbbr, monthOf, monthWord, tableLines, type TableLine } from '@app/core';
+import { HOUSE_PAGE_COPY, localDate, monthOf, monthWord, tableLines, type TableLine } from '@app/core';
 import type { UseQueryResult } from '@tanstack/react-query';
 import { InfoIcon, UserPlusIcon } from 'lucide-react-native';
 import { useState } from 'react';
@@ -12,21 +12,21 @@ import { GroupItem } from '@/components/group';
 import { InviteSheet } from '@/components/house-page/invite-sheet';
 import { MetaLine, Money } from '@/components/house-page/money';
 import { RulesSheet } from '@/components/house-page/rules-sheet';
+import { PickMenu } from '@/components/pick-menu';
 import { Reading, ReadFailed } from '@/components/read-state';
 import { Row, RowIcon } from '@/components/row';
 import { useContentWidth } from '@/components/screen';
 import { Section } from '@/components/section';
-import { Segmented } from '@/components/segmented';
 import type { HouseView } from '@/hooks/use-house';
 
 type Span = 'week' | 'month';
 
 /**
  * The Table: one row per housemate, most points first, with this week's or
- * the month's points (the switch), what matters about them in the meta line
- * and the month's money trailing; your own row tinted. Each row opens that
- * housemate's page. Then inviting housemates and how it all works, each a
- * sheet.
+ * the month's points (chosen from the menu in its header), what matters
+ * about them in the meta line and the month's money trailing; your own row
+ * tinted. Each row opens that housemate's page. Then inviting housemates and
+ * how it all works, each a sheet.
  */
 export function TableSection({
   userId,
@@ -68,10 +68,10 @@ export function TableSection({
       <Section
         label={HOUSE_PAGE_COPY.table}
         right={
-          <Segmented
+          <PickMenu
             options={[
               { value: 'week', label: HOUSE_PAGE_COPY.week },
-              { value: 'month', label: monthAbbr(month), spoken: monthWord(month) },
+              { value: 'month', label: monthWord(month) },
             ]}
             value={span}
             onChange={setSpan}

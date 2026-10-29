@@ -115,27 +115,25 @@ function BackLink({ to, label }: { to: Href; label: string }) {
   );
 }
 
-/** The title bar's sparkles: open the chat with Jonz, to start or change the list. */
+/**
+ * The title bar's sparkles: open the chat with Jonz, to start or change the
+ * list. From WIDE they open and close the panel beside the page, like a
+ * sidebar's button: they look the same either way, since the open panel is
+ * the sign (a screen reader hears it as expanded). On a phone they open the
+ * chat's page.
+ */
 function AskButton() {
   const { colors } = useTheme();
-  // From WIDE the sparkles open and close the panel beside the page; on a phone they open the chat's page.
   const ask = useAskJonz('toggle');
   const open = useAskPanelOpen();
   const button = (
     <Pressable
       accessibilityRole="button"
       accessibilityLabel={HOUSE_DRAFT_COPY.open}
-      accessibilityState={'onPress' in ask ? { expanded: open } : undefined}
+      aria-expanded={'onPress' in ask ? open : undefined}
       onPress={'onPress' in ask ? ask.onPress : undefined}
       testID="ask-jonz"
-      style={({ pressed }) => [
-        styles.icon,
-        styles.ask,
-        styles.more,
-        // Lit while the panel beside the page is open.
-        open && { backgroundColor: colors.secondary },
-        pressed && styles.pressed,
-      ]}
+      style={({ pressed }) => [styles.icon, styles.ask, styles.more, pressed && styles.pressed]}
     >
       <SparklesIcon size={22} color={colors.foreground} aria-hidden />
     </Pressable>

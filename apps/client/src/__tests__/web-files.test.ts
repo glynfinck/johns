@@ -22,6 +22,16 @@ describe('the page template', () => {
     expect(html).toContain('<title>%WEB_TITLE%</title>');
   });
 
+  it('has a tab icon, a home-screen icon and a card for pasted links, all there', () => {
+    expect(html).toContain('<link rel="icon" href="/favicon.svg" type="image/svg+xml" />');
+    expect(html).toContain('<link rel="apple-touch-icon" href="/apple-touch-icon.png" />');
+    expect(html).toContain('<meta property="og:image" content="https://jonz.app/og.png" />');
+    expect(html).toContain(`<meta property="og:description" content="${TAGLINE}" />`);
+    for (const file of ['favicon.ico', 'favicon.svg', 'apple-touch-icon.png', 'og.png']) {
+      expect(existsSync(join(PUBLIC, file))).toBe(true);
+    }
+  });
+
   it('is installable, and fits under a notch', () => {
     expect(html).toContain('<link rel="manifest" href="/manifest.webmanifest" />');
     expect(html).toContain('viewport-fit=cover');

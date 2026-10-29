@@ -107,6 +107,9 @@ export const JohnDraft = z.object({
   when: z.enum(JOHN_WHEN).default("day"),
   respondHours: z.coerce.number().int().min(1, "Give between 1 and 72 hours.").max(72, "Give between 1 and 72 hours.").default(12),
   perWeek: z.coerce.number().int().min(1).max(14).default(2),
+  // Done by (johns.crew): how many do it together, 1 to 6, or 0 for everyone
+  // home. Its points are per person. On call is always one.
+  crew: z.coerce.number().int().min(0).max(6).default(1),
 }).refine((j) => (j.everyMonths === null) === (j.weekOfMonth === null), "Say which week of the month it lands in.");
 export type JohnDraft = z.infer<typeof JohnDraft>;
 /** A JohnDraft before it is checked: the monthly fields may be left out (a weekly John). */
@@ -172,6 +175,22 @@ export type RaiseFlag = z.infer<typeof RaiseFlag>;
 /** The flag it opened, or the one already open: whoever is on call ticks that. */
 export const FlagResponse = z.object({ ok: z.literal(true), assignmentId: z.uuid() });
 export type FlagResponse = z.infer<typeof FlagResponse>;
+
+/**
+ * POST /api/roll-call: tick a John with who did it (crew.ts). `crew` is
+ * everyone on it, you among them: holders left off are absent, anyone else
+ * helped.
+ */
+export const RollCallRequest = z.object({
+  assignmentId: z.uuid(),
+  crew: z.array(z.uuid()).min(1).max(20),
+  photoPath: z.string().min(1).max(300).optional(),
+});
+export type RollCallRequest = z.infer<typeof RollCallRequest>;
+
+/** How many did it. */
+export const RollCallResponse = z.object({ ok: z.literal(true), people: z.number().int() });
+export type RollCallResponse = z.infer<typeof RollCallResponse>;
 
 /** POST /api/pass/checkout: buy the House Pass for a house, on the web. */
 export const PassCheckoutRequest = z.object({ houseId: z.uuid(), plan: z.enum(PASS_PURCHASES) });

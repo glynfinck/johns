@@ -88,8 +88,8 @@ describe("standings with covers", () => {
       ["glyn", "sam"],
     );
     expect(table).toEqual([
-      { userId: "glyn", points: 5, done: 1, late: 0, missed: 0, covered: 1, rank: 1 },
-      { userId: "sam", points: 0, done: 0, late: 0, missed: 1, covered: 0, rank: 2 },
+      { userId: "glyn", points: 5, done: 1, late: 0, missed: 0, covered: 1, helped: 0, rank: 1 },
+      { userId: "sam", points: 0, done: 0, late: 0, missed: 1, covered: 0, helped: 0, rank: 2 },
     ]);
   });
 

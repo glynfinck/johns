@@ -95,6 +95,7 @@ describe('loadJohnList', () => {
           everyMonths: null,
           weekOfMonth: null,
           anchorMonth: null,
+          crew: 1,
         },
       ],
       groups: [{ id: 'g1', name: 'Upstairs', memberIds: ['ava'] }],
@@ -134,6 +135,7 @@ describe('saveJohn', () => {
       kind: 'day',
       respond_hours: 12,
       per_week: 2,
+      crew: 1,
       house_id: 'h1',
       anchor_week: weekIndex(weekWindow(NOW, 'Europe/London', 1).startsOn),
     });

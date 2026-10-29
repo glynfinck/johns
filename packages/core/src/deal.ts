@@ -44,6 +44,10 @@ export interface DealJohn {
   points: number;
   /** Who did this John the last time it was handed out. */
   lastUserId: string | null;
+  /** For a John done together: everyone who had a place in it last time, each nudged on like `lastUserId`. */
+  lastUserIds?: readonly string[];
+  /** One place of a John done together (togetherPlaces): nobody is dealt two places in one job. */
+  jobId?: string;
   /** Everyone who shares it: the house, or its group. */
   sharers: readonly string[];
   /** The sharers who are home on the day it is due. */
@@ -161,11 +165,14 @@ export function fairSharesExplained(
   const state = new Map(members.map((m) => [m.userId, { assigned: 0, count: 0 }]));
 
   const ordered = [...johns].sort((a, b) => b.points - a.points || a.johnId.localeCompare(b.johnId));
+  const jobOf = new Map(johns.flatMap((j) => (j.jobId ? [[j.johnId, j.jobId] as const] : [])));
 
   const out: (DealAssignment & { why: DealWhy })[] = [];
   for (const john of ordered) {
-    const candidates = john.home.filter((id) => byId.has(id) && john.sharers.includes(id));
+    const placed = john.jobId ? out.filter((o) => jobOf.get(o.johnId) === john.jobId).map((o) => o.userId) : [];
+    const candidates = john.home.filter((id) => byId.has(id) && john.sharers.includes(id) && !placed.includes(id));
     if (candidates.length === 0) continue;
+    const last = john.lastUserIds ?? (john.lastUserId ? [john.lastUserId] : []);
     // Shares are sums of fractions (a third of a point, six times over), so
     // the cap allows for rounding rather than refuse a John by 1e-15.
     const roomy = candidates.filter(
@@ -177,7 +184,7 @@ export function fairSharesExplained(
       .map((id) => {
         const m = byId.get(id)!;
         const s = state.get(id)!;
-        const behind = m.balance + s.assigned - m.share + (id === john.lastUserId ? REPEAT_PENALTY : 0);
+        const behind = m.balance + s.assigned - m.share + (last.includes(id) ? REPEAT_PENALTY : 0);
         const key: [number, number, number] = [behind, s.count, stableHash(`${seed}:${john.johnId}:${id}`)];
         return { userId: id, key };
       })
@@ -194,7 +201,7 @@ export function fairSharesExplained(
         return {
           userId: id,
           standing,
-          ...(id === john.lastUserId ? { last: true as const } : {}),
+          ...(last.includes(id) ? { last: true as const } : {}),
           ...(pool.includes(id) ? {} : { full: true as const }),
         };
       })
@@ -207,6 +214,19 @@ export function fairSharesExplained(
     out.push({ johnId: john.johnId, userId: best.userId, why: { to: best.userId, by, weighed, away } });
   }
   return out;
+}
+
+/**
+ * A John done together as the deal hands it out: one place per person, each
+ * worth its points, `crew` of them (0: one for each sharer home), never more
+ * than are home. Each place's johnId is the John's with its number
+ * ("<id>#2"), and they share `jobId`. A John done by one is itself.
+ */
+export function togetherPlaces(john: DealJohn, crew: number, jobId: string): DealJohn[] {
+  if (crew === 1) return [john];
+  const home = john.home.filter((id) => john.sharers.includes(id)).length;
+  const n = crew === 0 ? home : Math.min(crew, home);
+  return Array.from({ length: n }, (_, i) => ({ ...john, johnId: `${john.johnId}#${i + 1}`, jobId }));
 }
 
 function lessThan(a: readonly number[], b: readonly number[]): boolean {

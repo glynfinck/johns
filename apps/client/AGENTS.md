@@ -262,6 +262,12 @@ permanent once a store has seen them.
   or turned on reminders keeps both. `src/__tests__/web-files.test.ts`
   checks them against core's words and colours. They are the only copies:
   `apps/api` has no pages or `public/` since Phase 14.
+- A pasted jonz.app link's card (iMessage, WhatsApp, Slack): `index.html`
+  carries the brand card's tags for every page, but the bots that draw cards
+  don't run the app, so `vercel.json` sends them by user agent to
+  `apps/api`'s `/api/share/*`, which answers with the page's own card: a join
+  link's names its house, drawn per house by `/api/og/join/[code]`. The words
+  and paths are in `packages/core/src/share.ts`.
 - When a change adds a native module or config plugin, say clearly that a
   new development build is needed. The image picker and manipulator (Phase
   6) are native modules: a build from before them can't take a photo.

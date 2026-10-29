@@ -1,5 +1,6 @@
-import { humanError } from '@app/core';
+import { humanError, RollCallRequest, RollCallResponse } from '@app/core';
 
+import { apiPost } from './http';
 import { supabase } from './supabase';
 
 // Your moves on a John. Each is one SQL function, which decides (the rules
@@ -13,6 +14,20 @@ async function call(result: PromiseLike<{ error: { message?: string; code?: stri
 /** Tick a John, with the storage path of a photo receipt when there is one. */
 export function markDone(assignmentId: string, photoPath?: string): Promise<void> {
   return call(supabase.rpc('mark_done', { p_assignment: assignmentId, p_photo_path: photoPath }));
+}
+
+/**
+ * Tick a John with who did it (crew.ts), through apps/api, which tells the
+ * people it names. Everyone in `crew` shares the points; holders left off
+ * have a miss once it stands.
+ */
+export async function rollCall(assignmentId: string, crew: readonly string[], photoPath?: string): Promise<number> {
+  const { people } = await apiPost(
+    '/api/roll-call',
+    RollCallRequest.parse({ assignmentId, crew, ...(photoPath ? { photoPath } : {}) }),
+    RollCallResponse,
+  );
+  return people;
 }
 
 /** Take a tick back while it's still being checked. */

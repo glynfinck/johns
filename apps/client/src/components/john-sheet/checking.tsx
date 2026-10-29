@@ -35,7 +35,8 @@ export function YoursChecking({ item, context }: { item: BoardItem; context: Joh
   const move = useMove(context.houseId);
   const [asking, setAsking] = useState(false);
   const warning = undoWarning(item, context.rules, context.now, forfeitRoom(context.stake, item.userId, monthOf(item.dueAt, context.zone)));
-  const undo = () => void move.run(() => (item.coveredBy ? undoCover(item.id) : undoDone(item.id)));
+  // A roll call is taken back from the place it was ticked from, and with it every place it settled.
+  const undo = () => void move.run(() => (item.coveredBy ? undoCover(item.id) : undoDone(item.crew?.tickedFrom ?? item.id)));
   return (
     <SheetLines>
       <Body testID="ticked-line">{tickedLine(item, context.members, context.userId, context.rules, context.now)}</Body>

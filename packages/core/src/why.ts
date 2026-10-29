@@ -6,7 +6,8 @@
  */
 import type { BoardItem } from "./board";
 import { isOpen } from "./board";
-import { WHY_COPY } from "./copy";
+import { CREW_COPY, WHY_COPY } from "./copy";
+import { shareLabel } from "./crew";
 import type { HouseRules } from "./domain";
 import { dueInLine, firstName, formatBalance } from "./format";
 import { coverOpensAt } from "./outcome";
@@ -49,6 +50,8 @@ export function johnWhy(
   viewerId: string,
   rules: HouseRules,
   now: Date,
+  /** A John done together's places on the board (its job's), to say why the people on it are. */
+  places: readonly BoardItem[] = [item],
 ): WhyView {
   const name = (id: string) => {
     const person = people.find((p) => p.userId === id);
@@ -60,7 +63,50 @@ export function johnWhy(
   const who = (id: string) => (id === viewerId ? WHY_COPY.you : name(id));
   const whose = (id: string) => (id === viewerId ? WHY_COPY.your : `${name(id)}’s`);
 
-  return { ...dealtPart(item, viewerId, { Who, who }), stakes: stakesLine(item, viewerId, rules, now, { Who, who, whose }) };
+  const together = places.length > 1 ? togetherPart(places, viewerId, { Who, who }) : null;
+  return {
+    ...(together ?? dealtPart(item, viewerId, { Who, who })),
+    stakes: stakesLine(item, viewerId, rules, now, { Who, who, whose }),
+  };
+}
+
+/**
+ * Why a John done together went to the people on it: "Needs 3. You, Sam and
+ * Ada were furthest behind of the 4 home." Each place was dealt like a John
+ * of its own, to whoever was furthest behind and not on it yet, so the
+ * first place weighed everyone home.
+ */
+function togetherPart(
+  places: readonly BoardItem[],
+  viewerId: string,
+  say: { Who: (id: string) => string; who: (id: string) => string },
+): Pick<WhyView, "answer" | "rows"> | null {
+  const dealt = places.map((p) => p.dealt);
+  if (dealt.some((d) => !d)) return null;
+  const tos = dealt.map((d) => d!.to);
+  const first = dealt.reduce((a, b) => (b!.weighed.length > a!.weighed.length ? b : a))!;
+  const home = first.weighed.length;
+  // You first, then in the order they were dealt.
+  const ordered = [...tos.filter((id) => id === viewerId), ...tos.filter((id) => id !== viewerId)];
+  const names = andList(ordered.map((id, i) => (i === 0 ? say.Who(id) : say.who(id))));
+  const one = ordered.length === 1 && ordered[0] !== viewerId;
+  const lines = [CREW_COPY.needs(places.length)];
+  lines.push(home <= places.length ? CREW_COPY.allHome(names, home) : CREW_COPY.furthest(names, one, home));
+  if (first.away.length) {
+    const away = first.away.map((id, i) => (i === 0 ? say.Who(id) : say.who(id)));
+    lines.push(WHY_COPY.away(andList(away), away.length === 1 && first.away[0] !== viewerId));
+  }
+  const rows: WhyRow[] =
+    first.weighed.length > 1
+      ? first.weighed.map((w) => ({
+          userId: w.userId,
+          name: say.Who(w.userId),
+          value: formatBalance(w.standing),
+          meta: [tos.includes(w.userId) ? WHY_COPY.dealtIt : null, w.last ? WHY_COPY.hadItLast : null].filter((m) => m !== null).join(" · ") || null,
+          chosen: tos.includes(w.userId),
+        }))
+      : [];
+  return { answer: lines.join(" "), rows };
 }
 
 function dealtPart(
@@ -136,6 +182,13 @@ function stakesLine(
   }
   // Disputed: whose work it is waits on the vote.
   if (item.status === "disputed") return null;
+  if (item.absentAt) return CREW_COPY.absentCounts(say.Who(holder), say.whose(holder));
+  if (item.crew && item.crew.people.length > 1) {
+    const crew = item.crew;
+    const ids = [...crew.people.filter((c) => c.userId === viewerId), ...crew.people.filter((c) => c.userId !== viewerId)].map((c) => c.userId);
+    const names = andList(ids.map((id, i) => (i === 0 ? say.Who(id) : say.who(id))));
+    return CREW_COPY.sharedCounts(names, shareLabel(crew.total / crew.people.length));
+  }
   if (item.coveredBy) return WHY_COPY.coveredCounts(say.Who(item.coveredBy), say.whose(item.coveredBy));
   if (item.status === "missed") return WHY_COPY.missedCounts(say.who(holder));
   if (item.status === "excused") return WHY_COPY.excusedCounts(holder === viewerId ? WHY_COPY.yours : say.whose(holder));
