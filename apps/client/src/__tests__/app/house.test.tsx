@@ -436,6 +436,8 @@ describe('on a laptop', () => {
     await open();
     const main = within(screen.getByTestId('column-main'));
     const side = within(screen.getByTestId('column-side'));
+    // The house's line heads the main column, so the month card lines up with the Wall's group beside it.
+    expect(main.getByTestId('top-line')).toBeOnTheScreen();
     expect(main.getByTestId('month-card')).toBeOnTheScreen();
     expect(main.getByTestId('house-table')).toBeOnTheScreen();
     expect(side.getAllByTestId('lower').map((node) => node.props.children)).toEqual(['the Wall', 'House setup', 'You', 'Leaving']);

@@ -228,8 +228,11 @@ function Board({
             {passUnlocked(house.pass, now) ? (
               <SideTable userId={userId} view={view} table={sharesRead} away={awayRead} />
             ) : null}
-            {fair}
-            {record}
+            {/* The deal's two quiet lines sit together under the Table, as Today's page lines do. */}
+            <View>
+              {fair}
+              {record}
+            </View>
           </>
         }
       />

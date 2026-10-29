@@ -1,5 +1,5 @@
 import { HOUSE_LOWER_COPY, JOHN_LIST_COPY, PAGE_TITLE, SECTION_LABEL } from "@app/core";
-import { expect, test, type Page } from "@playwright/test";
+import { expect, test, type Locator, type Page } from "@playwright/test";
 
 import { admin, CLIENT_URL, cleanUp, dealtHouseInClient } from "./auth";
 
@@ -20,6 +20,16 @@ async function shoot(page: Page, name: string) {
     await page.screenshot({ path: `${folder}/${name}-${colorScheme}.png` });
   }
   await page.emulateMedia({ colorScheme: "light" });
+}
+
+/** Where a box's top edge is on the page. */
+async function topOf(box: Locator): Promise<number> {
+  return (await box.boundingBox())?.y ?? Number.NaN;
+}
+
+/** A section's group of rows: the last of its two children, under its header. */
+function groupOf(section: Locator): Locator {
+  return section.locator(":scope > div").last();
 }
 
 test("each place spreads out on a laptop, and a narrow window keeps the phone's way", async ({ browser }, info) => {
@@ -57,6 +67,8 @@ test("each place spreads out on a laptop, and a narrow window keeps the phone's 
   const today = page.getByTestId("today-screen");
   await expect(today.getByTestId("column-main").getByTestId("next-up")).toBeVisible();
   await expect(today.getByTestId("column-side").getByTestId("week-glance")).toBeVisible();
+  // The columns share a top edge: Next up's card and the group beside it, under the day's line and its label.
+  expect(await topOf(today.getByTestId("next-up"))).toBeCloseTo(await topOf(groupOf(today.getByTestId("week-glance"))), 0);
   await shoot(page, "today");
 
   await page.getByRole("tab", { name: SECTION_LABEL.week }).click();
@@ -88,6 +100,10 @@ test("each place spreads out on a laptop, and a narrow window keeps the phone's 
 
   // A screen wide enough for the list beside the chat with Jonz still has one panel down the right: a John closes the chat.
   await page.setViewportSize({ width: 1920, height: 1080 });
+  await expect(house.getByTestId("columns")).toBeVisible();
+  const wall = groupOf(house.getByTestId("wall-section").locator(":scope > div").first());
+  expect(await topOf(house.getByTestId("month-card"))).toBeCloseTo(await topOf(wall), 0);
+  await shoot(page, "house-wide");
   await house.getByTestId("ask-jonz").click();
   await expect(page.getByTestId("ask-panel")).toBeVisible();
   await nav.getByRole("link", { name: HOUSE_LOWER_COPY.johns }).click();
