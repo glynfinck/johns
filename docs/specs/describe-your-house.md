@@ -21,10 +21,18 @@ and opens the list. Starter lists (flat share, couple, family) sit under
 the greeting for anyone who'd rather not write, and stand in whenever
 Claude can't be reached. It's free for every house.
 
-Later, not in this change: the same chat under House for changes ("Sam's
-moving out"), shown as a before-and-after card that an admin applies, with
-any change that shifts fair shares naming who it affects. That part is
-meant for the House Pass.
+Once the house has Johns, the same page is **Ask Jonz**, for changes
+("Sam's moving out", "bathroom is more work"). Jonz starts from the list
+as it is and the card shows only what changes: Johns changed (with what
+they were: "was 4 pts"), new ones and ones taken off, each ticked, with
+the house's points a week before and after. Nothing changes until the
+admin presses Apply. This part is the House Pass's: without it the message
+box gives way to the Pass (shown only once `PASS_ENFORCED` is on).
+
+The message box is one line while empty (a lighter hint that never
+wraps) and grows with what's typed, up to about five lines, then scrolls
+inside itself. Admins open the chat from the sparkles in the title bar on
+Today, Week and House.
 
 ## Inputs and outputs
 
@@ -59,6 +67,14 @@ meant for the House Pass.
   nobody in the house yet can't be made, so its Johns go to everyone until
   the admin makes it by hand. A group the house already has with that name
   is used as it is.
+- Changing a list: the request's `draft` starts as the list itself
+  (`listAsDraft`), each John carrying its `id`. Claude sees each one's
+  short `ref` and keeps it on Johns it keeps; a John left out is taken off.
+  `draftChanges(base, next)` gives the changes (`add:i`, `change:id`,
+  `remove:id`), and `applyDraft` applies the ticked ones through the list's
+  own writes: `addJohns`, `saveJohn`, `archiveJohn` (archived, so past
+  weeks keep their history). Changes take effect from the next deal. A
+  house with a list and no Pass is refused with 409 `pass_needed`.
 
 ## Edge cases
 
@@ -89,5 +105,7 @@ and from the empty John list. The message box stays above the keyboard.
 - [x] Starter lists work with no gateway, and when Claude fails.
 - [x] Housemates who aren't admins are refused; a house is held to 30
   turns a day.
+- [x] An admin with a list can ask Jonz for changes from the title bar's
+  sparkles, untick some and apply the rest; it's the House Pass's.
 - [ ] On production, a real chat drafts a sensible list through the AI
   Gateway.

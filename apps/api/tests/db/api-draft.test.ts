@@ -5,7 +5,7 @@ import { OPTIONS, POST } from "@/app/api/setup/draft/route";
 import type { DraftAnswer, DraftContext } from "@/lib/ai/house-draft";
 import { chatTurn } from "@/lib/moves/draft";
 import { adminClient, signedInUser, type Actor } from "@/tests/support/clients";
-import { makeHouse } from "@/tests/support/factories";
+import { addJohns, makeHouse, thisWeek } from "@/tests/support/factories";
 
 /**
  * POST /api/setup/draft, called as the app calls it, and the chat turn
@@ -135,6 +135,37 @@ describe("chatTurn, with Claude stood in for", () => {
     expect(await turnsIn(house.id)).toEqual([
       { outcome: "ai", johns: 2, input_tokens: 1200, output_tokens: 600, user_id: house.admin.userId },
     ]);
+  });
+
+  it("starts a house with a list from that list, and reads Claude's changes back to its Johns", async () => {
+    const house = await makeHouse(["Ava"]);
+    const [bath, bins] = await addJohns(house.id, [{ name: "Bathroom", points: 3 }, { name: "Bins out", points: 1 }], thisWeek());
+    let told: DraftContext | null = null;
+    const result = await chatTurn({ db: house.admin.db, userId: house.admin.userId }, house.id, said("Oven every month, and no bins"), null, new Date(), async (ctx) => {
+      told = ctx;
+      return {
+        raw: {
+          reply: "Done: an oven clean every four weeks, and the bins are off.",
+          ask: { kind: "none" },
+          draft: {
+            johns: [
+              { ref: bath.id.slice(0, 8), name: "Bathroom", category: "other", points: 4 },
+              { ref: null, name: "Oven clean", category: "kitchen", points: 5, everyWeeks: 4 },
+            ],
+            groups: [],
+            note: null,
+          },
+        },
+        inputTokens: 10,
+        outputTokens: 5,
+      };
+    });
+    expect(told!.editing).toBe(true);
+    expect(told!.draft!.johns!.map((j) => j.ref)).toEqual([bath.id.slice(0, 8), bins.id.slice(0, 8)]);
+    if ("refusal" in result) throw new Error("refused");
+    expect(result.draft!.johns.map((j) => j.id ?? null)).toEqual([bath.id, null]);
+    const { data: johns } = await db.from("johns").select("name").eq("house_id", house.id).is("archived_at", null);
+    expect(johns).toHaveLength(2);
   });
 
   it("counts a turn that only talks, and leaves the draft as it is", async () => {
