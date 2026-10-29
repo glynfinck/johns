@@ -3,6 +3,7 @@ import "server-only";
 import { passAfterSubscription, passFreeUntil, passOf, purchaseOfLookupKey, subscriptionLive, type HousePass } from "@app/core";
 import type Stripe from "stripe";
 
+import type { Stage } from "@/lib/env";
 import type { AdminClient } from "@/lib/supabase/admin";
 
 import type { PassStripe } from "./stripe";
@@ -14,6 +15,11 @@ import type { PassStripe } from "./stripe";
  * taken from the event, so events arriving late or out of order still land
  * on how things stand now. The rules are @app/core's (passAfterSubscription).
  *
+ * Staging and production can share a Stripe sandbox, and each has a webhook
+ * on it, so both hear every purchase. A purchase carries the stage it was
+ * made on (lib/moves/pass.ts) and only that stage acts on it; one from
+ * before stages were tagged belongs to whichever copy has its house.
+ *
  * Returns what it did, for the logs and the tests.
  */
 export async function applyPassEvent(
@@ -21,13 +27,16 @@ export async function applyPassEvent(
   stripe: PassStripe,
   event: Stripe.Event,
   now: Date,
+  stage: Stage,
 ): Promise<"founding" | "subscription" | "ignored"> {
+  const ours = (metadata: Record<string, string> | null | undefined) => !metadata?.stage || metadata.stage === stage;
   switch (event.type) {
     case "checkout.session.completed":
     case "checkout.session.async_payment_succeeded": {
       const session = event.data.object;
+      if (!ours(session.metadata)) return "ignored";
       if (session.mode === "subscription" && typeof session.subscription === "string") {
-        return syncSubscription(db, stripe, session.subscription, now);
+        return syncSubscription(db, stripe, session.subscription, now, ours);
       }
       if (session.mode === "payment" && session.payment_status === "paid") {
         return giveFounding(db, stripe, session);
@@ -39,7 +48,7 @@ export async function applyPassEvent(
     case "customer.subscription.deleted":
     case "customer.subscription.paused":
     case "customer.subscription.resumed":
-      return syncSubscription(db, stripe, event.data.object.id, now);
+      return syncSubscription(db, stripe, event.data.object.id, now, ours);
     default:
       return "ignored";
   }
@@ -88,8 +97,15 @@ async function giveFounding(db: AdminClient, stripe: PassStripe, session: Stripe
  * changes the house while it is the house's subscription, so an old one
  * ending after a new one started leaves the Pass alone.
  */
-async function syncSubscription(db: AdminClient, stripe: PassStripe, subscriptionId: string, now: Date) {
+async function syncSubscription(
+  db: AdminClient,
+  stripe: PassStripe,
+  subscriptionId: string,
+  now: Date,
+  ours: (metadata: Record<string, string>) => boolean,
+) {
   const sub = await stripe.subscription(subscriptionId);
+  if (!ours(sub.metadata)) return "ignored";
   const houseId = sub.metadata.house_id;
   const plan = purchaseOfLookupKey(sub.lookupKey);
   if (!houseId || !plan || plan === "founding") return "ignored";

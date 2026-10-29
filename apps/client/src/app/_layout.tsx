@@ -9,6 +9,7 @@ import { useEffect } from 'react';
 import { StyleSheet, View } from 'react-native';
 
 import { Button } from '@/components/button';
+import { StagingRibbon } from '@/components/staging-ribbon';
 import { Body, Heading } from '@/components/text';
 import { LookProvider } from '@/hooks/look';
 import { QueryProvider } from '@/hooks/query';
@@ -65,6 +66,7 @@ function Routes() {
   return (
     <>
       <StatusBar style={scheme === 'dark' ? 'light' : 'dark'} />
+      <StagingRibbon />
       <Stack screenOptions={{ headerShown: false, contentStyle: { backgroundColor: colors.background } }}>
         {/* Signed out: the front door and sign-in. */}
         <Stack.Protected guard={!signedIn} redirectTo={home}>

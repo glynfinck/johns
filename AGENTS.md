@@ -38,10 +38,11 @@ apps/
                 from the cutover (DEPLOYMENT.md)
 packages/
   core/         @app/core: the pure rules, the shared words, the database types
-supabase/       migrations/ and config.toml (local development only)
+supabase/       migrations/, config.toml (local development only), seeds/staging.sql
 docs/specs/     the migration plan; one short spec per feature (copy _template.md)
-scripts/        provision (production's accounts), tick (the clock by hand), vapid,
-                release (the store gate, read from release-targets.json)
+scripts/        provision (production's accounts), staging (staging's), tick (the
+                clock by hand), vapid, release (the store gate, read from
+                release-targets.json)
 ```
 
 ## Commands (from the repo root)
@@ -300,7 +301,8 @@ at `<house>/<assignment>/<file>`.
   (DEPLOYMENT.md).
 - Always ask first. Never run or change any of these unless I've said to in
   that message: `npm run provision` (even `--check`), `supabase db push`,
-  `supabase functions deploy`, a Vercel production deploy, either Vercel
+  `supabase functions deploy`, `node scripts/staging.mjs` (except
+  `--check`), a Vercel production deploy, either Vercel
   project's settings or domains, the Vault secrets, the VAPID keys, `npm run
   release:ios` / `release:android`, `eas build` with a production profile,
   `eas submit` and `eas update`. Store releases stay switched off in

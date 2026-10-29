@@ -1,8 +1,9 @@
 {
   "$schema": "https://openapi.vercel.sh/vercel.json",
   "framework": null,
-  "buildCommand": "npm run export:web",
+  "buildCommand": "node scripts/build-web.mjs",
   "outputDirectory": "dist",
+  "relatedProjects": ["prj_7iAOREFWVIdf2Xi5TAoyO9a9ma7R"],
   "redirects": [
     { "source": "/wall", "destination": "/house/wall", "permanent": false },
     { "source": "/stake", "destination": "/house/stake", "permanent": false },
@@ -22,6 +23,11 @@
         { "key": "Permissions-Policy", "value": "camera=(), microphone=(), geolocation=(), payment=()" },
         { "key": "Content-Security-Policy", "value": "frame-ancestors 'none'" }
       ]
+    },
+    {
+      "source": "/(.*)",
+      "has": [{ "type": "host", "value": "staging.jonz.app" }],
+      "headers": [{ "key": "X-Robots-Tag", "value": "noindex, nofollow" }]
     },
     { "source": "/api/:path*", "headers": [{ "key": "x-vercel-enable-rewrite-caching", "value": "0" }] },
     { "source": "/sw.js", "headers": [{ "key": "Cache-Control", "value": "no-cache" }] },

@@ -47,6 +47,9 @@ describe('sign-in on Android and the web', () => {
     expect(screen.getByRole('button', { name: SIGN_IN_COPY.google })).toBeOnTheScreen();
     expect(screen.getByRole('button', { name: SIGN_IN_COPY.microsoft })).toBeOnTheScreen();
     expect(screen.queryByTestId('apple-sign-in')).toBeNull();
+    // Production builds never offer the demo house (EXPO_PUBLIC_STAGE is staging's alone).
+    expect(screen.queryByTestId('demo-sign-in')).toBeNull();
+    expect(screen.queryByTestId('staging-ribbon')).toBeNull();
     expect(screen.getByText(SIGN_IN_COPY.sameAccount)).toBeOnTheScreen();
     expect(screen.getByRole('link', { name: SIGN_IN_COPY.privacy })).toBeOnTheScreen();
   });

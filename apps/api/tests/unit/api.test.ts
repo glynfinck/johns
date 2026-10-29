@@ -34,6 +34,18 @@ describe("corsHeaders", () => {
     expect(corsHeaders(null, allowed)).toEqual({});
     expect(corsHeaders("http://localhost:8205", [])).toEqual({});
   });
+
+  it("lets a preview in through a one-label wildcard, and nothing past it", () => {
+    const previews = ["https://staging.jonz.app", "https://*-glynfincks-projects.vercel.app"];
+    expect(corsHeaders("https://jonz-web-git-fix-glynfincks-projects.vercel.app", previews)).toMatchObject({
+      "Access-Control-Allow-Origin": "https://jonz-web-git-fix-glynfincks-projects.vercel.app",
+    });
+    expect(corsHeaders("https://staging.jonz.app", previews)).toMatchObject({ Vary: "Origin" });
+    expect(corsHeaders("https://evil.example/x-glynfincks-projects.vercel.app", previews)).toEqual({});
+    expect(corsHeaders("https://a.b-glynfincks-projects.vercel.app", previews)).toEqual({});
+    expect(corsHeaders("https://x-glynfincks-projects.vercel.app.evil.example", previews)).toEqual({});
+    expect(corsHeaders("https://x-glynfincksXprojects.vercel.app", previews)).toEqual({});
+  });
 });
 
 describe("responses", () => {
