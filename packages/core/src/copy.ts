@@ -406,7 +406,7 @@ export const JOHN_LIST_COPY = {
     `About ${Math.round(points)} points a week across the house. Changes apply from the next deal.`,
   add: "Add a John",
   edit: (name: string) => `Edit ${name}`,
-  hint: "Points are effort: 1 for taking the bins out, 5 for a deep clean, up to 20 for a half-day job.",
+  hint: "Points are effort: 1 for taking the bins out, 5 for a deep clean, up to 20 for a whole day’s job.",
   name: "Name",
   namePlaceholder: "Bathroom clean",
   kind: "Kind",
