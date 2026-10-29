@@ -105,7 +105,11 @@ missed, and a bin-lid colour per kind of John (`--bin-kitchen`,
 `--bin-bathroom`, `--bin-bins`, `--bin-floors`, `--bin-errands`,
 `--bin-other`, mirroring `CATEGORIES` in `packages/core/src/domain.ts`).
 Never hardcode colours. Headings are uppercase Overpass (Highway Gothic's
-descendant); the wordmark is the name boxed like a road sign. Late and missed
+descendant); the mark is the J in its road-sign frame on an amber tile
+(`packages/core/src/mark.ts`), and the lockup is that sign beside JONZ in
+Overpass Black. Every brand image is drawn from the mark by `npm run brand`;
+`docs/brand/README.md` is the brand guide (voice included) and says where each
+file goes. Late and missed
 wear hazard tape. No emoji anywhere in the UI: lucide icons only, reactions
 included. Light and dark both ship; the theme follows the system by default.
 Tap targets are at least 44px. Where the tokens and components live is in

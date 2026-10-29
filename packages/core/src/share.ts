@@ -1,0 +1,191 @@
+import { APP_NAME, PAGE_TITLE, RECORD_COPY, STAKE_HISTORY_COPY, TAGLINE, pageTitle } from "./copy";
+import { HISTORY_COPY } from "./history";
+import { WALL_COPY } from "./wall";
+
+/**
+ * What a pasted jonz.app link shows in a chat (iMessage, WhatsApp, Slack,
+ * X): its card's title, line and picture. The web app is one page that draws
+ * itself in the browser, and the bots that make these cards don't run it, so
+ * vercel.json sends them to apps/api, which answers with a page of just
+ * these tags (apps/api/app/api/share).
+ *
+ * A join link's card names its house and how many live there, the two things
+ * the join page shows anyone who signs in. Every other page needs a sign-in
+ * to show anything, so its card is the brand's, with the page's name.
+ */
+
+/** The site the cards send people to. */
+export const SHARE_SITE = "https://jonz.app";
+
+/** Every card is this size, the one iMessage, WhatsApp and X all draw large. */
+export const SHARE_IMAGE = { width: 1200, height: 630 } as const;
+
+/**
+ * Whether a join link's card names the house. Off, every invite reads "You're
+ * invited to a house on Jonz", and the card says nothing a stranger with the
+ * link couldn't guess.
+ */
+export const SHARE_NAMES_HOUSE = true;
+
+export const SHARE_COPY = {
+  /** The brand card's description: every page but a join link. */
+  description: TAGLINE,
+  imageAlt: `${APP_NAME}: fair shares of the housework.`,
+  joinTitle: (house: string) => `Join ${house} on ${APP_NAME}`,
+  joinGeneric: `You're invited to a house on ${APP_NAME}`,
+  housemates: (n: number) => `${n} ${n === 1 ? "housemate" : "housemates"}`,
+  joinLine: "Sign in to join and get your Johns.",
+  /** A code that opens nothing: reset, or its house is empty. */
+  expiredTitle: "This invite has expired",
+  expiredLine: "Ask the house for a new link.",
+} as const;
+
+/**
+ * What a card's sign says (packages/core/src/mark.ts, PLATE): the legend on
+ * the amber plate, in caps beside the J, and the line on the pavement plate
+ * hung under it.
+ */
+export interface ShareSign {
+  legend: string;
+  plate: string;
+}
+
+/** The brand's sign: every page's card, the banners. */
+export const BRAND_SIGN: ShareSign = { legend: APP_NAME, plate: "Fair shares of the housework." };
+
+/** A join link's sign: the house's own name beside the J, or the brand's when it's kept out. */
+export function joinSign(invite: InviteCard | null, namesHouse = SHARE_NAMES_HOUSE): ShareSign {
+  if (!invite) return { legend: "Invite expired", plate: SHARE_COPY.expiredLine };
+  if (!namesHouse) return { legend: APP_NAME, plate: "You're invited to a house." };
+  return { legend: invite.name, plate: `Join ${SHARE_COPY.housemates(invite.members)} on ${APP_NAME}.` };
+}
+
+/** A house as its join link's card shows it. */
+export interface InviteCard {
+  name: string;
+  members: number;
+}
+
+export interface SharePreview {
+  title: string;
+  description: string;
+  /** The page the card opens, on jonz.app. */
+  url: string;
+  image: string;
+  imageAlt: string;
+}
+
+/** Each page's name in a card, by its path on jonz.app (the app's routes). */
+const PAGES: [RegExp, string][] = [
+  [/^\/today$/, PAGE_TITLE.today],
+  [/^\/week$/, PAGE_TITLE.week],
+  [/^\/week\/record(\/[^/]+)?$/, RECORD_COPY.title],
+  [/^\/house$/, PAGE_TITLE.house],
+  [/^\/house\/wall$/, WALL_COPY.title],
+  [/^\/house\/stake$/, STAKE_HISTORY_COPY.title],
+  [/^\/house\/history$/, HISTORY_COPY.title],
+  [/^\/house\/johns$/, PAGE_TITLE.johnList],
+  [/^\/house\/rules$/, PAGE_TITLE.rules],
+  [/^\/house\/away$/, PAGE_TITLE.away],
+  [/^\/house\/groups$/, PAGE_TITLE.groups],
+  [/^\/house\/describe$/, PAGE_TITLE.describe],
+  [/^\/house\/pass$/, PAGE_TITLE.pass],
+  [/^\/house\/new$/, PAGE_TITLE.newHouse],
+  [/^\/signin$/, PAGE_TITLE.signIn],
+  [/^\/privacy$/, PAGE_TITLE.privacy],
+  [/^\/welcome$/, PAGE_TITLE.welcome],
+];
+
+/** The join code in a join link's path, as typed (the API checks it), or null. */
+export function joinCodeIn(path: string): string | null {
+  const match = /^\/join\/([^/?#]+)\/?$/.exec(path);
+  return match ? decodeURIComponent(match[1]) : null;
+}
+
+/** A path cut to its route: no query, no fragment, no trailing slash. */
+function route(path: string): string {
+  const bare = path.split(/[?#]/)[0] ?? "/";
+  const trimmed = bare.length > 1 ? bare.replace(/\/+$/, "") : bare;
+  return trimmed.startsWith("/") ? trimmed : `/${trimmed}`;
+}
+
+/** The brand card, named for the page (or just "Jonz" for the front door and anything unknown). */
+export function pagePreview(path: string): SharePreview {
+  const at = route(path);
+  const page = PAGES.find(([pattern]) => pattern.test(at))?.[1];
+  return {
+    title: pageTitle(page),
+    description: SHARE_COPY.description,
+    url: `${SHARE_SITE}${at === "/" ? "" : at}`,
+    image: `${SHARE_SITE}/og.png`,
+    imageAlt: SHARE_COPY.imageAlt,
+  };
+}
+
+/**
+ * A join link's card. `invite` is the house its code opens, or null when it
+ * opens nothing; `code` is already checked, so it is safe in a URL.
+ */
+export function joinPreview(code: string, invite: InviteCard | null, namesHouse = SHARE_NAMES_HOUSE): SharePreview {
+  const url = `${SHARE_SITE}/join/${code}`;
+  const image = `${SHARE_SITE}/api/og/join/${code}`;
+  if (!invite) {
+    return { title: SHARE_COPY.expiredTitle, description: SHARE_COPY.expiredLine, url, image, imageAlt: SHARE_COPY.expiredTitle };
+  }
+  if (!namesHouse) {
+    return { title: SHARE_COPY.joinGeneric, description: SHARE_COPY.joinLine, url, image, imageAlt: SHARE_COPY.joinGeneric };
+  }
+  const title = SHARE_COPY.joinTitle(invite.name);
+  return {
+    title,
+    description: `${SHARE_COPY.housemates(invite.members)}. ${SHARE_COPY.joinLine}`,
+    url,
+    image,
+    imageAlt: title,
+  };
+}
+
+const ESCAPES: Record<string, string> = { "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" };
+
+/** Text made safe inside an HTML attribute or element: a house's name is whatever its admin typed. */
+export function escapeHtml(text: string): string {
+  return text.replace(/[&<>"']/g, (c) => ESCAPES[c] ?? c);
+}
+
+/**
+ * The page a link-preview bot gets: the card's tags and a link on to the
+ * app, nothing else. Only bots are sent here; a person opening the same link
+ * gets the app.
+ */
+export function shareHtml(preview: SharePreview): string {
+  const tag = (attr: "property" | "name", key: string, value: string) =>
+    `<meta ${attr}="${key}" content="${escapeHtml(value)}" />`;
+  return [
+    "<!doctype html>",
+    '<html lang="en">',
+    "<head>",
+    '<meta charset="utf-8" />',
+    `<title>${escapeHtml(preview.title)}</title>`,
+    tag("name", "description", preview.description),
+    `<link rel="canonical" href="${escapeHtml(preview.url)}" />`,
+    tag("property", "og:site_name", APP_NAME),
+    tag("property", "og:type", "website"),
+    tag("property", "og:url", preview.url),
+    tag("property", "og:title", preview.title),
+    tag("property", "og:description", preview.description),
+    tag("property", "og:image", preview.image),
+    tag("property", "og:image:type", "image/png"),
+    tag("property", "og:image:width", String(SHARE_IMAGE.width)),
+    tag("property", "og:image:height", String(SHARE_IMAGE.height)),
+    tag("property", "og:image:alt", preview.imageAlt),
+    tag("name", "twitter:card", "summary_large_image"),
+    tag("name", "twitter:title", preview.title),
+    tag("name", "twitter:description", preview.description),
+    tag("name", "twitter:image", preview.image),
+    "</head>",
+    "<body>",
+    `<p><a href="${escapeHtml(preview.url)}">${escapeHtml(preview.title)}</a></p>`,
+    "</body>",
+    "</html>",
+  ].join("\n");
+}

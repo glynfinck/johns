@@ -21,6 +21,7 @@
     "tick": "node scripts/tick.mjs",
     "provision": "node scripts/provision.mjs",
     "vapid": "node scripts/vapid.mjs",
+    "brand": "node scripts/brand.mjs",
     "release:ios": "node scripts/release.mjs ios",
     "release:android": "node scripts/release.mjs android",
     "types": "supabase gen types typescript --local > packages/core/src/db-types.ts",

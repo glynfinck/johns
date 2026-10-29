@@ -7,6 +7,7 @@ import { join } from 'node:path';
 
 interface Rule {
   source: string;
+  has?: { type: string; key?: string; value: string }[];
   destination?: string;
   permanent?: boolean;
   headers?: { key: string; value: string }[];
@@ -65,9 +66,51 @@ describe("jonz.app's web build on Vercel", () => {
     );
   });
 
+  describe("a pasted link's card", () => {
+    // The app draws itself in the browser, and the bots that make a chat's
+    // link cards don't run it, so they're sent to apps/api's page of card tags
+    // (packages/core/src/share.ts) by their user agent. People get the app.
+    const [root, page] = config.rewrites.slice(1, 3);
+    const bots = new RegExp(`^${root.has![0].value}$`);
+
+    it('sends the chat apps\' bots, and only them, to the card page, front door and every page alike', () => {
+      expect(root).toMatchObject({ source: '/', destination: 'https://api.jonz.app/api/share' });
+      expect(page).toMatchObject({
+        source: '/:path((?!api/|_expo/)[^.]*)',
+        destination: 'https://api.jonz.app/api/share/:path',
+      });
+      expect(page.has).toEqual(root.has);
+      expect(root.has![0]).toMatchObject({ type: 'header', key: 'user-agent' });
+    });
+
+    it.each([
+      ['iMessage', 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_11_1) AppleWebKit/601.2.4 (KHTML, like Gecko) Version/9.0.1 Safari/601.2.4 facebookexternalhit/1.1 Facebot Twitterbot/1.0'],
+      ['WhatsApp', 'WhatsApp/2.23.20.0 A'],
+      ['Slack', 'Slackbot-LinkExpanding 1.0 (+https://api.slack.com/robots)'],
+      ['Telegram', 'TelegramBot (like TwitterBot)'],
+      ['Discord', 'Mozilla/5.0 (compatible; Discordbot/2.0; +https://discordapp.com)'],
+    ])('knows %s', (_app, agent) => {
+      expect(bots.test(agent)).toBe(true);
+    });
+
+    it('leaves people, and search engines, on the app', () => {
+      expect(bots.test('Mozilla/5.0 (iPhone; CPU iPhone OS 18_0 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/18.0 Mobile/15E148 Safari/604.1')).toBe(false);
+      expect(bots.test('Mozilla/5.0 (compatible; Googlebot/2.1; +http://www.google.com/bot.html)')).toBe(false);
+    });
+
+    it("never sends files a card needs (og.png) or the app's bundles to it", () => {
+      const pattern = /^\/((?!api\/|_expo\/)[^.]*)$/;
+      expect(pattern.test('/join/TRC4QX7M')).toBe(true);
+      expect(pattern.test('/house/wall')).toBe(true);
+      expect(pattern.test('/og.png')).toBe(false);
+      expect(pattern.test('/api/og/join/TRC4QX7M')).toBe(false);
+      expect(pattern.test('/_expo/static/js/web/entry.js')).toBe(false);
+    });
+  });
+
   it('opens any other path on the app, which draws its own not-found', () => {
     expect(config.rewrites.at(-1)).toEqual({ source: '/(.*)', destination: '/index.html' });
-    expect(config.rewrites).toHaveLength(2);
+    expect(config.rewrites).toHaveLength(4);
   });
 
   it('sends the headers the Next app sends (apps/api/next.config.ts)', () => {
