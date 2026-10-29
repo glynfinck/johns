@@ -1205,6 +1205,14 @@ export type Database = {
           user_id: string
         }[]
       }
+      house_by_code: {
+        Args: { p_code: string }
+        Returns: {
+          id: string
+          members: number
+          name: string
+        }[]
+      }
       house_history: {
         Args: { p_before?: string; p_house: string; p_limit?: number }
         Returns: {
@@ -1219,14 +1227,6 @@ export type Database = {
           subject: string
           undone_at: string
           undone_by: string
-        }[]
-      }
-      house_by_code: {
-        Args: { p_code: string }
-        Returns: {
-          id: string
-          members: number
-          name: string
         }[]
       }
       identity_photo: { Args: { data: Json }; Returns: string }
@@ -1293,6 +1293,7 @@ export type Database = {
         Returns: string
       }
       raise_flag: { Args: { p_john: string }; Returns: string }
+      recording: { Args: never; Returns: boolean }
       remove_member: {
         Args: { p_house: string; p_user: string }
         Returns: undefined
@@ -1329,6 +1330,10 @@ export type Database = {
       undo_done: { Args: { p_assignment: string }; Returns: undefined }
       undo_latest: {
         Args: { p_about?: string; p_kind: string }
+        Returns: string
+      }
+      undo_reach: {
+        Args: { x: Database["public"]["Tables"]["house_actions"]["Row"] }
         Returns: string
       }
       use_immunity: { Args: { p_assignment: string }; Returns: undefined }
