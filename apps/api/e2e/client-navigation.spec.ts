@@ -27,6 +27,23 @@ function backTo(page: Page, label: string) {
     .and(page.getByRole("button", { name: `Back to ${label}` }));
 }
 
+/**
+ * Tap the title bar's back. When it isn't there, fail saying what the page
+ * showed instead, since a missing back is the bug these tests look for.
+ */
+async function tapBack(page: Page, label: string) {
+  const back = backTo(page, label);
+  try {
+    await expect(back).toBeVisible({ timeout: 30_000 });
+  } catch {
+    const all = page.getByTestId("back");
+    const labels = await all.evaluateAll((els) => els.map((el) => `${el.getAttribute("aria-label")} (${el.getBoundingClientRect().width}x${el.getBoundingClientRect().height})`));
+    const text = (await page.locator("body").innerText()).slice(0, 600);
+    throw new Error(`No "Back to ${label}" on ${page.url()}. Backs: ${JSON.stringify(labels)}. The page says: ${JSON.stringify(text)}`);
+  }
+  await back.click();
+}
+
 async function newHouse(page: Page, name: string) {
   await page.goto("/house/new");
   await page.getByLabel(FRONT_DOOR_COPY.name).fill(name);
@@ -70,18 +87,18 @@ test.describe("a house with its week dealt", () => {
       await page.getByTestId(row).click();
       await expect(page).toHaveURL(new RegExp(`${path}$`));
       await expect(page.getByRole("heading", { name: title, exact: true })).toBeVisible();
-      await backTo(page, SECTION_LABEL.house).click();
+      await tapBack(page, SECTION_LABEL.house);
       await expectOnHouse(page, houseName);
     }
 
     await page.getByTestId("to-wall").getByRole("link").click();
     await expect(page).toHaveURL(/\/house\/wall$/);
-    await backTo(page, SECTION_LABEL.house).click();
+    await tapBack(page, SECTION_LABEL.house);
     await expectOnHouse(page, houseName);
 
     await page.getByTestId("standing").filter({ hasText: "Ben" }).getByRole("link").click();
     await expect(page).toHaveURL(new RegExp(`/house/people/${mateId}$`));
-    await backTo(page, SECTION_LABEL.house).click();
+    await tapBack(page, SECTION_LABEL.house);
     await expectOnHouse(page, houseName);
   });
 
@@ -94,7 +111,7 @@ test.describe("a house with its week dealt", () => {
     await expectOnHouse(page, houseName);
     await page.goForward();
     await expect(page).toHaveURL(/\/house\/johns$/);
-    await backTo(page, SECTION_LABEL.house).click();
+    await tapBack(page, SECTION_LABEL.house);
     await expectOnHouse(page, houseName);
   });
 
@@ -111,20 +128,20 @@ test.describe("a house with its week dealt", () => {
     test(`${path} opened cold, and after a refresh, still goes back to House`, async ({ page }) => {
       await page.goto(path);
       await expect(page).toHaveURL(new RegExp(`${path}$`));
-      await backTo(page, SECTION_LABEL.house).click();
+      await tapBack(page, SECTION_LABEL.house);
       await expectOnHouse(page, houseName);
 
       await page.goto(path);
       await page.reload();
       await expect(page).toHaveURL(new RegExp(`${path}$`));
-      await backTo(page, SECTION_LABEL.house).click();
+      await tapBack(page, SECTION_LABEL.house);
       await expectOnHouse(page, houseName);
     });
   }
 
   test("a housemate's page opened cold goes back to House", async ({ page }) => {
     await page.goto(`/house/people/${mateId}`);
-    await backTo(page, SECTION_LABEL.house).click();
+    await tapBack(page, SECTION_LABEL.house);
     // Known issue: opened cold, Expo Router copies the page's params onto the
     // routes under it, so House comes back as /house?userId=<id>. House
     // itself is right; only the URL carries the stray param.
@@ -137,12 +154,14 @@ test.describe("a house with its week dealt", () => {
     await expectOnHouse(page, houseName);
     await page.getByTestId("to-away").click();
     await expect(page).toHaveURL(/\/house\/away$/);
-    await backTo(page, SECTION_LABEL.house).click();
+    await tapBack(page, SECTION_LABEL.house);
     await expectOnHouse(page, houseName);
   });
 
   test("the tabs: each opens its page, and House on a pushed page goes back to House", async ({ page }) => {
     await page.goto("/today");
+    // The tabs answer once the app has drawn the page.
+    await expect(page.getByRole("heading", { name: PAGE_TITLE.today })).toBeVisible();
     await page.getByRole("tab", { name: SECTION_LABEL.week }).click();
     await expect(page).toHaveURL(/\/week$/);
     await expect(page.getByRole("heading", { name: PAGE_TITLE.week })).toBeVisible();
@@ -170,7 +189,7 @@ test.describe("a house just started", () => {
     await newHouse(page, name);
     await page.getByTestId("setup-johns").click();
     await expect(page).toHaveURL(/\/house\/johns$/);
-    await backTo(page, SECTION_LABEL.house).click();
+    await tapBack(page, SECTION_LABEL.house);
     await expectOnHouse(page, name);
   });
 
@@ -188,11 +207,11 @@ test.describe("a house just started", () => {
     await page.getByTestId("describe-keep").click();
     await page.getByTestId("chat-open-list").click();
     await expect(page).toHaveURL(/\/house\/johns$/);
-    await backTo(page, SECTION_LABEL.house).click();
+    await tapBack(page, SECTION_LABEL.house);
     await expectOnHouse(page, name);
     // And House's own back history doesn't send the next back to the chat.
     await page.getByTestId("to-johns").click();
-    await backTo(page, SECTION_LABEL.house).click();
+    await tapBack(page, SECTION_LABEL.house);
     await expectOnHouse(page, name);
   });
 
@@ -211,7 +230,7 @@ test.describe("a house just started", () => {
     await page.getByTestId("describe-keep").click();
     await page.getByTestId("chat-open-list").click();
     await expect(page).toHaveURL(/\/house\/johns$/);
-    await backTo(page, SECTION_LABEL.house).click();
+    await tapBack(page, SECTION_LABEL.house);
     await expectOnHouse(page, name);
   });
 });
