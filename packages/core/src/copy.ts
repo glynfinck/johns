@@ -1190,6 +1190,11 @@ export const WALL_FEED_COPY = {
 export const HOUSE_LOWER_COPY = {
   /** House setup's note on the right: changing these changes the house. */
   setupNote: "Affects everyone",
+  /** On a laptop, House's pages listed beside the page: its top, and the list's name to a screen reader. */
+  overview: "Overview",
+  pages: "The house’s pages",
+  /** The John list on a laptop: a John's details open beside it, and close from here. */
+  closePanel: "Close",
   johns: "Johns",
   rules: "Rules",
   away: "Time away",

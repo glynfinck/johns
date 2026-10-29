@@ -17,6 +17,7 @@ import {
 import { expect, test, type Page } from "@playwright/test";
 
 import { admin, CLIENT_URL, cleanUp, signInToClient } from "./auth";
+import { backToHouse, toHousePage } from "./house-pages";
 
 // A house from nothing, in the Expo app's web build alone: start it, write
 // the John list, let a housemate in, hand out the week, change the rules
@@ -103,7 +104,7 @@ test("run a house from nothing on the phone", async ({ browser }) => {
   // Johns, two people, one each.
   await page.reload();
   await expect(house.getByTestId("standing")).toHaveCount(2);
-  await house.getByTestId("to-johns").getByRole("link").click();
+  await toHousePage(page, "to-johns").click();
   await expect(page).toHaveURL(/\/house\/johns$/);
   await list.getByTestId("deal-week").click();
   await expect(list.getByTestId("deal-week")).toHaveText(new RegExp(DEAL_COPY.again));
@@ -148,7 +149,7 @@ test("run a house from nothing on the phone", async ({ browser }) => {
   await person.getByTestId("toggle-admin").getByRole("button", { name: PERSON_COPY.makeAdmin }).click();
   await expect(person.getByTestId("title-bar")).toContainText(PERSON_COPY.sub(true, false));
   await expect(person.getByTestId("toggle-admin")).toContainText(PERSON_COPY.makeHousemate);
-  await person.getByRole("button", { name: FOCUS_SHELL_COPY.backTo(SECTION_LABEL.house) }).click();
+  await backToHouse(page, person.getByRole("button", { name: FOCUS_SHELL_COPY.backTo(SECTION_LABEL.house) })).click();
   await expect(page).toHaveURL(/\/house$/);
   await house.getByTestId("to-name").click();
   const nameSheet = page.getByTestId("name-sheet");

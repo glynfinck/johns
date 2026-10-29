@@ -6,6 +6,7 @@ import { PassLocked, PassSection } from '@/components/house-page/pass-section';
 import { SetupSection } from '@/components/house-page/setup-section';
 import { TableSection } from '@/components/house-page/table-section';
 import { WallSection } from '@/components/house-page/wall-section';
+import { useHouseWorkspace } from '@/components/house/workspace';
 import { YouSection } from '@/components/house-page/you-section';
 import { PageTitle } from '@/components/page-title';
 import { Reading, ReadFailed } from '@/components/read-state';
@@ -93,6 +94,8 @@ function HouseSections({
   away: ReturnType<typeof useAway>;
 }) {
   const two = useColumns();
+  // On a laptop the setup and the Pass are in the list beside the page.
+  const { listed } = useHouseWorkspace();
   const money = passUnlocked(view.snapshot.house.pass, view.now) ? (
     <>
       <MonthCard houseId={houseId} userId={userId} view={view} stake={stake} />
@@ -107,8 +110,8 @@ function HouseSections({
   const lower = (
     <>
       <WallSection houseId={houseId} userId={userId} view={view} />
-      <SetupSection houseId={houseId} userId={userId} view={view} />
-      <PassSection view={view} />
+      {listed ? null : <SetupSection houseId={houseId} userId={userId} view={view} />}
+      {listed ? null : <PassSection view={view} />}
       <YouSection houseId={houseId} userId={userId} view={view} />
       <LeaveSection houseId={houseId} userId={userId} view={view} />
     </>

@@ -1,4 +1,4 @@
-import { FOCUS_SHELL_COPY, SECTION_LABEL } from '@app/core';
+import { FOCUS_SHELL_COPY, HOUSE_LOWER_COPY, SECTION_LABEL } from '@app/core';
 import { QueryClientProvider } from '@tanstack/react-query';
 import { Link, router, Slot } from 'expo-router';
 import { fireEvent, renderRouter, screen, waitFor, within } from 'expo-router/testing-library';
@@ -272,5 +272,49 @@ describe('on a laptop', () => {
     await open('/week');
     const today = await screen.findByRole('tab', { name: FOCUS_SHELL_COPY.tab(SECTION_LABEL.today, 1) });
     expect(within(today).getByTestId('count-badge', { includeHiddenElements: true })).toHaveTextContent('1');
+  });
+  it("lists House's pages beside them, the one you're on marked, and no way back on the page", async () => {
+    await open('/house');
+    const nav = await screen.findByTestId('house-nav');
+    expect(within(nav).getByRole('link', { name: HOUSE_LOWER_COPY.overview })).toHaveProp('aria-current', 'page');
+    await fireEvent.press(within(nav).getByRole('link', { name: HOUSE_LOWER_COPY.johns }));
+    expect(screen).toHavePathname('/house/johns');
+    expect(screen.getByText('Johns screen')).toBeOnTheScreen();
+    expect(within(nav).getByRole('link', { name: HOUSE_LOWER_COPY.johns })).toHaveProp('aria-current', 'page');
+    expect(within(nav).getByRole('link', { name: HOUSE_LOWER_COPY.overview })).not.toHaveProp('aria-current', 'page');
+    expect(screen.queryByTestId('back')).toBeNull();
+  });
+
+  it("moves between House's pages without piling them up, and Overview goes back to the top", async () => {
+    await open('/house/wall');
+    const nav = await screen.findByTestId('house-nav');
+    await fireEvent.press(within(nav).getByRole('link', { name: HOUSE_LOWER_COPY.johns }));
+    expect(screen).toHavePathname('/house/johns');
+    await fireEvent.press(within(nav).getByRole('link', { name: HOUSE_LOWER_COPY.overview }));
+    expect(screen).toHavePathname('/house');
+    expect(screen.getByText('House screen')).toBeOnTheScreen();
+  });
+
+  it("keeps the phone's way in a window too narrow for the list", async () => {
+    (useWindowDimensions as jest.Mock).mockReturnValue({ width: 1100, height: 900, scale: 1, fontScale: 1 });
+    await open('/house/wall');
+    await screen.findByText('Wall screen');
+    expect(screen.queryByTestId('house-nav')).toBeNull();
+    expect(screen.getByTestId('back')).toBeOnTheScreen();
+  });
+
+  it('puts the list away when something beside it takes the room', async () => {
+    await open('/house/wall');
+    expect(await screen.findByTestId('house-nav')).toBeOnTheScreen();
+    // The House tab measured narrower than the list and a page need (the chat with Jonz open beside it).
+    await fireEvent(screen.getByTestId('house-workspace'), 'layout', { nativeEvent: { layout: { width: 808, height: 900 } } });
+    expect(screen.queryByTestId('house-nav')).toBeNull();
+    expect(screen.getByTestId('back')).toBeOnTheScreen();
+  });
+
+  it('lists nothing beside Today or Week', async () => {
+    await open('/week');
+    await screen.findByText('Week screen');
+    expect(screen.queryByTestId('house-nav')).toBeNull();
   });
 });

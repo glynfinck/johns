@@ -5,6 +5,7 @@ import type { ReactNode } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
+import { useHouseWorkspace } from '@/components/house/workspace';
 import { useContentWidth } from '@/components/screen';
 import { Meta, Title } from '@/components/text';
 import { useAskJonz, useAskPanelOpen } from '@/hooks/use-ask-jonz';
@@ -48,14 +49,16 @@ export function TitleBar({
   const { colors } = useTheme();
   const insets = useSafeAreaInsets();
   const maxWidth = useContentWidth();
+  // On a laptop House's pages are listed beside them, which is the way back to House.
+  const way = useHouseWorkspace().listed && back === '/house' ? undefined : back;
   return (
     <View
       testID="title-bar"
       style={[styles.bar, { paddingTop: insets.top, backgroundColor: colors.background, borderBottomColor: colors.border }]}
     >
       <View style={[styles.inner, { maxWidth }]}>
-        {back != null ? <BackLink to={back} label={backLabel} /> : null}
-        <View style={[styles.line, sub ? styles.withSub : null, back != null && styles.pushed]}>
+        {way != null ? <BackLink to={way} label={backLabel} /> : null}
+        <View style={[styles.line, sub ? styles.withSub : null, way != null && styles.pushed]}>
           <View style={styles.words}>
             <Title numberOfLines={1} style={styles.title}>
               {title}
