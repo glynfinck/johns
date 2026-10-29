@@ -1327,8 +1327,8 @@ export const HOUSE_DRAFT_COPY = {
     family: { title: "Family", meta: "Parents and kids" },
   },
   /** The message box, before and after there's a draft to change. */
-  placeholder: "Four of us, two bathrooms, bins on Tuesday…",
-  placeholderChange: "Change anything: “oven every month”",
+  placeholder: "Four of us, two bathrooms…",
+  placeholderChange: "Try “oven every month”",
   message: "Message",
   send: "Send",
   privacy: "What you write is sent to Anthropic’s Claude, through Vercel, to draft the list.",

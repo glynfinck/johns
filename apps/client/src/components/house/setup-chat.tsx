@@ -248,10 +248,9 @@ export function SetupChat({
                 value={text}
                 onChangeText={setText}
                 onSubmitEditing={() => void send(text)}
-                submitBehavior="submit"
                 maxLength={MESSAGE_MAX}
-                multiline
-                numberOfLines={1}
+                // One line that stays one line, as other chat apps' boxes do: long messages scroll inside it.
+                returnKeyType="send"
                 style={[
                   styles.input,
                   { fontFamily: type.body.fontFamily, fontSize: type.body.fontSize },
@@ -418,15 +417,12 @@ const styles = StyleSheet.create({
     paddingVertical: SPACE.sm,
     gap: SPACE.sm,
   },
-  box: { flexDirection: 'row', alignItems: 'flex-end', gap: SPACE.sm },
+  box: { flexDirection: 'row', alignItems: 'center', gap: SPACE.sm },
   input: {
     flex: 1,
     minHeight: TAP,
-    maxHeight: 132,
     borderWidth: 1,
     borderRadius: RADIUS,
     paddingHorizontal: SPACE.md,
-    paddingTop: 13,
-    paddingBottom: 13,
   },
 });
