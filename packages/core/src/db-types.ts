@@ -1048,7 +1048,12 @@ export type Database = {
         Returns: undefined
       }
       claim_draft_turn: {
-        Args: { p_house: string; p_house_limit: number; p_user: string; p_user_limit: number }
+        Args: {
+          p_house: string
+          p_house_limit: number
+          p_user: string
+          p_user_limit: number
+        }
         Returns: string
       }
       close_month: {
@@ -1121,6 +1126,7 @@ export type Database = {
           name: string
         }[]
       }
+      identity_photo: { Args: { data: Json }; Returns: string }
       is_admin: { Args: { h: string }; Returns: boolean }
       is_member: { Args: { h: string }; Returns: boolean }
       join_house: { Args: { p_code: string }; Returns: string }
@@ -1187,9 +1193,9 @@ export type Database = {
         Args: { p_house: string; p_user: string }
         Returns: undefined
       }
-      reset_join_code: { Args: { p_house: string }; Returns: string }
       request_tick: { Args: never; Returns: undefined }
       require_user: { Args: never; Returns: string }
+      reset_join_code: { Args: { p_house: string }; Returns: string }
       resolve_dispute: {
         Args: { p_dispute: string; p_resolution: string }
         Returns: boolean
@@ -1211,6 +1217,7 @@ export type Database = {
         Args: { p_house: string; p_role: string; p_user: string }
         Returns: undefined
       }
+      set_my_photo: { Args: { photo: string }; Returns: undefined }
       settle_assignments: { Args: { p_items: Json }; Returns: number }
       shares_house: { Args: { other: string }; Returns: boolean }
       undo_cover: { Args: { p_assignment: string }; Returns: undefined }

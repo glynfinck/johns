@@ -65,7 +65,7 @@ export function FairnessFooter({
               <Row
                 key={row.userId}
                 leading={
-                  <Avatar name={nameOf(row.userId) ?? FOCUS_SHELL_COPY.formerHousemate} me={row.userId === viewerId} />
+                  <Avatar name={nameOf(row.userId) ?? FOCUS_SHELL_COPY.formerHousemate} userId={row.userId} me={row.userId === viewerId} />
                 }
                 title={weekWho(row.userId, viewerId, nameOf)}
                 trailing={row.balance}

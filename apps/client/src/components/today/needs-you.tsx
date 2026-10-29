@@ -38,7 +38,7 @@ export function NeedsYou({
       {items.map((item) => (
         <Row
           key={item.id}
-          leading={<Avatar name={members.find((m) => m.userId === item.userId)?.name ?? FOCUS_SHELL_COPY.formerHousemate} />}
+          leading={<Avatar name={members.find((m) => m.userId === item.userId)?.name ?? FOCUS_SHELL_COPY.formerHousemate} userId={item.userId} />}
           title={voteTitle(item, members)}
           // The John's name is never cut short.
           titleLines={2}
@@ -51,7 +51,7 @@ export function NeedsYou({
       {toCover.map((item) => (
         <Row
           key={item.id}
-          leading={<Avatar name={nameOf(item.userId) ?? FOCUS_SHELL_COPY.formerHousemate} />}
+          leading={<Avatar name={nameOf(item.userId) ?? FOCUS_SHELL_COPY.formerHousemate} userId={item.userId} />}
           title={coverTitle(item, members)}
           titleLines={2}
           meta={johnRow(item, userId, now, zone, nameOf).meta}

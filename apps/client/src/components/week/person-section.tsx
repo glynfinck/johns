@@ -39,7 +39,7 @@ export function PersonSection({
   return (
     <Section
       label={weekWho(person.userId, context.userId, context.nameOf)}
-      leading={<Avatar name={name} me={mine} size={24} />}
+      leading={<Avatar name={name} userId={person.userId} me={mine} size={24} />}
       tag={swapReady ? <Chip label={WEEK_SUMMARY_COPY.swapReady} icon={RepeatIcon} testID="swap-ready" /> : undefined}
       // Where the name, its tag and these don't fit on one line, these move under them.
       right={[counts, away, onCall].filter((line): line is string => Boolean(line))}

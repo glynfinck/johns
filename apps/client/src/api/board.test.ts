@@ -66,7 +66,7 @@ beforeEach(() => {
   mockRows.houses = { data: HOUSE, error: null };
   mockRows.members = {
     data: [
-      { user_id: 'u1', role: 'admin', streak: 3, immunity_tokens: 1, swap_tokens: 0, profiles: { display_name: 'Priya' } },
+      { user_id: 'u1', role: 'admin', streak: 3, immunity_tokens: 1, swap_tokens: 0, profiles: { display_name: 'Priya', avatar_url: 'https://lh3.googleusercontent.com/a/priya=s96-c' } },
       { user_id: 'u2', role: 'member', streak: 0, immunity_tokens: 0, swap_tokens: 1, profiles: null },
     ],
     error: null,
@@ -86,8 +86,8 @@ it('reads the house, its people and this week in one go', async () => {
   });
   expect(snapshot.rules).toMatchObject({ timezone: 'Europe/London', currency: 'GBP', weekStarts: 1, disputeHours: 24 });
   expect(snapshot.members).toEqual([
-    { userId: 'u1', name: 'Priya', role: 'admin', streak: 3, immunityTokens: 1, swapTokens: 0 },
-    { userId: 'u2', name: 'Housemate', role: 'member', streak: 0, immunityTokens: 0, swapTokens: 1 },
+    { userId: 'u1', name: 'Priya', photo: 'https://lh3.googleusercontent.com/a/priya=s96-c', role: 'admin', streak: 3, immunityTokens: 1, swapTokens: 0 },
+    { userId: 'u2', name: 'Housemate', photo: null, role: 'member', streak: 0, immunityTokens: 0, swapTokens: 1 },
   ]);
   expect(snapshot.week).toEqual(WEEK);
   // This week's, then any flag from last week still open: the mock answers both reads alike.

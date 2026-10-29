@@ -5,6 +5,8 @@ import { StyleSheet, Text, View } from 'react-native';
 
 import { INSET, LABEL_GAP, LEADING, ROW_MIN, TAP } from '@/theme';
 
+import { PhotosContext } from '@/hooks/photos';
+
 import { Avatar } from './avatar';
 import { CountBadge } from './badge';
 import { Button } from './button';
@@ -555,6 +557,24 @@ describe('the small marks', () => {
     expect(screen.getByTestId('avatar-me', HIDDEN)).toHaveStyle({ backgroundColor: light.foreground, borderRadius: 16 });
     expect(screen.getByTestId('avatar', HIDDEN)).toHaveStyle({ backgroundColor: light.secondary });
     expect(screen.getByText('PP', HIDDEN)).toHaveStyle({ color: light.card });
+  });
+
+  it("shows a housemate's sign-in photo, and their initials without one or when it won't load", async () => {
+    const photo = 'https://lh3.googleusercontent.com/a/priya=s96-c';
+    await render(
+      <PhotosContext.Provider value={new Map([['priya', photo]])}>
+        <Avatar name="Priya Patel" userId="priya" me />
+        <Avatar name="Sam Carter" userId="sam" />
+      </PhotosContext.Provider>,
+    );
+    const image = screen.getByTestId('avatar-photo', HIDDEN);
+    expect(image.props.source).toEqual({ uri: photo });
+    expect(screen.queryByText('PP', HIDDEN)).toBeNull();
+    expect(screen.getByText('SC', HIDDEN)).toBeTruthy();
+
+    await fireEvent(image, 'error');
+    expect(screen.queryByTestId('avatar-photo', HIDDEN)).toBeNull();
+    expect(screen.getByText('PP', HIDDEN)).toBeTruthy();
   });
 
   it("dots a John's lid colour", async () => {

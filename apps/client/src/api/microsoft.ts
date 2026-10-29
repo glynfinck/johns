@@ -2,6 +2,7 @@ import * as Linking from 'expo-linking';
 import * as WebBrowser from 'expo-web-browser';
 
 import type { SignInResult } from './auth';
+import { keepMicrosoftPhoto } from './microsoft-photo';
 import { supabase } from './supabase';
 
 // iOS and Android: Microsoft has no native sheet that hands Supabase a token,
@@ -15,14 +16,19 @@ export function microsoftReturn(): string {
   return Linking.createURL('signin');
 }
 
-/** The session's tokens, or the error, from the address the browser came back to. */
-export function sessionFromReturn(url: string): { accessToken: string; refreshToken: string } | { error: string } {
+/**
+ * The session's tokens, or the error, from the address the browser came
+ * back to; with Microsoft's own token, for the photo (microsoft-photo.ts).
+ */
+export function sessionFromReturn(
+  url: string,
+): { accessToken: string; refreshToken: string; providerToken: string | null } | { error: string } {
   const parsed = new URL(url);
   const params = new URLSearchParams(parsed.hash.replace(/^#/, ''));
   for (const [key, value] of parsed.searchParams) if (!params.has(key)) params.set(key, value);
   const accessToken = params.get('access_token');
   const refreshToken = params.get('refresh_token');
-  if (accessToken && refreshToken) return { accessToken, refreshToken };
+  if (accessToken && refreshToken) return { accessToken, refreshToken, providerToken: params.get('provider_token') };
   return { error: params.get('error_description') ?? params.get('error') ?? 'Microsoft sent no session.' };
 }
 
@@ -32,7 +38,8 @@ export async function signInWithMicrosoft(returnTo?: string): Promise<SignInResu
   const redirectTo = microsoftReturn();
   const { data, error } = await supabase.auth.signInWithOAuth({
     provider: 'azure',
-    options: { redirectTo, scopes: 'email', skipBrowserRedirect: true },
+    // User.Read lets the app read the account's photo from Microsoft Graph.
+    options: { redirectTo, scopes: 'email User.Read', skipBrowserRedirect: true },
   });
   if (error) throw error;
   if (!data.url) throw new Error('Supabase sent no Microsoft address.');
@@ -42,10 +49,11 @@ export async function signInWithMicrosoft(returnTo?: string): Promise<SignInResu
 
   const session = sessionFromReturn(result.url);
   if ('error' in session) throw new Error(session.error);
-  const { error: sessionError } = await supabase.auth.setSession({
+  const { data: signedIn, error: sessionError } = await supabase.auth.setSession({
     access_token: session.accessToken,
     refresh_token: session.refreshToken,
   });
   if (sessionError) throw sessionError;
+  if (signedIn.session && session.providerToken) void keepMicrosoftPhoto(signedIn.session, session.providerToken);
   return 'signed-in';
 }

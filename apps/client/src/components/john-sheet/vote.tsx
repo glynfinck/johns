@@ -28,6 +28,7 @@ export function Disputed({ item, context }: { item: BoardItem; context: JohnShee
       <View style={styles.reason}>
         <Avatar
           name={dispute.raisedBy ? context.nameOf(dispute.raisedBy) : FOCUS_SHELL_COPY.formerHousemate}
+          userId={dispute.raisedBy}
           me={dispute.raisedBy === context.userId}
         />
         <Body style={styles.shrink}>{`“${dispute.reason}”`}</Body>

@@ -205,7 +205,7 @@ function DaySheet({
               return (
                 <Row
                   key={t.id}
-                  leading={<Avatar name={who?.name ?? FOCUS_SHELL_COPY.formerHousemate} me={t.userId === me} />}
+                  leading={<Avatar name={who?.name ?? FOCUS_SHELL_COPY.formerHousemate} userId={t.userId} me={t.userId === me} />}
                   title={who ? name(who) : FOCUS_SHELL_COPY.formerHousemate}
                   meta={[AWAY_COPY.backOn(dateRange(back, back)), t.note || null].filter(Boolean).join(' · ')}
                   testID="day-away"
@@ -224,7 +224,7 @@ function DaySheet({
               <View style={styles.home}>
                 {home.map((p) => (
                   <View key={p.userId} style={styles.homeItem}>
-                    <Avatar name={p.name} me={p.userId === me} size={24} />
+                    <Avatar name={p.name} userId={p.userId} me={p.userId === me} size={24} />
                     <Body>{name(p)}</Body>
                   </View>
                 ))}

@@ -68,7 +68,7 @@ const read = loadHouse as jest.Mock;
 const HOUR = 3_600_000;
 const at = (hours: number) => new Date(Date.now() + hours * HOUR).toISOString();
 
-const MEGAN: Housemate = { userId: 'megan', name: 'Megan', role: 'member', streak: 0, immunityTokens: 0, swapTokens: 0 };
+const MEGAN: Housemate = { userId: 'megan', name: 'Megan', photo: null, role: 'member', streak: 0, immunityTokens: 0, swapTokens: 0 };
 
 /** Priya, with what she holds changed. */
 function priyaWith(tokens: Partial<Housemate>): Housemate[] {
