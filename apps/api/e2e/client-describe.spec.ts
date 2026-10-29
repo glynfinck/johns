@@ -4,8 +4,8 @@ import { expect, test, type Page } from "@playwright/test";
 import { CLIENT_URL, cleanUp, signInToClient } from "./auth";
 
 // The Expo app's web build: Describe your house, from Today's setup card to
-// the John list. The e2e stack has no ANTHROPIC_API_KEY, so "Draft my Johns"
-// gets the starter list that fits, as production does until the key is set.
+// the John list. The e2e stack has no AI Gateway, so "Draft my Johns" gets
+// the starter list that fits, as production does when the gateway is down.
 test.use({ baseURL: CLIENT_URL });
 
 const made: string[] = [];

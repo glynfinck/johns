@@ -30,8 +30,8 @@ meant for the House Pass.
 - Only an admin of the house may ask (403 otherwise). A house gets
   `DRAFTS_PER_DAY` (10) drafts from Claude in any 24 hours (409
   `draft_limit` after that); starter lists are unlimited.
-- Claude is `claude-haiku-5-5` with structured outputs, effort low, the
-  fixed instructions cached (`apps/api/lib/ai/house-draft.ts`). Core's
+- Claude is `anthropic/claude-haiku-5.5` through Vercel's AI Gateway (OIDC
+  on Vercel, no key), with structured outputs (`apps/api/lib/ai/house-draft.ts`). Core's
   `tidyDraft` checks every value afterwards: names cut to fit, numbers put
   in range, unknown kinds made Other, duplicates dropped, group members
   matched to housemates by name ("me" is the asker), at most 30 Johns and 6
@@ -50,7 +50,8 @@ meant for the House Pass.
 
 ## Edge cases
 
-- No `ANTHROPIC_API_KEY` in `apps/api`'s environment, Claude erroring,
+- No AI Gateway (locally and in CI, where there's no Vercel or
+  `AI_GATEWAY_API_KEY`), Claude erroring,
   refusing, being cut off or drafting nothing: the answer is the starter
   list `guessStarter` picks from the description, and the screen says a
   starter list stood in. The app also falls back to one if the API can't be
@@ -75,5 +76,5 @@ and from the empty John list.
 - [x] Starter lists work with no key set, and when Claude fails.
 - [x] Housemates who aren't admins are refused; a house is held to 10
   drafts a day.
-- [ ] `ANTHROPIC_API_KEY` is set on the `jonz-api` Vercel project (by hand,
-  DEPLOYMENT.md) and a real description drafts a sensible list.
+- [ ] On production, a real description drafts a sensible list through the
+  AI Gateway.

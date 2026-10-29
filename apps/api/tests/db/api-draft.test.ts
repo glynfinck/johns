@@ -10,22 +10,24 @@ import { makeHouse } from "@/tests/support/factories";
 /**
  * POST /api/setup/draft, called as the app calls it, and the move behind
  * it with Claude stood in for. Claude itself is never called here: without
- * ANTHROPIC_API_KEY the route offers a starter list, which is also what
- * production does until the key is set.
+ * the AI Gateway (no Vercel, no AI_GATEWAY_API_KEY) the route offers a
+ * starter list, which is also what production does when the gateway is down.
  */
 
 const BASE = "http://localhost:3205/api/setup/draft";
 const db = adminClient();
-const saved = { origins: process.env.ALLOWED_ORIGINS, key: process.env.ANTHROPIC_API_KEY };
+const saved = { origins: process.env.ALLOWED_ORIGINS, key: process.env.AI_GATEWAY_API_KEY, vercel: process.env.VERCEL };
 
 beforeAll(() => {
   process.env.ALLOWED_ORIGINS = "http://localhost:8205";
-  delete process.env.ANTHROPIC_API_KEY;
+  delete process.env.AI_GATEWAY_API_KEY;
+  delete process.env.VERCEL;
 });
 
 afterAll(() => {
   process.env.ALLOWED_ORIGINS = saved.origins;
-  if (saved.key) process.env.ANTHROPIC_API_KEY = saved.key;
+  if (saved.key) process.env.AI_GATEWAY_API_KEY = saved.key;
+  if (saved.vercel) process.env.VERCEL = saved.vercel;
 });
 
 async function draftAs(actor: Actor | undefined, body: unknown) {

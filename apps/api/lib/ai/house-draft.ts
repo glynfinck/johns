@@ -1,16 +1,17 @@
 import "server-only";
 
-import Anthropic from "@anthropic-ai/sdk";
-import { zodOutputFormat } from "@anthropic-ai/sdk/helpers/zod";
+import { generateText, Output } from "ai";
 import { APP_NAME, CATEGORIES, DOW_LABEL, type IsoDow, type RawDraft } from "@app/core";
 import { z } from "zod";
 
 // Describe your house: Claude drafts a John list from a sentence or two. A
 // small, cheap model is plenty for this, with structured outputs so the answer
 // is always JSON of the right shape; core's tidyDraft still checks every value,
-// because a schema can't say "between 1 and 10" to the model.
+// because a schema can't say "between 1 and 10" to the model. The call goes
+// through Vercel's AI Gateway, as Pub Golf's does: on Vercel it signs in with
+// the project's OIDC token, so there is no key to keep.
 
-export const DRAFT_MODEL = "claude-haiku-5-5";
+export const DRAFT_MODEL = "anthropic/claude-haiku-5.5";
 
 /** What Claude is asked to return. Loose on purpose: ranges are core's to enforce. */
 const ModelDraft = z.object({
@@ -81,30 +82,33 @@ export interface DraftAnswer {
   outputTokens: number;
 }
 
-/** Whether drafting with Claude is set up here: without a key, setup falls back to starter lists. */
+/**
+ * Whether drafting with Claude is set up here: on Vercel (the gateway signs in
+ * with the deployment's OIDC token) or with AI_GATEWAY_API_KEY set. Without
+ * either, as locally and in CI, setup falls back to starter lists.
+ */
 export function canDraft(): boolean {
-  return Boolean(process.env.ANTHROPIC_API_KEY);
+  return Boolean(process.env.VERCEL || process.env.AI_GATEWAY_API_KEY);
 }
 
 /**
- * Ask Claude for a draft. Throws when it can't answer (no key, the API down,
- * a refusal, a cut-off answer); the caller falls back to a starter list.
+ * Ask Claude for a draft. Throws when it can't answer (the gateway down, a
+ * refusal, a cut-off answer); the caller falls back to a starter list.
  */
 export async function askClaude(ctx: DraftContext): Promise<DraftAnswer> {
-  const client = new Anthropic({ timeout: 25_000, maxRetries: 1 });
-  const response = await client.messages.parse({
+  const result = await generateText({
     model: DRAFT_MODEL,
-    max_tokens: 8000,
-    output_config: { effort: "low", format: zodOutputFormat(ModelDraft) },
-    system: [{ type: "text", text: SYSTEM, cache_control: { type: "ephemeral" } }],
-    messages: [{ role: "user", content: userTurn(ctx) }],
+    system: SYSTEM,
+    prompt: userTurn(ctx),
+    output: Output.object({ schema: ModelDraft, name: "house_draft" }),
+    maxOutputTokens: 8000,
+    maxRetries: 1,
+    timeout: 25_000,
   });
-  if (response.stop_reason !== "end_turn" || !response.parsed_output) {
-    throw new Error(`No draft: ${response.stop_reason}`);
-  }
+  if (result.finishReason !== "stop") throw new Error(`No draft: ${result.finishReason}`);
   return {
-    raw: response.parsed_output,
-    inputTokens: response.usage.input_tokens,
-    outputTokens: response.usage.output_tokens,
+    raw: result.output,
+    inputTokens: result.usage.inputTokens ?? 0,
+    outputTokens: result.usage.outputTokens ?? 0,
   };
 }
