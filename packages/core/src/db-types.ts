@@ -404,6 +404,54 @@ export type Database = {
           },
         ]
       }
+      house_drafts: {
+        Row: {
+          created_at: string
+          house_id: string
+          id: string
+          input_tokens: number
+          johns: number
+          outcome: string
+          output_tokens: number
+          user_id: string | null
+        }
+        Insert: {
+          created_at?: string
+          house_id: string
+          id?: string
+          input_tokens?: number
+          johns?: number
+          outcome: string
+          output_tokens?: number
+          user_id?: string | null
+        }
+        Update: {
+          created_at?: string
+          house_id?: string
+          id?: string
+          input_tokens?: number
+          johns?: number
+          outcome?: string
+          output_tokens?: number
+          user_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "house_drafts_house_id_fkey"
+            columns: ["house_id"]
+            isOneToOne: false
+            referencedRelation: "houses"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "house_drafts_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       houses: {
         Row: {
           away_makeup: number
