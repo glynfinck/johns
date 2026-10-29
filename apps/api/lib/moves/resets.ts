@@ -1,0 +1,113 @@
+import "server-only";
+
+import {
+  forfeitFor,
+  passOf,
+  passUnlocked,
+  resetWhat,
+  ResetPreview,
+  rulesOf,
+  weekWindow,
+  type ResetRequest,
+} from "@app/core";
+
+import { dealWeek, loadHouse } from "@/lib/engine/tick";
+import { pushNotifier } from "@/lib/push";
+import { createAdminClient } from "@/lib/supabase/admin";
+
+import type { Caller, Refusal } from "./disputes";
+
+/**
+ * An admin's reset (supabase/migrations/*_admin_resets.sql admin_reset):
+ * without `apply`, what it would change, for the reset sheet; with it, the
+ * change, a push to everyone it touched, and the action's id for Undo.
+ *
+ * admin_reset is the server's, so who is asking is checked here through the
+ * caller's own session, and it checks again. What a late or missed John
+ * costs comes from the house's rules and House Pass, as the clock's does.
+ * A re-deal clears the week, then deals it again here (lib/engine/tick.ts),
+ * and only this week can be dealt. The web and POST /api/resets share it;
+ * Ask Jonz's tools will too.
+ */
+export async function resetHouse(
+  caller: Caller,
+  request: ResetRequest,
+  now: Date,
+): Promise<{ refusal: Refusal } | { preview: ResetPreview } | { action: string }> {
+  const { data: me } = await caller.db
+    .from("members")
+    .select("role, profiles(display_name)")
+    .eq("house_id", request.houseId)
+    .eq("user_id", caller.userId)
+    .maybeSingle();
+  if (!me) return { refusal: { code: "42501", message: "not_in_house" } };
+  if (me.role !== "admin") return { refusal: { code: "42501", message: "admins_only" } };
+
+  const admin = createAdminClient();
+  const { house, members } = await loadHouse(admin, request.houseId);
+  const rules = rulesOf(house);
+  const staked = passUnlocked(passOf(house), now);
+  const forfeits = {
+    late: staked ? forfeitFor("late", rules) : 0,
+    missed: staked ? forfeitFor("missed", rules) : 0,
+  };
+
+  if (request.kind === "redeal") {
+    const { data: week } = await admin.from("weeks").select("starts_on").eq("id", request.week ?? "").maybeSingle();
+    if (!week || week.starts_on !== weekWindow(now, rules.timezone, rules.weekStarts).startsOn) {
+      return { refusal: { code: "P0001", message: "not_this_week" } };
+    }
+  }
+
+  const target = {
+    week: request.week,
+    user: request.user,
+    assignment: request.assignment,
+    outcome: request.outcome,
+    month: request.month,
+  };
+  const { data, error } = await admin.rpc("admin_reset", {
+    p_actor: caller.userId,
+    p_house: request.houseId,
+    p_kind: request.kind,
+    p_target: target,
+    p_forfeits: forfeits,
+    p_apply: request.apply,
+  });
+  if (error) return { refusal: error };
+  if (!request.apply) return { preview: ResetPreview.parse(data) };
+
+  const done = data as { action: string; told: string[] };
+  if (request.kind === "redeal") {
+    try {
+      await dealWeek(admin, house, members, weekWindow(now, rules.timezone, rules.weekStarts), now, true);
+    } catch (e) {
+      // The week is cleared and the clear is in History; the deal says why it couldn't follow.
+      return { refusal: { message: e instanceof Error ? e.message : String(e) } };
+    }
+  }
+
+  const notify = pushNotifier(admin);
+  if (notify && done.told.length > 0) {
+    const by = (me.profiles as { display_name: string } | null)?.display_name ?? "An admin";
+    const { data: action } = await admin.from("house_actions").select("subject, data").eq("id", done.action).single();
+    const words = (action?.data ?? {}) as Record<string, unknown>;
+    const subjectId = action?.subject ?? null;
+    const { data: subject } = subjectId
+      ? await admin.from("profiles").select("display_name").eq("id", subjectId).maybeSingle()
+      : { data: null };
+    for (const userId of done.told) {
+      // "Glyn reset your week", "Glyn marked Sam’s Bins done".
+      const whose = userId === subjectId ? "You" : (subject?.display_name ?? "Someone");
+      await notify([userId], {
+        title: `${by} ${resetWhat(words, whose)}`,
+        body: "Open Jonz to see what changed.",
+        url: request.kind === "letoff" ? "/house/stake" : "/week",
+        kind: "checks",
+        zone: rules.timezone,
+        tag: `reset:${done.action}`,
+      });
+    }
+  }
+  return { action: done.action };
+}

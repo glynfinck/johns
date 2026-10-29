@@ -1,20 +1,23 @@
-import { WEEK_SUMMARY_COPY } from '@app/core';
+import { RESET_COPY, WEEK_SUMMARY_COPY, type ResetKind } from '@app/core';
 import { useRouter } from 'expo-router';
-import { ListTodoIcon, PlaneIcon, ShuffleIcon } from 'lucide-react-native';
+import { CircleSlashIcon, ListTodoIcon, PlaneIcon, RotateCcwIcon, ShuffleIcon } from 'lucide-react-native';
 import { useState } from 'react';
 
 import { dealThisWeek } from '@/api/settings';
 import { ActionMenu, type MenuAction } from '@/components/action-menu';
 import { ConfirmSheet } from '@/components/confirm-sheet';
+import { ResetSheet } from '@/components/reset-sheet';
 import { useToast } from '@/components/toast';
 import { useMove } from '@/hooks/use-move';
 
 /**
  * Week's "•••" menu: "I'm away…" (Time away) for everyone; for admins, "Edit
- * the John list" and, while nothing this week is ticked, "Re-deal this
- * week", which asks first, then deals the way the deal button does. The
- * server checks it's an admin asking and that nothing is ticked; a refusal
- * shows in the confirm.
+ * the John list" and fixing the week. While nothing this week is ticked,
+ * "Re-deal this week" asks first, then deals the way the deal button does.
+ * Once something is, re-dealing is a reset, beside "Reset this week" and
+ * "Skip this week": each opens the reset sheet, which says what it changes
+ * before it does. The server checks it's an admin asking; a refusal shows
+ * where it was made.
  */
 export function WeekMenu({
   visible,
@@ -22,6 +25,8 @@ export function WeekMenu({
   houseId,
   admin,
   canRedeal,
+  weekId,
+  userId,
 }: {
   visible: boolean;
   onClose: () => void;
@@ -29,6 +34,10 @@ export function WeekMenu({
   admin: boolean;
   /** This week is dealt and nothing in it has been ticked. */
   canRedeal: boolean;
+  /** This week, once dealt. */
+  weekId: string | null;
+  /** Who's looking. */
+  userId: string;
 }) {
   const router = useRouter();
   const toast = useToast();
@@ -36,6 +45,7 @@ export function WeekMenu({
   const [confirming, setConfirming] = useState(false);
   // The last refusal belongs to the confirm it was made in, not the next one.
   const [asked, setAsked] = useState(false);
+  const [resetting, setResetting] = useState<ResetKind | null>(null);
 
   const actions: MenuAction[] = [
     { label: WEEK_SUMMARY_COPY.awayAction, icon: PlaneIcon, onPress: () => router.push('/house/away'), testID: 'menu-away' },
@@ -52,6 +62,13 @@ export function WeekMenu({
         },
         testID: 'menu-redeal',
       });
+    }
+    if (weekId) {
+      actions.push({ label: RESET_COPY.resetWeek, icon: RotateCcwIcon, onPress: () => setResetting('week'), testID: 'menu-reset-week' });
+      if (!canRedeal) {
+        actions.push({ label: RESET_COPY.redeal, icon: ShuffleIcon, onPress: () => setResetting('redeal'), testID: 'menu-reset-redeal' });
+      }
+      actions.push({ label: RESET_COPY.skip, icon: CircleSlashIcon, onPress: () => setResetting('skip'), testID: 'menu-skip-week' });
     }
   }
 
@@ -78,6 +95,12 @@ export function WeekMenu({
         onConfirm={() => void redeal()}
         onClose={() => setConfirming(false)}
         testID="redeal-confirm"
+      />
+      <ResetSheet
+        ask={resetting && weekId ? { houseId, kind: resetting, week: weekId } : null}
+        userId={userId}
+        words={{}}
+        onClose={() => setResetting(null)}
       />
     </>
   );

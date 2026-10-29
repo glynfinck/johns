@@ -85,7 +85,9 @@ function RecordFor({ houseId, userId, span }: { houseId: string; userId: string;
               onOpen={(id) => router.push({ pathname: '/week/record/[userId]', params: { userId: id, span } })}
             />
           </Section>
-          {shown.length > 0 ? <RecordKey marks={shown} /> : null}
+          {shown.length > 0 ? (
+            <RecordKey marks={shown} changed={record.rows.some((r) => r.cells.some((c) => c.changed))} />
+          ) : null}
         </>
       ) : query.isError || rows.isError ? (
         <ReadFailed onRetry={() => void Promise.all([query.refetch(), rows.refetch()])} />

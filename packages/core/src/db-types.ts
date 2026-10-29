@@ -36,6 +36,8 @@ export type Database = {
     Tables: {
       assignments: {
         Row: {
+          changed_at: string | null
+          changed_by: string | null
           category: string
           closes_at: string | null
           covered_by: string | null
@@ -62,6 +64,8 @@ export type Database = {
           week_id: string
         }
         Insert: {
+          changed_at?: string | null
+          changed_by?: string | null
           category: string
           closes_at?: string | null
           covered_by?: string | null
@@ -88,6 +92,8 @@ export type Database = {
           week_id: string
         }
         Update: {
+          changed_at?: string | null
+          changed_by?: string | null
           category?: string
           closes_at?: string | null
           covered_by?: string | null
@@ -856,6 +862,27 @@ export type Database = {
           },
         ]
       }
+      month_let_offs: {
+        Row: {
+          created_at: string
+          house_id: string
+          let_off_by: string | null
+          month: string
+        }
+        Insert: {
+          created_at?: string
+          house_id: string
+          let_off_by?: string | null
+          month: string
+        }
+        Update: {
+          created_at?: string
+          house_id?: string
+          let_off_by?: string | null
+          month?: string
+        }
+        Relationships: []
+      }
       notification_prefs: {
         Row: {
           checks: boolean
@@ -1087,6 +1114,8 @@ export type Database = {
       }
       weeks: {
         Row: {
+          skipped_at: string | null
+          skipped_by: string | null
           closed_at: string | null
           created_at: string
           ends_at: string
@@ -1096,6 +1125,8 @@ export type Database = {
           starts_on: string
         }
         Insert: {
+          skipped_at?: string | null
+          skipped_by?: string | null
           closed_at?: string | null
           created_at?: string
           ends_at: string
@@ -1105,6 +1136,8 @@ export type Database = {
           starts_on: string
         }
         Update: {
+          skipped_at?: string | null
+          skipped_by?: string | null
           closed_at?: string | null
           created_at?: string
           ends_at?: string
@@ -1324,6 +1357,19 @@ export type Database = {
         Args: { p_about?: string; p_kind: string }
         Returns: string
       }
+      admin_reset: {
+        Args: {
+          p_actor: string
+          p_apply?: boolean
+          p_forfeits?: Json
+          p_house: string
+          p_kind: string
+          p_target: Json
+        }
+        Returns: Json
+      }
+      hand_over: { Args: { p_house: string; p_to: string }; Returns: undefined }
+      recount_streaks: { Args: { p_house: string }; Returns: undefined }
       use_immunity: { Args: { p_assignment: string }; Returns: undefined }
       use_swap: {
         Args: { p_mine: string; p_theirs: string }

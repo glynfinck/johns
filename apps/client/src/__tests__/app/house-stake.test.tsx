@@ -11,6 +11,7 @@ import { renderPages, untilRead } from '@/testing/pages';
 jest.mock('@/api/board', () => ({ loadHouse: jest.fn() }));
 jest.mock('@/api/house', () => ({ catchUp: jest.fn() }));
 jest.mock('@/api/stake', () => ({ loadStake: jest.fn(), confirmPayment: jest.fn() }));
+jest.mock('@/api/resets', () => ({ previewReset: jest.fn(), applyReset: jest.fn() }));
 jest.mock('@/api/supabase', () => ({ supabase: {} }));
 jest.mock('@/hooks/use-membership', () => ({
   useMembership: () => ({ session: { user: { id: 'priya' } }, house: { id: 'h1', name: 'Flat 3' } }),

@@ -566,7 +566,7 @@ function happened(row: HistoryRow): string {
   return (row.kind === "forfeit" && row.john?.due_at) || row.created_at;
 }
 
-export type HistoryKind = "late" | "missed" | "forfeit" | "share" | "cap_refund" | "payment" | "other";
+export type HistoryKind = "late" | "missed" | "forfeit" | "share" | "cap_refund" | "payment" | "correction" | "other";
 
 export interface HistoryLine {
   id: number;
@@ -633,6 +633,16 @@ function historyLine(row: HistoryRow, input: { me: string; whole: boolean; membe
         losing: false,
       };
     }
+    case "correction":
+      // A reset after the month was shared out: the difference, put right this month.
+      return {
+        id: row.id,
+        kind: "correction",
+        title: row.john?.name ? STAKE_HISTORY_COPY.correctionOf(row.john.name) : STAKE_HISTORY_COPY.correction,
+        meta: whose(day),
+        amount: signed,
+        losing: row.amount_minor < 0,
+      };
     default:
       return { id: row.id, kind: "other", title: row.kind, meta: whose(day), amount: signed, losing: row.amount_minor < 0 };
   }

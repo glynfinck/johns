@@ -36,7 +36,8 @@ export function markColour({ colors }: Theme, mark: RecordMark): { fill: string;
   }
 }
 
-export function Square({ mark }: { mark: RecordMark }) {
+/** A square: its mark's colour, and a small amber dot in its corner when an admin changed something in it. */
+export function Square({ mark, changed = false }: { mark: RecordMark; changed?: boolean }) {
   const theme = useTheme();
   const { fill, edge } = markColour(theme, mark);
   return (
@@ -44,7 +45,11 @@ export function Square({ mark }: { mark: RecordMark }) {
       aria-hidden
       testID={`square-${mark}`}
       style={[styles.cell, { backgroundColor: fill }, edge ? { borderWidth: 1.5, borderColor: edge } : null]}
-    />
+    >
+      {changed ? (
+        <View testID="square-changed" style={[styles.dot, { backgroundColor: theme.colors.hivis, borderColor: theme.colors.background }]} />
+      ) : null}
+    </View>
   );
 }
 
@@ -111,7 +116,7 @@ function RecordLine({
       </View>
       <View style={styles.cells}>
         {row.cells.map((cell) => (
-          <Square key={cell.key} mark={cell.mark} />
+          <Square key={cell.key} mark={cell.mark} changed={cell.changed} />
         ))}
       </View>
       <Meta numberOfLines={2}>{counts}</Meta>
@@ -120,7 +125,7 @@ function RecordLine({
 }
 
 /** What the colours mean, the marks that show on the grid only. */
-export function RecordKey({ marks }: { marks: readonly RecordMark[] }) {
+export function RecordKey({ marks, changed = false }: { marks: readonly RecordMark[]; changed?: boolean }) {
   return (
     <View accessibilityRole="list" accessibilityLabel={RECORD_COPY.key} style={styles.key} testID="record-key">
       {marks.map((mark) => (
@@ -129,6 +134,12 @@ export function RecordKey({ marks }: { marks: readonly RecordMark[] }) {
           <Meta>{RECORD_COPY.marks[mark]}</Meta>
         </View>
       ))}
+      {changed ? (
+        <View style={styles.keyItem}>
+          <Square mark="none" changed />
+          <Meta>{RECORD_COPY.changed}</Meta>
+        </View>
+      ) : null}
     </View>
   );
 }
@@ -140,6 +151,8 @@ const styles = StyleSheet.create({
   pct: { flexShrink: 0 },
   cells: { flexDirection: 'row', flexWrap: 'wrap', gap: 3 },
   cell: { width: CELL, height: CELL, borderRadius: 2 },
+  // The amber dot of a changed result, edged in the page colour so it reads on any mark.
+  dot: { position: 'absolute', top: -3, right: -3, width: 7, height: 7, borderRadius: 4, borderWidth: 1 },
   key: { paddingHorizontal: INSET, flexDirection: 'row', flexWrap: 'wrap', columnGap: SPACE.lg, rowGap: SPACE.xs },
   keyItem: { flexDirection: 'row', alignItems: 'center', gap: SPACE.xs },
 });

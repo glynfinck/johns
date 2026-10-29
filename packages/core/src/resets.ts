@@ -1,0 +1,304 @@
+import { z } from "zod";
+
+import type { Currency } from "./domain";
+import { firstName, monthLabel, weekRange } from "./format";
+import { formatMoney } from "./money";
+import { signedPoints } from "./record";
+
+// Resets: an admin fixing a week that went wrong. The database works out
+// what each would change (admin_reset, 20261101100000_admin_resets.sql) and
+// this says it, the same way on the reset sheet and in Ask Jonz.
+
+export const RESET_KINDS = ["result", "person_week", "week", "redeal", "skip", "letoff"] as const;
+export type ResetKind = (typeof RESET_KINDS)[number];
+
+/** What "Change result" can make a John. */
+export const RESULT_CHOICES = ["done", "late", "missed", "excused"] as const;
+export type ResultChoice = (typeof RESULT_CHOICES)[number];
+
+/** POST /api/resets: what to reset, and whether to do it or only say what it would do. */
+export const ResetRequest = z.object({
+  houseId: z.uuid(),
+  kind: z.enum(RESET_KINDS),
+  week: z.uuid().optional(),
+  user: z.uuid().optional(),
+  assignment: z.uuid().optional(),
+  outcome: z.enum(RESULT_CHOICES).optional(),
+  month: z.string().regex(/^\d{4}-\d{2}$/).optional(),
+  apply: z.boolean().default(false),
+});
+export type ResetRequest = z.infer<typeof ResetRequest>;
+
+const Tally = z.object({
+  ticks: z.number().optional(),
+  points: z.number().optional(),
+  forfeit: z.number().optional(),
+});
+
+/** What a reset would change: admin_reset's answer without p_apply. */
+export const ResetPreview = z.object({
+  kind: z.enum(RESET_KINDS),
+  week: z.object({ id: z.string(), starts_on: z.string(), starts_at: z.string(), ends_at: z.string() }).nullable(),
+  month: z.string().nullable(),
+  /** Each person's change: ticks cleared, balance points, forfeit back (+) or now owed (−), in minor units. */
+  people: z.record(z.string(), Tally),
+  /** Who hears about it: everyone touched but the admin. */
+  told: z.array(z.string()),
+  reopened: z.number(),
+  past_due: z.number(),
+  flags: z.number(),
+  disputes: z.number(),
+  /** Some of the money is in a month already shared out: it goes in as a correction. */
+  correction: z.boolean(),
+  nothing: z.boolean(),
+});
+export type ResetPreview = z.infer<typeof ResetPreview>;
+
+export const ResetResponse = z.object({
+  preview: ResetPreview.optional(),
+  /** The house_actions row, for Undo. */
+  action: z.string().optional(),
+});
+export type ResetResponse = z.infer<typeof ResetResponse>;
+
+export const RESET_COPY = {
+  fix: "Fix this week",
+  resetWeek: "Reset this week…",
+  resetWeekMeta: "Same Johns, ticks cleared",
+  redeal: "Re-deal this week…",
+  redealMeta: "Dealt again from the list",
+  skip: "Skip this week…",
+  skipMeta: "Nothing counts",
+  resetPerson: (name: string) => `Reset ${name}’s week`,
+  resetPersonMeta: "Their ticks this week come off",
+  changeResult: "Change result",
+  changeResultMeta: "Admins",
+  letOff: (month: string) => `Let everyone off ${month}`,
+  letOffMeta: "Its forfeits go; marks stay",
+  choice: { done: "Done", late: "Late", missed: "Missed", excused: "Let off" } as Record<ResultChoice, string>,
+  reading: "Working out what changes",
+  unreadable: "What this would change couldn’t be worked out.",
+  nothing: "Nothing to reset: nobody has ticked anything here.",
+  done: "Done.",
+  undo: (until: string) => `You can undo this from History until ${until}’s Stake is shared out.`,
+  ticks: (n: number) => (n === 1 ? "1 tick cleared" : `${n} ticks cleared`),
+  balances: "Balances",
+  stake: "Stake",
+  track: "Track record",
+  cleared: "Also cleared",
+  noChange: "No change",
+  pts: "pts",
+  removed: (money: string) => `${money} of forfeits removed`,
+  added: (money: string) => `${money} of forfeits added`,
+  asCorrection: "as a correction this month",
+  told: (names: string) => `${names} ${names.includes(" and ") ? "get" : "gets"} a notification`,
+  toldNobody: "Nobody else is told",
+  you: "you",
+} as const;
+
+export interface ResetLine {
+  key: "ticks" | "balances" | "stake" | "track" | "cleared";
+  label: string;
+  value: string;
+}
+
+export interface ResetSheet {
+  title: string;
+  body: string;
+  lines: ResetLine[];
+  told: string;
+  undo: string;
+  /** The hazard button: says what it does. */
+  confirm: string;
+}
+
+export interface ResetWords {
+  kind: ResetKind;
+  /** Anyone's name by id; the viewer's is "You". */
+  nameOf: (userId: string) => string;
+  viewerId: string;
+  currency: Currency;
+  zone: string;
+  /** The person, for one person's week or one John's result. */
+  person?: string;
+  /** The John, for a result. */
+  john?: string;
+  outcome?: ResultChoice;
+  /** The John's result now, for a result: "missed". */
+  was?: string | null;
+  /** The month, for letting one off: "2026-10". */
+  month?: string;
+}
+
+/** "October" from "2026-10". */
+function monthOnly(month: string): string {
+  return monthLabel(month).split(" ")[0];
+}
+
+function and(names: readonly string[]): string {
+  if (names.length < 2) return names.join("");
+  return `${names.slice(0, -1).join(", ")} and ${names[names.length - 1]}`;
+}
+
+const RESULT_WORDS: Record<string, string> = {
+  done: "done",
+  late: "late",
+  missed: "missed",
+  excused: "let off",
+  covered: "covered",
+};
+
+/** The reset sheet's words and numbers, from what the database says the reset would do. */
+export function resetSheet(preview: ResetPreview, w: ResetWords): ResetSheet {
+  const short = (id: string) => (id === w.viewerId ? RESET_COPY.you : firstName(w.nameOf(id)));
+  const people = Object.entries(preview.people).sort(([a], [b]) => short(a).localeCompare(short(b)));
+  const range = preview.week
+    ? weekRange(new Date(preview.week.starts_at), new Date(preview.week.ends_at), w.zone)
+    : "";
+  const monthName = preview.month ? monthOnly(preview.month) : "";
+  const { title, body, confirm } = resetHead(w, range, monthName);
+
+  const lines: ResetLine[] = [];
+  const ticks = people.filter(([, t]) => (t.ticks ?? 0) > 0);
+  if (ticks.length > 0) {
+    const total = ticks.reduce((n, [, t]) => n + (t.ticks ?? 0), 0);
+    lines.push({
+      key: "ticks",
+      label: RESET_COPY.ticks(total),
+      value: ticks.map(([id, t]) => `${short(id)} ${t.ticks}`).join(" · "),
+    });
+  }
+  if (w.kind !== "letoff") {
+    const moved = people.filter(([, t]) => Math.round((t.points ?? 0) * 10) !== 0);
+    lines.push({
+      key: "balances",
+      label: RESET_COPY.balances,
+      value:
+        w.kind === "redeal" && moved.length === 0
+          ? "From the new deal"
+          : moved.length === 0
+            ? RESET_COPY.noChange
+            : `${moved.map(([id, t]) => `${short(id)} ${signedPoints(t.points ?? 0)}`).join(" · ")} ${RESET_COPY.pts}`,
+    });
+  }
+  const back = people.reduce((n, [, t]) => n + Math.max(t.forfeit ?? 0, 0), 0);
+  const owed = people.reduce((n, [, t]) => n + Math.max(-(t.forfeit ?? 0), 0), 0);
+  const money: string[] = [];
+  if (back > 0) money.push(RESET_COPY.removed(formatMoney(back, w.currency)));
+  if (owed > 0) money.push(RESET_COPY.added(formatMoney(owed, w.currency)));
+  lines.push({
+    key: "stake",
+    label: RESET_COPY.stake,
+    value:
+      money.length === 0
+        ? RESET_COPY.noChange
+        : `${money.join(", ")}${preview.correction ? `, ${RESET_COPY.asCorrection}` : ""}`,
+  });
+  lines.push({ key: "track", label: RESET_COPY.track, value: trackLine(preview, w) });
+  const cleared: string[] = [];
+  if (preview.flags > 0) cleared.push(preview.flags === 1 ? "1 flag" : `${preview.flags} flags`);
+  if (preview.disputes > 0) cleared.push(preview.disputes === 1 ? "1 dispute" : `${preview.disputes} disputes`);
+  if (cleared.length > 0) lines.push({ key: "cleared", label: RESET_COPY.cleared, value: and(cleared) });
+
+  const told = preview.told.filter((id) => id !== w.viewerId).map((id) => firstName(w.nameOf(id)));
+  return {
+    title,
+    body,
+    lines,
+    told: told.length === 0 ? RESET_COPY.toldNobody : RESET_COPY.told(and(told.sort())),
+    undo: RESET_COPY.undo(preview.month ? monthOnly(preview.month) : "this month"),
+    confirm,
+  };
+}
+
+/** A reset's question before its numbers are in: the sheet's title while it works them out. */
+export function resetTitle(w: ResetWords): string {
+  return resetHead(w, "", w.month ? monthOnly(w.month) : "").title;
+}
+
+function resetHead(w: ResetWords, range: string, monthName: string): { title: string; body: string; confirm: string } {
+  const person = w.person ? firstName(w.person) : "";
+  const john = w.john ?? "this John";
+  switch (w.kind) {
+    case "result": {
+      const to = RESULT_WORDS[w.outcome ?? "done"];
+      return {
+        title: w.outcome === "excused" ? `Let ${person} off ${john}?` : `Mark ${john} ${to}?`,
+        body: w.was
+          ? `${person}’s ${john} changes from ${RESULT_WORDS[w.was] ?? w.was} to ${to}.`
+          : `${person}’s ${john} is marked ${to} now, without waiting.`,
+        confirm: w.outcome === "excused" ? "Let it off" : `Mark it ${to}`,
+      };
+    }
+    case "person_week":
+      return {
+        title: `Reset ${person}’s week?`,
+        body: `${person} keeps the Johns they were dealt. Their ticks from ${range} are cleared.`,
+        confirm: RESET_COPY.resetPerson(person),
+      };
+    case "week":
+      return {
+        title: "Reset this week?",
+        body: `Everyone keeps the Johns they were dealt. Ticks, covers and flags from ${range} are cleared.`,
+        confirm: "Reset this week",
+      };
+    case "redeal":
+      return {
+        title: "Re-deal this week?",
+        body: `Ticks, covers and flags from ${range} are cleared, then the week is dealt again from the list as it is now.`,
+        confirm: "Re-deal this week",
+      };
+    case "skip":
+      return {
+        title: "Skip this week?",
+        body: `${range} counts for nothing: no shares, no points and no forfeits. Streaks don’t grow or break.`,
+        confirm: "Skip this week",
+      };
+    case "letoff":
+      return {
+        title: `Let everyone off ${monthName}?`,
+        body: `${monthName}’s forfeits go. Everyone’s marks stay, and the month shows “Let off”.`,
+        confirm: `Let off ${monthName}`,
+      };
+  }
+}
+
+function trackLine(preview: ResetPreview, w: ResetWords): string {
+  switch (w.kind) {
+    case "result":
+      return "New mark, with an amber dot: “Changed by you”";
+    case "person_week":
+    case "week":
+      return preview.past_due > 0
+        ? `Shows open again. ${preview.past_due} past due: late if ticked now, missed at the week’s end`
+        : "This week shows open again";
+    case "redeal":
+      return "Shows the new deal";
+    case "skip":
+      return "This week shows grey, “Skipped”";
+    case "letoff":
+      return "Marks stay; the month shows “Let off”";
+  }
+}
+
+/** History's and the Wall's words for a reset: "reset Sam’s week", "marked Bins done". */
+export function resetWhat(data: Record<string, unknown>, subject: string): string {
+  const name = String(data.name ?? "a John");
+  const possessive = subject === "You" ? "your" : `${subject}’s`;
+  switch (data.what) {
+    case "result":
+      return data.outcome === "excused" ? `let ${subject === "You" ? "you" : subject} off ${name}` : `marked ${possessive} ${name} ${RESULT_WORDS[String(data.outcome)] ?? "changed"}`;
+    case "person_week":
+      return `reset ${possessive} week`;
+    case "week":
+      return "reset the week";
+    case "redeal":
+      return "re-dealt the week";
+    case "skip":
+      return "skipped the week";
+    case "letoff":
+      return `let everyone off ${data.month ? monthOnly(String(data.month)) : "a month"}’s forfeits`;
+    default:
+      return "reset something";
+  }
+}
