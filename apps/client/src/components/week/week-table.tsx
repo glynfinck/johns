@@ -3,11 +3,14 @@ import { StyleSheet, Text, View, type StyleProp, type TextStyle } from 'react-na
 
 import { Alert } from '@/components/alert';
 import { Avatar } from '@/components/avatar';
-import { Group, GroupItem, Hairline, useRowInset } from '@/components/group';
+import { Group, GroupItem } from '@/components/group';
 import { DoneFold, useJohnRow, type JohnRowContext } from '@/components/john-row';
 import { Row } from '@/components/row';
 import { Body } from '@/components/text';
-import { LEADING, ROW_GAP, SPACE, TABULAR, TAP, useTheme } from '@/theme';
+import { INSET, LABEL_GAP, LEADING, ROW_GAP, SPACE, TABULAR, useTheme } from '@/theme';
+
+/** A section label's line, which the columns' names stand in. */
+const LABEL_LINE = 24;
 
 /** The fixed columns; the John's takes what's left. */
 const WHO = 112;
@@ -16,7 +19,7 @@ const STATUS = 120;
 
 /**
  * The laptop's Week: one row per John, the whole house in one group, within
- * the tab's 680. Each row is the phone's Row with two columns of its own:
+ * the tab's 680, under the columns' names. Each row is the phone's Row with two columns of its own:
  * the circle (yours ticks from it), the John and its meta line (the column
  * that flexes), whose it is, its points (earned, once it's finished), and
  * one cell for where it has got to or what to do about it (Undo, Vote).
@@ -27,8 +30,8 @@ const STATUS = 120;
 export function WeekTable({ rows, folded, context }: { rows: BoardItem[]; folded: BoardItem[]; context: JohnRowContext }) {
   return (
     <View testID="week-table">
+      <HeadRow />
       <Group>
-        <HeadRow />
         {rows.map((item) => (
           <TableRow key={item.id} item={item} context={context} />
         ))}
@@ -42,18 +45,22 @@ export function WeekTable({ rows, folded, context }: { rows: BoardItem[]; folded
   );
 }
 
-/** The columns' names, in section-label caps, hidden from a screen reader (the rows say them). */
+/**
+ * The columns' names, in section-label caps, hidden from a screen reader
+ * (the rows say them). They stand over the group where a section's label
+ * would, a label's line and LABEL_GAP, inset as the rows are: so the table
+ * starts level with a section beside it (the Table, on a laptop), and its
+ * rows with that section's rows.
+ */
 function HeadRow() {
   const { type } = useTheme();
-  const inset = useRowInset();
   const head = (label: string, style: StyleProp<TextStyle>) => (
-    <Text numberOfLines={1} style={[type.sectionLabel, style]}>
+    <Text numberOfLines={1} style={[type.sectionLabel, styles.caps, style]}>
       {label}
     </Text>
   );
   return (
-    <View aria-hidden testID="week-table-head" style={[styles.head, { paddingHorizontal: inset }]}>
-      <Hairline />
+    <View aria-hidden testID="week-table-head" style={styles.head}>
       <View style={styles.leading} />
       {head(WEEK_COPY.columns.john, styles.john)}
       {head(WEEK_COPY.columns.who, styles.who)}
@@ -114,7 +121,16 @@ function TableRow({ item, context }: { item: BoardItem; context: JohnRowContext 
 }
 
 const styles = StyleSheet.create({
-  head: { minHeight: TAP, flexDirection: 'row', alignItems: 'center', gap: ROW_GAP },
+  head: {
+    minHeight: LABEL_LINE,
+    marginBottom: LABEL_GAP,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: ROW_GAP,
+    paddingHorizontal: INSET,
+  },
+  // Overpass's caps sit high in their line, so the names come down a little, as a section's label does.
+  caps: { paddingTop: 2 },
   leading: { width: LEADING },
   // The John's column flexes, as a Row's words do.
   john: { flex: 1, minWidth: 0 },

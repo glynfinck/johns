@@ -59,15 +59,7 @@ function HouseFor({ houseId, userId }: { houseId: string; userId: string }) {
           <Reading />
         )
       ) : (
-        <>
-          <TopLine>
-            {HOUSE_PAGE_COPY.sub(
-              view.snapshot.members.length,
-              formatMoney(view.snapshot.rules.stakeMinor, view.snapshot.rules.currency),
-            )}
-          </TopLine>
-          <HouseSections houseId={houseId} userId={userId} view={view} table={table} stake={stake} away={away} />
-        </>
+        <HouseSections houseId={houseId} userId={userId} view={view} table={table} stake={stake} away={away} />
       )}
     </Screen>
   );
@@ -96,7 +88,13 @@ function HouseSections({
   const two = useColumns();
   // On a laptop the setup and the Pass are in the list beside the page.
   const { listed } = useHouseWorkspace();
-  const money = passUnlocked(view.snapshot.house.pass, view.now) ? (
+  const unlocked = passUnlocked(view.snapshot.house.pass, view.now);
+  const top = (
+    <TopLine>
+      {HOUSE_PAGE_COPY.sub(view.snapshot.members.length, formatMoney(view.snapshot.rules.stakeMinor, view.snapshot.rules.currency))}
+    </TopLine>
+  );
+  const money = unlocked ? (
     <>
       <MonthCard houseId={houseId} userId={userId} view={view} stake={stake} />
       <TableSection userId={userId} view={view} table={table} stake={stake} away={away} />
@@ -116,9 +114,32 @@ function HouseSections({
       <LeaveSection houseId={houseId} userId={userId} view={view} />
     </>
   );
-  if (two) return <Columns main={money} side={lower} />;
+  // On a laptop the line heads the month card's column, a section label's height, so the card and the Wall's
+  // group beside it share a top edge; over the locked pair, which start with labels of their own, it heads both.
+  if (two && unlocked) {
+    return (
+      <Columns
+        main={
+          <>
+            {top}
+            {money}
+          </>
+        }
+        side={lower}
+      />
+    );
+  }
+  if (two) {
+    return (
+      <>
+        {top}
+        <Columns main={money} side={lower} />
+      </>
+    );
+  }
   return (
     <>
+      {top}
       {money}
       {lower}
     </>

@@ -660,6 +660,8 @@ describe('on a laptop', () => {
     await open();
     const main = within(screen.getByTestId('column-main'));
     const side = within(screen.getByTestId('column-side'));
+    // The day's line heads the main column, a section label's height, so Next up lines up with the first group beside it.
+    expect(main.getByTestId('top-line')).toBeOnTheScreen();
     expect(main.getByTestId('next-up')).toBeOnTheScreen();
     const glance = side.getByTestId('week-glance');
     expect(within(glance).getByTestId('week-bar')).toBeOnTheScreen();

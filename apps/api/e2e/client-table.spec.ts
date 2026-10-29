@@ -1,4 +1,4 @@
-import { HOUSE_PAGE_COPY, JOHN_COPY, monthAbbr, monthOf, NEXT_UP_COPY, PERSON_COPY, pointsLabel, SECTION_LABEL } from "@app/core";
+import { HOUSE_PAGE_COPY, JOHN_COPY, monthOf, monthWord, NEXT_UP_COPY, PERSON_COPY, pointsLabel, SECTION_LABEL } from "@app/core";
 import { expect, test } from "@playwright/test";
 
 import { admin, CLIENT_URL, cleanUp, dealtHouseInClient } from "./auth";
@@ -48,8 +48,11 @@ test("a tick scores on the Table at once, beside fair shares and streaks", async
   await expect(standings.first()).toContainText(pointsLabel(mine![0].points));
   await expect(standings.nth(1)).toContainText("Ben");
   await expect(standings.nth(1)).toContainText(pointsLabel(0));
-  // The month's Table has everyone on it too.
-  await table.getByRole("radio", { name: monthAbbr(monthOf(new Date(), "Europe/London")) }).click();
+  // The month's Table has everyone on it too, chosen from the menu in its header.
+  const month = monthWord(monthOf(new Date(), "Europe/London"));
+  await table.getByTestId("table-span").click();
+  await ava.getByRole("radio", { name: month }).click();
+  await expect(table.getByTestId("table-span")).toHaveText(month);
   await expect(standings).toHaveCount(2);
 
   // Ben's row opens his page: his fair share and his streak.

@@ -4,7 +4,7 @@ import { FONT, NARROW, RADIUS, SPACE, TAP, useTheme } from '@/theme';
 
 /**
  * A small two- or three-way switch for how a section shows itself
- * (Week | Oct, Mine | Whole house, Day | Night | Auto): a tinted track with
+ * (Mine | Whole house, Day | Night | Auto): a tinted track with
  * the chosen part raised on the card colour. A radio group to a screen
  * reader, `label` naming it; the chosen part is `aria-checked`, and each
  * says its `spoken` name where what it shows is short for one ("Mon" for

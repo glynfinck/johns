@@ -2,7 +2,7 @@ import { FOCUS_SHELL_COPY, HOUSE_LOWER_COPY, SECTION_LABEL } from '@app/core';
 import { QueryClientProvider } from '@tanstack/react-query';
 import { Link, router, Slot } from 'expo-router';
 import { fireEvent, renderRouter, screen, waitFor, within } from 'expo-router/testing-library';
-import { Text, useWindowDimensions, View } from 'react-native';
+import { StyleSheet, Text, useWindowDimensions, View } from 'react-native';
 
 import { loadHouse } from '@/api/board';
 import HouseLayout from '@/app/(house)/_layout';
@@ -240,9 +240,14 @@ describe('the sparkles', () => {
   it('open and close the chat beside the page on a laptop', async () => {
     (useWindowDimensions as jest.Mock).mockReturnValue({ width: 1440, height: 900, scale: 1, fontScale: 1 });
     await open('/week');
+    const look = () => StyleSheet.flatten(screen.getByTestId('ask-jonz').props.style);
+    const shut = look();
     await fireEvent.press(screen.getByTestId('ask-jonz'));
     expect(screen).toHavePathname('/week');
     expect(within(screen.getByTestId('ask-panel')).getByText('Chat with Jonz')).toBeOnTheScreen();
+    // The open panel is the sign: the sparkles look the same, and say they're expanded.
+    expect(screen.getByTestId('ask-jonz')).toBeExpanded();
+    expect(look()).toEqual(shut);
     expect(screen.getByText('Week screen')).toBeOnTheScreen();
     await fireEvent.press(screen.getByTestId('ask-close'));
     expect(screen.queryByTestId('ask-panel')).toBeNull();
