@@ -26,6 +26,7 @@ import { EmptyState } from '@/components/empty-state';
 import { Field } from '@/components/field';
 import { Group, GroupItem } from '@/components/group';
 import { TimingPicker, TimingSentence, type TimingWord } from '@/components/house/john-timing';
+import { useHouseWorkspace } from '@/components/house/workspace';
 import { Row, RowIcon } from '@/components/row';
 import { Section } from '@/components/section';
 import { ChoiceRow } from '@/components/setup/choice-row';
@@ -66,7 +67,37 @@ export function JohnList({
   const [editing, setEditing] = useState<Draft | null>(null);
   const [reading, setReading] = useState<JohnDef | null>(null);
   const groupName = (id: string | null) => groups.find((g) => g.id === id)?.name ?? null;
-  const add = () => setEditing({ ...NEW_JOHN });
+  // On a laptop a John opens in the panel beside the list, so the next one is a click away.
+  const { panel } = useHouseWorkspace();
+  const edit = (draft: Draft) => {
+    if (!panel) {
+      setEditing(draft);
+      return;
+    }
+    panel.open({
+      title: draft.id ? JOHN_LIST_COPY.edit(draft.name) : JOHN_LIST_COPY.add,
+      description: JOHN_LIST_COPY.hint,
+      testID: 'john-panel',
+      content: (
+        <JohnForm
+          key={draft.id ?? 'new'}
+          houseId={houseId}
+          rules={rules}
+          initial={draft}
+          groups={groups}
+          onDone={panel.close}
+        />
+      ),
+    });
+  };
+  const read = (john: JohnDef) => {
+    if (!panel) {
+      setReading(john);
+      return;
+    }
+    panel.open({ title: john.name, testID: 'john-facts', content: <JohnFacts john={john} group={groupName(john.groupId)} /> });
+  };
+  const add = () => edit({ ...NEW_JOHN });
   // Describe your house: the chat's page on a phone, the panel beside the list from WIDE.
   const ask = useAskJonz();
 
@@ -98,7 +129,7 @@ export function JohnList({
                   lid={j.category}
                   meta={line}
                   trailing={pointsLabel(j.points)}
-                  onPress={() => (editable ? setEditing(j) : setReading(j))}
+                  onPress={() => (editable ? edit(j) : read(j))}
                   accessibilityLabel={editable ? `${JOHN_LIST_COPY.edit(j.name)}, ${line}, ${pointsLabel(j.points)}` : undefined}
                   testID="john-def"
                 />
@@ -136,15 +167,20 @@ export function JohnList({
         ) : null}
       </Sheet>
       <Sheet visible={reading !== null} title={reading?.name} flush onClose={() => setReading(null)} testID="john-facts">
-        {reading ? (
-          <Group>
-            {johnFacts(reading, groupName(reading.groupId)).map((fact) => (
-              <Row key={fact.label} title={fact.label} trailing={fact.value} testID="john-fact" />
-            ))}
-          </Group>
-        ) : null}
+        {reading ? <JohnFacts john={reading} group={groupName(reading.groupId)} /> : null}
       </Sheet>
     </>
+  );
+}
+
+/** A John's details, to read: what an admin would edit, one row each. */
+function JohnFacts({ john, group }: { john: JohnDef; group: string | null }) {
+  return (
+    <Group>
+      {johnFacts(john, group).map((fact) => (
+        <Row key={fact.label} title={fact.label} trailing={fact.value} testID="john-fact" />
+      ))}
+    </Group>
   );
 }
 

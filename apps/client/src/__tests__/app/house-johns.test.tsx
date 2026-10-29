@@ -2,6 +2,7 @@ import {
   CATEGORY_LABEL,
   DEAL_COPY,
   FOCUS_SHELL_COPY,
+  HOUSE_LOWER_COPY,
   JOHN_LIST_COPY,
   NEW_JOHN,
   NEXT_UP_COPY,
@@ -12,13 +13,16 @@ import {
 } from '@app/core';
 import { router, Slot } from 'expo-router';
 import { act, fireEvent, screen, waitFor, within } from 'expo-router/testing-library';
-import { Text } from 'react-native';
+import { useContext } from 'react';
+import { Text, useWindowDimensions } from 'react-native';
 
 import { loadHouse } from '@/api/board';
 import { catchUp } from '@/api/house';
 import { archiveJohn, dealThisWeek, loadJohnList, saveJohn } from '@/api/settings';
 import JohnListScreen from '@/app/(house)/house/johns';
+import { HouseWorkspace } from '@/components/house/workspace';
 import { ToastProvider } from '@/components/toast';
+import { AskPanelContext, AskPanelProvider } from '@/hooks/use-ask-jonz';
 import { assignment, snapshot } from '@/testing/house';
 import { BATH, BINS, renderPages, untilRead } from '@/testing/pages';
 
@@ -37,13 +41,34 @@ jest.mock('@/hooks/use-membership', () => ({
   useMembership: () => ({ session: { user: { id: mockMembership.userId } }, house: { id: 'h1', name: 'Flat 3' } }),
 }));
 
+// A phone unless a test says otherwise.
+jest.mock('react-native/Libraries/Utilities/useWindowDimensions', () => ({
+  __esModule: true,
+  default: jest.fn(() => ({ width: 412, height: 915, scale: 1, fontScale: 1 })),
+}));
+
 const UPSTAIRS = { id: 'g1', name: 'Upstairs bathroom', memberIds: ['priya', 'sam'] };
 
-/** The house's toasts, as its layout mounts them. */
+/** The chat with Jonz beside the page, as the house layout's sparkles open it: here, a line saying whether it's open. */
+function AskToggle() {
+  const ask = useContext(AskPanelContext);
+  return (
+    <Text accessibilityRole="button" onPress={() => ask?.setOpen(!ask.open)} testID="ask-toggle">
+      {ask?.open ? 'ask open' : 'ask closed'}
+    </Text>
+  );
+}
+
+/** The house's toasts and the chat with Jonz, as its layout mounts them, and House's workspace, as its stack's does. */
 function HouseLayout() {
   return (
     <ToastProvider>
-      <Slot />
+      <AskPanelProvider>
+        <AskToggle />
+        <HouseWorkspace>
+          <Slot />
+        </HouseWorkspace>
+      </AskPanelProvider>
     </ToastProvider>
   );
 }
@@ -409,6 +434,55 @@ describe('a housemate who is not an admin', () => {
     ].forEach(([label, value], i) => expect(facts[i]).toHaveTextContent(`${label}${value}`));
     expect(screen.queryByTestId('john-form')).toBeNull();
     expect(screen.queryByTestId('save-john')).toBeNull();
+  });
+});
+
+describe('on a laptop', () => {
+  beforeEach(() => (useWindowDimensions as jest.Mock).mockReturnValue({ width: 1440, height: 900, scale: 1, fontScale: 1 }));
+  afterEach(() => (useWindowDimensions as jest.Mock).mockReturnValue({ width: 412, height: 915, scale: 1, fontScale: 1 }));
+
+  it('opens a John in the panel beside the list, and the next John in its place', async () => {
+    await open();
+    await fireEvent.press(screen.getByRole('button', { name: /^Edit Bins, / }));
+    const panel = within(screen.getByTestId('john-panel'));
+    expect(panel.getByRole('header', { name: JOHN_LIST_COPY.edit('Bins') })).toBeOnTheScreen();
+    expect(panel.getByTestId('john-name')).toHaveDisplayValue('Bins');
+    // The list stays in view, and the next John is a click away.
+    await fireEvent.press(screen.getByRole('button', { name: /^Edit Bathroom, / }));
+    expect(within(screen.getByTestId('john-panel')).getByTestId('john-name')).toHaveDisplayValue('Bathroom');
+    expect(screen.getAllByTestId('john-form')).toHaveLength(1);
+  });
+
+  it('closes the panel once the John is saved, and from its close button', async () => {
+    await open();
+    await fireEvent.press(screen.getByRole('button', { name: /^Edit Bins, / }));
+    await fireEvent.press(within(screen.getByTestId('john-panel')).getByTestId('save-john'));
+    expect(saveJohn).toHaveBeenCalledWith('h1', expect.anything(), expect.objectContaining({ id: 'j1' }), expect.any(Date));
+    await waitFor(() => expect(screen.queryByTestId('john-panel')).toBeNull());
+    await fireEvent.press(screen.getByTestId('add-john'));
+    expect(within(screen.getByTestId('john-panel')).getByRole('header', { name: JOHN_LIST_COPY.add })).toBeOnTheScreen();
+    await fireEvent.press(screen.getByRole('button', { name: HOUSE_LOWER_COPY.closePanel }));
+    expect(screen.queryByTestId('john-panel')).toBeNull();
+  });
+
+  it('keeps one panel down the right: a John closes the chat with Jonz, and the chat closes the John', async () => {
+    await open();
+    await fireEvent.press(screen.getByTestId('ask-toggle'));
+    expect(screen.getByTestId('ask-toggle')).toHaveTextContent('ask open');
+    await fireEvent.press(screen.getByRole('button', { name: /^Edit Bins, / }));
+    expect(screen.getByTestId('john-panel')).toBeOnTheScreen();
+    expect(screen.getByTestId('ask-toggle')).toHaveTextContent('ask closed');
+    await fireEvent.press(screen.getByTestId('ask-toggle'));
+    expect(screen.queryByTestId('john-panel')).toBeNull();
+  });
+
+  it('opens a John to read in the panel, for a housemate who is not an admin', async () => {
+    await open('sam');
+    await fireEvent.press(screen.getByRole('button', { name: /^Bathroom/ }));
+    const panel = within(screen.getByTestId('john-facts'));
+    expect(panel.getByRole('header', { name: 'Bathroom' })).toBeOnTheScreen();
+    expect(panel.getAllByTestId('john-fact').length).toBeGreaterThan(0);
+    expect(screen.queryByTestId('john-form')).toBeNull();
   });
 });
 

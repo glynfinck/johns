@@ -2,6 +2,7 @@ import { formatMoney, HOUSE_PAGE_COPY, monthOf, SECTION_LABEL, STAKE_HISTORY_COP
 import { expect, test } from "@playwright/test";
 
 import { admin, CLIENT_URL, cleanUp, dealtHouseInClient } from "./auth";
+import { backToHouse } from "./house-pages";
 
 // The Stake in the Expo app's web build: what a closed month left owing, on
 // House's month card, and the person paid marking it received there.
@@ -48,7 +49,7 @@ test("a closed month's debt is settled once the person paid marks it received", 
   await expect(benPage.getByTestId("stake-screen").getByTestId("ledger-entry").filter({ hasText: STAKE_HISTORY_COPY.aJohn })).toContainText(four);
 
   // Back on House, the month card says what he owes, with nothing to mark.
-  await benPage.getByTestId("stake-screen").getByTestId("back").click();
+  await backToHouse(benPage, benPage.getByTestId("stake-screen").getByTestId("back")).click();
   await expect(benPage).toHaveURL(/\/house$/);
   const owed = benPage.getByTestId("house-screen").getByTestId("month-card").getByTestId("transfer");
   await expect(owed).toHaveCount(1);

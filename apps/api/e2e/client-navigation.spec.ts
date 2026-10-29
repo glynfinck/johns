@@ -2,6 +2,7 @@ import { FRONT_DOOR_COPY, HOUSE_DRAFT_COPY, NOT_FOUND_COPY, PAGE_TITLE, SECTION_
 import { expect, test, type Page } from "@playwright/test";
 
 import { CLIENT_URL, cleanUp, dealtHouseInClient, signInToClient } from "./auth";
+import { backToHouse, toHousePage } from "./house-pages";
 
 // The Expo app's web build, walked as a housemate walks it: every way into a
 // House page (its row on House, a card on Today, a link opened cold, a
@@ -40,12 +41,13 @@ async function expectOnHouse(page: Page, houseName: string, url: RegExp = /\/hou
   await expect(page.getByRole("heading", { name: houseName })).toBeVisible();
 }
 
-/** The title bar's back, which names where it goes ("House"). */
+/** The title bar's back, which names where it goes ("House"); on a laptop, House's is Overview in the list of its pages. */
 function backTo(page: Page, label: string) {
-  return page
+  const back = page
     .getByTestId("back")
     .filter({ visible: true })
     .and(page.getByRole("button", { name: `Back to ${label}` }));
+  return label === SECTION_LABEL.house ? backToHouse(page, back) : back;
 }
 
 /**
@@ -106,7 +108,7 @@ test.describe("a house with its week dealt", () => {
     await page.goto("/house");
     await expectOnHouse(page, houseName);
     for (const { row, path, title } of PUSHED) {
-      await page.getByTestId(row).click();
+      await toHousePage(page, row).click();
       await expect(page).toHaveURL(new RegExp(`${path}$`));
       await expect(page.getByRole("heading", { name: title, exact: true })).toBeVisible();
       await tapBack(page, SECTION_LABEL.house);
@@ -127,7 +129,7 @@ test.describe("a house with its week dealt", () => {
   test("the browser's back from a House page comes home to House too", async ({ page }) => {
     await page.goto("/house");
     await expectOnHouse(page, houseName);
-    await page.getByTestId("to-johns").click();
+    await toHousePage(page, "to-johns").click();
     await expect(page).toHaveURL(/\/house\/johns$/);
     await page.goBack();
     await expectOnHouse(page, houseName);
@@ -174,7 +176,7 @@ test.describe("a house with its week dealt", () => {
     await page.goto("/today");
     await page.getByTestId("standing-line").click();
     await expectOnHouse(page, houseName);
-    await page.getByTestId("to-away").click();
+    await toHousePage(page, "to-away").click();
     await expect(page).toHaveURL(/\/house\/away$/);
     await tapBack(page, SECTION_LABEL.house);
     await expectOnHouse(page, houseName);
@@ -189,7 +191,7 @@ test.describe("a house with its week dealt", () => {
     await expect(page.getByRole("heading", { name: PAGE_TITLE.week })).toBeVisible();
     await page.getByRole("tab", { name: SECTION_LABEL.house }).click();
     await expectOnHouse(page, houseName);
-    await page.getByTestId("to-rules").click();
+    await toHousePage(page, "to-rules").click();
     await expect(page).toHaveURL(/\/house\/rules$/);
     await page.getByRole("tab", { name: SECTION_LABEL.today }).click();
     await expect(page).toHaveURL(/\/today$/);
@@ -232,7 +234,7 @@ test.describe("a house just started", () => {
     await tapBack(page, SECTION_LABEL.house);
     await expectOnHouse(page, name);
     // And House's own back history doesn't send the next back to the chat.
-    await page.getByTestId("to-johns").click();
+    await toHousePage(page, "to-johns").click();
     await tapBack(page, SECTION_LABEL.house);
     await expectOnHouse(page, name);
   });
@@ -245,7 +247,7 @@ test.describe("a house just started", () => {
     const name = `List ${Date.now() % 100_000}`;
     await newHouse(page, name);
     await page.getByRole("tab", { name: SECTION_LABEL.house }).click();
-    await page.getByTestId("to-johns").click();
+    await toHousePage(page, "to-johns").click();
     await page.getByTestId("describe-house").click();
     await chatOpened(page);
     await page.getByTestId("starter-flat_share").click();
