@@ -1,5 +1,7 @@
 import { describe, expect, it } from "vitest";
 
+import { NEW_JOHN, type JohnDef } from "./board";
+
 import {
   DRAFT_MAX_GROUPS,
   DRAFT_MAX_JOHNS,
@@ -9,7 +11,10 @@ import {
   HouseDraft,
   STARTER_KINDS,
   STARTER_LISTS,
+  changedLine,
+  draftChanges,
   draftForModel,
+  listAsDraft,
   draftPlan,
   guessStarter,
   matchPerson,
@@ -272,5 +277,69 @@ describe("guessStarter", () => {
     ["", "flat_share"],
   ] as const)("%s → %s", (description, kind) => {
     expect(guessStarter(description)).toBe(kind);
+  });
+});
+
+describe("changing a list that's already there", () => {
+  const ME = "00000000-0000-4000-8000-000000000001";
+  const BATH = "11111111-1111-4111-8111-111111111111";
+  const BINS = "22222222-2222-4222-8222-222222222222";
+  const UP = { id: "33333333-3333-4333-8333-333333333333", name: "Upstairs", memberIds: [ME] };
+  const john = (id: string, name: string, more: Partial<JohnDef> = {}): JohnDef => ({ ...NEW_JOHN, id, name, ...more });
+  const list = [john(BATH, "Bathroom", { category: "bathroom", points: 3, groupId: UP.id }), john(BINS, "Bins out", { category: "bins", points: 1 })];
+  const base = listAsDraft(list, [UP]);
+
+  it("reads the list as a draft, with ids and the groups it uses", () => {
+    expect(base.johns.map((j) => [j.id, j.name, j.group])).toEqual([
+      [BATH, "Bathroom", "Upstairs"],
+      [BINS, "Bins out", null],
+    ]);
+    expect(base.groups).toEqual([{ name: "Upstairs", memberIds: [ME], waitingFor: [] }]);
+    expect(draftChanges(base, base)).toEqual([]);
+  });
+
+  it("shows Claude short refs, and reads them back to the list's Johns", () => {
+    const raw = draftForModel(base, [{ userId: ME, name: "Glyn" }], ME);
+    expect(raw.johns?.[0]).toMatchObject({ ref: BATH.slice(0, 8), name: "Bathroom" });
+    expect(JSON.stringify(raw)).not.toContain(BATH);
+    const back = tidyDraft(raw, [{ userId: ME, name: "Glyn" }], ME, { johnIds: [BATH, BINS], groups: base.groups });
+    expect(back.johns.map((j) => j.id)).toEqual([BATH, BINS]);
+    expect(draftChanges(base, back)).toEqual([]);
+  });
+
+  it("keeps a list's group when Claude leaves it out of the groups, and never reuses a ref", () => {
+    const back = tidyDraft(
+      {
+        johns: [
+          { ref: BATH.slice(0, 8), name: "Bathroom", category: "bathroom", points: 4, group: "Upstairs" },
+          { ref: BATH.slice(0, 8), name: "Bathroom deep clean", category: "bathroom", points: 5 },
+          { ref: "nope", name: "Oven", category: "kitchen", points: 5, everyWeeks: 4 },
+        ],
+      },
+      [],
+      ME,
+      { johnIds: [BATH, BINS], groups: base.groups },
+    );
+    expect(back.johns.map((j) => [j.id ?? null, j.group])).toEqual([
+      [BATH, "Upstairs"],
+      [null, null],
+      [null, null],
+    ]);
+    const changes = draftChanges(base, back);
+    expect(changes.map((c) => c.key)).toEqual(["change:" + BATH, "add:1", "add:2", "remove:" + BINS]);
+    const changed = changes[0];
+    if (changed.kind !== "change") throw new Error("not a change");
+    expect(changedLine(changed.before, changed.john)).toBe("was 3 pts");
+  });
+
+  it("says what changed in words", () => {
+    const [bath] = base.johns;
+    expect(changedLine(bath, { ...bath, name: "Upstairs bathroom", everyWeeks: 2, dueDow: 6, group: null })).toBe(
+      "was “Bathroom” · was every week, Sun 21:00 · was Upstairs",
+    );
+  });
+
+  it("treats every John in a new house's draft as one to add", () => {
+    expect(draftChanges(null, starterDraft("couple")).every((c) => c.kind === "add")).toBe(true);
   });
 });

@@ -4,7 +4,12 @@ import {
   CHAT_TURNS_PER_DAY,
   draftForModel,
   firstName,
+  groupDef,
+  johnDef,
+  listAsDraft,
   offlineTurn,
+  passOf,
+  passUnlocked,
   tidyAsk,
   tidyDraft,
   type ChatMessage,
@@ -22,10 +27,12 @@ import type { Caller, Refusal } from "./disputes";
 const REPLY_MAX = 600;
 
 /**
- * Describe your house: one turn of the setup chat. An admin's message (and
- * the chat before it, and the draft as it stands) in; Jonz's reply, a
- * question to tap an answer to, and the new draft out. Only an admin of the
- * house may ask (the list is theirs to change), and a house gets
+ * One turn of the chat with Jonz. An admin's message (and the chat before
+ * it, and the draft as it stands) in; Jonz's reply, a question to tap an
+ * answer to, and the new draft out. A new house's chat drafts its first
+ * list, free; a house with a list already starts from that list and changes
+ * it, which is the House Pass's (`pass_needed` without it). Only an admin of
+ * the house may ask (the list is theirs to change), and a house gets
  * CHAT_TURNS_PER_DAY turns from Claude a day. When Claude isn't set up or
  * doesn't answer, offlineTurn answers (a starter list that fits, or the
  * draft left as it is), so setup never stops here. Nothing is written to the
@@ -51,7 +58,23 @@ export async function chatTurn(
   if (!me) return { refusal: { code: "42501", message: "not_in_house" } };
   if (me.role !== "admin") return { refusal: { code: "42501", message: "admins_only" } };
 
-  if (!canDraft() && ask === askClaude) return offlineTurn(messages, current);
+  const [{ data: house }, { data: members }, { data: johns }, { data: groups }] = await Promise.all([
+    caller.db.from("houses").select("week_starts, pass_plan, pass_until, pass_buyer").eq("id", houseId).single(),
+    caller.db.from("members").select("user_id, joined_at, profiles(display_name)").eq("house_id", houseId).order("joined_at"),
+    caller.db
+      .from("johns")
+      .select("id, name, category, points, every_weeks, due_dow, due_time, needs_photo, group_id, kind, respond_hours, per_week")
+      .eq("house_id", houseId)
+      .is("archived_at", null)
+      .order("created_at"),
+    caller.db.from("groups").select("id, name, group_members(user_id)").eq("house_id", houseId).order("name"),
+  ]);
+  // A house with a list already changes it: the House Pass's assistant. Setting up a new house is free.
+  const list = johns && johns.length > 0 ? listAsDraft(johns.map(johnDef), (groups ?? []).map(groupDef)) : null;
+  if (list && house && !passUnlocked(passOf(house), now)) return { refusal: { code: "P0001", message: "pass_needed" } };
+  const draftNow = current ?? list;
+
+  if (!canDraft() && ask === askClaude) return offlineTurn(messages, draftNow);
 
   const admin = createAdminClient();
   const since = new Date(now.getTime() - 24 * 3600_000).toISOString();
@@ -62,10 +85,6 @@ export async function chatTurn(
     .gte("created_at", since);
   if ((count ?? 0) >= CHAT_TURNS_PER_DAY) return { refusal: { code: "P0001", message: "draft_limit" } };
 
-  const [{ data: house }, { data: members }] = await Promise.all([
-    caller.db.from("houses").select("week_starts").eq("id", houseId).single(),
-    caller.db.from("members").select("user_id, joined_at, profiles(display_name)").eq("house_id", houseId).order("joined_at"),
-  ]);
   const people = (members ?? []).map((m) => ({ userId: m.user_id, name: m.profiles?.display_name ?? "" })).filter((p) => p.name);
   // The person writing first: "me" in what they say is them.
   people.sort((a, b) => Number(b.userId === caller.userId) - Number(a.userId === caller.userId));
@@ -76,16 +95,18 @@ export async function chatTurn(
       people: people.map((p) => firstName(p.name)),
       weekStarts: (house?.week_starts ?? 1) as IsoDow,
       messages,
-      draft: current ? draftForModel(current, people, caller.userId) : null,
+      draft: draftNow ? draftForModel(draftNow, people, caller.userId) : null,
+      editing: list !== null,
     });
   } catch (e) {
     console.error("draft_failed", e instanceof Error ? e.message : e);
     await admin.from("house_drafts").insert({ house_id: houseId, user_id: caller.userId, outcome: "failed" });
-    return offlineTurn(messages, current);
+    return offlineTurn(messages, draftNow);
   }
 
   // A draft with nothing in it (the message wasn't about a house) leaves the draft as it was.
-  const tidied = answer.raw.draft ? tidyDraft(answer.raw.draft, people, caller.userId) : null;
+  const known = { johnIds: (list?.johns ?? []).map((j) => j.id!), groups: list?.groups ?? [] };
+  const tidied = answer.raw.draft ? tidyDraft(answer.raw.draft, people, caller.userId, known) : null;
   const draft = tidied && tidied.johns.length > 0 ? tidied : null;
   await admin.from("house_drafts").insert({
     house_id: houseId,
@@ -97,6 +118,6 @@ export async function chatTurn(
   });
   const reply = answer.raw.reply.replace(/\s+/g, " ").trim().slice(0, REPLY_MAX);
   // Nothing to say and nothing drafted before: a starter list does better than silence.
-  if (!reply && !draft && !current) return offlineTurn(messages, current);
+  if (!reply && !draft && !draftNow) return offlineTurn(messages, draftNow);
   return { reply, ask: tidyAsk(answer.raw.ask), draft, source: "ai" };
 }
