@@ -15,8 +15,8 @@ import { FONT, GUTTER, INSET, SPACE, TAP, TITLE_BAR, useTheme } from '@/theme';
  * it, `sub` as a Meta line beneath (House: "4 housemates · £20 a month
  * each"), and one thing on the right: the date (a string is set as Meta), a
  * MoreButton, or nothing. 52 tall; 74 with a sub line, which brings its own
- * room above the Title and under the sub. A pushed page passes `back`, the page to
- * go to when there's no history (a link opened cold): a link-like "‹ House"
+ * room above the Title and under the sub. A pushed page passes `back`, the page its
+ * back goes to, whatever came before it: a link-like "‹ House"
  * (`backLabel`, the place it goes back to) sits on its own line above the
  * Title, which stays on the leading edge. It keeps clear of the notch and
  * lines up with the content below it.
@@ -44,7 +44,7 @@ export function TitleBar({
       style={[styles.bar, { paddingTop: insets.top, backgroundColor: colors.background, borderBottomColor: colors.border }]}
     >
       <View style={[styles.inner, { maxWidth }]}>
-        {back != null ? <BackLink fallback={back} label={backLabel} /> : null}
+        {back != null ? <BackLink to={back} label={backLabel} /> : null}
         <View style={[styles.line, sub ? styles.withSub : null, back != null && styles.pushed]}>
           <View style={styles.words}>
             <Title numberOfLines={1} style={styles.title}>
@@ -66,18 +66,21 @@ export function TitleBar({
 }
 
 /**
- * Back where you came from, or to `fallback` when there's nowhere to go back
- * to: a chevron and the place's name in Body Bold, the chevron hanging just
- * left of the leading edge. Spoken as "Back to House".
+ * Back to the place it names: a chevron and the place's name in Body Bold,
+ * the chevron hanging just left of the leading edge. Spoken as "Back to
+ * House". It pops the stack down to `to` when that's under this page, and
+ * puts `to` in this page's place when it isn't, so a page reached from
+ * another tab (Today's setup card, say) still goes to House, not back to
+ * the tab it came from.
  */
-function BackLink({ fallback, label }: { fallback: Href; label: string }) {
+function BackLink({ to, label }: { to: Href; label: string }) {
   const { colors, type } = useTheme();
   const router = useRouter();
   return (
     <Pressable
       accessibilityRole="button"
       accessibilityLabel={label === FOCUS_SHELL_COPY.back ? label : FOCUS_SHELL_COPY.backTo(label)}
-      onPress={() => (router.canGoBack() ? router.back() : router.replace(fallback))}
+      onPress={() => router.dismissTo(to)}
       testID="back"
       style={({ pressed }) => [styles.back, pressed && styles.pressed]}
     >
