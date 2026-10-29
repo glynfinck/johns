@@ -76,6 +76,7 @@ export function TableSection({
             value={span}
             onChange={setSpan}
             label={HOUSE_PAGE_COPY.show}
+            quiet
             testID="table-span"
           />
         }

@@ -1,7 +1,7 @@
-import { render, screen } from '@testing-library/react-native';
+import { fireEvent, render, screen } from '@testing-library/react-native';
 import { useWindowDimensions } from 'react-native';
 
-import { NARROW, SPACE, TAP } from '@/theme';
+import { FONT, NARROW, SPACE, TAP } from '@/theme';
 
 import { Segmented } from './segmented';
 
@@ -35,4 +35,29 @@ it('pads them less on a small phone, so the row beside it keeps its name, still 
   for (const name of ['Day', 'Night', 'Auto']) {
     expect(screen.getByRole('radio', { name })).toHaveStyle({ paddingHorizontal: SPACE.xs, minWidth: TAP, minHeight: TAP });
   }
+});
+
+it('in a section header, is its words alone: a thumb tall, the chosen one bold and the switch still a radio group', async () => {
+  const onChange = jest.fn();
+  await render(
+    <Segmented
+      label="Show"
+      options={[
+        { value: 'week', label: 'Week' },
+        { value: 'month', label: 'Oct', spoken: 'October' },
+      ]}
+      value="week"
+      onChange={onChange}
+      quiet
+      testID="span"
+    />,
+  );
+  expect(screen.getByTestId('span')).toHaveProp('accessibilityRole', 'radiogroup');
+  expect(screen.getByTestId('span')).toHaveProp('accessibilityLabel', 'Show');
+  expect(screen.getByRole('radio', { name: 'Week' })).toBeChecked();
+  expect(screen.getByRole('radio', { name: 'October' })).not.toBeChecked();
+  expect(screen.getByRole('radio', { name: 'October' })).toHaveStyle({ minHeight: TAP });
+  expect(screen.getByText('Week')).toHaveStyle({ fontFamily: FONT.bold });
+  await fireEvent.press(screen.getByRole('radio', { name: 'October' }));
+  expect(onChange).toHaveBeenCalledWith('month');
 });
