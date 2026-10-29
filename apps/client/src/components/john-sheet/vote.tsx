@@ -7,8 +7,8 @@ import { Alert } from '@/components/alert';
 import { Avatar } from '@/components/avatar';
 import { Button } from '@/components/button';
 import { Body, Meta } from '@/components/text';
-import { useToast } from '@/components/toast';
 import { useMove } from '@/hooks/use-move';
+import { useUndoOffer } from '@/hooks/use-undo-offer';
 import { SPACE } from '@/theme';
 
 import type { JohnSheetContext } from './body';
@@ -49,12 +49,12 @@ export function Disputed({ item, context }: { item: BoardItem; context: JohnShee
  */
 function SheetVote({ houseId, dispute, onVoted }: { houseId: string; dispute: DisputeView; onVoted: () => void }) {
   const move = useMove(houseId);
-  const toast = useToast();
+  const offer = useUndoOffer(houseId);
 
   async function vote(uphold: boolean) {
     if (await move.run(() => castVote(dispute.id, uphold))) {
       onVoted();
-      toast.show(JOHN_SHEET_COPY.voted);
+      offer(JOHN_SHEET_COPY.voted, 'vote', dispute.id);
     }
   }
 

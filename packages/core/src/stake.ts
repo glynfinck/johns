@@ -22,9 +22,11 @@ import type { HouseRules, Outcome } from "./domain";
  *   share       at month end, each person's cut of everyone else's forfeits,
  *               plus the whole of any forfeit for a John they covered
  *   payment     when a payee confirms money arrived: +payer, −payee
+ *   correction  an admin's reset after a month was shared out: the
+ *               difference, in the month that's open, summing to zero
  */
 
-export type LedgerKind = "forfeit" | "cap_refund" | "share" | "payment";
+export type LedgerKind = "forfeit" | "cap_refund" | "share" | "payment" | "correction";
 
 export interface LedgerEntry {
   userId: string;
@@ -251,13 +253,18 @@ export function buildStake(input: {
   const live = settleMonth(memberIds, stakeMinor, thisMonthForfeits, month);
   const raw = new Map<string, number>();
   for (const f of thisMonthForfeits) raw.set(f.userId, (raw.get(f.userId) ?? 0) + f.amount);
+  // An admin's corrections to months already shared out land in this one, as they stand.
+  const corrections = new Map<string, number>();
+  for (const r of ledger) {
+    if (r.month === month && r.kind === "correction") corrections.set(r.user_id, (corrections.get(r.user_id) ?? 0) + r.amount_minor);
+  }
 
   const projection = memberIds.map((id) => ({
     userId: id,
     forfeitedRaw: raw.get(id) ?? 0,
     forfeited: live.forfeited[id] ?? 0,
     received: live.received[id] ?? 0,
-    net: (live.received[id] ?? 0) - (live.forfeited[id] ?? 0),
+    net: (live.received[id] ?? 0) - (live.forfeited[id] ?? 0) + (corrections.get(id) ?? 0),
   }));
 
   const closed = new Set(input.closedMonths);

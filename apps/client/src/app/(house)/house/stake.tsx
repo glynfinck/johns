@@ -1,12 +1,15 @@
-import { formatMoney, HOUSE_PAGE_COPY, SECTION_LABEL, STAKE_HISTORY_COPY, stakeHistory } from '@app/core';
-import { CoinsIcon } from 'lucide-react-native';
+import { formatMoney, HOUSE_PAGE_COPY, monthLabel, RESET_COPY, SECTION_LABEL, STAKE_HISTORY_COPY, stakeHistory } from '@app/core';
+import { CoinsIcon, RotateCcwIcon } from 'lucide-react-native';
 import { useState } from 'react';
 import { StyleSheet, View } from 'react-native';
 
 import { EmptyState } from '@/components/empty-state';
+import { Group } from '@/components/group';
 import { StakeHistory } from '@/components/house-page/stake-history';
 import { PageTitle } from '@/components/page-title';
 import { Reading, ReadFailed } from '@/components/read-state';
+import { ResetSheet } from '@/components/reset-sheet';
+import { Row, RowIcon } from '@/components/row';
 import { Screen } from '@/components/screen';
 import { Segmented } from '@/components/segmented';
 import { TitleBar } from '@/components/title-bar';
@@ -19,7 +22,8 @@ import { INSET } from '@/theme';
 /**
  * Stake history, pushed from House's month card: the ledger by month, every
  * forfeit naming its John, payments and shares in words, yours or the whole
- * house's. The month so far and settling up live on House.
+ * house's. The month so far and settling up live on House. An admin can
+ * let everyone off a month's forfeits from here, through the reset sheet.
  */
 export default function StakeScreen() {
   const { session, house } = useMembership();
@@ -32,6 +36,7 @@ function StakeFor({ houseId, userId }: { houseId: string; userId: string }) {
   const stake = useStake(houseId, query.data);
   const { refreshing, pull } = usePull(houseId, () => Promise.all([query.refetch(), stake.refetch()]));
   const [whole, setWhole] = useState(false);
+  const [letOff, setLetOff] = useState<string | null>(null);
 
   const rules = view?.snapshot.rules;
   const months =
@@ -47,6 +52,11 @@ function StakeFor({ houseId, userId }: { houseId: string; userId: string }) {
       : null;
   const empty = months?.length === 0;
   const nothingAtAll = stake.data?.ledger.length === 0;
+  // The two latest months with forfeits in them, for an admin to let off.
+  const forfeitMonths =
+    view?.me?.role === 'admin' && stake.data
+      ? [...new Set(stake.data.ledger.filter((l) => l.kind === 'forfeit').map((l) => l.month))].sort().reverse().slice(0, 2)
+      : [];
 
   return (
     <Screen
@@ -93,8 +103,28 @@ function StakeFor({ houseId, userId }: { houseId: string; userId: string }) {
           ) : (
             <StakeHistory months={months} />
           )}
+          {forfeitMonths.length > 0 ? (
+            <Group testID="let-off">
+              {forfeitMonths.map((month) => (
+                <Row
+                  key={month}
+                  leading={<RowIcon icon={RotateCcwIcon} />}
+                  title={RESET_COPY.letOff(monthLabel(month).split(' ')[0])}
+                  meta={RESET_COPY.letOffMeta}
+                  onPress={() => setLetOff(month)}
+                  testID={`let-off-${month}`}
+                />
+              ))}
+            </Group>
+          ) : null}
         </>
       )}
+      <ResetSheet
+        ask={letOff ? { houseId, kind: 'letoff', month: letOff } : null}
+        userId={userId}
+        words={{ month: letOff ?? undefined }}
+        onClose={() => setLetOff(null)}
+      />
     </Screen>
   );
 }

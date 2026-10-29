@@ -36,6 +36,14 @@ function line(kind: string, data: Record<string, unknown> = {}, userId: string |
 
 const text = (l: WallLine) => l.parts.map((p) => p.text).join("");
 
+describe("an admin's reset", () => {
+  it("says who fixed what", () => {
+    expect(line("reset", { what: "person_week", subject: "ben" }, "ava")).toBe("You reset Ben’s week.");
+    expect(line("reset", { what: "result", name: "Bins", outcome: "done", subject: "ava" }, "cal")).toBe("Cal marked your Bins done.");
+    expect(line("reset", { what: "letoff", month: "2026-10" }, "cal")).toBe("Cal let everyone off October’s forfeits.");
+  });
+});
+
 describe("wallEvents", () => {
   it("counts each reaction and marks yours", () => {
     const [event] = wallEvents(
@@ -162,5 +170,18 @@ describe("describeEvent", () => {
   it("says the kind of anything it doesn’t know", () => {
     const [event] = wallEvents([row({ kind: "something_new" })], "ava");
     expect(describeEvent(event, nameOf, "GBP")).toEqual({ icon: "badge-check", parts: [{ text: "something_new" }] });
+  });
+});
+
+describe("an admin's undo on the Wall", () => {
+  it("tells whoever's move it was who took it back", () => {
+    expect(line("undone", { by: "ava", what: "tick", name: "Bins" }, "ben")).toBe("You undid Ben’s tick on Bins.");
+    expect(line("undone", { by: "cal", what: "flag", name: "Recycling" }, "ava")).toBe("Cal undid your flag on Recycling.");
+    expect(line("undone", { by: "ava", what: "away", name: null }, "cal")).toBe("You undid Cal’s time away.");
+    expect(line("undone", { by: "cal", what: "reset", name: null }, "ava")).toBe("Cal undid your reset.");
+  });
+
+  it("names a move it doesn't know plainly", () => {
+    expect(line("undone", { by: "ava", what: "something_new" }, "ben")).toBe("You undid Ben’s change.");
   });
 });

@@ -98,6 +98,8 @@ function WeekFor({ houseId, userId }: { houseId: string; userId: string }) {
             houseId={houseId}
             admin={view?.me?.role === 'admin'}
             canRedeal={board?.week != null && weekUnticked(board.items)}
+            weekId={board?.week?.id ?? null}
+            userId={userId}
           />
         </>
       }

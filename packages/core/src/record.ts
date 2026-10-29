@@ -40,6 +40,8 @@ export interface RecordWeek {
   starts_on: string;
   starts_at: string;
   ends_at: string;
+  /** An admin skipped it: it counts for nothing, and shows grey. */
+  skipped_at?: string | null;
 }
 
 export interface RecordJohn {
@@ -57,6 +59,8 @@ export interface RecordJohn {
   job_id?: string | null;
   /** When its roll call left its holder off, when read. */
   absent_at?: string | null;
+  /** An admin changed its result (a reset): the square gets an amber dot. */
+  changed_by?: string | null;
 }
 
 /** Who did a John by roll call: `crew` rows, when read. */
@@ -96,6 +100,8 @@ const WORST: readonly RecordMark[] = ["missed", "late", "covered", "clean", "ski
 export interface RecordCell {
   key: string;
   mark: RecordMark;
+  /** An admin changed something in it. */
+  changed?: boolean;
 }
 
 export interface RecordCounts {
@@ -156,6 +162,7 @@ function worst(marks: readonly RecordMark[]): RecordMark {
 /** Someone's mark for a week: the worst of their Johns, covering for someone, or away when they had none. */
 function weekMark(input: RecordInput, week: RecordWeek, userId: string): RecordMark {
   const theirs = input.johns.filter((j) => j.week_id === week.id && j.user_id === userId).map((j) => heldMark(j) as RecordMark);
+  if (week.skipped_at && theirs.length > 0) return "skipped";
   const covered = input.johns.some((j) => j.week_id === week.id && j.covered_by === userId && j.user_id !== userId);
   const marks: RecordMark[] = covered ? [...theirs, "covered"] : theirs;
   if (marks.length > 0) return worst(marks);
@@ -186,10 +193,14 @@ export function trackRecord(input: RecordInput, span: RecordSpan): TrackRecord {
     const cells: RecordCell[] =
       span === "week"
         ? [
-            ...held.map((j) => ({ key: j.id, mark: heldMark(j) as RecordMark })),
+            ...held.map((j) => ({ key: j.id, mark: heldMark(j) as RecordMark, changed: Boolean(j.changed_by) })),
             ...coveredFor.map((j) => ({ key: `covered:${j.id}`, mark: "covered" as const })),
           ]
-        : weeks.map((w) => ({ key: w.id, mark: weekMark(input, w, userId) }));
+        : weeks.map((w) => ({
+            key: w.id,
+            mark: weekMark(input, w, userId),
+            changed: johns.some((j) => j.week_id === w.id && j.user_id === userId && Boolean(j.changed_by)),
+          }));
 
     return { userId, cells, counts, onTimePct: settled > 0 ? Math.round((counts.onTime / settled) * 100) : null };
   });
@@ -251,8 +262,10 @@ export function recordBreakdown(
   const weeks = spanWeeks(input.weeks, span, input.now, input.zone);
   const ids = new Set(weeks.map((w) => w.id));
   const johns = input.johns.filter((j) => ids.has(j.week_id)).sort((a, b) => a.due_at.localeCompare(b.due_at));
+  // A skipped week counts for nothing, as the deal counts it: no share, no credit.
+  const skipped = new Set(weeks.filter((w) => w.skipped_at).map((w) => w.id));
   const share = input.shares
-    .filter((s) => ids.has(s.week_id) && s.user_id === userId)
+    .filter((s) => ids.has(s.week_id) && !skipped.has(s.week_id) && s.user_id === userId)
     .reduce((sum, s) => sum + Number(s.share), 0);
 
   const lines = new Map<BreakdownKey, BreakdownLine>(BREAKDOWN_ORDER.map((key) => [key, { key, points: 0, johns: [] }]));
@@ -261,18 +274,19 @@ export function recordBreakdown(
   const crewOf = (j: RecordJohn) => crew.filter((c) => c.job_id === (j.job_id ?? j.id));
   const add = (key: BreakdownKey, j: RecordJohn, note: string | null, credit?: number) => {
     const line = lines.get(key)!;
-    // What it adds is what the deal credits them with: nothing for a miss,
-    // their share of a John ticked by roll call they were on.
+    // What it adds is what the deal credits them with: nothing for a miss
+    // or in a skipped week, their share of a John ticked by roll call they
+    // were on.
     const mine = crewOf(j).find((c) => c.user_id === userId);
-    const points =
+    const earned =
       credit ??
       (mine
         ? Number(mine.points)
         : !j.absent_at && creditedTo({ userId: j.user_id, points: j.points, outcome: j.outcome, coveredBy: j.covered_by }) === userId
           ? j.points
           : 0);
-    line.points += points;
-    line.johns.push({ id: j.id, name: j.name, day: dayLabel(new Date(j.due_at), input.zone), points: mine ? round(points) : j.points, note });
+    if (!skipped.has(j.week_id)) line.points += earned;
+    line.johns.push({ id: j.id, name: j.name, day: dayLabel(new Date(j.due_at), input.zone), points: mine ? round(earned) : j.points, note });
   };
   /** Who else did it: "with Sam and Mo", or null. */
   const doneWith = (j: RecordJohn) => {

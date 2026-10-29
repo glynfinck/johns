@@ -1,11 +1,13 @@
-import { FOCUS_SHELL_COPY, HOUSE_LOWER_COPY, PASS_COPY, WALL_COPY } from '@app/core';
+import { ADMINS_COPY, FOCUS_SHELL_COPY, HISTORY_COPY, HOUSE_LOWER_COPY, PASS_COPY, WALL_COPY } from '@app/core';
 import { usePathname, useRouter, type Href } from 'expo-router';
 import {
+  HistoryIcon,
   HouseIcon,
   ListTodoIcon,
   MessageSquareIcon,
   PlaneIcon,
   ScrollTextIcon,
+  ShieldCheckIcon,
   TicketIcon,
   UsersIcon,
   XIcon,
@@ -143,6 +145,8 @@ const PAGES: { group: string | null; items: { href: Href; label: string; icon: L
       { href: '/house/rules', label: HOUSE_LOWER_COPY.rules, icon: ScrollTextIcon, testID: 'nav-rules' },
       { href: '/house/away', label: HOUSE_LOWER_COPY.away, icon: PlaneIcon, testID: 'nav-away' },
       { href: '/house/groups', label: HOUSE_LOWER_COPY.groups, icon: UsersIcon, testID: 'nav-groups' },
+      { href: '/house/admins', label: ADMINS_COPY.title, icon: ShieldCheckIcon, testID: 'nav-admins' },
+      { href: '/house/history', label: HISTORY_COPY.title, icon: HistoryIcon, testID: 'nav-history' },
     ],
   },
   {

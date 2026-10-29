@@ -47,6 +47,7 @@ jest.mock('@/api/flags', () => ({ raiseFlag: jest.fn() }));
 jest.mock('@/api/johns', () => ({ markDone: jest.fn(), undoDone: jest.fn(), spendImmunity: jest.fn(), spendSwap: jest.fn() }));
 jest.mock('@/api/photos', () => ({ pickPhoto: jest.fn(), uploadProof: jest.fn() }));
 jest.mock('@/api/wall', () => ({ loadWall: jest.fn(), setReaction: jest.fn() }));
+jest.mock('@/api/resets', () => ({ previewReset: jest.fn(), applyReset: jest.fn() }));
 jest.mock('@/api/supabase', () => {
   const mockChannel = { on: jest.fn(), subscribe: jest.fn() };
   mockChannel.on.mockReturnValue(mockChannel);

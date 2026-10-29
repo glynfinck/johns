@@ -1,7 +1,7 @@
 import { act, fireEvent, render, screen } from '@testing-library/react-native';
 import { AccessibilityInfo, Platform, Pressable, Text } from 'react-native';
 
-import { TOAST_MS, ToastProvider, useToast } from './toast';
+import { TOAST_ACTION_MS, TOAST_MS, ToastProvider, useToast } from './toast';
 
 function Speaker({ message = 'Vote counted.' }: { message?: string }) {
   const toast = useToast();
@@ -68,4 +68,34 @@ it('announces itself on iOS, which has no live regions', async () => {
 it('needs the provider above it', async () => {
   jest.spyOn(console, 'error').mockImplementation(() => undefined);
   await expect(render(<Speaker />)).rejects.toThrow(/ToastProvider/);
+});
+
+it('offers its one button for longer, and goes once it is pressed', async () => {
+  const undo = jest.fn();
+  function Offer() {
+    const toast = useToast();
+    return (
+      <Pressable accessibilityRole="button" onPress={() => toast.show('Marked done.', { label: 'Undo', onPress: undo })}>
+        <Text>Tick</Text>
+      </Pressable>
+    );
+  }
+  await render(
+    <ToastProvider>
+      <Offer />
+    </ToastProvider>,
+  );
+  await fireEvent.press(screen.getByRole('button', { name: 'Tick' }));
+  await act(() => jest.advanceTimersByTime(TOAST_MS));
+  expect(screen.getByTestId('toast')).toHaveTextContent('Marked done.Undo');
+  expect(screen.getByRole('button', { name: 'Undo: Marked done.' })).toBeOnTheScreen();
+  await fireEvent.press(screen.getByTestId('toast-action'));
+  expect(undo).toHaveBeenCalledTimes(1);
+  expect(screen.queryByTestId('toast')).toBeNull();
+
+  await fireEvent.press(screen.getByRole('button', { name: 'Tick' }));
+  await act(() => jest.advanceTimersByTime(TOAST_ACTION_MS - 1));
+  expect(screen.getByTestId('toast')).toBeOnTheScreen();
+  await act(() => jest.advanceTimersByTime(1));
+  expect(screen.queryByTestId('toast')).toBeNull();
 });

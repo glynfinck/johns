@@ -182,6 +182,8 @@ export async function loadBalances(
       .select("id")
       .eq("house_id", houseId)
       .lt("starts_on", beforeStartsOn)
+      // A skipped week counts for nothing, as house_balances counts it.
+      .is("skipped_at", null)
       .order("starts_on", { ascending: false })
       .limit(USUAL_WEEKS),
   ]).then(([a, b]) => [must(a, "balances"), must(b, "past weeks")] as const);
@@ -546,7 +548,7 @@ async function closeWeeks(db: Db, house: HouseRow, members: readonly MemberRow[]
   const due = must(
     await db
       .from("weeks")
-      .select("id, starts_on")
+      .select("id, starts_on, skipped_at")
       .eq("house_id", house.id)
       .is("closed_at", null)
       .lte("ends_at", now.toISOString())
@@ -584,12 +586,13 @@ async function closeWeeks(db: Db, house: HouseRow, members: readonly MemberRow[]
       })),
     );
     const table = standings(places, members.map((m) => m.user_id), jobs);
-    const winners = new Set(weekWinners(table));
+    // A skipped week tops nobody and leaves streaks as they were.
+    const winners = new Set(week.skipped_at ? [] : weekWinners(table));
 
     const payload = members.map((m) => {
       const outcomes = rows.filter((r) => r.user_id === m.user_id).map((r) => r.outcome as Outcome);
       const before = streaks.get(m.user_id) ?? 0;
-      const clean = isCleanWeek(outcomes);
+      const clean = week.skipped_at ? null : isCleanWeek(outcomes);
       const after = clean === null ? before : clean ? before + 1 : 0;
       const earn: string[] = [];
       if (perks && earnsImmunity(before, after)) earn.push("immunity");
@@ -613,9 +616,10 @@ async function closeMonths(db: Db, house: HouseRow, members: readonly MemberRow[
   const forfeitRows = must(
     await db
       .from("ledger")
-      .select("user_id, amount_minor, month, counterparty, doers")
+      .select("user_id, amount_minor, month, counterparty, doers, kind")
       .eq("house_id", house.id)
-      .eq("kind", "forfeit")
+      // A month with only an admin's corrections in it closes too, so they count.
+      .in("kind", ["forfeit", "correction"])
       .lt("month", current),
     "forfeits",
   );
@@ -644,7 +648,7 @@ async function closeMonths(db: Db, house: HouseRow, members: readonly MemberRow[
       members.map((m) => m.user_id),
       rules.stakeMinor,
       forfeitRows
-        .filter((r) => r.month === month)
+        .filter((r) => r.month === month && r.kind === "forfeit")
         .map((r) => ({ userId: r.user_id, amount: -r.amount_minor, to: r.counterparty ?? r.doers })),
       month,
     );

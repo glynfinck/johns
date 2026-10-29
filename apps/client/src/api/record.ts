@@ -16,7 +16,7 @@ export async function loadRecord(houseId: string): Promise<RecordRows> {
   const [weeks, away, shares, johns, crew] = await Promise.all([
     supabase
       .from('weeks')
-      .select('id, starts_on, starts_at, ends_at')
+      .select('id, starts_on, starts_at, ends_at, skipped_at')
       .eq('house_id', houseId)
       .order('starts_on', { ascending: false })
       .limit(MOST_WEEKS),
@@ -27,7 +27,7 @@ export async function loadRecord(houseId: string): Promise<RecordRows> {
     allPages((from, to) =>
       supabase
         .from('assignments')
-        .select('id, week_id, user_id, name, points, due_at, done_at, outcome, excused, covered_by, job_id, absent_at')
+        .select('id, week_id, user_id, name, points, due_at, done_at, outcome, excused, covered_by, changed_by, job_id, absent_at')
         .eq('house_id', houseId)
         .order('id')
         .range(from, to),

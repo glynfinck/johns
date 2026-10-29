@@ -1,16 +1,18 @@
-import { JOHN_COPY } from '@app/core';
+import { HISTORY_COPY, JOHN_COPY } from '@app/core';
 import { useState } from 'react';
 
 import { coverJohn, markDone, rollCall } from '@/api/johns';
 import { pickPhoto, uploadProof } from '@/api/photos';
 import { useMove } from '@/hooks/use-move';
+import { useUndoOffer } from '@/hooks/use-undo-offer';
 
 /**
  * Ticking one John: as it is, or with a photo receipt from the camera or the
  * library, uploaded first. `problem` is the sentence to show when the photo
  * or the database said no. With `cover`, the John is a housemate's and the
  * tick covers it (cover_john) rather than marking your own done. With
- * `crew`, it's ticked with who did it (the roll call, crew.ts).
+ * `crew`, it's ticked with who did it (the roll call, crew.ts). A tick that
+ * lands offers Undo in a toast.
  */
 export function useTick(
   houseId: string,
@@ -25,6 +27,7 @@ export function useTick(
       ? coverJohn
       : markDone;
   const move = useMove(houseId);
+  const offer = useUndoOffer(houseId);
   const [uploading, setUploading] = useState(false);
   const [photoProblem, setPhotoProblem] = useState<string | null>(null);
 
@@ -48,12 +51,18 @@ export function useTick(
     } finally {
       setUploading(false);
     }
-    await move.run(() => done(assignmentId, path));
+    if (await move.run(() => done(assignmentId, path))) offered();
   }
 
-  function tick() {
+  function offered() {
+    offer(cover ? HISTORY_COPY.covered : HISTORY_COPY.ticked, cover ? 'cover' : 'tick', assignmentId);
+  }
+
+  async function tick() {
     setPhotoProblem(null);
-    return move.run(() => done(assignmentId));
+    const ok = await move.run(() => done(assignmentId));
+    if (ok) offered();
+    return ok;
   }
 
   return {

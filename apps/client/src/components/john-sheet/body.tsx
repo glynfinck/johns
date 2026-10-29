@@ -19,6 +19,7 @@ import { STATUS_ICON } from '@/components/status-mark';
 import { Lead, Meta } from '@/components/text';
 import { INSET, SPACE, useTheme } from '@/theme';
 
+import { ChangeResult } from './change-result';
 import { TheirsChecking, YoursChecking } from './checking';
 import { TheirsOpen, YoursOpen } from './open';
 import { CrewPart, RollCall } from './roll-call';
@@ -71,7 +72,8 @@ export interface JohnSheetContext {
  * Settled: the photo, if it had one (the header says what happened). A John
  * done together, or with help, says who's on it (crew.ts); ticking one is
  * its roll call, "Who did it?", in place of the rest. Then, whatever its
- * state, "Why?": why it's whose it is, and what's at stake.
+ * state, an admin's "Change result", and "Why?": why it's whose it is, and
+ * what's at stake.
  */
 export function JohnSheetBody({ item, context }: { item: BoardItem; context: JohnSheetContext }) {
   const mode = johnSheetMode(item, context.userId);
@@ -87,6 +89,7 @@ export function JohnSheetBody({ item, context }: { item: BoardItem; context: Joh
         <>
           <ModeContent item={item} context={context} onRollCall={() => setRollCalling(true)} />
           <CrewPart item={item} context={context} />
+          <ChangeResult item={item} context={context} />
         </>
       )}
       <JohnWhy item={item} context={context} />

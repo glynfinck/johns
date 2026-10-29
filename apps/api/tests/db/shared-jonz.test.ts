@@ -8,7 +8,7 @@ import { expectDenied, expectOk, expectRule } from "@/tests/support/expect";
 import { actorFor, addJohns, deal, makeHouse, reread, thisWeek, weeksAgo, ZONE } from "@/tests/support/factories";
 
 /**
- * Shared Jonz (20261031100000_shared_jonz.sql): a John done together is
+ * Shared Jonz (20261102090000_shared_jonz.sql): a John done together is
  * dealt as one place per person on one job, ticked by a roll call that
  * says who did it, and its points are shared by everyone on it, helpers
  * included. Whoever it leaves off has a miss, and their forfeit goes to
@@ -159,6 +159,38 @@ describe("the roll call", () => {
       expect([row.done_at, row.absent_at]).toEqual([null, null]);
     }
     expect(await crewOf(first.id)).toEqual([]);
+  });
+});
+
+describe("taking a roll call back some other way", () => {
+  it("opens every place and drops the crew when its ticker undoes it from History", async () => {
+    const { first, second, ticker, spare } = await gardenTidy();
+    expectOk(await ticker.db.rpc("roll_call", { p_assignment: first.id, p_crew: [ticker.userId, spare.userId] }));
+    expectOk(await ticker.db.rpc("undo_latest", { p_kind: "tick", p_about: first.id }));
+    for (const id of [first.id, second.id]) {
+      const row = await reread("assignments", id);
+      expect([row.done_at, row.absent_at]).toEqual([null, null]);
+    }
+    expect(await crewOf(first.id)).toEqual([]);
+  });
+
+  it("takes a place an admin changes out of the share, and its holder off the miss", async () => {
+    const { house, first, second, ticker, spare } = await gardenTidy();
+    expectOk(await ticker.db.rpc("roll_call", { p_assignment: first.id, p_crew: [ticker.userId, spare.userId] }));
+    expectOk(
+      await db.rpc("admin_reset", {
+        p_actor: house.admin.userId,
+        p_house: house.id,
+        p_kind: "result",
+        p_target: { assignment: second.id, outcome: "done" },
+        p_forfeits: {},
+        p_apply: true,
+      }),
+    );
+    const theirs = await reread("assignments", second.id);
+    expect([theirs.outcome, theirs.absent_at]).toEqual(["done", null]);
+    // Their own 4 is theirs now; the two on the roll call share the other 4.
+    expect((await crewOf(first.id)).map((c) => c.points)).toEqual([2, 2]);
   });
 });
 

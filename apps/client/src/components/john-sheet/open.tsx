@@ -4,6 +4,7 @@ import {
   CREW_COPY,
   firstName,
   FOCUS_SHELL_COPY,
+  HISTORY_COPY,
   JOHN_COPY,
   JOHN_SHEET_COPY,
   NEXT_UP_COPY,
@@ -28,6 +29,7 @@ import { StatusMark } from '@/components/status-mark';
 import { Body } from '@/components/text';
 import { useMove } from '@/hooks/use-move';
 import { useTick } from '@/hooks/use-tick';
+import { useUndoOffer } from '@/hooks/use-undo-offer';
 import { SPACE, useTheme } from '@/theme';
 
 import type { JohnSheetContext, JohnSheetFocus } from './body';
@@ -138,6 +140,7 @@ function IfYouCant({
   onSwap: () => void;
 }) {
   const move = useMove(context.houseId);
+  const offer = useUndoOffer(context.houseId);
   const [skipping, setSkipping] = useState(skipFirst);
   // Opened at "If you can't" with more above it than fits, the sheet starts scrolled here.
   const anchor: JohnSheetFocus = 'cant';
@@ -156,7 +159,11 @@ function IfYouCant({
                       icon={ShieldIcon}
                       label={JOHN_SHEET_COPY.skipIt}
                       disabled={move.pending}
-                      onPress={() => void move.run(() => spendImmunity(item.id))}
+                      onPress={() =>
+                        void move.run(() => spendImmunity(item.id)).then((done) => {
+                          if (done) offer(HISTORY_COPY.immunity, 'immunity', item.id);
+                        })
+                      }
                       testID="skip-it"
                     />
                   </View>
@@ -213,12 +220,16 @@ function SwapPicker({
   onCancel: () => void;
 }) {
   const move = useMove(context.houseId);
+  const offer = useUndoOffer(context.houseId);
   const [take, setTake] = useState<string | null>(null);
   // A pick that has since gone (ticked, or swapped by someone else) is no pick.
   const picked = cant.swapFor.some((i) => i.id === take) ? take : null;
 
   async function swap() {
-    if (picked && (await move.run(() => spendSwap(item.id, picked)))) context.close();
+    if (picked && (await move.run(() => spendSwap(item.id, picked)))) {
+      context.close();
+      offer(HISTORY_COPY.swapped, 'swap', picked);
+    }
   }
 
   return (

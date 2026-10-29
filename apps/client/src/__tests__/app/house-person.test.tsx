@@ -17,6 +17,7 @@ jest.mock('@/api/house', () => ({ catchUp: jest.fn() }));
 jest.mock('@/api/settings', () => ({ setRole: jest.fn(), removeMember: jest.fn() }));
 jest.mock('@/api/stake', () => ({ loadStake: jest.fn(), confirmPayment: jest.fn() }));
 jest.mock('@/api/table', () => ({ loadTable: jest.fn() }));
+jest.mock('@/api/resets', () => ({ previewReset: jest.fn(), applyReset: jest.fn() }));
 jest.mock('@/api/supabase', () => ({ supabase: {} }));
 
 const mockMembership = { userId: 'priya' };

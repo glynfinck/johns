@@ -1,5 +1,7 @@
 import type { Currency } from "./domain";
 import { dateRange, monthLabel } from "./format";
+import { undoneWhat } from "./history";
+import { resetWhat } from "./resets";
 import { formatMoney } from "./money";
 
 // The Wall as both apps show it: each event in words, built from the rows
@@ -109,7 +111,8 @@ export type WallIcon =
   | "calendar-check"
   | "banknote"
   | "bell-ring"
-  | "badge-check";
+  | "badge-check"
+  | "undo";
 
 export interface WallLine {
   icon: WallIcon;
@@ -203,6 +206,20 @@ export function describeEvent(e: WallEvent, nameOf: (userId: string | null) => s
           b(nameOf((e.data.to as string) ?? null)),
           t(` got ${formatMoney(Number(e.data.amount), currency)} from ${who}.`),
         ],
+      };
+    case "undone": {
+      // An admin took back someone else's move: told to whoever's move it was.
+      const by = nameOf((e.data.by as string) ?? null);
+      return {
+        icon: "undo",
+        parts: [b(by), t(` undid ${possessive(who)} ${undoneWhat(String(e.data.what), (e.data.name as string | null) ?? null)}.`)],
+      };
+    }
+    case "reset":
+      // An admin fixed something: who, and what.
+      return {
+        icon: "undo",
+        parts: [b(who), t(` ${resetWhat(e.data, nameOf((e.data.subject as string) ?? null))}.`)],
       };
     default:
       return { icon: "badge-check", parts: [t(e.kind)] };

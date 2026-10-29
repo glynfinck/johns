@@ -37,6 +37,14 @@ The one rule: **a John's points are shared evenly by everyone who did it.**
 - **Nobody does it**: every place misses. Once past the grace, someone with
   no place in it can cover the whole job (every open place), and gets all of
   it.
+- **Undo and resets** (after Undo and History, and admin resets): taking a
+  roll call back any way (the toast's Undo, History, an admin) opens every
+  place it settled and drops its crew; a cover of a job taken back opens all
+  it covered. An admin changing one place's result, or putting one person's
+  week back to open, takes that place's points out of the share and its
+  holder off the crew; the rest share what's left. Kept by triggers
+  (`job_follows`, `left_off_settled`), so undo_action and admin_reset stay
+  as they are.
 - **Checks**: one check per roll call. It's checked on the place it was
   ticked from (`checked_place`); anyone named or left off can dispute it.
   Upheld opens every place again and the roll call goes. Undo takes the
@@ -57,7 +65,7 @@ The one rule: **a John's points are shared evenly by everyone who did it.**
 
 ## Inputs and outputs
 
-- Migration `20261031100000_shared_jonz.sql`, additive:
+- Migration `20261102090000_shared_jonz.sql`, additive:
   - `johns.crew` (1 to 6, or 0 for everyone home; 1 on call:
     `johns_crew_on_call`).
   - `assignments.job_id` (places of one job; unique per person:
@@ -107,3 +115,6 @@ Done button: the tick needs the roll call, in the app.
 - [x] The roll call with helpers, its split, and the notifications.
 - [x] Shares through balances, the Table, Track record, Why? and the Stake.
 - [ ] A helper's own "I helped" from a John they hold no place in (later).
+- [ ] Undoing an admin's week reset brings back the ticks but not who did a
+      roll call (its crew), and a reset's preview counts a roll call's
+      places as their holders' (later).

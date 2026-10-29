@@ -169,6 +169,23 @@ describe("recordBreakdown", () => {
   });
 });
 
+describe("after an admin's resets", () => {
+  it("dots a changed result, greys a skipped week, and counts the skipped week for nothing", () => {
+    const skipped = { ...W2, skipped_at: "2026-10-10T00:00:00Z" };
+    const data = input(
+      [john(W2, "sam", { outcome: "done", points: 3 }), john(W3, "sam", { outcome: "missed", changed_by: "ana" })],
+      { weeks: [W1, skipped, W3, NEXT] },
+    );
+    const sam = trackRecord(data, "month").rows.find((r) => r.userId === "sam")!;
+    expect(sam.cells.map((c) => [c.mark, c.changed])).toEqual([
+      ["skipped", false],
+      ["missed", true],
+    ]);
+    // W3's share only: W2's share and its 3 points count for nothing.
+    expect(recordBreakdown(data, "month", "sam", nameOf).total).toBe(-2);
+  });
+});
+
 describe("readSpan and signedPoints", () => {
   it("reads a span from a link, this month otherwise", () => {
     expect(readSpan("year")).toBe("year");

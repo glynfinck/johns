@@ -24,6 +24,10 @@
 --
 -- @app/core counts the same: crew.ts, points.ts standings, record.ts, and
 -- stake.ts settleMonth (doers).
+--
+-- After 20261101090000_undo_history and 20261101100000_admin_resets: a roll
+-- call taken back any other way (History's Undo, an admin's reset or result
+-- change) keeps the job whole, by trigger (see "Keeping a job whole").
 
 -- --- Done by ------------------------------------------------------------------------
 
@@ -504,7 +508,8 @@ stable
 security invoker set search_path = ''
 as $$
   with past as (
-    select w.id from public.weeks w where w.house_id = p_house and w.starts_on < p_before
+    select w.id from public.weeks w
+    where w.house_id = p_house and w.starts_on < p_before and w.skipped_at is null
   ),
   owed as (
     select s.user_id, sum(s.share) as owed
@@ -755,6 +760,122 @@ begin
   return moved;
 end;
 $$;
+
+-- --- Keeping a job whole -------------------------------------------------------------
+
+-- A roll call is one tick. However the tick on the place it was ticked from
+-- is taken back (undo_done, History's undo_action, an admin's reset), every
+-- place it settled opens again and its crew goes; a cover of a job taken
+-- back opens all the places it covered. A forfeit those places were settled
+-- with goes too while its month is open, as undo_action does for the place
+-- itself (a month already shared out keeps its money). The functions here
+-- do the same themselves, so for them this finds nothing left to do.
+--
+-- A single place leaving its roll call (a reset puts one person's Johns
+-- back to open, or changes one result) takes its points out of the share,
+-- and its holder off the crew: the rest share what is left.
+create function public.job_follows()
+returns trigger
+language plpgsql
+security definer set search_path = ''
+as $$
+declare
+  tick timestamptz := old.done_at;
+  n integer;
+begin
+  if old.covered_by is not null then
+    -- A cover of a job taken back: the rest of what it covered opens again.
+    if old.job_id is null then
+      return null;
+    end if;
+    delete from public.ledger l
+    using public.assignments p
+    where l.assignment_id = p.id and l.kind = 'forfeit'
+      and p.job_id = old.job_id and p.id <> old.id
+      and p.covered_by = old.covered_by and p.done_at = tick
+      and public.month_open(p.house_id, p.due_at);
+    update public.assignments p
+    set done_at = null, photo_path = null, covered_by = null, outcome = null, settled_at = null
+    where p.job_id = old.job_id and p.id <> old.id
+      and p.covered_by = old.covered_by and p.done_at = tick;
+    return null;
+  end if;
+
+  if exists (select 1 from public.crew where assignment_id = old.id and created_at = tick) then
+    -- The place it was ticked from: the whole roll call goes.
+    delete from public.crew where assignment_id = old.id and created_at = tick;
+    if old.job_id is not null then
+      delete from public.ledger l
+      using public.assignments p
+      where l.assignment_id = p.id and l.kind = 'forfeit'
+        and p.job_id = old.job_id and p.id <> old.id and p.covered_by is null
+        and (p.done_at = tick or p.absent_at = tick)
+        and public.month_open(p.house_id, p.due_at);
+      update public.assignments p
+      set done_at = null, photo_path = null, absent_at = null, outcome = null, settled_at = null
+      where p.job_id = old.job_id and p.id <> old.id and p.covered_by is null
+        and (p.done_at = tick or p.absent_at = tick);
+    end if;
+    return null;
+  end if;
+
+  -- Someone on a roll call whose own place opened again: off the crew, and
+  -- their place's points out of the share.
+  select count(*) into n from public.crew where job_id = coalesce(old.job_id, old.id) and created_at = tick;
+  if n > 0 and exists (
+    select 1 from public.crew where job_id = coalesce(old.job_id, old.id) and created_at = tick and user_id = old.user_id
+  ) then
+    delete from public.crew where job_id = coalesce(old.job_id, old.id) and created_at = tick and user_id = old.user_id;
+    if n > 1 then
+      update public.crew
+      set points = greatest(points * n - old.points, 0) / (n - 1)
+      where job_id = coalesce(old.job_id, old.id) and created_at = tick;
+    end if;
+  end if;
+  return null;
+end;
+$$;
+
+create trigger job_follows
+  after update of done_at, covered_by on public.assignments
+  for each row
+  when (old.done_at is not null and new.done_at is distinct from old.done_at)
+  execute function public.job_follows();
+
+-- A place left off that is then settled some other way (an admin's result,
+-- a skipped week, a cover) or put back to open is no longer left off, and
+-- its points come out of the share.
+create function public.left_off_settled()
+returns trigger
+language plpgsql
+security definer set search_path = ''
+as $$
+declare
+  n integer;
+begin
+  new.absent_at := null;
+  select count(*) into n from public.crew where job_id = old.job_id and created_at = old.absent_at;
+  if n > 0 then
+    update public.crew
+    set points = greatest(points - old.points::numeric / n, 0)
+    where job_id = old.job_id and created_at = old.absent_at;
+  end if;
+  return new;
+end;
+$$;
+
+create trigger left_off_settled
+  before update on public.assignments
+  for each row
+  when (
+    old.absent_at is not null and new.absent_at is not null
+    and (new.done_at is not null or new.excused or new.covered_by is not null
+         or (old.outcome is not null and new.outcome is null)
+         or new.outcome in ('done', 'late', 'excused'))
+  )
+  execute function public.left_off_settled();
+
+revoke execute on function public.job_follows(), public.left_off_settled() from public, anon, authenticated;
 
 -- --- Grants ------------------------------------------------------------------------------
 
