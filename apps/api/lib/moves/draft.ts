@@ -22,6 +22,7 @@ import {
 import { askClaude, canDraft, type DraftAnswer, type DraftContext } from "@/lib/ai/house-draft";
 import { createAdminClient } from "@/lib/supabase/admin";
 
+import { offerResets, resetState, type ResetState } from "./ask-resets";
 import type { Caller, Refusal } from "./disputes";
 
 /** The most Jonz says in one turn, so a runaway reply can't fill the screen. */
@@ -41,7 +42,9 @@ const REPLY_MAX = 600;
  * doesn't answer, offlineTurn answers (a starter list that fits, or the
  * draft left as it is), so setup never stops here. Nothing is written to the
  * John list: the admin keeps what they want of the draft through the list's
- * own grants.
+ * own grants. For a house that's running, Jonz also hears the last two weeks
+ * and what can be undone, and can offer resets (lib/moves/ask-resets.ts):
+ * those too only happen when the admin taps them.
  *
  * `ask` is Claude, unless a test stands in for it.
  */
@@ -96,6 +99,16 @@ export async function chatTurn(
   // The person writing first: "me" in what they say is them.
   people.sort((a, b) => Number(b.userId === caller.userId) - Number(a.userId === caller.userId));
 
+  // What the admin might want put right. Without it the chat still drafts.
+  let state: ResetState | null = null;
+  if (list) {
+    try {
+      state = await resetState(caller, houseId, now);
+    } catch (e) {
+      console.error("reset_state_failed", e instanceof Error ? e.message : e);
+    }
+  }
+
   let answer: DraftAnswer;
   try {
     answer = await ask({
@@ -104,6 +117,7 @@ export async function chatTurn(
       messages,
       draft: draftNow ? draftForModel(draftNow, people, caller.userId) : null,
       editing: list !== null,
+      now: state?.text ?? null,
     });
   } catch (e) {
     console.error("draft_failed", e instanceof Error ? e.message : e);
@@ -122,5 +136,6 @@ export async function chatTurn(
   const reply = answer.raw.reply.replace(/\s+/g, " ").trim().slice(0, REPLY_MAX);
   // Nothing to say and nothing drafted before: a starter list does better than silence.
   if (!reply && !draft && !draftNow) return offlineTurn(messages, draftNow);
-  return { reply, ask: tidyAsk(answer.raw.ask), draft, source: "ai" };
+  const resets = state && answer.raw.resets?.length ? await offerResets(caller, houseId, answer.raw.resets, state, now) : [];
+  return { reply, ask: tidyAsk(answer.raw.ask), draft, source: "ai", ...(resets.length > 0 ? { resets } : {}) };
 }

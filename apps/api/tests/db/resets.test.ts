@@ -2,6 +2,8 @@ import { monthOf, ResetResponse } from "@app/core";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 
 import { POST } from "@/app/api/resets/route";
+import type { DraftAnswer, DraftContext } from "@/lib/ai/house-draft";
+import { chatTurn } from "@/lib/moves/draft";
 import { adminClient, type Actor } from "@/tests/support/clients";
 import { expectOk } from "@/tests/support/expect";
 import { actorFor, addJohns, deal, makeHouse, reread, thisWeek, ZONE } from "@/tests/support/factories";
@@ -181,5 +183,46 @@ describe("handing over", () => {
     const { data } = await db.from("members").select("user_id, role").eq("house_id", house.id);
     expect(data!.find((m) => m.user_id === ben.userId)!.role).toBe("admin");
     expect(data!.some((m) => m.user_id === house.admin.userId)).toBe(false);
+  });
+});
+
+describe("Ask Jonz's resets", () => {
+  it("tells Jonz the week and what can be undone, and offers what it asks for with real numbers, changing nothing", async () => {
+    const { house, a, owner } = await dealtHouse();
+    expectOk(await owner.db.rpc("mark_done", { p_assignment: a.id }));
+    let told: DraftContext | null = null;
+    const result = await chatTurn(
+      { db: house.admin.db, userId: house.admin.userId },
+      house.id,
+      [{ role: "user", text: "That tick was a mistake, and reset the week" }],
+      null,
+      new Date(),
+      async (ctx): Promise<DraftAnswer> => {
+        told = ctx;
+        const ref = [...ctx.now!.matchAll(/(h\d+) [^;]*ticked/g)][0][1];
+        return {
+          raw: {
+            reply: "Here's what I'd put right.",
+            ask: { kind: "none" },
+            draft: null,
+            resets: [
+              { what: "undo", ref, person: null, outcome: null, week: null, month: null },
+              { what: "week", ref: null, person: null, outcome: null, week: "this", month: null },
+              // Not a ref it was given: left out.
+              { what: "result", ref: "j99", person: null, outcome: "missed", week: null, month: null },
+            ],
+          },
+          inputTokens: 1,
+          outputTokens: 1,
+        };
+      },
+    );
+    expect(told!.now).toMatch(/This week, from .*: j1 /);
+    if ("refusal" in result) throw new Error("refused");
+    expect(result.resets!.map((r) => r.kind)).toEqual(["undo", "reset"]);
+    const week = result.resets![1];
+    if (week.kind !== "reset") throw new Error("not a reset");
+    expect(week.preview.people[owner.userId].ticks).toBe(1);
+    expect((await reread("assignments", a.id)).done_at).not.toBeNull();
   });
 });

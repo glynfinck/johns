@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 
 import { actionLine } from "./history";
-import { resetSheet, resetTitle, resetWhat, type ResetPreview, type ResetWords } from "./resets";
+import { resetItemLine, resetSheet, resetTitle, resetWhat, toldLine, type ResetPreview, type ResetWords } from "./resets";
 
 const names: Record<string, string> = { glyn: "Glyn Finck", sam: "Sam Lee", ada: "Ada Park" };
 
@@ -78,5 +78,22 @@ describe("a reset in History and on the Wall", () => {
     expect(resetWhat({ what: "person_week" }, "Sam")).toBe("reset Sam’s week");
     expect(resetWhat({ what: "result", name: "Bins", outcome: "missed" }, "You")).toBe("marked your Bins missed");
     expect(actionLine("reset", { what: "skip" }, "Glyn", "Someone", "GBP")).toBe("Glyn skipped the week");
+  });
+});
+
+describe("Ask Jonz's Resets card", () => {
+  it("puts a reset's numbers in one line, without the Track record", () => {
+    const line = resetItemLine({ kind: "reset", ask: { kind: "week", week: "w1" }, preview: preview(), words: {} }, words());
+    expect(line).toEqual({ title: "Reset this week", meta: "6 ticks cleared · Ada −7 pts · £2 of forfeits removed", told: ["ada", "sam"] });
+  });
+
+  it("says an undo in History's words, and tells whoever's move it was", () => {
+    const line = resetItemLine({ kind: "undo", action: "h1", line: "Sam ticked Bins", actor: "sam" }, words());
+    expect(line).toEqual({ title: "Undo: Sam ticked Bins", meta: "Back as it was before", told: ["sam"] });
+  });
+
+  it("names everyone told once", () => {
+    expect(toldLine(["sam", "ada", "sam"], words().nameOf)).toBe("Ada and Sam get a notification");
+    expect(toldLine([], words().nameOf)).toBe("Nobody else is told");
   });
 });

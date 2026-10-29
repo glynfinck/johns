@@ -26,8 +26,8 @@ import type { Caller, Refusal } from "./disputes";
  * caller's own session, and it checks again. What a late or missed John
  * costs comes from the house's rules and House Pass, as the clock's does.
  * A re-deal clears the week, then deals it again here (lib/engine/tick.ts),
- * and only this week can be dealt. The web and POST /api/resets share it;
- * Ask Jonz's tools will too.
+ * and only this week can be dealt. The app (POST /api/resets) and Ask Jonz
+ * (lib/moves/ask-resets.ts) share it.
  */
 export async function resetHouse(
   caller: Caller,

@@ -1,8 +1,9 @@
 # Admins and resets
 
 Design: https://claude.ai/artifact/WMLo693iKzjmhLMyzE5snL (Glyn picked the
-whole package, 29 Oct 2026). This is step 2 of 3. Step 1 is undo and
-History (`docs/specs/undo-history.md`); step 3 is Ask Jonz for both.
+whole package, 29 Oct 2026). Step 1 is undo and History
+(`docs/specs/undo-history.md`); step 2 is the resets below; step 3 is Ask
+Jonz for both.
 
 ## Admins
 
@@ -67,6 +68,25 @@ Streaks are counted again from the closed weeks after any reset or its undo
 (`recount_streaks`), as the clock counts them. Tokens already earned stay
 earned.
 
+## Ask Jonz
+
+An admin can say what went wrong in Ask Jonz ("Sam's tick was a mistake",
+"reset this week"). For a house that's running, Jonz is told the last two
+weeks' Johns and the moves History can still undo, each by a short ref
+(`lib/moves/ask-resets.ts` `resetState`), and answers with the fixes in
+those refs. The server turns refs into ids and asks the database what each
+would change, as the reset sheet does; a ref Jonz made up, or a reset the
+database refuses or that changes nothing, isn't offered.
+
+The fixes come back on a **Resets card** in the chat: hazard tape across the
+top, one ticked row per fix with its numbers in a line, who gets a
+notification, and a hazard button "Reset N things". Unticking a row keeps
+it. Nothing changes until that button; afterwards the card says what was
+done, and Undo takes the resets back. An undo from History is offered as
+its own row, and isn't undone again. Jonz can't start the house over,
+delete it or wipe its history, only offer the resets above, at most six at
+a time.
+
 ## Where it lives
 
 - `supabase/migrations/20261101100000_admin_resets.sql`: `admin_reset` (the
@@ -74,7 +94,9 @@ earned.
   `add_correction`, `recount_streaks`, `hand_over`, and the skipped week in
   `house_balances`.
 - `apps/api/lib/moves/resets.ts`: who may ask, what forfeits cost (rules and
-  House Pass), the re-deal, the pushes. `POST /api/resets` and Ask Jonz's
-  tools share it.
+  House Pass), the re-deal, the pushes. `POST /api/resets` and Ask Jonz
+  share it.
+- `apps/api/lib/moves/ask-resets.ts`: what Jonz is told, and its fixes as
+  the Resets card offers them (`components/house/resets-card.tsx`).
 - `packages/core/src/resets.ts`: the request and preview, and the sheet's
   words (`resetSheet`).
