@@ -8,6 +8,7 @@ import {
   monthOf,
   NEXT_UP_COPY,
   SWAP_COPY,
+  WHY_COPY,
   type DisputeRow,
 } from '@app/core';
 import type { QueryClient } from '@tanstack/react-query';
@@ -155,6 +156,52 @@ describe('the header', () => {
     );
     await openOn('Open a1');
     expect(screen.getByTestId('john-sheet-when')).toHaveTextContent(/^Due .+ · late costs £1, missed £2$/);
+  });
+});
+
+describe('Why?', () => {
+  const dealt = {
+    to: 'priya',
+    by: 'behind',
+    weighed: [
+      { userId: 'priya', standing: -2.5 },
+      { userId: 'sam', standing: 1, last: true },
+    ],
+    away: [],
+  };
+
+  it('says why the John is yours and what slipping would cost, with how it added up folded away', async () => {
+    await show(house([binsOut({ dealt })]));
+    await openOn('Open a1');
+    const why = screen.getByTestId('john-why');
+    expect(within(why).getByText(WHY_COPY.label)).toBeOnTheScreen();
+    expect(within(why).getByTestId('why-answer')).toHaveTextContent(WHY_COPY.behind('you'));
+    expect(within(why).getByTestId('why-stakes')).toHaveTextContent(
+      /^If it isn’t done by .+, it’s missed\. A miss counts for nobody, so the work comes back to you/,
+    );
+    expect(within(why).queryByTestId('why-row')).toBeNull();
+
+    await fireEvent.press(within(why).getByTestId('why-adds-up'));
+    const rows = within(why).getAllByTestId('why-row');
+    expect(rows).toHaveLength(2);
+    expect(rows[0]).toHaveTextContent(/You.*Dealt it.*−2\.5/);
+    expect(rows[1]).toHaveTextContent(/Had it last time.*\+1/);
+    expect(within(why).getByText(WHY_COPY.key)).toBeOnTheScreen();
+  });
+
+  it('owns up to a John dealt before the deal kept its working, with nothing to fold open', async () => {
+    await show();
+    await openOn('Open a1');
+    expect(screen.getByTestId('why-answer')).toHaveTextContent(WHY_COPY.unknown);
+    expect(screen.queryByTestId('why-adds-up')).toBeNull();
+  });
+
+  it("says whose work a housemate's settled John counted as", async () => {
+    const onlySam = { to: 'sam', by: 'only', weighed: [{ userId: 'sam', standing: 0 }], away: ['priya'] };
+    await show(house([binsOut(), samsBath({ dealt: onlySam, done_at: at(-30), outcome: 'done' })]));
+    await openOn('Open a4');
+    expect(screen.getByTestId('why-answer')).toHaveTextContent(`${WHY_COPY.only('Sam', false)} ${WHY_COPY.away('You', false)}`);
+    expect(screen.getByTestId('why-stakes')).toHaveTextContent(WHY_COPY.counts('Sam’s'));
   });
 });
 

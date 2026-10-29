@@ -116,17 +116,51 @@ export function weekShares(
   return share;
 }
 
+/**
+ * Why a John went where it did, as the deal weighed it: kept with the
+ * assignment (assignments.dealt), so its sheet can say why without replaying
+ * the deal. A type, not an interface, so it goes into the deal's JSON as it is.
+ */
+export type DealWhy = {
+  /** Who it was dealt to. */
+  to: string;
+  /**
+   * What decided it: the only sharer home that day; furthest behind; level
+   * with someone, but with fewer Johns this week; or level in every way, so
+   * the seeded shuffle.
+   */
+  by: "only" | "behind" | "fewer" | "draw";
+  /**
+   * Each sharer home that day, as the deal weighed them, furthest behind
+   * first: their balance plus this week's Johns dealt before this one, minus
+   * their share of this week (to a tenth of a point). `last` did it last
+   * time; `full` had already been handed as much extra as a week catches up.
+   */
+  weighed: { userId: string; standing: number; last?: true; full?: true }[];
+  /** The sharers away the day it's due. */
+  away: string[];
+};
+
 export function fairShares(
   johns: readonly DealJohn[],
   members: readonly DealMember[],
   seed: string,
 ): DealAssignment[] {
+  return fairSharesExplained(johns, members, seed).map(({ johnId, userId }) => ({ johnId, userId }));
+}
+
+/** The deal (fairShares), with why each John went where it did. */
+export function fairSharesExplained(
+  johns: readonly DealJohn[],
+  members: readonly DealMember[],
+  seed: string,
+): (DealAssignment & { why: DealWhy })[] {
   const byId = new Map(members.map((m) => [m.userId, m]));
   const state = new Map(members.map((m) => [m.userId, { assigned: 0, count: 0 }]));
 
   const ordered = [...johns].sort((a, b) => b.points - a.points || a.johnId.localeCompare(b.johnId));
 
-  const out: DealAssignment[] = [];
+  const out: (DealAssignment & { why: DealWhy })[] = [];
   for (const john of ordered) {
     const candidates = john.home.filter((id) => byId.has(id) && john.sharers.includes(id));
     if (candidates.length === 0) continue;
@@ -137,18 +171,38 @@ export function fairShares(
     );
     const pool = roomy.length > 0 ? roomy : candidates;
 
-    let best: { userId: string; key: [number, number, number] } | null = null;
-    for (const id of pool) {
-      const m = byId.get(id)!;
-      const s = state.get(id)!;
-      const behind = m.balance + s.assigned - m.share + (id === john.lastUserId ? REPEAT_PENALTY : 0);
-      const key: [number, number, number] = [behind, s.count, stableHash(`${seed}:${john.johnId}:${id}`)];
-      if (!best || lessThan(key, best.key)) best = { userId: id, key };
-    }
-    const chosen = state.get(best!.userId)!;
+    const keyed = pool
+      .map((id) => {
+        const m = byId.get(id)!;
+        const s = state.get(id)!;
+        const behind = m.balance + s.assigned - m.share + (id === john.lastUserId ? REPEAT_PENALTY : 0);
+        const key: [number, number, number] = [behind, s.count, stableHash(`${seed}:${john.johnId}:${id}`)];
+        return { userId: id, key };
+      })
+      .sort((a, b) => (lessThan(a.key, b.key) ? -1 : lessThan(b.key, a.key) ? 1 : 0));
+    const best = keyed[0];
+    const next = keyed[1];
+    const by: DealWhy["by"] =
+      candidates.length === 1 ? "only" : !next || best.key[0] < next.key[0] ? "behind" : best.key[1] < next.key[1] ? "fewer" : "draw";
+
+    const weighed = candidates
+      .map((id) => {
+        const m = byId.get(id)!;
+        const standing = Math.round((m.balance + state.get(id)!.assigned - m.share) * 10) / 10;
+        return {
+          userId: id,
+          standing,
+          ...(id === john.lastUserId ? { last: true as const } : {}),
+          ...(pool.includes(id) ? {} : { full: true as const }),
+        };
+      })
+      .sort((a, b) => a.standing - b.standing || a.userId.localeCompare(b.userId));
+    const away = john.sharers.filter((id) => byId.has(id) && !john.home.includes(id));
+
+    const chosen = state.get(best.userId)!;
     chosen.assigned += john.points;
     chosen.count += 1;
-    out.push({ johnId: john.johnId, userId: best!.userId });
+    out.push({ johnId: john.johnId, userId: best.userId, why: { to: best.userId, by, weighed, away } });
   }
   return out;
 }

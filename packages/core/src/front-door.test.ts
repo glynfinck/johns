@@ -192,11 +192,12 @@ describe("FRONT_DOOR_COPY", () => {
     expect([...shown].sort()).toEqual([...web].sort());
   });
 
-  it("heads privacy in four short sections", () => {
+  it("heads privacy in five short sections", () => {
     expect(FRONT_DOOR_COPY.privacy.map((s) => s.heading)).toEqual([
       "What we keep",
       "What we don’t",
       "Who sees what",
+      "Drafting your Johns",
       "Deleting your data",
     ]);
     for (const { heading, body } of FRONT_DOOR_COPY.privacy) {

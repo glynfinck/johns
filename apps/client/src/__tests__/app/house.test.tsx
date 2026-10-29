@@ -1,4 +1,13 @@
-import { BIN_NIGHT, buildStake, FOCUS_SHELL_COPY, HOUSE_PAGE_COPY, type HistoryRow, INVITE_COPY, stakeRules } from '@app/core';
+import {
+  BIN_NIGHT,
+  buildStake,
+  FOCUS_SHELL_COPY,
+  HOUSE_PAGE_COPY,
+  type HistoryRow,
+  INVITE_COPY,
+  PASS_COPY,
+  stakeRules,
+} from '@app/core';
 import { router } from 'expo-router';
 import { Tabs } from 'expo-router/js-tabs';
 import { act, fireEvent, screen, waitFor, within } from 'expo-router/testing-library';
@@ -134,6 +143,16 @@ it('keeps the lower sections under the money and the Table, in their order', asy
     'You',
     'Leaving',
   ]);
+});
+
+it('shows where the house stands on the House Pass, with the way to its page', async () => {
+  await open();
+  const row = screen.getByTestId('to-pass');
+  expect(within(row).getByText(PASS_COPY.title)).toBeOnTheScreen();
+  expect(within(row).getByText(PASS_COPY.founding)).toBeOnTheScreen();
+  // The Pass isn't enforced yet, so every house keeps the money and the Table.
+  expect(screen.getByTestId('month-card')).toBeOnTheScreen();
+  expect(screen.queryByTestId('stake-locked')).toBeNull();
 });
 
 describe('the month card', () => {

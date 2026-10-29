@@ -22,6 +22,7 @@ import { TheirsChecking, YoursChecking } from './checking';
 import { TheirsOpen, YoursOpen } from './open';
 import { Settled } from './settled';
 import { Disputed } from './vote';
+import { JohnWhy } from './why';
 
 /**
  * What the John sheet was opened for, when it was opened for something in
@@ -65,13 +66,15 @@ export interface JohnSheetContext {
  * johnSheetMode). Yours and open: the tick, and "If you can't" while you
  * hold a token. Being checked: when it stands, and Undo for yours or
  * Dispute for a housemate's. Disputed: the reason, the tally and the vote.
- * Settled: the photo, if it had one (the header says what happened).
+ * Settled: the photo, if it had one (the header says what happened). Then,
+ * whatever its state, "Why?": why it's whose it is, and what's at stake.
  */
 export function JohnSheetBody({ item, context }: { item: BoardItem; context: JohnSheetContext }) {
   return (
     <View testID="john-sheet-body">
       <JohnSheetHeader item={item} context={context} />
       <ModeContent item={item} context={context} />
+      <JohnWhy item={item} context={context} />
     </View>
   );
 }

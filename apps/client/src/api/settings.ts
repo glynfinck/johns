@@ -90,6 +90,42 @@ export async function saveJohn(houseId: string, rules: HouseRules, draft: Omit<J
   );
 }
 
+/**
+ * Add several Johns at once (a draft an admin kept), each with its group's
+ * id or null for everyone. Like saveJohn, their cadence counts from the
+ * house's current week. All or nothing: one insert.
+ */
+export async function addJohns(
+  houseId: string,
+  rules: HouseRules,
+  drafts: readonly Omit<JohnDraft, 'id'>[],
+  now: Date,
+) {
+  if (drafts.length === 0) return;
+  const anchor = weekIndex(weekWindow(now, rules.timezone, rules.weekStarts).startsOn);
+  const rows = drafts.map((draft) => {
+    const parsed = JohnDraft.safeParse(draft);
+    if (!parsed.success) throw new Error(parsed.error.issues[0].message);
+    const j = parsed.data;
+    return {
+      house_id: houseId,
+      anchor_week: anchor,
+      name: j.name,
+      category: j.category,
+      points: j.points,
+      every_weeks: j.everyWeeks,
+      due_dow: j.dueDow,
+      due_time: j.dueTime,
+      needs_photo: j.needsPhoto,
+      group_id: j.groupId,
+      kind: j.when,
+      respond_hours: j.respondHours,
+      per_week: j.perWeek,
+    };
+  });
+  wrote(await supabase.from('johns').insert(rows).select('id'));
+}
+
 /** Take a John off the list. Weeks already dealt keep it; the next deal won't. */
 export async function archiveJohn(houseId: string, johnId: string, now: Date) {
   wrote(

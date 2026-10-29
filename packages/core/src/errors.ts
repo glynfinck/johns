@@ -43,6 +43,7 @@ const MESSAGES: Record<string, string> = {
   nobody_home: "Everyone who shares that John is away today.",
   tick_it_yourself: "That’s your John. Tick it off instead.",
   too_soon_to_cover: "It’s still theirs to do. You can cover it once the grace period is up.",
+  draft_limit: "That’s enough for one day. Add the draft as it is and change it on the list, or try again tomorrow.",
   john_covered: "A housemate covered this one. Dispute it if it wasn’t done.",
 };
 

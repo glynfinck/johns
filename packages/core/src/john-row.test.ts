@@ -19,6 +19,7 @@ function item(id: string, overrides: Partial<BoardItem> = {}): BoardItem {
     flaggedAt: null,
     flaggedBy: null,
     carried: false,
+    dealt: null,
     johnId: `j-${id}`,
     everyWeeks: 1,
     userId: "sam",
