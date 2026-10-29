@@ -54,6 +54,8 @@ export interface JohnSpec {
   groupId?: string;
   /** On call: flagged when it needs doing, with this window. */
   onCall?: { respondHours?: number; perWeek?: number };
+  /** Done by: how many do it together (1 to 6), or 0 for everyone home. */
+  crew?: number;
 }
 
 export async function addJohns(houseId: string, specs: JohnSpec[], anchor: WeekWindow) {
@@ -79,6 +81,7 @@ export async function addJohns(houseId: string, specs: JohnSpec[], anchor: WeekW
         kind: s.onCall ? "on_call" : "day",
         respond_hours: s.onCall?.respondHours ?? 12,
         per_week: s.onCall?.perWeek ?? 2,
+        crew: s.crew ?? 1,
       })),
     )
     .select("id, name");
