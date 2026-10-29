@@ -177,6 +177,10 @@ it('stays when you cancel', async () => {
 it('says Jonz never moves money, and leads to Privacy', async () => {
   await open();
   expect(screen.getByText(HOUSE_LOWER_COPY.noMoney)).toBeOnTheScreen();
+  // The links are the same size as the words beside them (Meta, 14).
+  for (const label of [HOUSE_LOWER_COPY.noMoney, HOUSE_LOWER_COPY.privacy, HOUSE_LOWER_COPY.terms]) {
+    expect(screen.getByText(label)).toHaveStyle({ fontSize: 14 });
+  }
   await fireEvent.press(screen.getByRole('link', { name: HOUSE_LOWER_COPY.privacy }));
   expect(screen).toHavePathname('/privacy');
   expect(screen.getByText('Privacy page')).toBeOnTheScreen();

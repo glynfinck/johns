@@ -34,6 +34,8 @@ it('gives every link a whole thumb to land on', async () => {
   await render(<FrontDoor />);
   expect(screen.getByTestId('privacy')).toHaveStyle({ minHeight: TAP });
   expect(screen.getByTestId('terms')).toHaveStyle({ minHeight: TAP });
+  // The small print's size, like the name beside them (Meta, 14).
+  for (const label of ['Privacy', 'Terms']) expect(screen.getByText(label)).toHaveStyle({ fontSize: 14 });
   for (const label of [FRONT_DOOR_COPY.start, FRONT_DOOR_COPY.invite, FRONT_DOOR.signIn]) {
     expect(screen.getByRole('link', { name: label })).toHaveStyle({ minHeight: TAP });
   }
