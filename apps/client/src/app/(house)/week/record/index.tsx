@@ -1,0 +1,102 @@
+import {
+  readSpan,
+  RECORD_COPY,
+  RECORD_SPANS,
+  SECTION_LABEL,
+  trackRecord,
+  type RecordMark,
+  type RecordSpan,
+} from '@app/core';
+import { router, useLocalSearchParams } from 'expo-router';
+import { StyleSheet, View } from 'react-native';
+
+import { PageTitle } from '@/components/page-title';
+import { Reading, ReadFailed } from '@/components/read-state';
+import { Screen } from '@/components/screen';
+import { Section } from '@/components/section';
+import { Segmented } from '@/components/segmented';
+import { Meta } from '@/components/text';
+import { TitleBar } from '@/components/title-bar';
+import { RecordGrid, RecordKey } from '@/components/week/track-record';
+import { useHouse } from '@/hooks/use-house';
+import { useMembership } from '@/hooks/use-membership';
+import { usePull } from '@/hooks/use-refresh';
+import { useRecord } from '@/hooks/use-record';
+import { INSET, SPACE } from '@/theme';
+
+/** The key's marks, in the order they read. */
+const KEY: readonly RecordMark[] = ['clean', 'late', 'missed', 'covered', 'skipped', 'away', 'open'];
+
+/**
+ * The track record, pushed from Week: Week, Month, Year or All, then one
+ * row per person, best on time first, with a square per week (on Week, per
+ * John) coloured by the worst thing in it, and the key under them. A row
+ * opens that person's breakdown, for the same span.
+ */
+export default function RecordScreen() {
+  const { session, house } = useMembership();
+  const { span } = useLocalSearchParams<{ span?: string }>();
+  // The layout's guard only shows the house's screens with a house and a session.
+  return <RecordFor houseId={house!.id} userId={session!.user.id} span={readSpan(span)} />;
+}
+
+function RecordFor({ houseId, userId, span }: { houseId: string; userId: string; span: RecordSpan }) {
+  const { query, view } = useHouse(houseId, userId);
+  const rows = useRecord(houseId);
+  const { refreshing, pull } = usePull(houseId, () => Promise.all([query.refetch(), rows.refetch()]));
+
+  const members = view?.snapshot.members ?? [];
+  const nameOf = (id: string) => members.find((m) => m.userId === id)?.name ?? RECORD_COPY.someoneGone;
+  const record =
+    view && rows.data
+      ? trackRecord(
+          { ...rows.data, memberIds: members.map((m) => m.userId), now: view.now, zone: view.snapshot.rules.timezone },
+          span,
+        )
+      : null;
+  const shown = record ? KEY.filter((mark) => record.rows.some((r) => r.cells.some((c) => c.mark === mark))) : [];
+
+  return (
+    <Screen
+      bar={<TitleBar title={RECORD_COPY.title} back="/week" backLabel={SECTION_LABEL.week} />}
+      refreshing={refreshing}
+      onRefresh={pull}
+      testID="record-screen"
+    >
+      <PageTitle page={RECORD_COPY.title} />
+      <View style={styles.top}>
+        <Meta>{span === 'week' ? RECORD_COPY.introWeek : RECORD_COPY.intro}</Meta>
+        <Segmented
+          options={RECORD_SPANS.map((value) => ({ value, label: RECORD_COPY.spans[value] }))}
+          value={span}
+          onChange={(value) => router.setParams({ span: value })}
+          label={RECORD_COPY.span}
+          equal
+          testID="record-span"
+        />
+      </View>
+      {record ? (
+        <>
+          <Section label={record.range} right={RECORD_COPY.onTime} testID="record-section">
+            <RecordGrid
+              rows={record.rows}
+              viewerId={userId}
+              nameOf={nameOf}
+              onOpen={(id) => router.push({ pathname: '/week/record/[userId]', params: { userId: id, span } })}
+            />
+          </Section>
+          {shown.length > 0 ? <RecordKey marks={shown} /> : null}
+        </>
+      ) : query.isError || rows.isError ? (
+        <ReadFailed onRetry={() => void Promise.all([query.refetch(), rows.refetch()])} />
+      ) : (
+        <Reading />
+      )}
+    </Screen>
+  );
+}
+
+const styles = StyleSheet.create({
+  // On the leading edge, where the sections' labels start.
+  top: { paddingHorizontal: INSET, gap: SPACE.md },
+});

@@ -2,8 +2,7 @@ import { BIN_NIGHT, type BinNightScheme, type Look } from '@app/core';
 import { createContext, useContext } from 'react';
 import { useColorScheme, type TextStyle } from 'react-native';
 
-// Bin Night for React Native: the one theme file. Colours come from @app/core
-// (the same values as the web's globals.css, kept equal by a test in apps/api);
+// Bin Night for React Native: the one theme file. Colours come from @app/core;
 // this file only turns them into React Native styles. Never hardcode a colour
 // anywhere else in the app.
 

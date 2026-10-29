@@ -4,7 +4,7 @@
  * migrations' CHECK constraints (keep the two lists in step).
  */
 
-/** What kind of John it is. Each one wears its bin-lid colour (globals.css). */
+/** What kind of John it is. Each one wears its bin-lid colour (bin-night.ts). */
 export const CATEGORIES = [
   "kitchen",
   "bathroom",

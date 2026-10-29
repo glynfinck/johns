@@ -35,7 +35,7 @@ style: council signage, hi-vis amber, a bin-lid colour per kind of John.
 
 The same shape as Pub Golf, Graph Editor and glyn.dev: Next.js 16 on Vercel,
 Supabase (Postgres, RLS, Auth with Google, Storage, Realtime, pg_cron),
-shadcn/ui on Tailwind 4, Vitest and Playwright, in an npm workspace shaped
+Vitest and Playwright, in an npm workspace shaped
 like `glynfinck/app-template`, on its way to iOS and Android with an Expo app
 (SDK 58, Expo Router, Jest; `docs/specs/native-migration.md`). See
 `AGENTS.md` for how it fits together and why.
@@ -45,15 +45,13 @@ like `glynfinck/app-template`, on its way to iOS and Android with an Expo app
 ```
 packages/core/                 @app/core, the pure rules: week, deal, outcome, points, streak, stake, dispute;
                                Bin Night's colours and the shared words
-apps/api/                      the Next.js app and its /api, at api.jonz.app
-  app/(house)/                 today · week · wall · table · stake · house
-  app/join/[code]/             the join link
+apps/api/                      the API (Next.js route handlers only), at api.jonz.app
+  app/api/                     the routes the Expo app calls
   app/api/cron/tick/           the clock (called by pg_cron)
-  components/                  shell, John cards and actions, house settings, ui (shadcn)
   lib/engine/                  the tick: applies the rules to the database
-  lib/actions/ lib/data/       server actions and loaders
+  lib/moves/                   moves that need the service role after the caller's own RPC
   tests/db/                    the database attacked (the rules' tests sit beside them in core)
-  e2e/                         phones and a laptop, end to end
+  e2e/                         the Expo web build on phones and a laptop, end to end
 apps/client/                   the Expo app for iOS, Android and the web, at jonz.app
   src/app/                     screens (Expo Router)
   src/components/ src/theme.ts Bin Night in React Native

@@ -32,14 +32,9 @@ function svg({ safe = false, background = AMBER, radius = 0, ink = INK } = {}) {
 const SOURCES = {
   "scripts/icon-square.svg": svg(),
   "scripts/icon-maskable.svg": svg({ safe: true }),
-  "apps/api/app/icon.svg": svg({ radius: 96 }),
 };
 
 const PNGS = [
-  ["apps/api/app/apple-icon.png", 180, svg()],
-  ["apps/api/public/icon-192.png", 192, svg()],
-  ["apps/api/public/icon-512.png", 512, svg()],
-  ["apps/api/public/icon-maskable-512.png", 512, svg({ safe: true })],
   ["apps/client/public/icon-192.png", 192, svg()],
   ["apps/client/public/icon-512.png", 512, svg()],
   ["apps/client/public/icon-maskable-512.png", 512, svg({ safe: true })],

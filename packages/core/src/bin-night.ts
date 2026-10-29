@@ -5,10 +5,9 @@ import { CATEGORIES, type Category } from "./domain";
  * hi-vis amber for the one thing to do, hazard for late and missed, and a
  * bin-lid colour per kind of John.
  *
- * The web carries the same values as CSS variables in
- * apps/api/app/globals.css, and a test there fails if the two drift. The
- * native app's theme reads them from here. Names are the CSS variables' in
- * camelCase: `cardForeground` is `--card-foreground`.
+ * The Expo app's theme (iOS, Android and the web) reads them from here.
+ * Names are CSS variables' in camelCase: `cardForeground` is
+ * `--card-foreground`.
  */
 export interface BinNightScheme {
   background: string;
