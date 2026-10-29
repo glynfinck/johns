@@ -73,8 +73,10 @@ test("run a house from nothing on the phone", async ({ browser }) => {
   await addJohn(page, "Bins", 2);
   await addJohn(page, "Bathroom", 4);
   await list.getByRole("button", { name: JOHN_LIST_COPY.edit("Bins") }).click();
-  await pickRow(page, JOHN_LIST_COPY.due).click();
-  await page.getByTestId("john-form").getByRole("radio", { name: "Thursday" }).click();
+  // When it comes round is a sentence; its day opens the days, and Done goes back to it.
+  await page.getByTestId("john-form").getByTestId("timing-day").click();
+  await page.getByTestId("timing-days").getByRole("radio", { name: "Thursday" }).click();
+  await page.getByTestId("timing-done").click();
   await page.getByTestId("john-form").getByTestId("save-john").click();
   await expect(list.getByTestId("john-def").filter({ hasText: "Bins" })).toContainText(
     scheduleLine({ everyWeeks: 1, dueDow: 4, dueTime: "21:00", needsPhoto: false }),

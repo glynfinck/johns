@@ -38,6 +38,8 @@ const MESSAGES: Record<string, string> = {
   away_overlaps: "You’re already away for some of those days.",
   away_over: "That time away has already finished.",
   not_yours: "That isn’t yours to change.",
+  cannot_undo: "That can’t be undone any more.",
+  already_undone: "That’s already been undone.",
   not_on_call: "That John isn’t on call, so it can’t be flagged.",
   not_dealt: "This week hasn’t been handed out yet, so nobody is on call.",
   nobody_home: "Everyone who shares that John is away today.",

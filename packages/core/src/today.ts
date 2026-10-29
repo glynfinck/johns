@@ -10,6 +10,7 @@ import { johnKind } from "./john-row";
 import { formatMoney } from "./money";
 import { canCover, coverOpensAt, type LiveStatus } from "./outcome";
 import type { TableRow } from "./points";
+import { oftenWords } from "./repeat";
 import type { StakeView } from "./stake";
 import { addDaysTo, monthOf } from "./week";
 
@@ -358,10 +359,16 @@ export function johnSheetMode(
  * the list).
  */
 export function sheetKind(
-  item: Pick<BoardItem, "category" | "groupName" | "points" | "everyWeeks"> & Partial<Pick<BoardItem, "flaggedAt">>,
+  item: Pick<BoardItem, "category" | "groupName" | "points" | "everyWeeks"> & Partial<Pick<BoardItem, "flaggedAt" | "everyMonths">>,
 ): string {
   // A flag comes round when it's flagged, not every N weeks.
-  const often = item.flaggedAt ? JOHN_SHEET_COPY.onCall : item.everyWeeks ? JOHN_SHEET_COPY.every(item.everyWeeks) : null;
+  const often = item.flaggedAt
+    ? JOHN_SHEET_COPY.onCall
+    : item.everyMonths
+      ? oftenWords({ everyWeeks: 1, everyMonths: item.everyMonths }).toLocaleLowerCase()
+      : item.everyWeeks
+        ? JOHN_SHEET_COPY.every(item.everyWeeks)
+        : null;
   return [johnKind(item.category), item.groupName, pointsLabel(item.points), often]
     .filter(Boolean)
     .join(" · ");

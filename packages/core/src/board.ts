@@ -3,6 +3,10 @@ import type { DealWhy } from "./deal";
 import type { Category, Currency, HouseRules, IsoDow, JohnWhen, Outcome } from "./domain";
 import { canCover, closesAt, liveStatus, standsAt, type LiveStatus } from "./outcome";
 import { standings, type TableRow } from "./points";
+import { timesAYear } from "./repeat";
+
+/** Weeks in an average year, for turning how often a John comes round into a week's worth. */
+const WEEKS_A_YEAR = 365.25 / 7;
 
 // The week as both apps show it, built from the rows they each read through
 // RLS (the web on the server, the native app on the phone), so the two can't
@@ -16,7 +20,16 @@ export interface JohnDef {
   name: string;
   category: Category;
   points: number;
+  /** Every N weeks, for a John that repeats in weeks (repeat.ts). */
   everyWeeks: number;
+  /** Every N months (12 a year), or null for a John that repeats in weeks. */
+  everyMonths: number | null;
+  /** Which of its due day in the month (1 to 4, or 5 the last), for a John that repeats in months. */
+  weekOfMonth: number | null;
+  /** A month it lands in (repeat.ts monthIndex); null on a weekly John, or a monthly one not saved yet. */
+  anchorMonth: number | null;
+  /** The week a weekly John counts from; absent on one not saved yet. */
+  anchorWeek?: number;
   dueDow: IsoDow;
   /** "21:00": the database's time, to the minute. */
   dueTime: string;
@@ -37,6 +50,9 @@ export const NEW_JOHN: Omit<JohnDef, "id"> = {
   category: "kitchen",
   points: 2,
   everyWeeks: 1,
+  everyMonths: null,
+  weekOfMonth: null,
+  anchorMonth: null,
   dueDow: 7,
   dueTime: "21:00",
   needsPhoto: false,
@@ -46,10 +62,10 @@ export const NEW_JOHN: Omit<JohnDef, "id"> = {
   perWeek: 2,
 };
 
-/** A John on the list, from its row (a read without the on-call columns gets a John due on a day). */
+/** A John on the list, from its row (a read without the on-call or monthly columns gets a weekly John due on a day). */
 export function johnDef(
   row: Pick<Row<"johns">, "id" | "name" | "category" | "points" | "every_weeks" | "due_dow" | "due_time" | "needs_photo" | "group_id"> &
-    Partial<Pick<Row<"johns">, "kind" | "respond_hours" | "per_week">>,
+    Partial<Pick<Row<"johns">, "kind" | "respond_hours" | "per_week" | "every_months" | "week_of_month" | "anchor_month" | "anchor_week">>,
 ): JohnDef {
   return {
     id: row.id,
@@ -57,6 +73,10 @@ export function johnDef(
     category: row.category as Category,
     points: row.points,
     everyWeeks: row.every_weeks,
+    everyMonths: row.every_months ?? null,
+    weekOfMonth: row.week_of_month ?? null,
+    anchorMonth: row.anchor_month ?? null,
+    ...(row.anchor_week !== undefined ? { anchorWeek: row.anchor_week } : {}),
     dueDow: row.due_dow as IsoDow,
     dueTime: row.due_time.slice(0, 5),
     needsPhoto: row.needs_photo,
@@ -81,12 +101,22 @@ export function groupDef(row: Pick<Row<"groups">, "id" | "name"> & { group_membe
 
 /**
  * How much effort the list asks of the house in an average week: a
- * fortnightly John counts half, an on-call one as often as it needs doing.
+ * fortnightly John counts half, a quarterly one a thirteenth, an on-call one
+ * as often as it needs doing.
  */
 export function weeklyEffort(
-  johns: readonly (Pick<JohnDef, "points" | "everyWeeks"> & Partial<Pick<JohnDef, "when" | "perWeek">>)[],
+  johns: readonly (Pick<JohnDef, "points" | "everyWeeks"> & Partial<Pick<JohnDef, "when" | "perWeek" | "everyMonths">>)[],
 ): number {
-  return johns.reduce((sum, j) => sum + (j.points * (j.when === "on_call" ? (j.perWeek ?? 1) : 1)) / j.everyWeeks, 0);
+  return johns.reduce(
+    (sum, j) =>
+      sum +
+      (j.when === "on_call"
+        ? j.points * (j.perWeek ?? 1)
+        : j.everyMonths
+          ? (j.points * timesAYear({ everyWeeks: j.everyWeeks, everyMonths: j.everyMonths })) / WEEKS_A_YEAR
+          : j.points / j.everyWeeks),
+    0,
+  );
 }
 
 /** The house's rules, from its row. */
@@ -138,8 +168,8 @@ export type AssignmentRow = Pick<
 > & {
   /** The John on the list it was dealt from: null once that John is deleted, absent when not read. */
   john_id?: string | null;
-  /** That John as the list has it now (`johns(every_weeks)`), when the read embeds it. */
-  johns?: { every_weeks: number } | null;
+  /** That John as the list has it now (`johns(every_weeks, every_months)`), when the read embeds it. */
+  johns?: { every_weeks: number; every_months?: number | null } | null;
   /** The week it was dealt or flagged in, when read: a flag can outlast its week. */
   week_id?: string;
   /** On a flag: when it was raised, and by whom (null: opened again after a miss). */
@@ -179,6 +209,8 @@ export interface BoardItem {
   johnId: string | null;
   /** How often that John comes round, from the list; null when the read didn't embed it or the John is gone. */
   everyWeeks: number | null;
+  /** Every N months instead, when it repeats in months; null or absent otherwise, or when the read didn't say. */
+  everyMonths?: number | null;
   userId: string;
   name: string;
   category: string;
@@ -276,6 +308,7 @@ export function buildWeekBoard(input: {
         id: a.id,
         johnId: a.john_id ?? null,
         everyWeeks: a.johns?.every_weeks ?? null,
+        everyMonths: a.johns?.every_months ?? null,
         userId: a.user_id,
         name: a.name,
         category: a.category,

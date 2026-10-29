@@ -6,12 +6,14 @@ import {
   JohnDraft,
   johnDef,
   MoveResponse,
+  repeatColumns,
   RULES_COPY,
   weekIndex,
   weekWindow,
   type GroupDef,
   type HouseRules,
   type JohnDef,
+  type JohnDraftInput,
 } from '@app/core';
 
 import { apiPost } from './http';
@@ -34,7 +36,9 @@ export async function loadJohnList(houseId: string): Promise<JohnList> {
   const [johns, groups] = await Promise.all([
     supabase
       .from('johns')
-      .select('id, name, category, points, every_weeks, due_dow, due_time, needs_photo, group_id, kind, respond_hours, per_week')
+      .select(
+        'id, name, category, points, every_weeks, every_months, week_of_month, anchor_month, anchor_week, due_dow, due_time, needs_photo, group_id, kind, respond_hours, per_week',
+      )
       .eq('house_id', houseId)
       .is('archived_at', null)
       .order('created_at'),
@@ -59,7 +63,7 @@ function wrote(result: { data: unknown[] | null; error: { message?: string; code
  * Add a John, or change one. A new John's cadence counts from the house's
  * current week, as the web's does. Changes apply from the next deal.
  */
-export async function saveJohn(houseId: string, rules: HouseRules, draft: Omit<JohnDraft, 'id'> & { id?: string }, now: Date) {
+export async function saveJohn(houseId: string, rules: HouseRules, draft: JohnDraftInput, now: Date) {
   const parsed = JohnDraft.safeParse(draft);
   if (!parsed.success) throw new Error(parsed.error.issues[0].message);
   const j = parsed.data;
@@ -67,7 +71,7 @@ export async function saveJohn(houseId: string, rules: HouseRules, draft: Omit<J
     name: j.name,
     category: j.category,
     points: j.points,
-    every_weeks: j.everyWeeks,
+    ...repeatColumns(j, now, rules.timezone, rules.weekStarts),
     due_dow: j.dueDow,
     due_time: j.dueTime,
     needs_photo: j.needsPhoto,
@@ -98,7 +102,7 @@ export async function saveJohn(houseId: string, rules: HouseRules, draft: Omit<J
 export async function addJohns(
   houseId: string,
   rules: HouseRules,
-  drafts: readonly Omit<JohnDraft, 'id'>[],
+  drafts: readonly JohnDraftInput[],
   now: Date,
 ) {
   if (drafts.length === 0) return;
@@ -113,7 +117,7 @@ export async function addJohns(
       name: j.name,
       category: j.category,
       points: j.points,
-      every_weeks: j.everyWeeks,
+      ...repeatColumns(j, now, rules.timezone, rules.weekStarts),
       due_dow: j.dueDow,
       due_time: j.dueTime,
       needs_photo: j.needsPhoto,

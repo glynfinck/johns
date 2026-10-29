@@ -81,6 +81,12 @@ describe("scheduleLine", () => {
     expect(scheduleLine(john({ everyWeeks: 6, dueDow: 3, dueTime: "12:00" }))).toBe("Every 6 weeks · Wed 12:00");
   });
 
+  it("says a monthly John's period and which of its weekday", () => {
+    expect(scheduleLine(john({ everyMonths: 3, weekOfMonth: 1, dueDow: 6, dueTime: "21:00" }))).toBe("Every 3 months · first Sat 21:00");
+    expect(scheduleLine(john({ everyMonths: 6, weekOfMonth: 5, dueDow: 7, dueTime: "10:00" }))).toBe("Twice a year · last Sun 10:00");
+    expect(scheduleLine(john({ everyMonths: 12, weekOfMonth: 2, dueDow: 1, dueTime: "09:00" }))).toBe("Every year · second Mon 09:00");
+  });
+
   it("says an on-call John's window and how often, not a day", () => {
     expect(scheduleLine(john({ when: "on_call", respondHours: 12, perWeek: 3 }), "Downstairs")).toBe(
       "On call · within 12 hours · about 3 times a week · Downstairs",
@@ -98,6 +104,14 @@ describe("johnFacts", () => {
       { label: "How often", value: "Every 2 weeks" },
       { label: "Due", value: "Friday 18:00" },
       { label: "Photo", value: "Needed to tick it" },
+    ]);
+  });
+
+  it("reads a monthly John's day as which of its weekday", () => {
+    const facts = johnFacts(john({ everyMonths: 3, weekOfMonth: 1, dueDow: 6, dueTime: "21:00" }), null);
+    expect(facts.slice(3, 5)).toEqual([
+      { label: "How often", value: "Every 3 months" },
+      { label: "Due", value: "First Saturday 21:00" },
     ]);
   });
 
