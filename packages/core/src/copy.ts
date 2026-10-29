@@ -1473,6 +1473,18 @@ export const PASS_COPY = {
   foundingMeta: "The Pass for life, for houses that start at launch",
   /** Until the stores are set up there is nothing to press. */
   buyingSoon: "Buying opens with the app store release. Until then every house keeps everything.",
+  /** Under the plans during the free month, when Stripe can put the first charge off. */
+  firstCharge: (day: string) => `Nothing to pay until your free month ends on ${day}.`,
+  /** Back from Stripe Checkout, before the webhook has landed. */
+  bought: "Thanks for buying the House Pass. It shows here in a moment.",
+  manage: "Manage plan",
+  manageMeta: "Change plan, change card or cancel",
+  // The API's refusals.
+  checkoutClosed: "Buying the House Pass isn’t open yet.",
+  alreadyFounding: "This house has the House Pass for life already.",
+  alreadyPaid: "This house has the House Pass already. Whoever bought it can change the plan from Manage plan.",
+  notBuyer: "Only the housemate who bought the House Pass can change it.",
+  nothingToManage: "There’s no plan to manage yet.",
   free: "Free for every house, always: the deal, the housemate check, reminders, covering and time away. No ads.",
   /** Where a locked extra was, once the Pass is enforced. */
   locked: (feature: string) => `${feature} comes with the House Pass`,

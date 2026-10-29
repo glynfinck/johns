@@ -100,3 +100,95 @@ export function passOffers(currency: Currency): PassOffer[] {
     { plan: "founding", label: PASS_COPY.foundingPlan, price: PASS_COPY.once(formatMoney(p.founding, currency)), meta: PASS_COPY.foundingMeta },
   ];
 }
+
+// Buying the Pass on the web (Stripe Checkout, then Stripe's webhook to
+// apps/api). These are the rules; apps/api only carries them to Stripe and
+// back.
+
+/** What can be bought: every plan but the free month. */
+export const PASS_PURCHASES = ["yearly", "monthly", "founding"] as const;
+export type PassPurchase = (typeof PASS_PURCHASES)[number];
+
+/** Each plan's Stripe price, by lookup key, so no code names a price id. One price holds every house currency. */
+export const PASS_LOOKUP_KEYS: Record<PassPurchase, string> = {
+  yearly: "pass_yearly",
+  monthly: "pass_monthly",
+  founding: "pass_founding",
+};
+
+/** The plan a Stripe price is for, by its lookup key; null for any other price. */
+export function purchaseOfLookupKey(key: string | null | undefined): PassPurchase | null {
+  return PASS_PURCHASES.find((plan) => PASS_LOOKUP_KEYS[plan] === key) ?? null;
+}
+
+/** When a house's free month ends: PASS_TRIAL_DAYS after it was made. */
+export function passFreeUntil(createdAt: Date): Date {
+  return new Date(createdAt.getTime() + PASS_TRIAL_DAYS * 86_400_000);
+}
+
+/** Stripe puts off a first charge only to at least two days out; an hour more allows for the trip there. */
+const FIRST_CHARGE_MIN_MS = 49 * 3_600_000;
+
+/**
+ * When a plan bought during the free month first charges: the end of the free
+ * month, so nobody pays for days the house already has. Null to charge at
+ * once: no free month left, or too little for Stripe to put off.
+ */
+export function passFirstCharge(pass: HousePass, now: Date): Date | null {
+  if (pass.plan !== "trial" || pass.until === null) return null;
+  return pass.until.getTime() - now.getTime() >= FIRST_CHARGE_MIN_MS ? pass.until : null;
+}
+
+/** The line under the plans while a first charge can wait for the free month to end: "Nothing to pay until your free month ends on 22 Nov." */
+export function passFirstChargeNote(pass: HousePass, now: Date, zone: string): string | null {
+  const first = passFirstCharge(pass, now);
+  return first ? PASS_COPY.firstCharge(format(first, "d MMM", { in: tz(zone) })) : null;
+}
+
+/**
+ * Why the house can't buy `plan` at `now`, in words fit to show, or null when
+ * it can. A Founding house has nothing to buy; a house on a paid plan changes
+ * it from Manage, except to buy Founding, which ends the plan for it.
+ */
+export function passPurchaseRefusal(pass: HousePass, plan: PassPurchase, now: Date): string | null {
+  if (pass.plan === "founding") return PASS_COPY.alreadyFounding;
+  if (plan !== "founding" && pass.plan !== "trial" && hasPass(pass, now)) return PASS_COPY.alreadyPaid;
+  return null;
+}
+
+/** A house's Stripe subscription, as the webhook reads it back from Stripe. */
+export interface PassSubscription {
+  plan: Exclude<PassPurchase, "founding">;
+  status: string;
+  /** The end of the period paid for (or of Stripe's trial, during the free month). */
+  periodEnd: Date;
+  endedAt: Date | null;
+  buyerId: string | null;
+}
+
+/** Statuses in which a subscription keeps the Pass: paid up, in the free month, or Stripe still retrying a card. */
+const LIVE_STATUSES = ["active", "trialing", "past_due"];
+/** Statuses in which it has stopped for good, or until someone pays. */
+const ENDED_STATUSES = ["canceled", "unpaid", "paused"];
+
+/** Whether a subscription in this status keeps a house's Pass. */
+export function subscriptionLive(status: string): boolean {
+  return LIVE_STATUSES.includes(status);
+}
+
+/**
+ * The house's Pass after its subscription changed, or null to leave it as it
+ * is. Founding never changes. A live subscription runs the Pass to the end of
+ * its period; an ended one stops it then, except that a house still in its
+ * free month keeps the rest of it. A first payment still going through
+ * changes nothing yet.
+ */
+export function passAfterSubscription(current: HousePass, sub: PassSubscription, freeUntil: Date, now: Date): HousePass | null {
+  if (current.plan === "founding") return null;
+  if (subscriptionLive(sub.status)) return { plan: sub.plan, until: sub.periodEnd, buyerId: sub.buyerId };
+  if (!ENDED_STATUSES.includes(sub.status)) return null;
+  const ended = sub.status === "canceled" && sub.endedAt ? sub.endedAt : now;
+  const end = ended.getTime() < sub.periodEnd.getTime() ? ended : sub.periodEnd;
+  if (freeUntil.getTime() > end.getTime()) return { plan: "trial", until: freeUntil, buyerId: null };
+  return { plan: sub.plan, until: end, buyerId: sub.buyerId };
+}

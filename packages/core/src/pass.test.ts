@@ -4,6 +4,16 @@ import { CURRENCIES } from "./domain";
 import {
   hasPass,
   PASS_ENFORCED,
+  PASS_LOOKUP_KEYS,
+  PASS_PURCHASES,
+  passAfterSubscription,
+  passFirstCharge,
+  passFirstChargeNote,
+  passFreeUntil,
+  passPurchaseRefusal,
+  purchaseOfLookupKey,
+  subscriptionLive,
+  type PassSubscription,
   PASS_PRICES,
   passDaysLeft,
   passLine,
@@ -120,5 +130,105 @@ describe("passOffers", () => {
       expect(p.founding).toBeGreaterThan(p.yearly);
       expect(passOffers(currency)).toHaveLength(3);
     }
+  });
+});
+
+describe("purchaseOfLookupKey", () => {
+  it("names the plan for each Pass price, and nothing for any other", () => {
+    for (const plan of PASS_PURCHASES) expect(purchaseOfLookupKey(PASS_LOOKUP_KEYS[plan])).toBe(plan);
+    expect(purchaseOfLookupKey("pass_trial")).toBeNull();
+    expect(purchaseOfLookupKey(null)).toBeNull();
+  });
+});
+
+describe("passFreeUntil", () => {
+  it("is thirty days after the house was made", () => {
+    expect(passFreeUntil(at("2026-11-01T09:00:00Z"))).toEqual(at("2026-12-01T09:00:00Z"));
+  });
+});
+
+describe("passFirstCharge", () => {
+  it("puts the first charge off to the end of the free month", () => {
+    expect(passFirstCharge(pass("trial", "2026-11-22T12:00:00Z"), now)).toEqual(at("2026-11-22T12:00:00Z"));
+  });
+
+  it("charges at once with under two days left, after the free month, or on a paid plan", () => {
+    expect(passFirstCharge(pass("trial", "2026-11-12T12:00:00Z"), now)).toBeNull();
+    expect(passFirstCharge(pass("trial", "2026-11-01T00:00:00Z"), now)).toBeNull();
+    expect(passFirstCharge(pass("monthly", "2026-11-22T12:00:00Z"), now)).toBeNull();
+  });
+
+  it("says when, in the house's zone", () => {
+    expect(passFirstChargeNote(pass("trial", "2026-11-22T12:00:00Z"), now, "Europe/London")).toBe(
+      "Nothing to pay until your free month ends on 22 Nov.",
+    );
+    expect(passFirstChargeNote(pass("trial", "2026-11-12T12:00:00Z"), now, "Europe/London")).toBeNull();
+  });
+});
+
+describe("passPurchaseRefusal", () => {
+  it("lets a house in or after its free month buy any plan", () => {
+    for (const plan of PASS_PURCHASES) {
+      expect(passPurchaseRefusal(pass("trial", "2026-11-22T12:00:00Z"), plan, now)).toBeNull();
+      expect(passPurchaseRefusal(pass("trial", "2026-11-01T00:00:00Z"), plan, now)).toBeNull();
+      expect(passPurchaseRefusal(pass("yearly", "2026-11-01T00:00:00Z"), plan, now)).toBeNull();
+    }
+  });
+
+  it("sends a house on a paid plan to Manage, except for Founding", () => {
+    const paid = pass("monthly", "2026-12-01T00:00:00Z");
+    expect(passPurchaseRefusal(paid, "yearly", now)).toMatch(/Manage plan/);
+    expect(passPurchaseRefusal(paid, "monthly", now)).toMatch(/Manage plan/);
+    expect(passPurchaseRefusal(paid, "founding", now)).toBeNull();
+  });
+
+  it("has nothing to sell a Founding house", () => {
+    expect(passPurchaseRefusal(pass("founding", null), "founding", now)).toMatch(/for life/);
+  });
+});
+
+describe("passAfterSubscription", () => {
+  const freeUntil = at("2026-11-22T12:00:00Z");
+  const sub = (status: string, periodEnd: string, endedAt: string | null = null): PassSubscription => ({
+    plan: "yearly",
+    status,
+    periodEnd: at(periodEnd),
+    endedAt: endedAt ? at(endedAt) : null,
+    buyerId: "u1",
+  });
+
+  it("runs a live subscription's Pass to the end of its period", () => {
+    for (const status of ["active", "trialing", "past_due"]) {
+      expect(subscriptionLive(status)).toBe(true);
+      expect(passAfterSubscription(pass("trial", "2026-11-22T12:00:00Z"), sub(status, "2027-11-22T12:00:00Z"), freeUntil, now)).toEqual({
+        plan: "yearly",
+        until: at("2027-11-22T12:00:00Z"),
+        buyerId: "u1",
+      });
+    }
+  });
+
+  it("stops the Pass when the subscription ends", () => {
+    const ended = passAfterSubscription(
+      pass("yearly", "2027-01-01T00:00:00Z"),
+      sub("canceled", "2027-01-01T00:00:00Z", "2026-12-20T00:00:00Z"),
+      at("2026-10-01T00:00:00Z"),
+      at("2026-12-20T00:00:05Z"),
+    );
+    expect(ended).toEqual({ plan: "yearly", until: at("2026-12-20T00:00:00Z"), buyerId: "u1" });
+    // Unpaid has no end of its own: it stops when the webhook hears.
+    expect(passAfterSubscription(pass("yearly", "2027-01-01T00:00:00Z"), sub("unpaid", "2027-01-01T00:00:00Z"), at("2026-10-01T00:00:00Z"), now)!.until).toEqual(now);
+  });
+
+  it("gives back the rest of the free month to a plan stopped during it", () => {
+    expect(
+      passAfterSubscription(pass("yearly", "2026-11-22T12:00:00Z"), sub("canceled", "2026-11-22T12:00:00Z", "2026-11-10T12:00:00Z"), freeUntil, now),
+    ).toEqual({ plan: "trial", until: freeUntil, buyerId: null });
+  });
+
+  it("waits while a first payment goes through, and never touches a Founding house", () => {
+    expect(passAfterSubscription(pass("trial", "2026-11-22T12:00:00Z"), sub("incomplete", "2027-11-22T12:00:00Z"), freeUntil, now)).toBeNull();
+    expect(passAfterSubscription(pass("trial", "2026-11-22T12:00:00Z"), sub("incomplete_expired", "2027-11-22T12:00:00Z"), freeUntil, now)).toBeNull();
+    expect(passAfterSubscription(pass("founding", null), sub("active", "2027-11-22T12:00:00Z"), freeUntil, now)).toBeNull();
   });
 });
