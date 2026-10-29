@@ -973,9 +973,10 @@ export const HOUSE_PAGE_COPY = {
   stakeUnreadable: "Couldn’t read the Stake. Check the connection.",
   readingStake: "Reading the Stake",
   table: "The Table",
-  /** The Table's switch between this week and the month, to a screen reader. */
+  /** The Table's menu of this week and the month, to a screen reader. */
   show: "Show",
-  week: "Week",
+  /** The Table's this week, in its menu and its header ("October" is the other). */
+  week: "This week",
   you: "You",
   tableUnreadable: "Couldn’t read the month’s Table. Check the connection.",
   readingTable: "Reading the Table",
