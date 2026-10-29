@@ -16,6 +16,7 @@ export * from "./money";
 export * from "./notify";
 export * from "./outcome";
 export * from "./points";
+export * from "./pass";
 export * from "./proof";
 export * from "./schemas";
 export * from "./stake";

@@ -419,6 +419,9 @@ export type Database = {
           late_hours: number
           missed_forfeit_minor: number
           name: string
+          pass_buyer: string | null
+          pass_plan: string
+          pass_until: string | null
           stake_minor: number
           ticked_at: string | null
           timezone: string
@@ -438,6 +441,9 @@ export type Database = {
           late_hours?: number
           missed_forfeit_minor?: number
           name: string
+          pass_buyer?: string | null
+          pass_plan?: string
+          pass_until?: string | null
           stake_minor?: number
           ticked_at?: string | null
           timezone?: string
@@ -457,12 +463,23 @@ export type Database = {
           late_hours?: number
           missed_forfeit_minor?: number
           name?: string
+          pass_buyer?: string | null
+          pass_plan?: string
+          pass_until?: string | null
           stake_minor?: number
           ticked_at?: string | null
           timezone?: string
           week_starts?: number
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "houses_pass_buyer_fkey"
+            columns: ["pass_buyer"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       johns: {
         Row: {

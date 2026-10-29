@@ -1,8 +1,10 @@
 import {
+  passOf,
   weekWindow,
   rulesOf,
   type AssignmentRow,
   type DisputeRow,
+  type HousePass,
   type HouseRules,
   type OnCallRow,
   type WeekRow,
@@ -31,6 +33,8 @@ export interface HouseSnapshot {
     joinCode: string;
     everDealt: boolean;
     awayMakeup: number;
+    /** The House Pass: who has the extras, and until when. */
+    pass: HousePass;
   };
   rules: HouseRules;
   members: Housemate[];
@@ -102,6 +106,7 @@ export async function loadHouse(houseId: string, now: Date): Promise<HouseSnapsh
       joinCode: house.join_code,
       everDealt: house.first_dealt_at !== null,
       awayMakeup: house.away_makeup,
+      pass: passOf(house),
     },
     rules,
     members: (members ?? []).map((m) => ({

@@ -230,7 +230,9 @@ already due a day's grace (`graceDue`).
 
 `profiles` (from auth via `handle_new_user`) → `houses` (rules: timezone,
 currency GBP/CAD/USD/EUR defaulted from Vercel's geo headers, week start,
-stake and forfeits, dispute hours; `join_code` from the CSPRNG) → `members`
+stake and forfeits, dispute hours; `join_code` from the CSPRNG; the House
+Pass's `pass_plan`, `pass_until` and `pass_buyer`, service role only:
+`docs/specs/house-pass.md`) → `members`
 (role admin/member, streak, tokens; one house per person via
 `members_one_house`, dropped when "more than one house" ships) → `groups` +
 `group_members` → `johns` (the list: category, points 1–10, every N weeks
