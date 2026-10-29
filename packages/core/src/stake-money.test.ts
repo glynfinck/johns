@@ -19,9 +19,17 @@ describe("forfeitFor", () => {
   });
 });
 
+/** A month whose odd pennies start at the top of the order. */
+const FIRST_TURN = "0000-01";
+
 /** The month's whole ledger: forfeits as written during it, plus its close. */
-function monthLedger(ids: string[], stake: number, forfeits: { userId: string; amount: number; to?: string | null }[]) {
-  const s = settleMonth(ids, stake, forfeits);
+function monthLedger(
+  ids: string[],
+  stake: number,
+  forfeits: { userId: string; amount: number; to?: string | null }[],
+  month = FIRST_TURN,
+) {
+  const s = settleMonth(ids, stake, forfeits, month);
   const entries: LedgerEntry[] = [
     ...forfeits.map((f) => ({ userId: f.userId, kind: "forfeit" as const, amount: -f.amount })),
     ...s.entries,
@@ -49,6 +57,17 @@ describe("settleMonth", () => {
   it("gives the odd penny to the earliest members, consistently", () => {
     const { s } = monthLedger(["a", "b", "c", "d"], 2000, [{ userId: "a", amount: 100 }]);
     expect(s.received).toEqual({ a: 0, b: 34, c: 33, d: 33 });
+    expect(monthLedger(["a", "b", "c", "d"], 2000, [{ userId: "a", amount: 100 }]).s).toEqual(s);
+  });
+
+  it("moves the odd penny one place down the order each month", () => {
+    const forfeit = [{ userId: "a", amount: 100 }];
+    expect(monthLedger(["a", "b", "c", "d"], 2000, forfeit, "0000-02").s.received).toEqual({ a: 0, b: 33, c: 34, d: 33 });
+    expect(monthLedger(["a", "b", "c", "d"], 2000, forfeit, "0000-03").s.received).toEqual({ a: 0, b: 33, c: 33, d: 34 });
+    expect(monthLedger(["a", "b", "c", "d"], 2000, forfeit, "0000-04").s.received).toEqual({ a: 0, b: 34, c: 33, d: 33 });
+    // And on across the new year: December's penny is d's, January's b's.
+    expect(monthLedger(["a", "b", "c", "d"], 2000, forfeit, "2026-12").s.received.d).toBe(34);
+    expect(monthLedger(["a", "b", "c", "d"], 2000, forfeit, "2027-01").s.received.b).toBe(34);
   });
 
   it("never takes more than the stake", () => {
@@ -72,7 +91,7 @@ describe("settleMonth", () => {
   });
 
   it("writes nothing for a clean month", () => {
-    expect(settleMonth(["a", "b"], 2000, []).entries).toEqual([]);
+    expect(settleMonth(["a", "b"], 2000, [], FIRST_TURN).entries).toEqual([]);
   });
 
   it("pays a covered John's forfeit whole to whoever covered it", () => {

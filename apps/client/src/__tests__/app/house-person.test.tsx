@@ -93,7 +93,7 @@ it('shows their week and month, and where they stand against their share', async
 
 it('says being level with your share in words alone, with no bare figure after them', async () => {
   await open('priya');
-  expect(screen.getByTestId('person-share')).toHaveTextContent(new RegExp(`${PERSON_COPY.level(true)}${PERSON_COPY.overWeeks(12)}$`));
+  expect(screen.getByTestId('person-share')).toHaveTextContent(new RegExp(`${PERSON_COPY.level(true)}${PERSON_COPY.sinceJoining}$`));
 });
 
 it('counts someone dealt nothing lately as level, rather than reading for ever', async () => {

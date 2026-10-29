@@ -9,6 +9,10 @@ const mockCalls: [string, string, unknown[]][] = [];
 
 jest.mock('./supabase', () => ({
   supabase: {
+    rpc: jest.fn((fn: string, args: unknown) => {
+      mockCalls.push([fn, 'rpc', [args]]);
+      return Promise.resolve(mockAnswers[fn]?.shift() ?? { data: [], error: null });
+    }),
     from: jest.fn((table: string) => {
       const answer = () => Promise.resolve(mockAnswers[table]?.shift() ?? { data: [], error: null });
       const builder: Record<string, unknown> = {};
@@ -64,35 +68,35 @@ it("scores the house's month, from the Johns due in it", async () => {
   expect(mockCalls).toContainEqual(['assignments', 'lt', ['due_at', endsAt.toISOString()]]);
 });
 
-it('balances everyone against their share over the weeks before this one', async () => {
-  mockAnswers.weeks = [{ data: [{ id: 'w2' }, { id: 'w1' }], error: null }];
-  mockAnswers.assignments = [
-    { data: [], error: null },
+it('balances everyone against everything they owed, over every week before this one', async () => {
+  mockAnswers.house_balances = [
     {
       data: [
-        { week_id: 'w1', user_id: 'ava', points: 2 },
-        { week_id: 'w2', user_id: 'ben', points: 6 },
+        { user_id: 'ava', owed: 40, credited: 38 },
+        { user_id: 'ben', owed: '40', credited: '42' },
       ],
       error: null,
     },
   ];
+  mockAnswers.weeks = [{ data: [{ id: 'w2' }, { id: 'w1' }], error: null }];
   mockAnswers.week_shares = [
     {
       data: [
-        { week_id: 'w1', user_id: 'ava', share: 2 },
-        { week_id: 'w1', user_id: 'ben', share: 2 },
-        { week_id: 'w2', user_id: 'ava', share: 2 },
-        { week_id: 'w2', user_id: 'ben', share: 2 },
+        { user_id: 'ava', share: 2 },
+        { user_id: 'ava', share: 4 },
+        { user_id: 'ben', share: 2 },
       ],
       error: null,
     },
   ];
   const table = await loadTable('h1', RULES, ['ava', 'ben'], NOW);
-  expect(table.balances.map((b) => [b.userId, b.balance])).toEqual([
-    ['ava', -2],
-    ['ben', 2],
+  // Ava is 2 behind; at half her usual 3-point week extra, that's 2 weeks to even.
+  expect(table.balances).toEqual([
+    { userId: 'ava', balance: -2, weeksToEven: 2 },
+    { userId: 'ben', balance: 2, weeksToEven: 0 },
   ]);
   const { startsOn } = weekWindow(NOW, 'Europe/London', 1);
+  expect(mockCalls).toContainEqual(['house_balances', 'rpc', [{ p_house: 'h1', p_before: startsOn }]]);
   expect(mockCalls).toContainEqual(['weeks', 'lt', ['starts_on', startsOn]]);
   expect(mockCalls).toContainEqual(['weeks', 'limit', [12]]);
   expect(mockCalls).toContainEqual(['week_shares', 'in', ['week_id', ['w2', 'w1']]]);
@@ -107,4 +111,6 @@ it('reads no shares for a house with no weeks behind it, and is level', async ()
 it('fails when any of it cannot be read', async () => {
   mockAnswers.weeks = [{ data: null, error: new Error('offline') }];
   await expect(loadTable('h1', RULES, ['ava'], NOW)).rejects.toThrow('offline');
+  mockAnswers.house_balances = [{ data: null, error: new Error('no balances') }];
+  await expect(loadTable('h1', RULES, ['ava'], NOW)).rejects.toThrow('no balances');
 });

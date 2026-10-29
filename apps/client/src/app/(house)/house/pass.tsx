@@ -6,7 +6,7 @@ import { HousePage } from '@/components/house/house-page';
 import { Row, RowIcon } from '@/components/row';
 import { Section } from '@/components/section';
 import { Body, Meta } from '@/components/text';
-import { useHouse } from '@/hooks/use-house';
+import { useHouse, type HouseView } from '@/hooks/use-house';
 import { useMembership } from '@/hooks/use-membership';
 import { usePull, useReadOnFocus } from '@/hooks/use-refresh';
 import { INSET, SPACE } from '@/theme';
@@ -39,54 +39,61 @@ function PassFor({ houseId, userId }: { houseId: string; userId: string }) {
       refreshing={refreshing}
       onRefresh={pull}
     >
-      {() => {
-        const { house, rules, members } = view!.snapshot;
-        const { pass } = house;
-        const founding = pass.plan === 'founding';
-        const buyer = pass.buyerId ? members.find((m) => m.userId === pass.buyerId)?.name : undefined;
-        return (
-          <>
-            <View style={styles.words}>
-              <Body testID="pass-lead">{founding ? PASS_COPY.foundingLead : PASS_COPY.lead}</Body>
-              <Meta testID="pass-line">
-                {buyer ? `${passLine(pass, view!.now, rules.timezone)} · ${PASS_COPY.boughtBy(buyer)}` : passLine(pass, view!.now, rules.timezone)}
-              </Meta>
-            </View>
-
-            <Section label={PASS_COPY.includes}>
-              <Row leading={<RowIcon icon={CoinsIcon} />} title={PASS_COPY.stake} meta={PASS_COPY.stakeMeta} />
-              <Row leading={<RowIcon icon={TrophyIcon} />} title={PASS_COPY.table} meta={PASS_COPY.tableMeta} />
-              <Row leading={<RowIcon icon={CameraIcon} />} title={PASS_COPY.photos} meta={PASS_COPY.photosMeta} />
-              <Row
-                leading={<RowIcon icon={HistoryIcon} />}
-                title={PASS_COPY.history}
-                meta={PASS_COPY.historyMeta(PASS_FREE_HISTORY_WEEKS)}
-              />
-            </Section>
-
-            {founding ? null : (
-              <Section label={PASS_COPY.plans} testID="pass-plans">
-                {passOffers(rules.currency).map((offer) => (
-                  <Row
-                    key={offer.plan}
-                    title={offer.label}
-                    meta={offer.meta}
-                    trailing={offer.price}
-                    disabled
-                    testID={`plan-${offer.plan}`}
-                  />
-                ))}
-              </Section>
-            )}
-
-            <View style={styles.words}>
-              {founding ? null : <Meta testID="pass-soon">{PASS_COPY.buyingSoon}</Meta>}
-              <Meta>{PASS_COPY.free}</Meta>
-            </View>
-          </>
-        );
-      }}
+      {() => <PassReadOut view={view!} />}
     </HousePage>
+  );
+}
+
+/**
+ * The page once the house is read. Its own component, so `view` is never
+ * null here: the React Compiler lifts reads of it out of a render callback
+ * into the screen, where a first load (no house read yet) would throw.
+ */
+function PassReadOut({ view }: { view: HouseView }) {
+  const { house, rules, members } = view.snapshot;
+  const { pass } = house;
+  const founding = pass.plan === 'founding';
+  const buyer = pass.buyerId ? members.find((m) => m.userId === pass.buyerId)?.name : undefined;
+  return (
+    <>
+      <View style={styles.words}>
+        <Body testID="pass-lead">{founding ? PASS_COPY.foundingLead : PASS_COPY.lead}</Body>
+        <Meta testID="pass-line">
+          {buyer ? `${passLine(pass, view.now, rules.timezone)} · ${PASS_COPY.boughtBy(buyer)}` : passLine(pass, view.now, rules.timezone)}
+        </Meta>
+      </View>
+
+      <Section label={PASS_COPY.includes}>
+        <Row leading={<RowIcon icon={CoinsIcon} />} title={PASS_COPY.stake} meta={PASS_COPY.stakeMeta} />
+        <Row leading={<RowIcon icon={TrophyIcon} />} title={PASS_COPY.table} meta={PASS_COPY.tableMeta} />
+        <Row leading={<RowIcon icon={CameraIcon} />} title={PASS_COPY.photos} meta={PASS_COPY.photosMeta} />
+        <Row
+          leading={<RowIcon icon={HistoryIcon} />}
+          title={PASS_COPY.history}
+          meta={PASS_COPY.historyMeta(PASS_FREE_HISTORY_WEEKS)}
+        />
+      </Section>
+
+      {founding ? null : (
+        <Section label={PASS_COPY.plans} testID="pass-plans">
+          {passOffers(rules.currency).map((offer) => (
+            <Row
+              key={offer.plan}
+              title={offer.label}
+              meta={offer.meta}
+              trailing={offer.price}
+              disabled
+              testID={`plan-${offer.plan}`}
+            />
+          ))}
+        </Section>
+      )}
+
+      <View style={styles.words}>
+        {founding ? null : <Meta testID="pass-soon">{PASS_COPY.buyingSoon}</Meta>}
+        <Meta>{PASS_COPY.free}</Meta>
+      </View>
+    </>
   );
 }
 
