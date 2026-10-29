@@ -23,15 +23,16 @@ export default defineConfig({
   testDir: "./e2e",
   timeout: process.env.CI ? 180_000 : 90_000,
   expect: { timeout: process.env.CI ? 30_000 : 15_000 },
-  // Retries record a trace; failOnFlakyTests still fails the run. Green has
-  // to mean green.
-  retries: process.env.CI ? 1 : 0,
-  failOnFlakyTests: !!process.env.CI,
+  // No retries: green has to mean green, so a retry could only ever record
+  // a trace, and a failing test's trace is kept anyway. A run with a few
+  // failures stops there rather than waiting out every test's timeout.
+  retries: 0,
+  maxFailures: process.env.CI ? 3 : 0,
   workers: 1,
   reporter: process.env.CI ? [["list"], ["github"], ["html", { open: "never" }]] : "list",
   use: {
     baseURL: `http://localhost:${PORT}`,
-    trace: "on-first-retry",
+    trace: "retain-on-failure",
   },
   projects: [
     { name: "android-chrome", use: { ...devices["Pixel 7"], ...chromium } },
