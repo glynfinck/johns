@@ -4,8 +4,10 @@ import { useEffect, useState } from 'react';
 import { StyleSheet, View } from 'react-native';
 
 import { appleSignInAvailable, signInWithApple, signInWithGoogle, signInWithMicrosoft, type SignInResult } from '@/api/auth';
+import { ON_STAGING } from '@/api/staging';
 import { Alert } from '@/components/alert';
 import { Button } from '@/components/button';
+import { DemoSignIn } from '@/components/demo-sign-in';
 import { DoorFoot, Sign, SignHeading } from '@/components/front-door/door';
 import { GoogleIcon } from '@/components/google-icon';
 import { MicrosoftIcon } from '@/components/microsoft-icon';
@@ -21,7 +23,8 @@ import { RADIUS, SPACE, TAP, useTheme } from '@/theme';
  * signing in leads (the front door's choice, or the join link): the line
  * under the heading names it, and the web comes back from Google or
  * Microsoft carrying it (core's googleReturn). `failed` says one of them
- * already turned the web back once, which the page can't tell apart.
+ * already turned the web back once, which the page can't tell apart. On
+ * staging, the demo house's housemates follow (DemoSignIn).
  */
 export function SignInPanel({ next, failed: failedBefore = false }: { next?: string; failed?: boolean }) {
   const { scheme } = useTheme();
@@ -101,6 +104,8 @@ export function SignInPanel({ next, failed: failedBefore = false }: { next?: str
 
           <Meta>{SIGN_IN_COPY.sameAccount}</Meta>
         </View>
+
+        {ON_STAGING ? <DemoSignIn /> : null}
       </Sign>
 
       <DoorFoot>

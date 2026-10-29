@@ -5,10 +5,10 @@ The same arrangement as Pub Golf: Vercel's git integration builds the apps
 cutover below the Expo app's web build in `apps/client` as `jonz-web`;
 they were `johns` and `johns-web` until the move to jonz.app below),
 Supabase's GitHub integration applies the migrations, and CI only proves.
-`main` is production. There is no preview database yet, so preview
-deployments get no keys (a preview writing to production's data would be
-worse than one that doesn't start); add a persistent `preview` branch project
-when the house wants a staging copy.
+`main` is production. Previews never get production's keys (a preview
+writing to production's data would be worse than one that doesn't start):
+they run on staging, a copy of the whole stack with a database of its own
+(below, "Staging").
 
 Because the two integrations do not wait for each other, migrations must be
 additive and readable by the code already deployed.
@@ -253,13 +253,88 @@ Rolling back before step 3 is reverting the PR; the old names still answer.
 After it, take the forwards off in the Vercel dashboard. About three months
 on, remove the old names and their Supabase redirect URLs.
 
+## Staging
+
+A copy of the whole stack for trying UI and the game's mechanics before
+anything reaches `main`: **https://staging.jonz.app**, on a database of its
+own with a demo house in it.
+
+| Layer | Production | Staging |
+| --- | --- | --- |
+| Database | Supabase project `Johns` | Its persistent branch `staging` (Micro, about $10 a month; branching compute isn't covered by the plan's credits) |
+| Code | git `main` | git `staging`: main, or main with one PR merged in |
+| Web | `jonz-web`, jonz.app | `jonz-web`'s `staging` branch, staging.jonz.app (also every PR preview) |
+| API | `jonz-api`, api.jonz.app | `jonz-api`'s `staging` branch, api.staging.jonz.app (also every PR preview) |
+| Vercel environment | Production | Preview |
+| Sign-in | Google, Microsoft, Apple | Google and Microsoft (same clients), plus four demo housemates with a password |
+| Stripe | Jonz (live, once it's on) | The Jonz sandbox, with a webhook of its own |
+| Reminders | Its VAPID pair | Its own pair, so staging never reminds a real phone |
+| The clock | Vault → jonz.app | Vault → api.staging.jonz.app |
+| Ask Jonz | AI Gateway (OIDC) | The same, on the preview's own OIDC token |
+
+How it works:
+
+- **Every PR's preview runs on staging's data.** The web build's preview
+  calls the same PR's preview of `apps/api` (Vercel's related projects,
+  `apps/client/scripts/build-web.mjs`), or staging's API when that PR has
+  none, cross-origin: `apps/api` lets staging's origins in through
+  `ALLOWED_ORIGINS`, which takes `*` for one DNS label. Production's web
+  build is unchanged: `/api/*` on its own origin.
+- **The `staging` branch follows `main`.** The **Staging** workflow
+  (`.github/workflows/staging.yml`) puts `main` on it after every merge.
+  To try a PR that changes the database, run the workflow with "Put a PR on
+  staging" and its number: staging becomes main with that PR merged in, and
+  Supabase applies its migrations to staging's database only. It stays until
+  the next merge to main. A PR put there and then dropped leaves its tables
+  behind, so staging's database then lags git until "Reset the database".
+- **One stage per purchase.** Checkout tags each House Pass purchase with
+  its stage (`production`, `staging` or `local`, from `VERCEL_ENV`) and each
+  webhook ignores the other's, so both may listen to one Stripe sandbox.
+  After Checkout or the billing page Stripe sends the buyer back to the page
+  that asked, when it's an allowed origin, else `APP_URL`.
+- **Demo sign-in.** Builds with `EXPO_PUBLIC_STAGE=staging` (Vercel's Preview
+  environment only) show a ribbon across the top and, under the usual
+  sign-in buttons, the demo house's housemates (`DEMO_HOUSEMATES` in
+  `@app/core`): type the staging password once and be any of them. Their
+  accounts and the house come from `supabase/seeds/staging.sql`. Sign in as
+  Alex, the admin, to hand out the first week.
+- **staging.jonz.app is public**, like jonz.app, and sends
+  `X-Robots-Tag: noindex`. Only the demo password and your own Google or
+  Microsoft account get in; strangers' email sign-ups can't be confirmed.
+
+Setting it up, and keeping it right, is `node scripts/staging.mjs`, run from
+the Staging workflow ("Set up and check"). Like provision it looks before it
+writes, writes only to the staging branch and Vercel's Preview environment,
+and reads everything back. It needs the repository secrets
+`SUPABASE_ACCESS_TOKEN` and `VERCEL_TOKEN`, `STAGING_DEMO_PASSWORD` (8
+characters or more, your choice) to seed, and for sign-in the same
+`GOOGLE_CLIENT_ID`/`GOOGLE_CLIENT_SECRET` and `AZURE_CLIENT_ID`/
+`AZURE_CLIENT_SECRET` as production. What stays by hand, once:
+
+1. Create the persistent branch `staging` of `Johns`, from the git branch
+   `staging` (the workflow's first run makes the git branch).
+2. In `jonz-api`, make `APP_URL` and `STRIPE_WEBHOOK_SECRET` Production only,
+   and give Preview the sandbox key and the webhook secret of a second
+   sandbox endpoint, `https://api.staging.jonz.app/api/stripe/webhook`.
+3. Attach staging.jonz.app to `jonz-web` and api.staging.jonz.app to
+   `jonz-api`, each for the git branch `staging`. Leave `jonz-api`'s previews
+   without Vercel Authentication: the web previews call them from another
+   origin, and every route already needs a session or a secret.
+4. Add staging's callback, `https://<staging ref>.supabase.co/auth/v1/callback`,
+   to the Google web client's redirect URIs and the Azure app's.
+
+"Seed the demo house" adds it if it isn't there. "Reset the database" wipes
+staging back to its migrations, then sets up and seeds again (a new clock
+secret, so it builds both projects again).
+
 ## Day to day
 
 - Work on a branch, open a PR; CI must be green to merge.
 - Merging to `main` deploys both halves. A migration that drops or renames
   anything the running code reads is an outage for the minute the deploys
   take; split it into an additive step and a later cleanup.
-- `npm run provision -- --check` says whether production still looks right.
+- `npm run provision -- --check` says whether production still looks right;
+  the Staging workflow's "Check only" does the same for staging.
 - `TICK_URL=https://jonz.app/api/cron/tick CRON_SECRET=… npm run tick`
   runs the clock by hand (through the web project's rewrite;
   `https://api.jonz.app/api/cron/tick` goes straight there). Check the cron job with
