@@ -1,4 +1,5 @@
 import { BALANCE_WEEKS } from "./deal";
+import type { BreakdownKey, RecordCounts, RecordMark, RecordSpan } from "./record";
 import { IMMUNITY_EVERY } from "./streak";
 
 /**
@@ -1476,4 +1477,71 @@ export const PASS_COPY = {
   /** Where a locked extra was, once the Pass is enforced. */
   locked: (feature: string) => `${feature} comes with the House Pass`,
   unlock: "See the House Pass",
+} as const;
+
+/** The track record, opened from Week: the grid, and one person's breakdown. */
+export const RECORD_COPY = {
+  title: "Track record",
+  /** Week's way in. */
+  open: "Track record",
+  intro: "One square per week. A streak, or a slide, shows at a glance.",
+  introWeek: "One square per John this week.",
+  span: "Show",
+  spans: { week: "Week", month: "Month", year: "Year", all: "All" } as Record<RecordSpan, string>,
+  nothingYet: "Nothing dealt yet",
+  yearRange: (year: string, weeks: number) => `${year} · ${weeks} ${weeks === 1 ? "week" : "weeks"}`,
+  allRange: (since: string, weeks: number) => `Since ${since} · ${weeks} ${weeks === 1 ? "week" : "weeks"}`,
+  onTime: "On time",
+  /** A row's figure: "94%", or a dash with nothing settled. */
+  pct: (pct: number | null) => (pct === null ? "–" : `${pct}%`),
+  /** A row's meta: "6 on time · 1 late · 1 missed · covered 2". */
+  counts: (c: RecordCounts) =>
+    [
+      `${c.onTime} on time`,
+      c.late ? `${c.late} late` : null,
+      c.missed ? `${c.missed} missed` : null,
+      c.skipped ? `${c.skipped} skipped` : null,
+      c.covered ? `covered ${c.covered}` : null,
+    ]
+      .filter(Boolean)
+      .join(" · "),
+  you: (name: string) => `${name} (you)`,
+  key: "Key",
+  marks: {
+    clean: "All on time",
+    late: "Something late",
+    missed: "Something missed",
+    covered: "Covered for someone",
+    skipped: "Skipped",
+    open: "Not done yet",
+    away: "Away",
+    none: "Nothing dealt",
+  } as Record<RecordMark, string>,
+  /** A square, spoken: "Week of 6 Oct: all on time". */
+  cellLabel: (when: string, mark: RecordMark) => `${when}: ${RECORD_COPY.marks[mark].toLowerCase()}`,
+  /** The person's page. */
+  personTitle: (name: string) => name,
+  whereFrom: "Where it comes from",
+  lines: {
+    share: "Their share",
+    onTime: "Done on time",
+    late: "Done late",
+    skipped: "Skipped",
+    open: "Still to do",
+    missed: "Missed",
+    covered: "Covered for others",
+  } as Record<BreakdownKey, string>,
+  yourShare: "Your share",
+  /** Under the share: what it is. */
+  shareMeta: (weeks: number) => `A part of every John they share, over ${weeks} ${weeks === 1 ? "week" : "weeks"}`,
+  lineMeta: (johns: number) => `${johns} ${johns === 1 ? "John" : "Johns"}`,
+  missedMeta: "A miss counts for nobody",
+  openMeta: "Counts as theirs until it’s done or missed",
+  coveredIt: (name: string) => `${name} covered it`,
+  coveredFor: (name: string) => `for ${name}`,
+  total: (name: string) => `${name}, this span`,
+  totalYou: "You, this span",
+  /** The breakdown's last word: what the deal does about it, over the weeks it remembers. */
+  next: "What happens next",
+  someoneGone: "A former housemate",
 } as const;

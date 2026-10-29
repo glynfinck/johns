@@ -190,10 +190,12 @@ The steps, each asked for and checked before the next:
    start_time desc limit 5;`, and `/api/cron/tick` in `johns`'s logs); a
    reminder arrives.
 
-**Rolling back** is step 4 in reverse: move `johns.glyn.dev` back to
-`johns`, whose pages still answer. Once Phase 14 has removed them, roll back
-by promoting `johns`'s last deployment that still had them (Vercel keeps
-every deployment) and moving the domain back.
+**Rolling back** was step 4 in reverse: move `johns.glyn.dev` back to
+`johns`, whose pages still answered. Phase 14 removed those pages on 28
+October 2026, so `apps/api` now answers only `/api/*` and sends every other
+path to the same path on jonz.app (308). A rollback to the old pages would
+mean promoting the project's last deployment that still had them (Vercel
+keeps every deployment) and moving a domain to it.
 
 ## The move to jonz.app (October 2026)
 

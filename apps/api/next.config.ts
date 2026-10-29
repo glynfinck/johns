@@ -1,28 +1,35 @@
 import type { NextConfig } from "next";
 
 /**
- * Headers every response gets. As in Pub Golf, the CSP carries only
- * `frame-ancestors`: a full script policy needs per-request nonces and is
- * its own change, shipped report-only first.
+ * Headers every response gets. The CSP carries only `frame-ancestors`: the
+ * app serves JSON, so there is no script to write a policy for.
  */
 const SECURITY_HEADERS = [
   { key: "Strict-Transport-Security", value: "max-age=63072000; includeSubDomains" },
   { key: "X-Content-Type-Options", value: "nosniff" },
-  // A join link carries the house's code; other sites get the bare origin.
   { key: "Referrer-Policy", value: "strict-origin-when-cross-origin" },
-  // Photo receipts use a file input, which needs no camera permission.
   { key: "Permissions-Policy", value: "camera=(), microphone=(), geolocation=(), payment=()" },
   { key: "Content-Security-Policy", value: "frame-ancestors 'none'" },
 ];
 
+/** The site. Everything here that is not the API belongs to it. */
+const SITE = "https://jonz.app";
+
+/** Any other path outside `/api` (the bare origin has its own rule). */
+const NOT_API = "/:path((?!api(?:/|$)).*)";
+
 const nextConfig: NextConfig = {
   poweredByHeader: false,
   async headers() {
+    return [{ source: "/:path*", headers: SECURITY_HEADERS }];
+  },
+  // api.jonz.app only serves the API. An old bookmark, a join link from
+  // before the Expo app, or someone typing the address lands on the same path
+  // on the site (308, so the query string and the method carry over).
+  async redirects() {
     return [
-      { source: "/:path*", headers: SECURITY_HEADERS },
-      // The service worker must never be served stale, or a fix to push
-      // handling would take days to reach phones.
-      { source: "/sw.js", headers: [{ key: "Cache-Control", value: "no-cache" }] },
+      { source: "/", destination: SITE, permanent: true },
+      { source: NOT_API, destination: `${SITE}/:path`, permanent: true },
     ];
   },
 };

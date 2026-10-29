@@ -32,8 +32,8 @@ you're working in (`apps/api/AGENTS.md` for the Next.js app).
 
 ```
 apps/
-  api/          Next.js: the web app (its pages stay until Expo web reaches
-                parity), server actions, /api routes, the engine, push  → Vercel "jonz-api"
+  api/          Next.js, API only: /api routes, the clock, the engine, push
+                (every other path 308s to jonz.app)  → Vercel "jonz-api"
   client/       Expo: iOS, Android and web from one codebase   → Vercel "jonz-web",
                 from the cutover (DEPLOYMENT.md)
 packages/
@@ -145,7 +145,7 @@ each app's AGENTS.md.
   grants (house settings and the John list, its group included, for admins;
   your own name, reactions, push subscriptions). Refusals raise `42501` (not
   yours) or `P0001` with a short code that `errors.ts` turns into a sentence.
-  Whatever calls them (server actions now, the native app later) only
+  Whatever calls them (the Expo app, or a route in `apps/api`) only
   translates and refreshes: it never decides.
 
 ## The clock

@@ -46,7 +46,9 @@ export default defineConfig({
   webServer: [
     {
       command: process.env.CI ? `npx next start -p ${PORT}` : `npx next dev -p ${PORT}`,
-      url: `http://localhost:${PORT}/signin`,
+      // The tick answers 401 without the secret, which is enough to know the
+      // server is up.
+      url: `http://localhost:${PORT}/api/cron/tick`,
       reuseExistingServer: !process.env.CI,
       timeout: 120_000,
     },

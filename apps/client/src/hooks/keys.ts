@@ -22,3 +22,4 @@ export const listKey = (houseId: string) => [...houseKey(houseId), 'list'] as co
 
 /** The house's time away, under the house. */
 export const awayKey = (houseId: string) => [...houseKey(houseId), 'away'] as const;
+export const recordKey = (houseId: string) => [...houseKey(houseId), 'record'] as const;

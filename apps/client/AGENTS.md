@@ -258,8 +258,8 @@ permanent once a store has seen them.
   web's layout has. Beside it the web's `manifest.webmanifest`, icons and
   `sw.js`, at the same paths and scope, so a phone that installed the site
   or turned on reminders keeps both. `src/__tests__/web-files.test.ts`
-  checks them against core's words and colours; a change to one of them is
-  made in `apps/api/public` too, until Phase 14.
+  checks them against core's words and colours. They are the only copies:
+  `apps/api` has no pages or `public/` since Phase 14.
 - When a change adds a native module or config plugin, say clearly that a
   new development build is needed. The image picker and manipulator (Phase
   6) are native modules: a build from before them can't take a photo.
@@ -280,9 +280,7 @@ permanent once a store has seen them.
 ### Bin Night in React Native
 
 - **One theme file**, `src/theme.ts`. Colours come from `useTheme()`, which
-  reads `BIN_NIGHT` from `@app/core`; never write a colour anywhere else. The
-  web's `globals.css` carries the same values, and a test in `apps/api` fails
-  if they drift, so change a token in both places together.
+  reads `BIN_NIGHT` from `@app/core`; never write a colour anywhere else.
 - **Type:** Overpass, loaded behind the splash screen in `_layout.tsx`. Text
   goes through six roles (`useTheme().type`, drawn by `components/text.tsx`):
   `Title` (once per screen, in the title bar), `Lead`, `SectionLabel`,
