@@ -407,6 +407,84 @@ export type Database = {
           },
         ]
       }
+      house_actions: {
+        Row: {
+          actor: string | null
+          assignment_id: string | null
+          created_at: string
+          data: Json
+          house_id: string
+          id: string
+          kind: string
+          ref: string | null
+          subject: string | null
+          undone_at: string | null
+          undone_by: string | null
+        }
+        Insert: {
+          actor?: string | null
+          assignment_id?: string | null
+          created_at?: string
+          data?: Json
+          house_id: string
+          id?: string
+          kind: string
+          ref?: string | null
+          subject?: string | null
+          undone_at?: string | null
+          undone_by?: string | null
+        }
+        Update: {
+          actor?: string | null
+          assignment_id?: string | null
+          created_at?: string
+          data?: Json
+          house_id?: string
+          id?: string
+          kind?: string
+          ref?: string | null
+          subject?: string | null
+          undone_at?: string | null
+          undone_by?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "house_actions_actor_fkey"
+            columns: ["actor"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "house_actions_assignment_id_fkey"
+            columns: ["assignment_id"]
+            isOneToOne: false
+            referencedRelation: "assignments"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "house_actions_house_id_fkey"
+            columns: ["house_id"]
+            isOneToOne: false
+            referencedRelation: "houses"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "house_actions_subject_fkey"
+            columns: ["subject"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "house_actions_undone_by_fkey"
+            columns: ["undone_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       house_drafts: {
         Row: {
           created_at: string
@@ -1122,6 +1200,22 @@ export type Database = {
           user_id: string
         }[]
       }
+      house_history: {
+        Args: { p_before?: string; p_house: string; p_limit?: number }
+        Returns: {
+          actor: string
+          assignment_id: string
+          created_at: string
+          data: Json
+          id: string
+          kind: string
+          reach: string
+          ref: string
+          subject: string
+          undone_at: string
+          undone_by: string
+        }[]
+      }
       house_by_code: {
         Args: { p_code: string }
         Returns: {
@@ -1137,6 +1231,7 @@ export type Database = {
         Args: { p_assignment: string; p_photo_path?: string }
         Returns: undefined
       }
+      month_open: { Args: { p_at: string; p_house: string }; Returns: boolean }
       my_open_assignment: {
         Args: { p_assignment: string }
         Returns: {
@@ -1222,8 +1317,13 @@ export type Database = {
       }
       settle_assignments: { Args: { p_items: Json }; Returns: number }
       shares_house: { Args: { other: string }; Returns: boolean }
+      undo_action: { Args: { p_action: string }; Returns: undefined }
       undo_cover: { Args: { p_assignment: string }; Returns: undefined }
       undo_done: { Args: { p_assignment: string }; Returns: undefined }
+      undo_latest: {
+        Args: { p_about?: string; p_kind: string }
+        Returns: string
+      }
       use_immunity: { Args: { p_assignment: string }; Returns: undefined }
       use_swap: {
         Args: { p_mine: string; p_theirs: string }

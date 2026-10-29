@@ -164,3 +164,15 @@ describe("describeEvent", () => {
     expect(describeEvent(event, nameOf, "GBP")).toEqual({ icon: "badge-check", parts: [{ text: "something_new" }] });
   });
 });
+
+describe("an admin's undo on the Wall", () => {
+  it("tells whoever's move it was who took it back", () => {
+    expect(line("undone", { by: "ava", what: "tick", name: "Bins" }, "ben")).toBe("You undid Ben’s tick on Bins.");
+    expect(line("undone", { by: "cal", what: "flag", name: "Recycling" }, "ava")).toBe("Cal undid your flag on Recycling.");
+    expect(line("undone", { by: "ava", what: "away", name: null }, "cal")).toBe("You undid Cal’s time away.");
+  });
+
+  it("names a move it doesn't know plainly", () => {
+    expect(line("undone", { by: "ava", what: "something_new" }, "ben")).toBe("You undid Ben’s change.");
+  });
+});
