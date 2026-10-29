@@ -29,10 +29,11 @@ with a roll call) are a separate change.
 - The **deal stays weekly**. A John that repeats in months is dealt in the
   week that holds its date, to whoever the fair shares say, like any other.
 - A **long John** (every 4 weeks or more, or any John in months) that is
-  **missed** comes back into the next week's deal, so a missed quarterly job
-  isn't lost for three months. It comes back once: its new assignment is the
-  latest, so if that's done (or missed again, a week on) it doesn't repeat
-  until its next date.
+  **missed** goes into the next deal after it's called missed, so a missed
+  quarterly job isn't lost for three months. One due early in the week is
+  missed before the week ends and comes back the next week; one due at the
+  weekend can still be done late on the Monday, so it comes back the week
+  after. It keeps coming back each week it's missed, until someone does it.
 - **Week** has a **Coming up** section: the long Johns landing in the next
   four weeks, with their date and how often ("Sat 7 Nov · every 3 months").
   Nobody's name is on them until the deal hands each out in its week.

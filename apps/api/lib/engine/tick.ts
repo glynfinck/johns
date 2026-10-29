@@ -217,7 +217,7 @@ export async function dealWeek(
     dueDow: j.due_dow as IsoDow,
   });
   const due = list.filter((j) => landsInWeek(repeatOf(j), week.startsOn, rules.weekStarts));
-  // A long John that was missed comes back the next week rather than waiting for its turn (repeat.ts comesBack).
+  // A long John that was missed comes back in the next deal rather than waiting for its turn (repeat.ts comesBack).
   const waiting = list.filter((j) => j.kind !== "on_call" && isLong(repeatOf(j)) && !due.includes(j));
   const back = new Set<string>();
   if (waiting.length > 0) {

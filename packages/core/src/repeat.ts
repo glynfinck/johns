@@ -121,7 +121,7 @@ export function startMonths(
 
 /**
  * A long John: one that comes round every 4 weeks or less often. Week shows
- * these coming up, and one that's missed comes back the next week instead of
+ * these coming up, and one that's missed comes back in the next deal instead of
  * waiting for its turn.
  */
 export function isLong(repeat: Pick<Repeat, "everyWeeks" | "everyMonths">): boolean {

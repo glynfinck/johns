@@ -8,7 +8,7 @@
 -- counted as year * 12 + month - 1), and its every_weeks is left at 1. The
 -- deal stays weekly: a monthly John is dealt in the week that holds its date
 -- (@app/core repeat.ts, landsInWeek). A long John that is missed comes back
--- into the next week's deal (the engine, comesBack); nothing here.
+-- in the next deal (the engine, comesBack); nothing here.
 --
 -- Big jobs can weigh more: effort goes up to 20 points, on the list and on
 -- what is dealt.
