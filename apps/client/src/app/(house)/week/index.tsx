@@ -1,5 +1,6 @@
 import {
   canSwap,
+  passUnlocked,
   liveWeekFilter,
   ON_CALL_COPY,
   PAGE_TITLE,
@@ -24,10 +25,11 @@ import { StyleSheet, useWindowDimensions, View } from 'react-native';
 import type { JohnRowContext } from '@/components/john-row';
 import { PageTitle } from '@/components/page-title';
 import { Reading, ReadFailed } from '@/components/read-state';
-import { Screen } from '@/components/screen';
+import { Columns, Screen, useColumns } from '@/components/screen';
 import { Chip } from '@/components/status-mark';
 import { TextButton } from '@/components/text-button';
 import { MoreButton, TitleBar } from '@/components/title-bar';
+import { TableSection } from '@/components/house-page/table-section';
 import { FairnessFooter } from '@/components/week/fair-shares';
 import { PersonSection } from '@/components/week/person-section';
 import { WeekSummaryBar } from '@/components/week/summary';
@@ -39,6 +41,7 @@ import { useHouse, type HouseView } from '@/hooks/use-house';
 import { useJohnList } from '@/hooks/use-john-list';
 import { useMembership } from '@/hooks/use-membership';
 import { usePull, useReadOnFocus } from '@/hooks/use-refresh';
+import { useStake } from '@/hooks/use-stake';
 import { useTable } from '@/hooks/use-table';
 import { INSET, WIDE } from '@/theme';
 
@@ -90,13 +93,14 @@ function WeekFor({ houseId, userId }: { houseId: string; userId: string }) {
           />
         </>
       }
+      spreads
       refreshing={refreshing}
       onRefresh={pull}
       testID="week-screen"
     >
       <PageTitle page={PAGE_TITLE.week} />
       {view ? (
-        <Board view={view} wide={wide} away={away.data} shares={shares.data} johns={list.data?.johns ?? null} />
+        <Board view={view} wide={wide} away={away} shares={shares} johns={list.data?.johns ?? null} />
       ) : query.isError ? (
         <ReadFailed onRetry={() => void query.refetch()} />
       ) : (
@@ -109,16 +113,19 @@ function WeekFor({ houseId, userId }: { houseId: string; userId: string }) {
 function Board({
   view,
   wide,
-  away,
-  shares,
+  away: awayRead,
+  shares: sharesRead,
   johns,
 }: {
   view: HouseView;
   wide: boolean;
-  away: ReturnType<typeof useAway>['data'];
-  shares: ReturnType<typeof useTable>['data'];
+  away: ReturnType<typeof useAway>;
+  shares: ReturnType<typeof useTable>;
   johns: readonly unknown[] | null;
 }) {
+  const away = awayRead.data;
+  const shares = sharesRead.data;
+  const two = useColumns();
   const { snapshot, board, me, now } = view;
   const { house, members, rules } = snapshot;
   const [filter, setFilter] = useState<WeekPart | null>(null);
@@ -155,55 +162,103 @@ function Board({
   };
   const swapReady = canSwap(board, me);
 
-  return (
-    <>
-      <WeekSummaryBar
-        range={weekRangeLine(week.startsAt, week.endsAt, now, rules.timezone)}
-        summary={summary}
-        filter={shown}
-        onFilter={(part) => setFilter(toggleWeekFilter(shown, part))}
-        // The table has no person headers, so what they'd say about time away and your swap goes here.
-        tag={wide && swapReady ? <Chip label={WEEK_SUMMARY_COPY.swapReady} icon={RepeatIcon} testID="swap-ready" /> : undefined}
-        note={
-          wide
-            ? weekAwayLine(
-                weekPeople(board.items, memberIds, userId).map((p) => ({ userId: p.userId, away: awayOf(p.userId) })),
-                userId,
-                nameOf,
-              )
-            : null
+  const summaryBar = (
+    <WeekSummaryBar
+      range={weekRangeLine(week.startsAt, week.endsAt, now, rules.timezone)}
+      summary={summary}
+      filter={shown}
+      onFilter={(part) => setFilter(toggleWeekFilter(shown, part))}
+      // The table has no person headers, so what they'd say about time away and your swap goes here.
+      tag={wide && swapReady ? <Chip label={WEEK_SUMMARY_COPY.swapReady} icon={RepeatIcon} testID="swap-ready" /> : undefined}
+      note={
+        wide
+          ? weekAwayLine(
+              weekPeople(board.items, memberIds, userId).map((p) => ({ userId: p.userId, away: awayOf(p.userId) })),
+              userId,
+              nameOf,
+            )
+          : null
+      }
+    />
+  );
+  const list = wide ? (
+    <WeekTable {...weekList(board.items, shown)} context={context} />
+  ) : (
+    weekPeople(board.items, memberIds, userId, shown).map((person) => (
+      <PersonSection
+        key={person.userId}
+        person={person}
+        context={context}
+        points={pointsOf(person.userId)}
+        away={awayOf(person.userId)}
+        onCall={onCallOf(person.userId)}
+        swapReady={person.userId === userId && swapReady}
+      />
+    ))
+  );
+  const fair =
+    fairness && shares ? (
+      <FairnessFooter
+        sentence={fairness}
+        balances={shares.balances}
+        memberIds={memberIds}
+        viewerId={userId}
+        nameOf={nameOf}
+        awayMakeup={house.awayMakeup}
+      />
+    ) : null;
+  const record = (
+    <View style={styles.record}>
+      <TextButton label={RECORD_COPY.open} href="/week/record" chevron align="start" testID="week-record" />
+    </View>
+  );
+
+  // On a laptop the board keeps the main column and the Table sits beside it, over the deal's fairness.
+  if (two) {
+    return (
+      <Columns
+        main={
+          <>
+            {summaryBar}
+            {list}
+          </>
+        }
+        side={
+          <>
+            {passUnlocked(house.pass, now) ? (
+              <SideTable userId={userId} view={view} table={sharesRead} away={awayRead} />
+            ) : null}
+            {fair}
+            {record}
+          </>
         }
       />
-      {wide ? (
-        <WeekTable {...weekList(board.items, shown)} context={context} />
-      ) : (
-        weekPeople(board.items, memberIds, userId, shown).map((person) => (
-          <PersonSection
-            key={person.userId}
-            person={person}
-            context={context}
-            points={pointsOf(person.userId)}
-            away={awayOf(person.userId)}
-            onCall={onCallOf(person.userId)}
-            swapReady={person.userId === userId && swapReady}
-          />
-        ))
-      )}
-      {fairness && shares ? (
-        <FairnessFooter
-          sentence={fairness}
-          balances={shares.balances}
-          memberIds={memberIds}
-          viewerId={userId}
-          nameOf={nameOf}
-          awayMakeup={house.awayMakeup}
-        />
-      ) : null}
-      <View style={styles.record}>
-        <TextButton label={RECORD_COPY.open} href="/week/record" chevron align="start" testID="week-record" />
-      </View>
+    );
+  }
+  return (
+    <>
+      {summaryBar}
+      {list}
+      {fair}
+      {record}
     </>
   );
+}
+
+/** The Table beside the board on a laptop, with the month's money it reads for itself (a phone's Week never needs it). */
+function SideTable({
+  userId,
+  view,
+  table,
+  away,
+}: {
+  userId: string;
+  view: HouseView;
+  table: ReturnType<typeof useTable>;
+  away: ReturnType<typeof useAway>;
+}) {
+  const stake = useStake(view.snapshot.house.id, view.snapshot);
+  return <TableSection userId={userId} view={view} table={table} stake={stake} away={away} />;
 }
 
 const styles = StyleSheet.create({

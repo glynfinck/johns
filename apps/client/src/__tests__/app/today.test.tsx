@@ -13,11 +13,12 @@ import {
   PAGE_TITLE,
   WEEK_SUMMARY_COPY,
   type DisputeRow,
+  TODAY_COPY,
 } from '@app/core';
 import { QueryClientProvider } from '@tanstack/react-query';
 import { Slot } from 'expo-router';
 import { fireEvent, renderRouter, screen, waitFor, within } from 'expo-router/testing-library';
-import { Text } from 'react-native';
+import { Text, useWindowDimensions } from 'react-native';
 
 import { loadAway } from '@/api/away';
 import type { Housemate } from '@/api/board';
@@ -100,6 +101,12 @@ async function show() {
     { initialUrl: '/today' },
   );
 }
+
+// A phone unless a test says otherwise.
+jest.mock('react-native/Libraries/Utilities/useWindowDimensions', () => ({
+  __esModule: true,
+  default: jest.fn(() => ({ width: 412, height: 915, scale: 1, fontScale: 1 })),
+}));
 
 async function open() {
   await show();
@@ -638,5 +645,31 @@ describe('On call', () => {
   it('shows nothing in a house with no on-call Johns', async () => {
     await open();
     expect(screen.queryByTestId('on-call')).toBeNull();
+  });
+});
+
+describe('on a laptop', () => {
+  const LAPTOP = { width: 1440, height: 900, scale: 1, fontScale: 1 };
+  beforeEach(() => (useWindowDimensions as jest.Mock).mockReturnValue(LAPTOP));
+  afterEach(() => (useWindowDimensions as jest.Mock).mockReturnValue({ width: 412, height: 915, scale: 1, fontScale: 1 }));
+
+  it('keeps your Johns in the main column and puts the house’s week beside them', async () => {
+    await open();
+    const main = within(screen.getByTestId('column-main'));
+    const side = within(screen.getByTestId('column-side'));
+    expect(main.getByTestId('next-up')).toBeOnTheScreen();
+    const glance = side.getByTestId('week-glance');
+    expect(within(glance).getByTestId('week-bar')).toBeOnTheScreen();
+    // The glance's parts are one line, not Week's filters.
+    expect(within(glance).getByTestId('week-parts')).toBeOnTheScreen();
+    expect(within(glance).queryByRole('button', { name: /done/ })).toBeNull();
+    expect(within(glance).getByRole('link', { name: new RegExp(TODAY_COPY.seeWeek) })).toBeOnTheScreen();
+  });
+
+  it('stays in one column, in the phone’s order, at the narrowest laptop', async () => {
+    (useWindowDimensions as jest.Mock).mockReturnValue({ ...LAPTOP, width: 1100 });
+    await open();
+    expect(screen.queryByTestId('columns')).toBeNull();
+    expect(screen.queryByTestId('week-glance')).toBeNull();
   });
 });

@@ -4,7 +4,7 @@ import type { AwayView } from '@/api/away';
 import type { JohnList } from '@/api/settings';
 import { PageTitle } from '@/components/page-title';
 import { Reading, ReadFailed } from '@/components/read-state';
-import { Screen } from '@/components/screen';
+import { Columns, Screen, useColumns } from '@/components/screen';
 import { TitleBar } from '@/components/title-bar';
 import { NeedsYou } from '@/components/today/needs-you';
 import { NextUp } from '@/components/today/next-up';
@@ -12,6 +12,7 @@ import { OnCall } from '@/components/today/on-call';
 import { PageLine, PageLines } from '@/components/today/page-line';
 import { RestOfWeek } from '@/components/today/rest-of-week';
 import { SetupCard } from '@/components/today/setup-card';
+import { WeekGlance } from '@/components/today/week-glance';
 import { useAway } from '@/hooks/use-away';
 import { useHouse, type HouseView } from '@/hooks/use-house';
 import { useJohnList } from '@/hooks/use-john-list';
@@ -53,6 +54,7 @@ function TodayFor({ houseId, userId }: { houseId: string; userId: string }) {
           ask={view?.me?.role === 'admin'}
         />
       }
+      spreads
       refreshing={refreshing}
       onRefresh={pull}
       testID="today-screen"
@@ -85,63 +87,99 @@ function TodayView({
   const userId = me?.userId ?? '';
   const page = todayPage({ board, mine: today.mine, userId, me, members, rules, away, stake });
   const nameOf = (id: string) => members.find((m) => m.userId === id)?.name ?? null;
+  const two = useColumns();
 
-  return (
-    <>
-      {page.state.kind === 'setup' ? (
-        <SetupCard
-          houseId={house.id}
-          houseName={house.name}
-          joinCode={house.joinCode}
-          johns={list?.johns ?? null}
-          memberCount={members.length}
-        />
-      ) : (
-        <NextUp
-          houseId={house.id}
-          state={page.state}
-          rules={rules}
-          now={now}
-          cant={page.cant}
-          room={page.room}
-          awayMakeup={house.awayMakeup}
-        />
-      )}
-      <NeedsYou
-        items={today.toVote}
-        toCover={today.toCover}
-        members={members}
-        userId={userId}
-        zone={rules.timezone}
-        now={now}
-      />
-      <OnCall
+  const next =
+    page.state.kind === 'setup' ? (
+      <SetupCard
         houseId={house.id}
-        items={onCallItems(snapshot.onCall, board)}
-        members={members}
-        userId={userId}
+        houseName={house.name}
+        joinCode={house.joinCode}
+        johns={list?.johns ?? null}
+        memberCount={members.length}
+      />
+    ) : (
+      <NextUp
+        houseId={house.id}
+        state={page.state}
         rules={rules}
         now={now}
+        cant={page.cant}
+        room={page.room}
+        awayMakeup={house.awayMakeup}
       />
-      <RestOfWeek
-        going={page.going}
-        finished={page.finished}
-        context={{ houseId: house.id, userId, zone: rules.timezone, rules, now, nameOf }}
+    );
+  const needsYou = (
+    <NeedsYou
+      items={today.toVote}
+      toCover={today.toCover}
+      members={members}
+      userId={userId}
+      zone={rules.timezone}
+      now={now}
+    />
+  );
+  const onCall = (
+    <OnCall
+      houseId={house.id}
+      items={onCallItems(snapshot.onCall, board)}
+      members={members}
+      userId={userId}
+      rules={rules}
+      now={now}
+    />
+  );
+  const rest = (
+    <RestOfWeek
+      going={page.going}
+      finished={page.finished}
+      context={{ houseId: house.id, userId, zone: rules.timezone, rules, now, nameOf }}
+    />
+  );
+  const lines =
+    page.standing || page.away ? (
+      // The page's quiet lines sit together, under the week.
+      <PageLines>
+        {page.standing ? <PageLine text={page.standing} href="/house" testID="standing-line" /> : null}
+        {page.away ? (
+          <PageLine
+            text={page.away}
+            href="/house/away"
+            accessibilityLabel={`${page.away}. ${NEXT_UP_COPY.changeDates}`}
+            testID="away-line"
+          />
+        ) : null}
+      </PageLines>
+    ) : null;
+
+  // On a laptop your own Johns keep the main column; what the house wants of you sits beside them, over its week.
+  if (two) {
+    return (
+      <Columns
+        main={
+          <>
+            {next}
+            {rest}
+            {lines}
+          </>
+        }
+        side={
+          <>
+            {needsYou}
+            {onCall}
+            <WeekGlance view={view} away={away} />
+          </>
+        }
       />
-      {page.standing || page.away ? (
-        // The page's quiet lines sit together, under the week.
-        <PageLines>
-          {page.standing ? <PageLine text={page.standing} href="/house" testID="standing-line" /> : null}
-          {page.away ? (
-            <PageLine
-              text={page.away}
-              href="/house/away"
-              accessibilityLabel={`${page.away}. ${NEXT_UP_COPY.changeDates}`}
-              testID="away-line"
-            />
-          ) : null}
-        </PageLines>
-      ) : null}
+    );
+  }
+  return (
+    <>
+      {next}
+      {needsYou}
+      {onCall}
+      {rest}
+      {lines}
     </>
   );
 }

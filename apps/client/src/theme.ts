@@ -68,6 +68,15 @@ export const ROW_GAP = 12;
 export const GROUP_RADIUS = 10;
 /** The widest a screen's content gets, on every tab. */
 export const CONTENT_MAX = 680;
+/**
+ * A laptop page that spreads (Today, Week, House) keeps to this from
+ * COLUMNS_MIN: a main column about as wide as CONTENT_MAX and ASIDE beside it.
+ */
+export const PAGE_MAX = 1120;
+/** The side column of a page in two columns. */
+export const ASIDE = 380;
+/** The page's own width from which a page that spreads goes to two columns. */
+export const COLUMNS_MIN = 1000;
 /** Between one section and the next. */
 export const SECTION_GAP = 32;
 /** From a section's label to its group. */

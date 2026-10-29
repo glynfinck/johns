@@ -169,6 +169,8 @@ export const TODAY_COPY = {
   nothingYours: "Nothing on your list this week. Enjoy it while it lasts.",
   toVote: "The house wants your vote",
   yours: "Yours",
+  /** On a laptop, the house's week beside yours: the way to Week. */
+  seeWeek: "See the week",
 } as const;
 
 /** One John, and what its owner can do with it. */
