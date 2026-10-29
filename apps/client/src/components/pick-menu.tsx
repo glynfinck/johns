@@ -1,7 +1,7 @@
 import { withAlpha } from '@app/core';
 import { CheckIcon, ChevronDownIcon } from 'lucide-react-native';
 import { useRef, useState } from 'react';
-import { Modal, Pressable, StyleSheet, Text, useWindowDimensions, View } from 'react-native';
+import { Modal, Pressable, StyleSheet, Text, useWindowDimensions, View, type HostInstance } from 'react-native';
 
 import { Group } from '@/components/group';
 import { Row } from '@/components/row';
@@ -51,7 +51,7 @@ export function PickMenu<T extends string>({
   const [pressed, setPressed] = useState(false);
   // Where the menu drops from: under the words, its right edge on theirs.
   const [place, setPlace] = useState<{ top: number; right: number } | null>(null);
-  const words = useRef<View>(null);
+  const words = useRef<HostInstance>(null);
   const chosen = options.find((option) => option.value === value) ?? options[0];
 
   function show() {

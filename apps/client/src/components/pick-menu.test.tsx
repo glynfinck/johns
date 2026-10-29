@@ -1,4 +1,3 @@
-import MockNativeMethods from '@react-native/jest-preset/jest/MockNativeMethods';
 import { fireEvent, render, screen } from '@testing-library/react-native';
 import { useState } from 'react';
 import { useWindowDimensions } from 'react-native';
@@ -7,6 +6,11 @@ import { BIN_NIGHT } from '@app/core';
 import { FONT, SPACE, TAP, WIDE } from '@/theme';
 
 import { PickMenu } from './pick-menu';
+
+// Every host view's measureInWindow, as react-native's jest setup mocks it: one jest.fn they share.
+const { measureInWindow } = jest.requireActual<{ default: { measureInWindow: jest.Mock } }>(
+  '@react-native/jest-preset/jest/MockNativeMethods',
+).default;
 
 jest.mock('react-native/Libraries/Utilities/useWindowDimensions', () => ({
   __esModule: true,
@@ -70,11 +74,11 @@ describe('beside the page', () => {
   beforeEach(() => {
     (useWindowDimensions as jest.Mock).mockReturnValue({ width: WIDE + 416, height: 900, scale: 1, fontScale: 1 });
     // The words sit at 1200–1300 across, 300–348 down.
-    (MockNativeMethods.measureInWindow as jest.Mock).mockImplementation((place: (x: number, y: number, w: number, h: number) => void) =>
+    measureInWindow.mockImplementation((place: (x: number, y: number, w: number, h: number) => void) =>
       place(1200, 300, 100, TAP),
     );
   });
-  afterEach(() => (MockNativeMethods.measureInWindow as jest.Mock).mockReset());
+  afterEach(() => measureInWindow.mockReset());
 
   it('drops the choices from the words, their right edges together', async () => {
     await render(<Span />);
