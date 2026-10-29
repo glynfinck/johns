@@ -1,6 +1,6 @@
 import { FOCUS_SHELL_COPY, SECTION_LABEL } from '@app/core';
 import { QueryClientProvider } from '@tanstack/react-query';
-import { Link, Slot } from 'expo-router';
+import { Link, router, Slot } from 'expo-router';
 import { fireEvent, renderRouter, screen, waitFor, within } from 'expo-router/testing-library';
 import { Text, useWindowDimensions, View } from 'react-native';
 
@@ -60,7 +60,13 @@ async function open(url = '/today') {
         </QueryClientProvider>
       ),
       '(house)/_layout': HouseLayout,
-      '(house)/today': () => <Text>Today screen</Text>,
+      '(house)/today': () => (
+        <View>
+          <Text>Today screen</Text>
+          <Link href="/house/describe">Describe your house</Link>
+          <Link href="/house/stake">To the Stake</Link>
+        </View>
+      ),
       '(house)/week': () => <Text>Week screen</Text>,
       // As the module is, so the anchor under a page opened from a link applies.
       '(house)/house/_layout': { default: HouseStack, unstable_settings: houseStackSettings },
@@ -72,6 +78,14 @@ async function open(url = '/today') {
       ),
       '(house)/house/wall': () => <Pushed name="Wall" />,
       '(house)/house/stake': () => <Pushed name="Stake" />,
+      '(house)/house/johns': () => <Pushed name="Johns" />,
+      // As the chat is once its Johns are added: a row on to the John list.
+      '(house)/house/describe': () => (
+        <View>
+          <Pushed name="Describe" />
+          <Text onPress={() => router.dismissTo('/house/johns')}>Open the list</Text>
+        </View>
+      ),
     },
     { initialUrl: url },
   );
@@ -163,6 +177,26 @@ describe('on a phone', () => {
     expect(screen.getByRole('tab', { name: SECTION_LABEL.house })).toBeSelected();
     await fireEvent.press(screen.getByRole('button', { name: FOCUS_SHELL_COPY.backTo(SECTION_LABEL.house) }));
     expect(screen).toHavePathname('/house');
+  });
+
+  it('goes back to House, not Today, from a House page opened from Today', async () => {
+    await open('/today');
+    await fireEvent.press(screen.getByRole('link', { name: 'To the Stake' }));
+    expect(screen).toHavePathname('/house/stake');
+    await fireEvent.press(screen.getByRole('button', { name: FOCUS_SHELL_COPY.backTo(SECTION_LABEL.house) }));
+    expect(screen).toHavePathname('/house');
+    expect(screen.getByText('House screen')).toBeOnTheScreen();
+  });
+
+  it('goes back to House from the John list the describe chat opens', async () => {
+    await open('/today');
+    await fireEvent.press(screen.getByRole('link', { name: 'Describe your house' }));
+    expect(screen).toHavePathname('/house/describe');
+    await fireEvent.press(screen.getByText('Open the list'));
+    expect(screen).toHavePathname('/house/johns');
+    await fireEvent.press(screen.getByRole('button', { name: FOCUS_SHELL_COPY.backTo(SECTION_LABEL.house) }));
+    expect(screen).toHavePathname('/house');
+    expect(screen.getByText('House screen')).toBeOnTheScreen();
   });
 
   it("takes House's tab back to the top of its stack", async () => {
