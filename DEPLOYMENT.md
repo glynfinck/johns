@@ -118,6 +118,27 @@ is exactly what local development needs and production must not have.
   well under a cent, and each house gets thirty a day
   (`CHAT_TURNS_PER_DAY`), counted in `house_drafts`. Locally and in CI there is no gateway, so
   drafts are starter lists unless `AI_GATEWAY_API_KEY` is set.
+- **The House Pass on the web (Stripe).** Checkout and the billing page
+  come from `POST /api/pass/checkout` and `/api/pass/manage`; Stripe's
+  webhook (`POST /api/stripe/webhook`, `apps/api/lib/pass/events.ts`) writes
+  the house's `pass_*` columns. The three prices live on the `house_pass`
+  product with the lookup keys `pass_yearly`, `pass_monthly` and
+  `pass_founding`, each with GBP, EUR and CAD alongside USD, prices
+  including tax. The product's tax code is `txcd_10103000` (SaaS, personal
+  use): Checkout refuses a product without one while Managed Payments
+  (Stripe as merchant of record, collecting and paying the sales tax and
+  VAT) is on, as it is by default on a new account. On `jonz-api`
+  set `STRIPE_SECRET_KEY` (a restricted key is enough: write on Checkout
+  Sessions, Customer portal and Subscriptions, read on Prices),
+  `STRIPE_WEBHOOK_SECRET` and `APP_URL=https://jonz.app`. The webhook
+  endpoint is `https://api.jonz.app/api/stripe/webhook`, listening for
+  `checkout.session.completed`, `checkout.session.async_payment_succeeded`
+  and `customer.subscription.*`. The billing page uses the account's default
+  Customer portal configuration, "House Pass": cancel at the end of the
+  period, change card, and switch between Yearly and Monthly (the sandbox's
+  is `bpc_1UVt3gRwTZ2GsMbUO4o3mD4i`; live needs the same one). Then `EXPO_PUBLIC_PASS_CHECKOUT=on` on
+  `jonz-web` shows the plans as buttons. Without the key the Pass page shows
+  the plans and sells nothing.
 - **Brand verification.** Opening the app beyond your own house means
   Google's review; the landing page at `/` carries the name, the purpose and
   the privacy link it checks for.

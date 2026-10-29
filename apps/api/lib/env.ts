@@ -17,6 +17,11 @@ export const env = {
    * once the Expo web build serves jonz.app it calls the API from the
    * same origin.
    */
+  /**
+   * The app's own web address (the Expo web build), where Stripe sends a
+   * buyer back after Checkout or the billing page: https://jonz.app.
+   */
+  appUrl: () => required("APP_URL").replace(/\/+$/, ""),
   allowedOrigins: () =>
     (process.env.ALLOWED_ORIGINS ?? "")
       .split(",")

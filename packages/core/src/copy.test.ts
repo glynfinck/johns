@@ -179,7 +179,7 @@ describe("TABLE_COPY", () => {
   });
 
   it("names the rules’ numbers from the rules", () => {
-    expect(TABLE_COPY.sharesBody).toMatch(/last 12 weeks/);
+    expect(TABLE_COPY.sharesBody).toMatch(/since you joined/);
     expect(TABLE_COPY.rules[1].body).toMatch(/^Every 4 clean weeks/);
     expect(TABLE_COPY.weeks(1)).toBe("1 week");
   });

@@ -415,53 +415,40 @@ describe("catchUpWeeks", () => {
 
 describe("recentBalances", () => {
   const rows = {
-    weekIds: ["w2", "w1"],
-    shares: [
-      { week_id: "w1", user_id: "ava", share: 4 },
-      { week_id: "w1", user_id: "ben", share: 4 },
-      { week_id: "w2", user_id: "ava", share: "3" },
-      { week_id: "w2", user_id: "ben", share: 3 },
-      { week_id: "w0", user_id: "ava", share: 100 },
+    // The database's sums over every week so far (house_balances); numeric comes back as a string.
+    totals: [
+      { user_id: "ava", owed: "107", credited: 5 },
+      { user_id: "ben", owed: 7, credited: "109" },
+      { user_id: "dan", owed: 50, credited: 0 },
     ],
-    handed: [
-      { week_id: "w1", user_id: "ava", points: 2 },
-      { week_id: "w1", user_id: "ben", points: 6 },
-      { week_id: "w2", user_id: "ava", points: 3 },
-      { week_id: "w2", user_id: "ben", points: 3 },
-      { week_id: "w0", user_id: "ben", points: 100 },
+    recentShares: [
+      { user_id: "ava", share: 4 },
+      { user_id: "ava", share: "3" },
+      { user_id: "ben", share: 4 },
+      { user_id: "ben", share: 3 },
+      { user_id: "ben", share: 0 },
     ],
   };
 
-  it("reads how each John ended: a miss counts for nobody, a cover for the coverer", () => {
-    const { balances } = recentBalances(
-      {
-        weekIds: ["w1"],
-        shares: rows.shares.filter((s) => s.week_id === "w1"),
-        handed: [
-          { week_id: "w1", user_id: "ava", points: 2, outcome: "missed", covered_by: null },
-          { week_id: "w1", user_id: "ben", points: 6, outcome: "covered", covered_by: "ava" },
-        ],
-      },
-      ["ava", "ben"],
-    );
-    expect(balances).toEqual(new Map([["ava", 2], ["ben", -4]]));
-  });
-
-  it("balances what each was handed against their share, over the weeks asked for", () => {
+  it("balances everything each did against everything they owed", () => {
     const { balances } = recentBalances(rows, ["ava", "ben"]);
-    expect(balances).toEqual(new Map([["ava", -2], ["ben", 2]]));
+    expect(balances).toEqual(new Map([["ava", -102], ["ben", 102]]));
   });
 
-  it("takes a usual week's share as the average of the weeks they had one", () => {
+  it("leaves out people who have left, and starts a newcomer level", () => {
+    const { balances } = recentBalances(rows, ["ava", "cal"]);
+    expect(balances).toEqual(new Map([["ava", -102], ["cal", 0]]));
+  });
+
+  it("takes a usual week's share as the average of the recent weeks they had one", () => {
     const { usualShare } = recentBalances(rows, ["ava", "ben", "cal"]);
+    expect(usualShare.get("ava")).toBe(3.5);
     expect(usualShare.get("ben")).toBe(3.5);
-    // Ava's 100 is from a week outside the ones asked for, but it is still one of her shares.
-    expect(usualShare.get("ava")).toBeCloseTo(107 / 3);
     expect(usualShare.get("cal")).toBe(0);
   });
 
   it("is level for everyone with no weeks behind them", () => {
-    const { balances, usualShare } = recentBalances({ weekIds: [], shares: [], handed: [] }, ["ava"]);
+    const { balances, usualShare } = recentBalances({ totals: [], recentShares: [] }, ["ava"]);
     expect(balances).toEqual(new Map([["ava", 0]]));
     expect(usualShare).toEqual(new Map([["ava", 0]]));
   });

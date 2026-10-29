@@ -455,6 +455,35 @@ export type Database = {
           },
         ]
       }
+      house_pass_billing: {
+        Row: {
+          house_id: string
+          stripe_customer: string
+          stripe_subscription: string | null
+          updated_at: string
+        }
+        Insert: {
+          house_id: string
+          stripe_customer: string
+          stripe_subscription?: string | null
+          updated_at?: string
+        }
+        Update: {
+          house_id?: string
+          stripe_customer?: string
+          stripe_subscription?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "house_pass_billing_house_id_fkey"
+            columns: ["house_id"]
+            isOneToOne: true
+            referencedRelation: "houses"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       houses: {
         Row: {
           away_makeup: number
@@ -1030,6 +1059,13 @@ export type Database = {
         Args: { p_members: Json; p_week: string }
         Returns: boolean
       }
+      closes_at: {
+        Args: {
+          a: Database["public"]["Tables"]["assignments"]["Row"]
+          week_ends: string
+        }
+        Returns: string
+      }
       confirm_payment: {
         Args: { p_amount: number; p_from: string; p_house: string }
         Returns: undefined
@@ -1037,6 +1073,14 @@ export type Database = {
       cover_john: {
         Args: { p_assignment: string; p_photo_path?: string }
         Returns: undefined
+      }
+      cover_opens_at: {
+        Args: {
+          a: Database["public"]["Tables"]["assignments"]["Row"]
+          grace: number
+          week_ends: string
+        }
+        Returns: string
       }
       create_house: {
         Args: {
@@ -1061,6 +1105,14 @@ export type Database = {
         Returns: string
       }
       delete_group: { Args: { p_group: string }; Returns: undefined }
+      house_balances: {
+        Args: { p_before: string; p_house: string }
+        Returns: {
+          credited: number
+          owed: number
+          user_id: string
+        }[]
+      }
       house_by_code: {
         Args: { p_code: string }
         Returns: {
@@ -1080,8 +1132,10 @@ export type Database = {
         Args: { p_assignment: string }
         Returns: {
           category: string
+          closes_at: string | null
           covered_by: string | null
           created_at: string
+          dealt: Json | null
           done_at: string | null
           due_at: string
           due_moved_from: string | null
