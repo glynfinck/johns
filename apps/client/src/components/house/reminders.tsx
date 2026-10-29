@@ -5,6 +5,7 @@ import { StyleSheet, View } from 'react-native';
 
 import { reminderSupport, remindersOn, turnRemindersOff, turnRemindersOn } from '@/api/push';
 import { Alert } from '@/components/alert';
+import { NotificationSettings } from '@/components/house/notification-settings';
 import { Button } from '@/components/button';
 import { Meta, SectionLabel } from '@/components/text';
 import { SPACE } from '@/theme';
@@ -15,6 +16,7 @@ import { SPACE } from '@/theme';
  * (a phone, until native push; a build without the VAPID key). It heads
  * itself with a section label, unless `labelled` is false because something
  * round it already says Reminders (the You section's sheet, in its title).
+ * Once they're on, what to send and quiet hours follow.
  */
 export function Reminders({ userId, labelled = true }: { userId: string; labelled?: boolean }) {
   const support = reminderSupport();
@@ -79,6 +81,7 @@ export function Reminders({ userId, labelled = true }: { userId: string; labelle
       )}
       {problem ? <Alert message={problem} /> : null}
       <View accessibilityLiveRegion="polite">{notice ? <Meta>{notice}</Meta> : null}</View>
+      {on ? <NotificationSettings userId={userId} /> : null}
     </View>
   );
 }

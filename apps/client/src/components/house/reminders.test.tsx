@@ -5,6 +5,11 @@ import { reminderSupport, remindersOn, turnRemindersOff, turnRemindersOn } from 
 
 import { Reminders } from './reminders';
 
+jest.mock('@/api/notification-prefs', () => ({
+  loadPrefs: jest.fn(async () => (jest.requireActual('@app/core') as typeof import('@app/core')).DEFAULT_PREFS),
+  savePrefs: jest.fn(),
+}));
+
 jest.mock('@/api/push', () => ({
   reminderSupport: jest.fn(),
   remindersOn: jest.fn(),
@@ -67,4 +72,13 @@ it('turns them off on a device that has them', async () => {
   await fireEvent.press(await screen.findByRole('button', { name: REMINDERS_COPY.off }));
   expect(turnRemindersOff).toHaveBeenCalled();
   expect(await screen.findByRole('button', { name: REMINDERS_COPY.on })).toBeOnTheScreen();
+});
+
+it('offers what to send once reminders are on, and not before', async () => {
+  await render(<Reminders userId="ava" />);
+  await screen.findByRole('button', { name: REMINDERS_COPY.on });
+  expect(screen.queryByTestId('notification-settings')).toBeNull();
+  isOn.mockResolvedValue(true);
+  await render(<Reminders userId="ava" />);
+  expect(await screen.findByTestId('notification-settings')).toBeOnTheScreen();
 });

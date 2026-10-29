@@ -3,6 +3,7 @@ import {
   CATEGORY_LABEL,
   DOW_LABEL,
   JOHN_LIST_COPY,
+  NEXT_UP_COPY,
   johnFacts,
   johnsByKind,
   NEW_JOHN,
@@ -18,7 +19,7 @@ import {
   type JohnDef,
   type JohnWhen,
 } from '@app/core';
-import { ListTodoIcon, PlusIcon, Trash2Icon } from 'lucide-react-native';
+import { ListTodoIcon, PlusIcon, SparklesIcon, Trash2Icon } from 'lucide-react-native';
 import { useState } from 'react';
 import { StyleSheet, View } from 'react-native';
 
@@ -84,7 +85,14 @@ export function JohnList({
           icon={ListTodoIcon}
           title={SETUP_COPY.noJohns}
           body={editable ? SETUP_COPY.noJohnsBody : whoAdds}
-          action={editable ? <Button icon={PlusIcon} label={JOHN_LIST_COPY.add} onPress={add} testID="add-john" /> : undefined}
+          action={
+            editable ? (
+              <View style={styles.emptyActions}>
+                <Button icon={SparklesIcon} label={NEXT_UP_COPY.describe} href="/house/describe" testID="describe-house" />
+                <Button variant="outline" icon={PlusIcon} label={JOHN_LIST_COPY.add} onPress={add} testID="add-john" />
+              </View>
+            ) : undefined
+          }
         />
       ) : (
         johnsByKind(johns).map((kind) => (
@@ -273,6 +281,7 @@ function JohnForm({
 }
 
 const styles = StyleSheet.create({
+  emptyActions: { gap: SPACE.sm, alignSelf: 'stretch' },
   foot: { gap: LABEL_GAP },
   // A line under a group, on the leading edge.
   note: { paddingHorizontal: INSET },

@@ -26,6 +26,7 @@ export function ChoiceRow({
   onPress,
   leading,
   disabled = false,
+  metaLines = 1,
   testID,
 }: {
   role: 'radio' | 'checkbox';
@@ -35,6 +36,8 @@ export function ChoiceRow({
   onPress: () => void;
   leading?: ReactNode;
   disabled?: boolean;
+  /** How many lines the meta may take before it's cut short. */
+  metaLines?: number;
   testID?: string;
 }) {
   const { colors } = useTheme();
@@ -63,7 +66,7 @@ export function ChoiceRow({
       {meta ? (
         <View style={styles.words}>
           <RowTitle numberOfLines={1}>{label}</RowTitle>
-          <Meta numberOfLines={1}>{meta}</Meta>
+          <Meta numberOfLines={metaLines}>{meta}</Meta>
         </View>
       ) : (
         <>

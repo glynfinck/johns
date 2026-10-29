@@ -108,6 +108,16 @@ is exactly what local development needs and production must not have.
   automatic branching off. It deploys on every push to `main`, applying any
   new migrations; Auth and API settings in `config.toml` are ignored, which
   is what keeps them local.
+- **Claude, for "Describe your house"**. `POST /api/setup/draft` asks
+  Claude (`anthropic/claude-haiku-5.5`, `apps/api/lib/ai/house-draft.ts`)
+  to draft a new house's John list through Vercel's AI Gateway, as Pub Golf
+  does. On Vercel the gateway signs in with the `jonz-api` project's OIDC
+  token, so there is no key to set; it bills to the team's AI Gateway
+  credits, where a spend limit belongs. If the gateway refuses or is down,
+  setup offers the starter lists instead, so nothing breaks. A chat turn costs
+  well under a cent, and each house gets thirty a day
+  (`CHAT_TURNS_PER_DAY`), counted in `house_drafts`. Locally and in CI there is no gateway, so
+  drafts are starter lists unless `AI_GATEWAY_API_KEY` is set.
 - **Brand verification.** Opening the app beyond your own house means
   Google's review; the landing page at `/` carries the name, the purpose and
   the privacy link it checks for.

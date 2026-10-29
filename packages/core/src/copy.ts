@@ -29,6 +29,8 @@ export const PAGE_TITLE = {
   rules: "House rules",
   away: "Time away",
   groups: "Groups",
+  describe: "Describe your house",
+  pass: "House Pass",
 } as const;
 
 /** What Jonz keeps, and who sees it. */
@@ -38,6 +40,7 @@ export const PRIVACY_COPY = {
     "Jonz keeps what it needs to share out your house’s Johns and nothing more: your name from Google, the house you belong to, the Johns you were given and when you ticked them, any photos you add, disputes and votes, and the Stake ledger.",
     "Only people in your house can see any of it. Photos are stored privately and shown to your housemates through links that expire after an hour.",
     "Jonz never moves money. The ledger records what housemates owe each other; you settle up however you like, outside the app.",
+    `If you ask ${APP_NAME} to draft your house’s Johns, what you write about the house is sent to Anthropic’s Claude, through Vercel, to draft the list. It isn’t stored with your house, and Anthropic doesn’t train on it.`,
     "If you turn on reminders, your browser gives us an address to send notifications to. Turning reminders off deletes it. Leaving a house removes you from it; your past Johns stay in its history.",
   ],
 } as const;
@@ -532,6 +535,55 @@ export const REMINDERS_COPY = {
   turnedOn: "Reminders on for this device",
 } as const;
 
+/** What the pushes say, their buttons, and the settings for them. */
+export const NOTIFY_COPY = {
+  dueTomorrowTitle: (john: string) => `${john} is due tomorrow`,
+  dueSoonTitle: (john: string) => `${john} is due soon`,
+  dueTomorrowBody: (due: string) => `Due ${due}. Tick it here when it’s done.`,
+  dueSoonBody: (due: string) => `Due ${due}. A few hours left to do it on time.`,
+  needsPhoto: "It needs a photo, so tick it in the app.",
+  dealTitle: "This week’s Johns",
+  disputedTitle: (john: string) => `Your ${john} tick is disputed`,
+  voteTitle: (john: string) => `Vote: was ${john} really done?`,
+  // The buttons. Short: a phone shows a few words at most.
+  done: "Done",
+  held: "It was done",
+  struck: "It wasn’t",
+  // What the notification says once a button worked.
+  ticked: (john: string) => `${john} ticked`,
+  tickedBody: "The house can check it now.",
+  alreadyTicked: (john: string) => `${john} was already ticked`,
+  voted: (john: string) => `Vote counted on ${john}`,
+  votedHeld: "You said it was done.",
+  votedStruck: "You said it wasn’t done.",
+  // Settings.
+  settings: "What to send",
+  kinds: {
+    reminders: "Johns due soon",
+    checks: "Housemate checks",
+    flags: "On-call flags",
+    deal: "The week’s deal",
+  },
+  kindHints: {
+    reminders: "The day before and a few hours before. Tick from the notification.",
+    checks: "A tick of yours disputed, or a vote for you to answer.",
+    flags: "When a housemate flags an on-call John you have.",
+    deal: "Your Johns, when the week is handed out.",
+  },
+  quiet: "Quiet hours",
+  quietHint: "Reminders wait until morning. Anything else arrives without a sound.",
+  on: "On",
+  off: "Off",
+  /** The quiet hours on offer, from and until, on the hour. */
+  quietOptions: [
+    { label: "Off", from: null, until: null },
+    { label: "22:00–07:00", from: 22, until: 7 },
+    { label: "23:00–08:00", from: 23, until: 8 },
+  ],
+  saved: "Saved",
+  failed: "Couldn’t save that. Try again.",
+} as const;
+
 export const ME_COPY = {
   name: "Your name",
   save: "Save",
@@ -654,6 +706,8 @@ export const NEXT_UP_COPY = {
   changeDates: "Change dates",
   setUp: (house: string) => `Set up ${house}`,
   addJohns: "Add your Johns",
+  describe: "Describe your house",
+  describeMeta: `${APP_NAME} drafts the list for you`,
   onTheList: (count: number) => (count === 0 ? "Nothing on the list yet" : `${count} on the list`),
   invite: "Invite housemates",
   housemates: (count: number) => (count <= 1 ? "Just you so far" : `${count} in the house so far`),
@@ -1302,6 +1356,7 @@ export const FRONT_DOOR_COPY = {
     },
     { heading: "What we don’t", body: [PRIVACY_COPY.paragraphs[2]] },
     { heading: "Who sees what", body: [PRIVACY_COPY.paragraphs[1]] },
+    { heading: "Drafting your Johns", body: [PRIVACY_COPY.paragraphs[3]] },
     {
       heading: "Deleting your data",
       body: [
@@ -1309,4 +1364,96 @@ export const FRONT_DOOR_COPY = {
       ],
     },
   ],
+} as const;
+
+/** Describe your house: Claude drafts the John list, or a starter list does, and an admin keeps what they want. */
+export const HOUSE_DRAFT_COPY = {
+  title: "Describe your house",
+  /** Jonz's first message, over the starter lists. */
+  greeting: `Tell me about the house: who lives there, and anything that always gets missed. I’ll draft the Johns, and nothing is added until you keep them.`,
+  /** Under the greeting: start from a list instead. */
+  orStart: "Or start from a list:",
+  starter: {
+    flat_share: { title: "Flat share", meta: "Housemates sharing a kitchen and bathroom" },
+    couple: { title: "Couple", meta: "Two of you" },
+    family: { title: "Family", meta: "Parents and kids" },
+  },
+  /** The message box, before and after there's a draft to change. */
+  placeholder: "Four of us, two bathrooms…",
+  placeholderChange: "Try “oven every month”",
+  message: "Message",
+  send: "Send",
+  privacy: "What you write is sent to Anthropic’s Claude, through Vercel, to draft the list.",
+  /** While Jonz is answering. */
+  thinking: `${APP_NAME} is thinking…`,
+  /** The day picker's name, for a screen reader. */
+  pickDay: "Pick a day",
+  /** The draft card: its label, the line under it, and how it opens and closes. */
+  draftLabel: "Your draft",
+  draftMeta: (n: number, points: number) => `${n === 1 ? "1 John" : `${n} Johns`} · ${points} pts a week`,
+  seeAll: (n: number) => `See all ${n}`,
+  showLess: "Show less",
+  fromStarter: "Here’s a starter list. Tell me what’s different about your house and I’ll change it, or untick any you don’t want.",
+  /** Claude couldn't be reached, so a starter list stands in. */
+  offline: "I couldn’t draft from that just now, so here’s a starter list to begin with. Untick any you don’t want; you can change each one after.",
+  /** Claude couldn't be reached to change a draft that's already there. */
+  offlineChange: "I couldn’t change the draft just now. Try again in a minute, or add it and change the Johns on the list.",
+  groupsLabel: "Groups",
+  /** A drafted group's meta line: who's in it, and who it waits for. */
+  waiting: (names: string) => `waiting for ${names} to join`,
+  /** Under a group nobody in it has joined yet. */
+  everyoneForNow: (groups: string) => `Until someone in ${groups} joins, its Johns go to everyone. Make the group under House once they have.`,
+  /** The primary button: how many Johns keeping adds. */
+  keep: (n: number) => (n === 0 ? "Pick at least one John" : n === 1 ? "Add 1 John" : `Add ${n} Johns`),
+  keeping: "Adding…",
+  /** After keeping, in the chat. */
+  added: (n: number) => (n === 1 ? "1 John added" : `${n} Johns added`),
+  addedMeta: "Deal the week once everyone’s in",
+  openList: "Open the list",
+} as const;
+
+/**
+ * The House Pass: one per house, bought by anyone in it, for everyone in it.
+ * The sentences on its row on House and on its page.
+ */
+export const PASS_COPY = {
+  title: "House Pass",
+  /** Its section on House, and the note on the right. */
+  section: "House Pass",
+  sectionNote: "For everyone here",
+  // The row's value (pass.ts passLine).
+  founding: "Founding house",
+  trialLeft: (days: number) => `Free month · ${days} ${days === 1 ? "day" : "days"} left`,
+  trialEnded: "Free month ended",
+  renews: (plan: string, day: string) => `${plan} · renews ${day}`,
+  ended: (day: string) => `Ended ${day}`,
+  // The page.
+  lead: "One Pass covers the whole house. Anyone can buy it, and everyone gets the extras.",
+  foundingLead: `Your house has the House Pass for life, as one of the first houses on ${APP_NAME}. Thank you.`,
+  boughtBy: (name: string) => `Bought by ${name}`,
+  includes: "What the house gets",
+  stake: "The Stake",
+  stakeMeta: "Forfeits for late and missed Johns, shared out each month",
+  table: "The Table and perks",
+  tableMeta: "Points, streaks, immunity and swaps",
+  photos: "Photo receipts",
+  photosMeta: "A photo with a tick, for the Johns that need one",
+  history: "All your history",
+  historyMeta: (weeks: number) => `Every week, not just the last ${weeks}`,
+  plans: "Plans",
+  yearly: "Yearly",
+  monthly: "Monthly",
+  foundingPlan: "Founding house",
+  perYear: (price: string) => `${price} a year`,
+  perMonth: (price: string) => `${price} a month`,
+  once: (price: string) => `${price} once`,
+  perMonthish: (price: string) => `About ${price} a month`,
+  monthlyMeta: "Stop any time",
+  foundingMeta: "The Pass for life, for houses that start at launch",
+  /** Until the stores are set up there is nothing to press. */
+  buyingSoon: "Buying opens with the app store release. Until then every house keeps everything.",
+  free: "Free for every house, always: the deal, the housemate check, reminders, covering and time away. No ads.",
+  /** Where a locked extra was, once the Pass is enforced. */
+  locked: (feature: string) => `${feature} comes with the House Pass`,
+  unlock: "See the House Pass",
 } as const;

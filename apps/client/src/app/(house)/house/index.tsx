@@ -1,7 +1,8 @@
-import { formatMoney, HOUSE_PAGE_COPY, PAGE_TITLE } from '@app/core';
+import { formatMoney, HOUSE_PAGE_COPY, PAGE_TITLE, PASS_COPY, passUnlocked } from '@app/core';
 
 import { LeaveSection } from '@/components/house-page/leave-section';
 import { MonthCard } from '@/components/house-page/month-card';
+import { PassLocked, PassSection } from '@/components/house-page/pass-section';
 import { SetupSection } from '@/components/house-page/setup-section';
 import { TableSection } from '@/components/house-page/table-section';
 import { WallSection } from '@/components/house-page/wall-section';
@@ -21,8 +22,10 @@ import { useTable } from '@/hooks/use-table';
  * House, the third tab: the house's group page. The month's money and
  * settling up in the one card, then the Table; below them the lower
  * sections, each its own component in components/house-page: the Wall's
- * latest, the house's setup, you, and leaving. The pages it pushes keep the
- * tabs (house/_layout is a stack).
+ * latest, the house's setup, the House Pass, you, and leaving. Without the
+ * Pass (once it's enforced) the month card and the Table give way to a row
+ * to the Pass page. The pages it pushes keep the tabs (house/_layout is a
+ * stack).
  */
 export default function HouseScreen() {
   const { session, house } = useMembership();
@@ -65,11 +68,21 @@ function HouseFor({ houseId, userId }: { houseId: string; userId: string }) {
         )
       ) : (
         <>
-          <MonthCard houseId={houseId} userId={userId} view={view} stake={stake} />
-          <TableSection userId={userId} view={view} table={table} stake={stake} away={away} />
+          {passUnlocked(view.snapshot.house.pass, view.now) ? (
+            <>
+              <MonthCard houseId={houseId} userId={userId} view={view} stake={stake} />
+              <TableSection userId={userId} view={view} table={table} stake={stake} away={away} />
+            </>
+          ) : (
+            <>
+              <PassLocked label={PASS_COPY.stake} feature={PASS_COPY.stake} testID="stake-locked" />
+              <PassLocked label={PASS_COPY.table} feature={PASS_COPY.table} testID="table-locked" />
+            </>
+          )}
 
           <WallSection houseId={houseId} userId={userId} view={view} />
           <SetupSection houseId={houseId} userId={userId} view={view} />
+          <PassSection view={view} />
           <YouSection houseId={houseId} userId={userId} view={view} />
           <LeaveSection houseId={houseId} userId={userId} view={view} />
         </>

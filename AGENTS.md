@@ -139,7 +139,9 @@ each app's AGENTS.md.
   `undo_cover`, `raise_dispute`,
   `cast_vote`, `use_immunity`, `use_swap`, `confirm_payment`,
   `create_house`, `join_house`, `set_member_role`, `remove_member`,
-  `save_group`, `delete_group`, `set_away`, `cancel_away`, `raise_flag`) or a few column
+  `save_group`, `delete_group`, `set_away`, `cancel_away`, `raise_flag`;
+  a notification's buttons reach `mark_done` and `cast_vote` through the
+  service-role-only `push_action`) or a few column
   grants (house settings and the John list, its group included, for admins;
   your own name, reactions, push subscriptions). Refusals raise `42501` (not
   yours) or `P0001` with a short code that `errors.ts` turns into a sentence.
@@ -228,7 +230,9 @@ already due a day's grace (`graceDue`).
 
 `profiles` (from auth via `handle_new_user`) → `houses` (rules: timezone,
 currency GBP/CAD/USD/EUR defaulted from Vercel's geo headers, week start,
-stake and forfeits, dispute hours; `join_code` from the CSPRNG) → `members`
+stake and forfeits, dispute hours; `join_code` from the CSPRNG; the House
+Pass's `pass_plan`, `pass_until` and `pass_buyer`, service role only:
+`docs/specs/house-pass.md`) → `members`
 (role admin/member, streak, tokens; one house per person via
 `members_one_house`, dropped when "more than one house" ships) → `groups` +
 `group_members` → `johns` (the list: category, points 1–10, every N weeks
@@ -238,7 +242,8 @@ housemate's share of it) → `assignments` (a snapshot of the John as dealt,
 `group_name`, `due_at`, `due_moved_from`, `done_at`, `photo_path`, `outcome`
 stamped once final); `away` (local first and last dates, inclusive) →
 `disputes` + `dispute_votes`; `ledger` + `month_closes`; `events` +
-`reactions`; `push_subscriptions`. On-call Johns add `johns.kind`, `respond_hours` and
+`reactions`; `push_subscriptions` + `notification_prefs` (each person's
+kinds of push on or off, and quiet hours; no row is everything on). On-call Johns add `johns.kind`, `respond_hours` and
 `per_week`, `on_call` (who holds each one each week), and
 `assignments.flagged_at` and `flagged_by`. Photos live in the private `proofs` bucket
 at `<house>/<assignment>/<file>`.
