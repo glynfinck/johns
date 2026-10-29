@@ -219,7 +219,8 @@ describe("what the clock does with a roll call", () => {
     // Only this one John in the month: later weeks the clock deals have nothing in them.
     await db.from("johns").update({ archived_at: new Date().toISOString() }).eq("house_id", house.id);
 
-    // Tick it now, as if still inside its late window; then put the tick back an hour before it was due.
+    // Tick it now, as if still inside its late window; then put the tick (and who did it) back an hour
+    // before it was due.
     await db
       .from("assignments")
       .update({ closes_at: new Date(Date.now() + DAY).toISOString() })
@@ -228,6 +229,7 @@ describe("what the clock does with a roll call", () => {
     const back = new Date(new Date(first.due_at).getTime() - HOUR).toISOString();
     await db.from("assignments").update({ done_at: back }).eq("id", first.id);
     await db.from("assignments").update({ absent_at: back }).eq("id", second.id);
+    await db.from("crew").update({ created_at: back }).eq("assignment_id", first.id);
 
     await tickHouse(db, house.id, new Date(week.endsAt.getTime() + 2 * DAY));
     expect((await reread("assignments", first.id)).outcome).toBe("done");

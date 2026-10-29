@@ -329,8 +329,8 @@ begin
   select array_agg(user_id) into holders from covered;
   insert into public.events (house_id, kind, user_id, assignment_id, data)
   values (a.house_id, 'covered', me, a.id,
-          jsonb_build_object('name', a.name, 'points', a.points, 'photo', photo is not null, 'for', a.user_id,
-                             'for_all', to_jsonb(holders)));
+          jsonb_build_object('name', a.name, 'points', a.points, 'photo', photo is not null, 'for', a.user_id)
+          || case when a.job_id is not null then jsonb_build_object('for_all', to_jsonb(holders)) else '{}' end);
 end;
 $$;
 
@@ -839,7 +839,7 @@ $$;
 create trigger job_follows
   after update of done_at, covered_by on public.assignments
   for each row
-  when (old.done_at is not null and new.done_at is distinct from old.done_at)
+  when (old.done_at is not null and new.done_at is null)
   execute function public.job_follows();
 
 -- A place left off that is then settled some other way (an admin's result,
