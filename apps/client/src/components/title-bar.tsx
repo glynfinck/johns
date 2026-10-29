@@ -2,14 +2,14 @@ import { FOCUS_SHELL_COPY, HOUSE_DRAFT_COPY } from '@app/core';
 import { Link, useRouter, type Href } from 'expo-router';
 import { ChevronLeftIcon, EllipsisIcon, SparklesIcon } from 'lucide-react-native';
 import type { ReactNode } from 'react';
-import { Pressable, StyleSheet, Text, View } from 'react-native';
+import { Pressable, StyleSheet, Text, useWindowDimensions, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { useHouseWorkspace } from '@/components/house/workspace';
 import { useContentWidth } from '@/components/screen';
 import { Meta, Title } from '@/components/text';
 import { useAskJonz, useAskPanelOpen } from '@/hooks/use-ask-jonz';
-import { FONT, GUTTER, INSET, SECTION_GAP, SPACE, TAP, TITLE_BAR, useTheme } from '@/theme';
+import { FONT, GUTTER, INSET, SECTION_GAP, SPACE, TAP, TITLE_BAR, useTheme, WIDE } from '@/theme';
 
 /**
  * The top of every house screen, in place of the old wordmark strip: the
@@ -24,8 +24,10 @@ import { FONT, GUTTER, INSET, SECTION_GAP, SPACE, TAP, TITLE_BAR, useTheme } fro
  * link-like "‹ House" (`backLabel`, the place it goes back to) sits on its
  * own line above the Title, which stays on the leading edge, and may carry
  * `sub` as a Meta line under the Title (74 tall, with its own room above
- * the Title and under the sub). It keeps clear of the notch and lines up
- * with the content below it.
+ * the Title and under the sub). It keeps clear of the notch. On a phone it
+ * lines up with the content below it; from WIDE it holds the edges of the
+ * page beside the rail, as a desktop app's toolbar does: the Title where the
+ * page's words start, the sparkles at the window's right edge.
  */
 export function TitleBar({
   title,
@@ -48,7 +50,8 @@ export function TitleBar({
 }) {
   const { colors } = useTheme();
   const insets = useSafeAreaInsets();
-  const maxWidth = useContentWidth();
+  const contentWidth = useContentWidth();
+  const maxWidth = useWindowDimensions().width >= WIDE ? undefined : contentWidth;
   // On a laptop House's pages are listed beside them, which is the way back to House.
   const way = useHouseWorkspace().listed && back === '/house' ? undefined : back;
   return (

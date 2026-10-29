@@ -238,34 +238,31 @@ function Board({
     </View>
   );
 
-  // On a laptop the summary runs across the page; under it the board keeps the main column and the Table sits
-  // beside it, over the deal's fairness. The board's column names stand where the Table's label does, so the two
-  // groups start level and their rows line up.
+  // On a laptop the summary heads the board in the main column, and the Table sits in the panel beside it, over
+  // the deal's fairness, from the top of the page to its foot.
   if (two) {
     return (
-      <>
-        {summaryBar}
-        <Columns
-          main={
-            <>
-              {johnRows}
-              {coming}
-            </>
-          }
-          side={
-            <>
-              {passUnlocked(house.pass, now) ? (
-                <SideTable userId={userId} view={view} table={sharesRead} away={awayRead} />
-              ) : null}
-              {/* The deal's two quiet lines sit together under the Table, as Today's page lines do. */}
-              <View>
-                {fair}
-                {record}
-              </View>
-            </>
-          }
-        />
-      </>
+      <Columns
+        main={
+          <>
+            {summaryBar}
+            {johnRows}
+            {coming}
+          </>
+        }
+        side={
+          <>
+            {passUnlocked(house.pass, now) ? (
+              <SideTable userId={userId} view={view} table={sharesRead} away={awayRead} />
+            ) : null}
+            {/* The deal's two quiet lines sit together under the Table, as Today's page lines do. */}
+            <View>
+              {fair}
+              {record}
+            </View>
+          </>
+        }
+      />
     );
   }
   return (

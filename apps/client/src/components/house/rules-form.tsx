@@ -20,7 +20,7 @@ import {
   type RulesField,
 } from '@app/core';
 import { useState } from 'react';
-import { StyleSheet, View } from 'react-native';
+import { StyleSheet, useWindowDimensions, View } from 'react-native';
 
 import { updateHouse } from '@/api/settings';
 import { Alert } from '@/components/alert';
@@ -34,7 +34,7 @@ import { Meta } from '@/components/text';
 import { TextButton } from '@/components/text-button';
 import { useMove } from '@/hooks/use-move';
 import { deviceTimeZone } from '@/locale';
-import { GUTTER, INSET, LABEL_GAP, SPACE, useTheme } from '@/theme';
+import { GUTTER, INSET, LABEL_GAP, SPACE, useTheme, WIDE } from '@/theme';
 
 const CURRENCY_OPTIONS = CURRENCIES.map((c) => ({ value: c, label: `${CURRENCY_SYMBOL[c]} ${c}` }));
 const DAY_OPTIONS = (Object.entries(DOW_LABEL) as [string, string][]).map(([day, name]) => ({ value: Number(day) as IsoDow, label: name }));
@@ -220,9 +220,11 @@ export function RulesForm({ form }: { form: RulesFormState }) {
 export function RulesFoot({ form, onCancel }: { form: RulesFormState; onCancel: () => void }) {
   const { colors } = useTheme();
   const width = useContentWidth();
+  // From WIDE the page starts at its leading edge, and so does its foot.
+  const leading = useWindowDimensions().width >= WIDE;
   return (
     <View style={[styles.foot, { backgroundColor: colors.background, borderTopColor: colors.border }]} testID="rules-foot">
-      <View style={[styles.footInner, { maxWidth: width }]}>
+      <View style={[styles.footInner, { maxWidth: width }, leading && styles.footLeading]}>
         {form.problems.form ? <Alert message={form.problems.form} /> : null}
         <View style={styles.buttons}>
           <View style={styles.save}>
@@ -245,6 +247,7 @@ const styles = StyleSheet.create({
   // A line under a group, on the leading edge.
   note: { paddingHorizontal: INSET },
   foot: { borderTopWidth: StyleSheet.hairlineWidth },
+  footLeading: { alignSelf: 'flex-start' },
   footInner: {
     width: '100%',
     alignSelf: 'center',
