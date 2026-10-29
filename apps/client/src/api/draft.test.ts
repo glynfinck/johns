@@ -1,6 +1,6 @@
-import { starterDraft, tidyDraft, type HouseRules } from '@app/core';
+import { HOUSE_DRAFT_COPY, starterDraft, tidyDraft, type HouseRules } from '@app/core';
 
-import { keepDraft, requestDraft } from './draft';
+import { keepDraft, sendChat } from './draft';
 import { apiPost, ApiRequestError } from './http';
 import { addJohns, saveGroup } from './settings';
 import { supabase } from './supabase';
@@ -37,24 +37,35 @@ const NOW = new Date('2026-10-28T12:00:00Z');
 
 beforeEach(() => jest.clearAllMocks());
 
-describe('requestDraft', () => {
-  it("asks the API for the house's draft", async () => {
-    const answer = { draft: starterDraft('couple'), source: 'ai' };
+describe('sendChat', () => {
+  const said = (text: string) => [{ role: 'user' as const, text }];
+
+  it('sends the chat and the draft as it stands', async () => {
+    const answer = { reply: 'Here you go.', ask: null, draft: starterDraft('couple'), source: 'ai' };
     post.mockResolvedValue(answer);
-    await expect(requestDraft(HOUSE, 'Me and my partner in a flat')).resolves.toBe(answer);
-    expect(post).toHaveBeenCalledWith('/api/setup/draft', { houseId: HOUSE, description: 'Me and my partner in a flat' }, expect.anything());
+    await expect(sendChat(HOUSE, said('Me and my partner in a flat'), null)).resolves.toBe(answer);
+    expect(post).toHaveBeenCalledWith(
+      '/api/setup/draft',
+      { houseId: HOUSE, messages: said('Me and my partner in a flat'), draft: null },
+      expect.anything(),
+    );
   });
 
   it("passes on the API's refusal", async () => {
-    post.mockRejectedValue(new ApiRequestError('That’s enough drafts for one day.', 409));
-    await expect(requestDraft(HOUSE, 'Five of us')).rejects.toThrow('That’s enough drafts for one day.');
+    post.mockRejectedValue(new ApiRequestError('That’s enough for one day.', 409));
+    await expect(sendChat(HOUSE, said('Five of us'), null)).rejects.toThrow('That’s enough for one day.');
   });
 
-  it('falls back to a starter list that fits when the API can’t be reached', async () => {
+  it('answers as the API would when it can’t be reached', async () => {
     post.mockRejectedValue(new TypeError('Network request failed'));
-    await expect(requestDraft(HOUSE, 'Me, my wife and the kids')).resolves.toEqual({ draft: starterDraft('family'), source: 'starter' });
+    await expect(sendChat(HOUSE, said('Me, my wife and the kids'), null)).resolves.toMatchObject({ draft: starterDraft('family'), source: 'starter' });
     post.mockRejectedValue(new ApiRequestError('Something went wrong. Try again.', 500));
-    await expect(requestDraft(HOUSE, 'Five of us in a flat')).resolves.toEqual({ draft: starterDraft('flat_share'), source: 'starter' });
+    await expect(sendChat(HOUSE, said('Oven every month'), starterDraft('couple'))).resolves.toEqual({
+      reply: HOUSE_DRAFT_COPY.offlineChange,
+      ask: null,
+      draft: null,
+      source: 'starter',
+    });
   });
 });
 

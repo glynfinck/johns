@@ -1317,38 +1317,47 @@ export const FRONT_DOOR_COPY = {
 /** Describe your house: Claude drafts the John list, or a starter list does, and an admin keeps what they want. */
 export const HOUSE_DRAFT_COPY = {
   title: "Describe your house",
-  lead: `Say who lives there and what needs doing. ${APP_NAME} drafts the list, and nothing is added until you keep it.`,
-  field: "Your house",
-  placeholder:
-    "Four of us in a flat with two bathrooms. Sam and Priya share the upstairs one. Bins go out Tuesday night. Nobody ever cleans the oven.",
-  draft: "Draft my Johns",
-  drafting: "Drafting…",
-  privacy: "What you write is sent to Anthropic’s Claude to draft the list.",
-  orStart: "Or start from a list",
+  /** Jonz's first message, over the starter lists. */
+  greeting: `Tell me about the house: who lives there, and anything that always gets missed. I’ll draft the Johns, and nothing is added until you keep them.`,
+  /** Under the greeting: start from a list instead. */
+  orStart: "Or start from a list:",
   starter: {
     flat_share: { title: "Flat share", meta: "Housemates sharing a kitchen and bathroom" },
     couple: { title: "Couple", meta: "Two of you" },
     family: { title: "Family", meta: "Parents and kids" },
   },
+  /** The message box, before and after there's a draft to change. */
+  placeholder: "Four of us, two bathrooms, bins on Tuesday…",
+  placeholderChange: "Change anything: “oven every month”",
+  message: "Message",
+  send: "Send",
+  privacy: "What you write is sent to Anthropic’s Claude, through Vercel, to draft the list.",
+  /** While Jonz is answering. */
+  thinking: `${APP_NAME} is thinking…`,
+  /** The day picker's name, for a screen reader. */
+  pickDay: "Pick a day",
+  /** The draft card: its label, the line under it, and how it opens and closes. */
   draftLabel: "Your draft",
-  /** "9 Johns drafted. Untick any you don’t want." */
-  drafted: (n: number) => `${n === 1 ? "1 John" : `${n} Johns`} drafted. Untick any you don’t want; you can change each one after.`,
-  fromStarter: "A starter list. Untick any you don’t want; you can change each one after.",
+  draftMeta: (n: number, points: number) => `${n === 1 ? "1 John" : `${n} Johns`} · ${points} pts a week`,
+  seeAll: (n: number) => `See all ${n}`,
+  showLess: "Show less",
+  fromStarter: "Here’s a starter list. Tell me what’s different about your house and I’ll change it, or untick any you don’t want.",
   /** Claude couldn't be reached, so a starter list stands in. */
-  offline: "Couldn’t draft from your description just now, so here’s a starter list to begin with.",
-  empty: "Nothing came back to draft from that. Say a little more about the house, or start from a list.",
+  offline: "I couldn’t draft from that just now, so here’s a starter list to begin with. Untick any you don’t want; you can change each one after.",
+  /** Claude couldn't be reached to change a draft that's already there. */
+  offlineChange: "I couldn’t change the draft just now. Try again in a minute, or add it and change the Johns on the list.",
   groupsLabel: "Groups",
   /** A drafted group's meta line: who's in it, and who it waits for. */
   waiting: (names: string) => `waiting for ${names} to join`,
   /** Under a group nobody in it has joined yet. */
   everyoneForNow: (groups: string) => `Until someone in ${groups} joins, its Johns go to everyone. Make the group under House once they have.`,
-  johnLabel: (name: string, kept: boolean) => `${kept ? "Keep" : "Leave out"} ${name}`,
   /** The primary button: how many Johns keeping adds. */
-  keep: (n: number) => (n === 0 ? "Pick at least one John" : n === 1 ? "Add 1 John to the list" : `Add ${n} Johns to the list`),
+  keep: (n: number) => (n === 0 ? "Pick at least one John" : n === 1 ? "Add 1 John" : `Add ${n} Johns`),
   keeping: "Adding…",
-  startAgain: "Start again",
-  /** After keeping: Today's setup card takes over. */
-  added: (n: number) => (n === 1 ? "1 John added to the list." : `${n} Johns added to the list.`),
+  /** After keeping, in the chat. */
+  added: (n: number) => (n === 1 ? "1 John added" : `${n} Johns added`),
+  addedMeta: "Deal the week once everyone’s in",
+  openList: "Open the list",
 } as const;
 
 /**

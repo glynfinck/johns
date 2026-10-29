@@ -115,8 +115,9 @@ permanent once a store has seen them.
   `humanError` from `@app/core` and refreshes. `apps/api` is called only for
   the moves that need a server: `POST /api/deal`, `POST /api/disputes`,
   `POST /api/disputes/:id/votes`, `POST /api/fresh`, `POST /api/flags` and
-  `POST /api/setup/draft` (`draft.ts`: a draft John list from a
-  description, a starter list if the API can't be reached, and `keepDraft`,
+  `POST /api/setup/draft` (`draft.ts`: `sendChat`, one turn of the
+  setup chat, answered as the API would by `offlineTurn` if the API can't
+  be reached, and `keepDraft`,
   which adds the Johns an admin kept through `settings.ts`).
 - `src/hooks/`: connect `@app/core` and `src/api/` to screens (e.g.
   `use-session.ts`). `use-membership.tsx` is the session and the house it's
@@ -195,7 +196,8 @@ permanent once a store has seen them.
   (`(house)/house/_layout.tsx`): the group page (`index.tsx`) and the pages
   it pushes, `wall`, `stake`, `people/[userId]` (a housemate's page) and
   the setup pages `johns`, `rules`, `away`, `groups` and `describe`
-  (Describe your house, `components/house/describe-house.tsx`). A new page goes in
+  (Describe your house, a chat: `components/house/setup-chat.tsx`, the one
+  setup page not on `HousePage`, as its message box stays put under the chat). A new page goes in
   `(house)/house/`, built on `HousePage` (whose back goes to `/house`),
   keeping the tabs; one opened straight from a link still has House under
   it (the stack's `anchor`). The

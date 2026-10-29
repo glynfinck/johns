@@ -1,8 +1,8 @@
 import {
-  DraftResponse,
+  ChatResponse,
   draftPlan,
-  guessStarter,
-  starterDraft,
+  offlineTurn,
+  type ChatMessage,
   type GroupDef,
   type HouseDraft,
   type HouseRules,
@@ -12,23 +12,24 @@ import { apiPost, ApiRequestError } from './http';
 import { addJohns, saveGroup } from './settings';
 import { supabase } from './supabase';
 
-// Describe your house: ask apps/api for a draft John list (Claude, or a
-// starter list when Claude isn't there), then add the Johns an admin kept.
+// Describe your house: one turn of the setup chat with apps/api (Claude, or
+// a starter list when Claude isn't there), then add the Johns an admin kept.
 // Keeping goes through the John list's own grants and save_group, exactly as
 // adding Johns and groups by hand does; the draft itself is never stored.
 
 /**
- * A draft of the house's Johns from what the admin wrote. A refusal (not an
- * admin, too many drafts today) throws its sentence; if the API can't be
- * reached at all, a starter list that fits the description stands in, so
- * setting up a house never stops here.
+ * Jonz's answer to the chat so far, with the draft as it stands. A refusal
+ * (not an admin, too many turns today) throws its sentence; if the API
+ * can't be reached at all, offlineTurn answers here as the API would
+ * (a starter list that fits, or the draft left as it is), so setting up a
+ * house never stops here.
  */
-export async function requestDraft(houseId: string, description: string): Promise<DraftResponse> {
+export async function sendChat(houseId: string, messages: readonly ChatMessage[], draft: HouseDraft | null): Promise<ChatResponse> {
   try {
-    return await apiPost('/api/setup/draft', { houseId, description }, DraftResponse);
+    return await apiPost('/api/setup/draft', { houseId, messages, draft }, ChatResponse);
   } catch (e) {
     if (e instanceof ApiRequestError && e.status >= 400 && e.status < 500 && e.status !== 404) throw e;
-    return { draft: starterDraft(guessStarter(description)), source: 'starter' };
+    return offlineTurn(messages, draft);
   }
 }
 

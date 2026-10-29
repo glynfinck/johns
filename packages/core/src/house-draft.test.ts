@@ -3,17 +3,22 @@ import { describe, expect, it } from "vitest";
 import {
   DRAFT_MAX_GROUPS,
   DRAFT_MAX_JOHNS,
-  DraftRequest,
+  CHOICES_MAX,
+  ChatRequest,
   DraftedJohn,
   HouseDraft,
   STARTER_KINDS,
   STARTER_LISTS,
+  draftForModel,
   draftPlan,
   guessStarter,
   matchPerson,
+  offlineTurn,
   starterDraft,
+  tidyAsk,
   tidyDraft,
 } from "./house-draft";
+import { HOUSE_DRAFT_COPY } from "./copy";
 import { JohnDraft } from "./schemas";
 
 const ME = "00000000-0000-4000-8000-000000000001";
@@ -24,12 +29,86 @@ const people = [
   { userId: SAM, name: "Sam Okafor" },
 ];
 
-describe("DraftRequest", () => {
-  it("asks for a sentence or so, and not an essay", () => {
-    const houseId = ME;
-    expect(DraftRequest.safeParse({ houseId, description: "  flat  " }).success).toBe(false);
-    expect(DraftRequest.safeParse({ houseId, description: "Three of us in a flat" }).success).toBe(true);
-    expect(DraftRequest.safeParse({ houseId, description: "x".repeat(801) }).success).toBe(false);
+describe("ChatRequest", () => {
+  const houseId = ME;
+  const said = (text: string) => ({ role: "user" as const, text });
+
+  it("takes the chat so far, ending with what the admin said, and the draft as it stands", () => {
+    expect(ChatRequest.safeParse({ houseId, messages: [said("Three of us in a flat")], draft: null }).success).toBe(true);
+    expect(ChatRequest.safeParse({ houseId, messages: [said("Fewer bathrooms")], draft: starterDraft("couple") }).success).toBe(true);
+  });
+
+  it("refuses an empty message, an essay, an empty chat, or one ending with Jonz", () => {
+    expect(ChatRequest.safeParse({ houseId, messages: [said("   ")], draft: null }).success).toBe(false);
+    expect(ChatRequest.safeParse({ houseId, messages: [said("x".repeat(801))], draft: null }).success).toBe(false);
+    expect(ChatRequest.safeParse({ houseId, messages: [], draft: null }).success).toBe(false);
+    expect(
+      ChatRequest.safeParse({ houseId, messages: [said("Hi"), { role: "assistant", text: "Hello" }], draft: null }).success,
+    ).toBe(false);
+  });
+});
+
+describe("tidyAsk", () => {
+  it("keeps quick answers trimmed, once each, and only a few", () => {
+    expect(tidyAsk({ kind: "choices", options: [" Oven ", "oven", "Windows", 4, ""] })).toEqual({ kind: "choices", options: ["Oven", "Windows"] });
+    const many = tidyAsk({ kind: "choices", options: Array.from({ length: 9 }, (_, i) => `Option ${i}`) });
+    expect(many?.kind === "choices" && many.options).toHaveLength(CHOICES_MAX);
+  });
+
+  it("asks for a day, or nothing when there's nothing to tap", () => {
+    expect(tidyAsk({ kind: "day", options: ["ignored"] })).toEqual({ kind: "day" });
+    expect(tidyAsk({ kind: "choices", options: [] })).toBeNull();
+    expect(tidyAsk({ kind: "none" })).toBeNull();
+    expect(tidyAsk(null)).toBeNull();
+  });
+});
+
+describe("draftForModel", () => {
+  it("shows Claude a draft in words, which tidyDraft reads back the same", () => {
+    const draft = tidyDraft(
+      {
+        groups: [{ name: "Upstairs", members: ["me", "Sam", "Priya"] }],
+        johns: [
+          { name: "Upstairs bathroom", category: "bathroom", points: 4, group: "Upstairs" },
+          { name: "Kitchen bin", category: "bins", points: 1, onCall: true },
+        ],
+        note: "I guessed the bins.",
+      },
+      people,
+      ME,
+    );
+    const shown = draftForModel(draft, people, ME);
+    expect(shown.groups).toEqual([{ name: "Upstairs", members: ["me", "Sam", "Priya"] }]);
+    expect(shown.johns?.[1]).toMatchObject({ name: "Kitchen bin", onCall: true });
+    expect(tidyDraft(shown, people, ME)).toEqual(draft);
+  });
+});
+
+describe("offlineTurn", () => {
+  const said = (text: string) => ({ role: "user" as const, text });
+
+  it("offers the starter list that fits what was said", () => {
+    expect(offlineTurn([said("Me, my wife and the kids")], null)).toEqual({
+      reply: HOUSE_DRAFT_COPY.offline,
+      ask: null,
+      draft: starterDraft("family"),
+      source: "starter",
+    });
+  });
+
+  it("offers the starter list the admin named", () => {
+    const turn = offlineTurn([said(HOUSE_DRAFT_COPY.starter.couple.title)], null);
+    expect(turn.draft).toEqual(starterDraft("couple"));
+    expect(turn.reply).toBe(HOUSE_DRAFT_COPY.fromStarter);
+  });
+
+  it("leaves a draft that's already there as it is", () => {
+    expect(offlineTurn([said("Oven every month")], starterDraft("couple"))).toEqual({
+      reply: HOUSE_DRAFT_COPY.offlineChange,
+      ask: null,
+      draft: null,
+      source: "starter",
+    });
   });
 });
 

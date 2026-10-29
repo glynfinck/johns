@@ -3,9 +3,10 @@ import { expect, test, type Page } from "@playwright/test";
 
 import { CLIENT_URL, cleanUp, signInToClient } from "./auth";
 
-// The Expo app's web build: Describe your house, from Today's setup card to
-// the John list. The e2e stack has no AI Gateway, so "Draft my Johns" gets
-// the starter list that fits, as production does when the gateway is down.
+// The Expo app's web build: Describe your house, a chat with Jonz, from
+// Today's setup card to the John list. The e2e stack has no AI Gateway, so a
+// message gets the starter list that fits, as production does when the
+// gateway is down.
 test.use({ baseURL: CLIENT_URL });
 
 const made: string[] = [];
@@ -26,18 +27,22 @@ test("describe the house, keep most of the draft, and find it on the list", asyn
   await expect(page).toHaveURL(/\/house\/describe$/);
   await expect(page.getByRole("heading", { name: PAGE_TITLE.describe })).toBeVisible();
 
-  await page.getByTestId("describe-field").fill("Me, my husband and our two kids in a semi. Bins go out Tuesday night.");
+  await page.getByTestId("chat-input").fill("Me, my husband and our two kids in a semi. Bins go out Tuesday night.");
   const answered = page.waitForResponse((r) => r.url().endsWith("/api/setup/draft"));
-  await page.getByTestId("describe-draft").click();
+  await page.getByTestId("chat-send").click();
   expect((await answered).status()).toBe(200);
 
-  // No key here, so the family starter list stands in, and says so.
+  // No gateway here, so the family starter list stands in, and says so.
   await expect(page.getByText(HOUSE_DRAFT_COPY.offline)).toBeVisible();
   const family = STARTER_LISTS.family;
+  await expect(page.getByTestId("draft-john")).toHaveCount(3);
+  await page.getByTestId("draft-see-all").click();
   await expect(page.getByTestId("draft-john")).toHaveCount(family.length);
 
   await page.getByRole("checkbox", { name: new RegExp(`^${family[0].name}`) }).click();
   await page.getByTestId("describe-keep").click();
+  await expect(page.getByText(HOUSE_DRAFT_COPY.added(family.length - 1))).toBeVisible();
+  await page.getByTestId("chat-open-list").click();
 
   await expect(page).toHaveURL(/\/house\/johns$/);
   await expect(page.getByTestId("john-def")).toHaveCount(family.length - 1);
@@ -58,6 +63,7 @@ test("start from a list without writing anything", async ({ context, page }) => 
   await page.getByTestId("starter-flat_share").click();
   await expect(page.getByText(HOUSE_DRAFT_COPY.fromStarter)).toBeVisible();
   await page.getByTestId("describe-keep").click();
+  await page.getByTestId("chat-open-list").click();
   await expect(page).toHaveURL(/\/house\/johns$/);
   await expect(page.getByTestId("john-def")).toHaveCount(STARTER_LISTS.flat_share.length);
 });

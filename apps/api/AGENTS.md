@@ -78,7 +78,8 @@ appear only in the laptop board.
   Today: `POST /api/fresh` (catch a house up, at most once a minute),
   `POST /api/disputes`, `POST /api/disputes/:id/votes`, `POST /api/deal`
   (an admin hands out or re-deals the week), `POST /api/setup/draft`
-  (Describe your house: Claude drafts a John list for an admin to review,
+  (Describe your house: one turn of the setup chat, in which Claude drafts
+  and changes a John list for an admin to review,
   `lib/moves/draft.ts` and `lib/ai/house-draft.ts`, the only code that
   calls Claude; `docs/specs/describe-your-house.md`), and
   `POST /api/push-actions` (a button on a notification: the one route with

@@ -1,9 +1,12 @@
-// A house's first John list, drafted: from a sentence or two about the house
-// (Claude, through POST /api/setup/draft) or from a starter list. Nothing here
-// writes anything: a draft is only shown, and an admin keeps what they want
-// of it, which then goes on the list like any John added by hand.
+// A house's first John list, drafted in a chat: the admin says what the house
+// is like, Jonz (Claude, through POST /api/setup/draft) asks a question or two
+// and drafts the list, and every message after that changes the draft. A
+// starter list stands in whenever Claude can't. Nothing here writes
+// anything: a draft is only shown, and an admin keeps what they want of it,
+// which then goes on the list like any John added by hand.
 import { z } from "zod";
 
+import { HOUSE_DRAFT_COPY } from "./copy";
 import { CATEGORIES, JOHN_WHEN, type Category, type IsoDow } from "./domain";
 import { firstName } from "./format";
 import type { JohnDraft } from "./schemas";
@@ -11,21 +14,21 @@ import type { JohnDraft } from "./schemas";
 /** The most a draft holds: a long list is a list nobody reads. */
 export const DRAFT_MAX_JOHNS = 30;
 export const DRAFT_MAX_GROUPS = 6;
-/** How much of the house a description can say. */
-export const DESCRIPTION_MAX = 800;
-/** Drafts a house can ask Claude for in a day; starter lists are free and unlimited. */
-export const DRAFTS_PER_DAY = 10;
+/** How much one message in the chat can say. */
+export const MESSAGE_MAX = 800;
+/** How many messages of the chat go to Claude each time: enough for setting up a house. */
+export const CHAT_MAX_MESSAGES = 24;
+/** Messages a house can send Claude in a day; starter lists are free and unlimited. */
+export const CHAT_TURNS_PER_DAY = 30;
+/** The most quick answers one question offers. */
+export const CHOICES_MAX = 5;
 
-/** POST /api/setup/draft: the house, in the admin's words. */
-export const DraftRequest = z.object({
-  houseId: z.uuid(),
-  description: z
-    .string()
-    .trim()
-    .min(10, "Say a little more about the house: who lives there and what needs doing.")
-    .max(DESCRIPTION_MAX, `Keep it under ${DESCRIPTION_MAX} characters.`),
+/** One message in the setup chat, the admin's or Jonz's, as words. */
+export const ChatMessage = z.object({
+  role: z.enum(["user", "assistant"]),
+  text: z.string().trim().min(1, "Say something about the house.").max(MESSAGE_MAX, `Keep it under ${MESSAGE_MAX} characters.`),
 });
-export type DraftRequest = z.infer<typeof DraftRequest>;
+export type ChatMessage = z.infer<typeof ChatMessage>;
 
 /** One drafted John: a John as the list holds it, the group that shares it by name, and why it's there. */
 export const DraftedJohn = z.object({
@@ -67,8 +70,40 @@ export type HouseDraft = z.infer<typeof HouseDraft>;
 export const DRAFT_SOURCES = ["ai", "starter"] as const;
 export type DraftSource = (typeof DRAFT_SOURCES)[number];
 
-export const DraftResponse = z.object({ draft: HouseDraft, source: z.enum(DRAFT_SOURCES) });
-export type DraftResponse = z.infer<typeof DraftResponse>;
+/**
+ * POST /api/setup/draft: the chat so far, ending with what the admin just
+ * said, and the draft as it stands (null before there is one), which the
+ * answer changes.
+ */
+export const ChatRequest = z.object({
+  houseId: z.uuid(),
+  messages: z
+    .array(ChatMessage)
+    .min(1)
+    .max(CHAT_MAX_MESSAGES)
+    .refine((m) => m.at(-1)?.role === "user", "The chat has to end with what you said."),
+  draft: HouseDraft.nullable(),
+});
+export type ChatRequest = z.infer<typeof ChatRequest>;
+
+/**
+ * A question Jonz asks with something to tap under it: a few quick answers,
+ * or the days of the week. Whatever's tapped is sent as the admin's answer.
+ */
+export const ChatAsk = z.discriminatedUnion("kind", [
+  z.object({ kind: z.literal("choices"), options: z.array(z.string().min(1).max(40)).min(1).max(CHOICES_MAX) }),
+  z.object({ kind: z.literal("day") }),
+]);
+export type ChatAsk = z.infer<typeof ChatAsk>;
+
+/** Jonz's answer: what it says, what it asks (if anything), and the new draft (null: as it was). */
+export const ChatResponse = z.object({
+  reply: z.string(),
+  ask: ChatAsk.nullable(),
+  draft: HouseDraft.nullable(),
+  source: z.enum(DRAFT_SOURCES),
+});
+export type ChatResponse = z.infer<typeof ChatResponse>;
 
 /**
  * What Claude sends back, before it's checked: every field loose, because a
@@ -229,6 +264,53 @@ export function draftPlan(draft: HouseDraft, keep: readonly number[], existingGr
     return { john, groupName };
   });
   return { makeGroups, johns, everyoneForNow };
+}
+
+/** What Claude asks with, before it's checked. */
+export interface RawAsk {
+  kind?: unknown;
+  options?: unknown;
+}
+
+/** Claude's question made safe to show: quick answers trimmed, kept once each, at most CHOICES_MAX; null when there's nothing to tap. */
+export function tidyAsk(raw: RawAsk | null | undefined): ChatAsk | null {
+  if (raw?.kind === "day") return { kind: "day" };
+  if (raw?.kind !== "choices" || !Array.isArray(raw.options)) return null;
+  const options: string[] = [];
+  for (const o of raw.options) {
+    const option = text(o, 40);
+    if (option && !options.some((p) => key(p) === key(option))) options.push(option);
+    if (options.length === CHOICES_MAX) break;
+  }
+  return options.length > 0 ? { kind: "choices", options } : null;
+}
+
+/**
+ * The draft as Claude is shown it, to change: groups by who's in them in
+ * words ("me" for the person asking, first names for the rest, and names
+ * still to join), and on-call Johns as `onCall`. tidyDraft reads it back.
+ */
+export function draftForModel(draft: HouseDraft, people: readonly Person[], me: string): RawDraft {
+  const named = (id: string) => (id === me ? "me" : firstName(people.find((p) => p.userId === id)?.name ?? "")) || null;
+  return {
+    johns: draft.johns.map(({ when, ...j }) => ({ ...j, onCall: when === "on_call" })),
+    groups: draft.groups.map((g) => ({ name: g.name, members: [...g.memberIds.map(named).filter(Boolean), ...g.waitingFor] })),
+    note: draft.note,
+  };
+}
+
+/**
+ * Jonz's answer when Claude can't give one (not set up here, down, or a
+ * reply it couldn't use). Before there's a draft, a starter list fits what
+ * the admin said (or the one they named); after, the draft stays as it is
+ * and the admin is told to change it by hand.
+ */
+export function offlineTurn(messages: readonly ChatMessage[], draft: HouseDraft | null): ChatResponse {
+  if (draft) return { reply: HOUSE_DRAFT_COPY.offlineChange, ask: null, draft: null, source: "starter" };
+  const said = messages.filter((m) => m.role === "user").map((m) => m.text);
+  const named = STARTER_KINDS.find((k) => said.some((t) => key(t.trim()) === key(HOUSE_DRAFT_COPY.starter[k].title)));
+  const kind = named ?? guessStarter(said.join(" "));
+  return { reply: named ? HOUSE_DRAFT_COPY.fromStarter : HOUSE_DRAFT_COPY.offline, ask: null, draft: starterDraft(kind), source: "starter" };
 }
 
 // --- Starter lists ------------------------------------------------------------

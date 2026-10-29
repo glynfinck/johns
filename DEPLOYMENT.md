@@ -114,9 +114,9 @@ is exactly what local development needs and production must not have.
   does. On Vercel the gateway signs in with the `jonz-api` project's OIDC
   token, so there is no key to set; it bills to the team's AI Gateway
   credits, where a spend limit belongs. If the gateway refuses or is down,
-  setup offers the starter lists instead, so nothing breaks. A draft costs
-  well under a cent, and each house gets ten a day (`DRAFTS_PER_DAY`),
-  counted in `house_drafts`. Locally and in CI there is no gateway, so
+  setup offers the starter lists instead, so nothing breaks. A chat turn costs
+  well under a cent, and each house gets thirty a day
+  (`CHAT_TURNS_PER_DAY`), counted in `house_drafts`. Locally and in CI there is no gateway, so
   drafts are starter lists unless `AI_GATEWAY_API_KEY` is set.
 - **Brand verification.** Opening the app beyond your own house means
   Google's review; the landing page at `/` carries the name, the purpose and
