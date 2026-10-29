@@ -1,15 +1,20 @@
-import { HOUSE_DRAFT_COPY, listAsDraft, NEW_JOHN, NEXT_UP_COPY, starterDraft, tidyDraft, type HouseRules, type JohnDef } from '@app/core';
+import { HOUSE_DRAFT_COPY, RESET_COPY, type ChatReset, listAsDraft, NEW_JOHN, NEXT_UP_COPY, starterDraft, tidyDraft, type HouseRules, type JohnDef } from '@app/core';
 import { QueryClientProvider } from '@tanstack/react-query';
 import { fireEvent, render, screen } from '@testing-library/react-native';
 import { router } from 'expo-router';
 import type { ReactNode } from 'react';
 
 import { applyDraft, sendChat } from '@/api/draft';
+import { undoAction } from '@/api/history';
+import { applyReset } from '@/api/resets';
 import { testQueryClient } from '@/testing/query';
 
 import { SetupChat } from './setup-chat';
 
 jest.mock('@/api/draft', () => ({ applyDraft: jest.fn(), sendChat: jest.fn() }));
+jest.mock('@/api/history', () => ({ undoAction: jest.fn() }));
+jest.mock('@/api/resets', () => ({ applyReset: jest.fn() }));
+jest.mock('@/api/supabase', () => ({ supabase: {} }));
 jest.mock('expo-router', () => ({ ...jest.requireActual('expo-router'), router: { dismissTo: jest.fn() } }));
 
 const chat = sendChat as jest.Mock;
@@ -189,5 +194,68 @@ describe('with a list already', () => {
     await openList(false);
     expect(screen.getByText(HOUSE_DRAFT_COPY.passNeeded)).toBeTruthy();
     expect(screen.queryByTestId('chat-input')).toBeNull();
+  });
+});
+
+describe('fixing mistakes', () => {
+  const SAM = '00000000-0000-4000-8000-000000000002';
+  const resets: ChatReset[] = [
+    { kind: 'undo', action: 'tick-1', line: 'Sam ticked Bins', actor: SAM },
+    {
+      kind: 'reset',
+      ask: { kind: 'week', week: '00000000-0000-4000-8000-0000000000aa' },
+      preview: {
+        kind: 'week',
+        week: { id: 'w1', starts_on: '2026-10-26', starts_at: '2026-10-26T00:00:00Z', ends_at: '2026-11-02T00:00:00Z' },
+        month: '2026-10',
+        people: { [SAM]: { ticks: 2 } },
+        told: [SAM],
+        reopened: 2,
+        past_due: 0,
+        flags: 0,
+        disputes: 0,
+        correction: false,
+        nothing: false,
+      },
+      words: {},
+    },
+  ];
+
+  beforeEach(() => {
+    chat.mockResolvedValue({ reply: 'Here’s what I’d put right.', ask: null, draft: null, source: 'ai', resets });
+    (applyReset as jest.Mock).mockResolvedValue('reset-1');
+    (undoAction as jest.Mock).mockResolvedValue(undefined);
+  });
+
+  async function offered() {
+    const list = [{ ...NEW_JOHN, id: 'j1', name: 'Bins', category: 'bins' as const }] as JohnDef[];
+    await render(
+      <SetupChat houseId="h1" rules={RULES} johns={list} groups={[]} people={[...people, { userId: SAM, name: 'Sam Lee' }]} me={ME} passOpen />,
+      { wrapper: House },
+    );
+    await say('Sam’s tick was a mistake, and reset the week');
+    return screen.findByTestId('resets-card');
+  }
+
+  it('offers each fix ticked, with its numbers, under hazard tape, and changes nothing yet', async () => {
+    await offered();
+    expect(screen.getByRole('checkbox', { name: /^Undo: Sam ticked Bins/ })).toBeChecked();
+    expect(screen.getByRole('checkbox', { name: /^Reset this week/ })).toBeChecked();
+    expect(screen.getByTestId('resets-told')).toHaveTextContent('Sam gets a notification');
+    expect(screen.getByRole('button', { name: RESET_COPY.applyN(2) })).toBeTruthy();
+    expect(applyReset).not.toHaveBeenCalled();
+    expect(undoAction).not.toHaveBeenCalled();
+  });
+
+  it('does only what is still ticked, then Undo takes the reset back', async () => {
+    await offered();
+    await fireEvent.press(screen.getByRole('checkbox', { name: /^Undo: Sam ticked Bins/ }));
+    await fireEvent.press(screen.getByRole('button', { name: RESET_COPY.applyN(1) }));
+    expect(await screen.findByText(RESET_COPY.appliedN(1))).toBeTruthy();
+    expect(applyReset).toHaveBeenCalledWith({ houseId: 'h1', kind: 'week', week: '00000000-0000-4000-8000-0000000000aa' });
+    expect(undoAction).not.toHaveBeenCalled();
+    await fireEvent.press(screen.getByRole('button', { name: RESET_COPY.undoAll }));
+    expect(await screen.findByText(RESET_COPY.putBack)).toBeTruthy();
+    expect(undoAction).toHaveBeenCalledWith('reset-1');
   });
 });
