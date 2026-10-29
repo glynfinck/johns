@@ -39,7 +39,7 @@ export const PAGE_TITLE = {
 export const PRIVACY_COPY = {
   title: "Privacy",
   paragraphs: [
-    "Jonz keeps what it needs to share out your house’s Johns and nothing more: your name from Google, the house you belong to, the Johns you were given and when you ticked them, any photos you add, disputes and votes, and the Stake ledger.",
+    "Jonz keeps what it needs to share out your house’s Johns and nothing more: your name from the account you sign in with, the house you belong to, the Johns you were given and when you ticked them, any photos you add, disputes and votes, and the Stake ledger.",
     "Only people in your house can see any of it. Photos are stored privately and shown to your housemates through links that expire after an hour.",
     "Jonz never moves money. The ledger records what housemates owe each other; you settle up however you like, outside the app.",
     `If you ask ${APP_NAME} to draft your house’s Johns, what you write about the house is sent to Anthropic’s Claude, through Vercel, to draft the list. It isn’t stored with your house, and Anthropic doesn’t train on it.`,
@@ -92,23 +92,28 @@ export const FRONT_DOOR = {
 
 export type FrontDoorPoint = (typeof FRONT_DOOR.points)[number]["key"];
 
-export type SignInProvider = "Google" | "Apple";
+export type SignInProvider = "Google" | "Apple" | "Microsoft";
 
 /**
  * The sign-in screen's words. The reason line under the heading comes from
- * `signInReason` (auth-paths.ts) where only Google is offered; iOS also
- * offers Apple, so it says `eitherAccount` instead, and warns that a second
- * account starts with no house (Hide My Email makes a new person).
+ * `signInReason` (auth-paths.ts); iOS also offers Apple, so it says
+ * `eitherAccount` instead (Hide My Email makes a new person). Every screen
+ * offers more than one account, so `sameAccount` warns that a second one
+ * starts with no house.
  */
 export const SIGN_IN_COPY = {
   heading: "Sign in",
   google: "Continue with Google",
   googleBusy: "Opening Google…",
+  microsoft: "Continue with Microsoft",
+  microsoftBusy: "Opening Microsoft…",
   eitherAccount: "Your house’s Johns are kept with the account you sign in with.",
   sameAccount: "Already in a house? Use the account you joined with.",
   terms: "By signing in you agree to the house rules your housemates set.",
   privacy: "Privacy",
   failed: (provider: SignInProvider) => `${provider} didn’t finish signing you in. Try again.`,
+  /** The web came back from Google or Microsoft with an error, and can't tell which. */
+  returnFailed: "That sign-in didn’t finish. Try again.",
   signOut: "Sign out",
 } as const;
 

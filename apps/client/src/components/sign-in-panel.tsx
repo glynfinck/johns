@@ -3,28 +3,31 @@ import * as AppleAuthentication from 'expo-apple-authentication';
 import { useEffect, useState } from 'react';
 import { StyleSheet, View } from 'react-native';
 
-import { appleSignInAvailable, signInWithApple, signInWithGoogle, type SignInResult } from '@/api/auth';
+import { appleSignInAvailable, signInWithApple, signInWithGoogle, signInWithMicrosoft, type SignInResult } from '@/api/auth';
 import { Alert } from '@/components/alert';
 import { Button } from '@/components/button';
 import { DoorFoot, Sign, SignHeading } from '@/components/front-door/door';
 import { GoogleIcon } from '@/components/google-icon';
+import { MicrosoftIcon } from '@/components/microsoft-icon';
 import { Meta } from '@/components/text';
 import { TextLink } from '@/components/text-link';
 import { RADIUS, SPACE, TAP, useTheme } from '@/theme';
 
 /**
- * Sign-in: Apple then Google on iOS, Google elsewhere, on the page's taped
+ * Sign-in: Apple then Google then Microsoft on iOS, Google then Microsoft
+ * elsewhere (Microsoft for Outlook, Hotmail and work accounts), on the page's taped
  * sign, with the small print under it. The sign-in screen is this on its
  * own; a join link shows it in place, so the code survives. `next` is where
  * signing in leads (the front door's choice, or the join link): the line
- * under the heading names it, and the web comes back from Google carrying it
- * (core's googleReturn). `failed` says Google already turned the web back once.
+ * under the heading names it, and the web comes back from Google or
+ * Microsoft carrying it (core's googleReturn). `failed` says one of them
+ * already turned the web back once, which the page can't tell apart.
  */
 export function SignInPanel({ next, failed: failedBefore = false }: { next?: string; failed?: boolean }) {
   const { scheme } = useTheme();
   const [apple, setApple] = useState(false);
   const [busy, setBusy] = useState<SignInProvider | null>(null);
-  const [failed, setFailed] = useState<SignInProvider | null>(failedBefore ? 'Google' : null);
+  const [failed, setFailed] = useState<SignInProvider | 'return' | null>(failedBefore ? 'return' : null);
 
   useEffect(() => {
     let active = true;
@@ -42,7 +45,7 @@ export function SignInPanel({ next, failed: failedBefore = false }: { next?: str
     setBusy(provider);
     setFailed(null);
     try {
-      // Redirected: the page is leaving for Google, so stay busy.
+      // Redirected: the page is leaving for Google or Microsoft, so stay busy.
       if ((await signIn()) !== 'redirected') setBusy(null);
     } catch (reason) {
       console.warn(`${provider} sign-in failed`, reason);
@@ -59,7 +62,7 @@ export function SignInPanel({ next, failed: failedBefore = false }: { next?: str
           body={signInLine(next, apple)}
         />
 
-        {failed ? <Alert message={SIGN_IN_COPY.failed(failed)} /> : null}
+        {failed ? <Alert message={failed === 'return' ? SIGN_IN_COPY.returnFailed : SIGN_IN_COPY.failed(failed)} /> : null}
 
         <View style={styles.ways}>
           {apple ? (
@@ -87,7 +90,16 @@ export function SignInPanel({ next, failed: failedBefore = false }: { next?: str
             testID="google-sign-in"
           />
 
-          {apple ? <Meta>{SIGN_IN_COPY.sameAccount}</Meta> : null}
+          <Button
+            variant="outline"
+            icon={MicrosoftIcon}
+            label={busy === 'Microsoft' ? SIGN_IN_COPY.microsoftBusy : SIGN_IN_COPY.microsoft}
+            disabled={busy !== null}
+            onPress={() => void attempt('Microsoft', () => signInWithMicrosoft(googleReturn(next)))}
+            testID="microsoft-sign-in"
+          />
+
+          <Meta>{SIGN_IN_COPY.sameAccount}</Meta>
         </View>
       </Sign>
 

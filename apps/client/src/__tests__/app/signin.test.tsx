@@ -1,7 +1,7 @@
 import { FRONT_DOOR_COPY, SIGN_IN_COPY, signInReason } from '@app/core';
 import { act, fireEvent, renderRouter, screen } from 'expo-router/testing-library';
 
-import { appleSignInAvailable, signInWithApple, signInWithGoogle } from '@/api/auth';
+import { appleSignInAvailable, signInWithApple, signInWithGoogle, signInWithMicrosoft } from '@/api/auth';
 import SignIn from '@/app/signin';
 import { TAP } from '@/theme';
 
@@ -9,6 +9,7 @@ jest.mock('@/api/auth', () => ({
   appleSignInAvailable: jest.fn(),
   signInWithApple: jest.fn(),
   signInWithGoogle: jest.fn(),
+  signInWithMicrosoft: jest.fn(),
 }));
 
 // Apple's button is a native view; a plain button stands in for it.
@@ -26,6 +27,7 @@ jest.mock('expo-apple-authentication', () => {
 const available = appleSignInAvailable as jest.Mock;
 const google = signInWithGoogle as jest.Mock;
 const apple = signInWithApple as jest.Mock;
+const microsoft = signInWithMicrosoft as jest.Mock;
 
 async function open(url = '/signin') {
   await renderRouter({ signin: SignIn }, { initialUrl: url });
@@ -38,13 +40,14 @@ beforeEach(() => {
 });
 
 describe('sign-in on Android and the web', () => {
-  it('offers Google alone, with the web’s words', async () => {
+  it('offers Google and Microsoft, with the web’s words', async () => {
     await open();
     expect(screen.getByRole('header', { name: SIGN_IN_COPY.heading })).toBeOnTheScreen();
     expect(screen.getByText(signInReason(null))).toBeOnTheScreen();
     expect(screen.getByRole('button', { name: SIGN_IN_COPY.google })).toBeOnTheScreen();
+    expect(screen.getByRole('button', { name: SIGN_IN_COPY.microsoft })).toBeOnTheScreen();
     expect(screen.queryByTestId('apple-sign-in')).toBeNull();
-    expect(screen.queryByText(SIGN_IN_COPY.sameAccount)).toBeNull();
+    expect(screen.getByText(SIGN_IN_COPY.sameAccount)).toBeOnTheScreen();
     expect(screen.getByRole('link', { name: SIGN_IN_COPY.privacy })).toBeOnTheScreen();
   });
 
@@ -72,9 +75,26 @@ describe('sign-in on Android and the web', () => {
     expect(screen.getByRole('button', { name: SIGN_IN_COPY.google })).toBeEnabled();
   });
 
-  it('says so when Google sends the web back with an error', async () => {
+  it('says so when the web comes back with an error, without guessing whose', async () => {
     await open('/signin?error=access_denied');
-    expect(screen.getByRole('alert')).toHaveTextContent(SIGN_IN_COPY.failed('Google'));
+    expect(screen.getByRole('alert')).toHaveTextContent(SIGN_IN_COPY.returnFailed);
+  });
+
+  it('signs in with Microsoft, staying busy while the web leaves for it', async () => {
+    microsoft.mockResolvedValue('redirected');
+    await open('/signin?next=%2Fhouse%2Fnew');
+    await fireEvent.press(screen.getByRole('button', { name: SIGN_IN_COPY.microsoft }));
+    expect(microsoft).toHaveBeenCalledWith('/signin?next=%2Fhouse%2Fnew');
+    expect(screen.getByRole('button', { name: SIGN_IN_COPY.microsoftBusy })).toBeDisabled();
+    expect(screen.getByRole('button', { name: SIGN_IN_COPY.google })).toBeDisabled();
+  });
+
+  it('says so when Microsoft fails, and lets you try again', async () => {
+    microsoft.mockRejectedValue(new Error('provider is not enabled'));
+    await open();
+    await fireEvent.press(screen.getByRole('button', { name: SIGN_IN_COPY.microsoft }));
+    expect(screen.getByRole('alert')).toHaveTextContent(SIGN_IN_COPY.failed('Microsoft'));
+    expect(screen.getByRole('button', { name: SIGN_IN_COPY.microsoft })).toBeEnabled();
   });
 
   it('sets the page on the taped sign, with the small print under it', async () => {
@@ -104,10 +124,10 @@ describe("the front door's choice", () => {
     expect(google).toHaveBeenCalledWith('/signin?next=%2Fwelcome');
   });
 
-  it('says so when Google turns the web back, and keeps the choice', async () => {
+  it('says so when the web is turned back, and keeps the choice', async () => {
     google.mockResolvedValue('redirected');
     await open('/signin?next=%2Fhouse%2Fnew&error=access_denied&error_description=denied');
-    expect(screen.getByRole('alert')).toHaveTextContent(SIGN_IN_COPY.failed('Google'));
+    expect(screen.getByRole('alert')).toHaveTextContent(SIGN_IN_COPY.returnFailed);
     expect(screen.getByText(FRONT_DOOR_COPY.startReason)).toBeOnTheScreen();
     await fireEvent.press(screen.getByRole('button', { name: SIGN_IN_COPY.google }));
     expect(google).toHaveBeenCalledWith('/signin?next=%2Fhouse%2Fnew');
