@@ -117,8 +117,8 @@ permanent once a store has seen them.
   `POST /api/disputes/:id/votes`, `POST /api/fresh`, `POST /api/flags` and
   `POST /api/setup/draft` (`draft.ts`: `sendChat`, one turn of the
   setup chat, answered as the API would by `offlineTurn` if the API can't
-  be reached, and `keepDraft`,
-  which adds the Johns an admin kept through `settings.ts`).
+  be reached, and `applyDraft` (`keepDraft` for a new house),
+  which applies the changes an admin ticked through `settings.ts`).
 - `src/hooks/`: connect `@app/core` and `src/api/` to screens (e.g.
   `use-session.ts`). `use-membership.tsx` is the session and the house it's
   in, read behind the splash screen, with `refresh()` for after creating or
@@ -196,7 +196,8 @@ permanent once a store has seen them.
   (`(house)/house/_layout.tsx`): the group page (`index.tsx`) and the pages
   it pushes, `wall`, `stake`, `people/[userId]` (a housemate's page) and
   the setup pages `johns`, `rules`, `away`, `groups` and `describe`
-  (Describe your house, a chat: `components/house/setup-chat.tsx`, the one
+  (Describe your house, or Ask Jonz once there's a list, opened from the
+  title bar's sparkles, `TitleBar`'s `ask`; a chat: `components/house/setup-chat.tsx`, the one
   setup page not on `HousePage`, as its message box stays put under the chat). A new page goes in
   `(house)/house/`, built on `HousePage` (whose back goes to `/house`),
   keeping the tabs; one opened straight from a link still has House under

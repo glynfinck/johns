@@ -1,4 +1,4 @@
-import { FRONT_DOOR_COPY, HOUSE_DRAFT_COPY, NEXT_UP_COPY, PAGE_TITLE, STARTER_LISTS } from "@app/core";
+import { FRONT_DOOR_COPY, HOUSE_DRAFT_COPY, NEXT_UP_COPY, PAGE_TITLE, STARTER_LISTS, type HouseDraft } from "@app/core";
 import { expect, test, type Page } from "@playwright/test";
 
 import { CLIENT_URL, cleanUp, signInToClient } from "./auth";
@@ -66,4 +66,45 @@ test("start from a list without writing anything", async ({ context, page }) => 
   await page.getByTestId("chat-open-list").click();
   await expect(page).toHaveURL(/\/house\/johns$/);
   await expect(page.getByTestId("john-def")).toHaveCount(STARTER_LISTS.flat_share.length);
+});
+
+test("ask Jonz from Today to change the list, and apply what's ticked", async ({ context, page }) => {
+  made.push(await signInToClient(context, "Cal Describe"));
+  await newHouse(page, `Mews ${Date.now() % 10_000}`);
+  await page.goto("/house/describe");
+  await page.getByTestId("starter-couple").click();
+  await page.getByTestId("describe-keep").click();
+  await expect(page.getByTestId("chat-open-list")).toBeVisible();
+  const couple = STARTER_LISTS.couple;
+
+  // There's no gateway here, so Jonz's answer is written in: the first John
+  // worth more, the second taken off, and one new.
+  await page.route("**/api/setup/draft", async (route) => {
+    const { draft } = route.request().postDataJSON() as { draft: HouseDraft };
+    const johns = draft.johns
+      .filter((j) => j.name !== couple[1].name)
+      .map((j) => (j.name === couple[0].name ? { ...j, points: j.points + 2 } : j));
+    const windows = { ...couple[0], name: "Windows", why: "" };
+    const changed = { ...draft, johns: [...johns, windows] };
+    await route.fulfill({ json: { reply: "Done.", ask: null, draft: changed, source: "ai" } });
+  });
+
+  await page.goto("/today");
+  await page.getByTestId("ask-jonz").click();
+  await expect(page).toHaveURL(/\/house\/describe$/);
+  await expect(page.getByRole("heading", { name: PAGE_TITLE.ask })).toBeVisible();
+  await page.getByTestId("chat-input").fill(`${couple[0].name} is more work, no ${couple[1].name}, and add windows`);
+  await page.getByTestId("chat-send").click();
+
+  await expect(page.getByTestId("draft-change")).toContainText(`was ${couple[0].points} pts`);
+  await expect(page.getByTestId("draft-remove")).toContainText(couple[1].name);
+  await expect(page.getByTestId("draft-john")).toContainText("Windows");
+  await page.getByTestId("describe-keep").click();
+  await expect(page.getByText(HOUSE_DRAFT_COPY.applied(3))).toBeVisible();
+  await page.getByTestId("chat-open-list").click();
+
+  await expect(page).toHaveURL(/\/house\/johns$/);
+  await expect(page.getByTestId("john-def")).toHaveCount(couple.length);
+  await expect(page.getByText("Windows")).toBeVisible();
+  await expect(page.getByText(couple[1].name, { exact: true })).toHaveCount(0);
 });

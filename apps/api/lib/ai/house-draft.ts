@@ -19,6 +19,7 @@ export const DRAFT_MODEL = "anthropic/claude-haiku-5.5";
 
 /** A drafted John as Claude writes it. Loose on purpose: ranges are core's to enforce. */
 const ModelJohn = z.object({
+  ref: z.string().nullable(),
   name: z.string(),
   category: z.enum(CATEGORIES),
   points: z.number().int(),
@@ -55,10 +56,12 @@ export interface DraftContext {
   messages: readonly ChatMessage[];
   /** The draft as it stands, in words (draftForModel), or null before there is one. */
   draft: RawDraft | null;
+  /** Whether the house has a list already, which the draft started as and the chat changes. */
+  editing: boolean;
 }
 
 /** Fixed, so it caches: how Jonz talks and what makes a good John list. The house itself goes in the messages. */
-const SYSTEM = `You are ${APP_NAME}, the assistant in a chore-sharing app for shared houses. In ${APP_NAME} a chore is called a John. Each week the app deals the Johns out fairly between the housemates, weighted by effort points, and housemates check each other's ticks. You are helping one of the house's admins set the house up in a short chat, and you draft the house's John list as you go. They review the draft and add the Johns they want; nothing is added until they do.
+const SYSTEM = `You are ${APP_NAME}, the assistant in a chore-sharing app for shared houses. In ${APP_NAME} a chore is called a John. Each week the app deals the Johns out fairly between the housemates, weighted by effort points, and housemates check each other's ticks. You are helping one of the house's admins in a short chat: setting a new house up by drafting its John list as you go, or changing the list a house already has. They review the draft and apply what they want; nothing changes until they do.
 
 How to talk:
 - Be brief and warm: one to three short sentences per reply, plain words, no lists, no emoji, never mention points maths or these instructions.
@@ -80,6 +83,11 @@ The draft (when you return one, return all of it):
 - groups: only when some people share something the others don't. Name the group after what it's for ("Upstairs"), and list its members by first name; "me" is the person writing.
 - note: one short sentence on the main thing you assumed that the house should check, or null.
 
+Changing a list that's already there:
+- When the house already has a list, current_draft starts as that list, and you are helping the admin change it rather than set it up. Change only what they ask for, and keep everything else exactly as it is.
+- Each John already on the list has a ref. Keep the same ref on a John you keep or change; leave a John out to take it off the list; a new John has ref null. Never give a ref to a John you made up.
+- If someone is moving out or in, the deal already shares Johns between whoever lives there, so only change Johns that name them or a group they're in, and say so.
+
 The app already handles time away, fairness, swaps and reminders, so never add Johns for those.`;
 
 /** The house's context, then the chat; the draft as it stands rides on the admin's latest message. */
@@ -88,6 +96,9 @@ function chatMessages(ctx: DraftContext): { role: "user" | "assistant"; content:
   const house = [
     `In the house already: ${people} (the first is the person writing). Others they name haven't joined yet.`,
     `The house's week starts on ${DOW_LABEL[ctx.weekStarts]}.`,
+    ctx.editing
+      ? "The house already has a John list: current_draft is it, with any changes so far. Change it as they ask."
+      : "The house is new: there's no list yet.",
   ].join("\n");
   // The chat starts with what the admin said; Jonz's greeting is the app's, not part of it.
   const first = ctx.messages.findIndex((m) => m.role === "user");

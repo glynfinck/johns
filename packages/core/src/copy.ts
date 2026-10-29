@@ -30,6 +30,7 @@ export const PAGE_TITLE = {
   away: "Time away",
   groups: "Groups",
   describe: "Describe your house",
+  ask: `Ask ${APP_NAME}`,
   pass: "House Pass",
 } as const;
 
@@ -1410,6 +1411,25 @@ export const HOUSE_DRAFT_COPY = {
   added: (n: number) => (n === 1 ? "1 John added" : `${n} Johns added`),
   addedMeta: "Deal the week once everyone’s in",
   openList: "Open the list",
+
+  // A house with a list already: the chat changes it (the House Pass's assistant).
+  /** The AI button in the title bar, to a screen reader. */
+  open: `Ask ${APP_NAME}`,
+  greetingList: "What would you like to change? I can add Johns, change them or take some off, and nothing changes until you apply it.",
+  placeholderList: "Sam’s moving out…",
+  /** The card's label, and its line: the house's points a week before and after. */
+  changesLabel: "Changes",
+  changesMeta: (before: number, after: number) => (before === after ? `${after} pts a week` : `${before} → ${after} pts a week`),
+  /** Each change's kind, before what it says about the John. */
+  adding: "New",
+  removing: "Taking off",
+  apply: (n: number) => (n === 0 ? "Pick at least one change" : n === 1 ? "Apply 1 change" : `Apply ${n} changes`),
+  applying: "Applying…",
+  applied: (n: number) => (n === 1 ? "1 change made" : `${n} changes made`),
+  appliedMeta: "From the next deal",
+  /** In place of the message box, for a house without the Pass. */
+  passNeeded: `Changing your list with ${APP_NAME} comes with the House Pass. Setting up a new house stays free.`,
+  seePass: "See the House Pass",
 } as const;
 
 /**

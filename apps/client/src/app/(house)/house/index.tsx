@@ -54,6 +54,7 @@ function HouseFor({ houseId, userId }: { houseId: string; userId: string }) {
           ? HOUSE_PAGE_COPY.sub(snapshot.members.length, formatMoney(snapshot.rules.stakeMinor, snapshot.rules.currency))
           : undefined
       }
+      ask={view?.me?.role === 'admin'}
     />
   );
 

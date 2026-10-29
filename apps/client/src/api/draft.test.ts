@@ -1,8 +1,8 @@
-import { HOUSE_DRAFT_COPY, starterDraft, tidyDraft, type HouseRules } from '@app/core';
+import { HOUSE_DRAFT_COPY, listAsDraft, NEW_JOHN, starterDraft, tidyDraft, type HouseRules, type JohnDef } from '@app/core';
 
-import { keepDraft, sendChat } from './draft';
+import { applyDraft, keepDraft, sendChat } from './draft';
 import { apiPost, ApiRequestError } from './http';
-import { addJohns, saveGroup } from './settings';
+import { addJohns, archiveJohn, saveGroup, saveJohn } from './settings';
 import { supabase } from './supabase';
 
 jest.mock('./http', () => {
@@ -15,7 +15,7 @@ jest.mock('./http', () => {
   }
   return { apiPost: jest.fn(), ApiRequestError };
 });
-jest.mock('./settings', () => ({ addJohns: jest.fn(), saveGroup: jest.fn() }));
+jest.mock('./settings', () => ({ addJohns: jest.fn(), archiveJohn: jest.fn(), saveGroup: jest.fn(), saveJohn: jest.fn() }));
 jest.mock('./supabase', () => ({ supabase: { from: jest.fn() } }));
 
 const post = apiPost as jest.Mock;
@@ -101,5 +101,33 @@ describe('keepDraft', () => {
     expect(saveGroup).not.toHaveBeenCalled();
     expect(from).not.toHaveBeenCalled();
     expect((addJohns as jest.Mock).mock.calls[0][2][0].groupId).toBe('g9');
+  });
+});
+
+describe('applyDraft', () => {
+  const BATH = '11111111-1111-4111-8111-111111111111';
+  const BINS = '22222222-2222-4222-8222-222222222222';
+  const johns: JohnDef[] = [
+    { ...NEW_JOHN, id: BATH, name: 'Bathroom', category: 'bathroom', points: 3, needsPhoto: true },
+    { ...NEW_JOHN, id: BINS, name: 'Bins out', category: 'bins', points: 1 },
+  ];
+  const base = listAsDraft(johns, []);
+  const next = {
+    ...base,
+    johns: [{ ...base.johns[0], points: 4 }, { ...starterDraft('couple').johns[0] }],
+  };
+
+  it('adds, changes and takes off only the ticked changes, keeping what the draft doesn’t say', async () => {
+    const keys = [`change:${BATH}`, 'add:1', `remove:${BINS}`];
+    await expect(applyDraft(HOUSE, RULES, base, next, keys, { johns, groups: [] }, NOW)).resolves.toBe(3);
+    expect((addJohns as jest.Mock).mock.calls[0][2].map((j: { name: string }) => j.name)).toEqual([next.johns[1].name]);
+    expect(saveJohn).toHaveBeenCalledWith(HOUSE, RULES, expect.objectContaining({ id: BATH, points: 4, needsPhoto: true, groupId: null }), NOW);
+    expect(archiveJohn).toHaveBeenCalledWith(HOUSE, BINS, NOW);
+  });
+
+  it('leaves an unticked change alone', async () => {
+    await applyDraft(HOUSE, RULES, base, next, ['add:1'], { johns, groups: [] }, NOW);
+    expect(saveJohn).not.toHaveBeenCalled();
+    expect(archiveJohn).not.toHaveBeenCalled();
   });
 });

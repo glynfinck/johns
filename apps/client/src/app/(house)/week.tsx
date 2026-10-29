@@ -73,7 +73,11 @@ function WeekFor({ houseId, userId }: { houseId: string; userId: string }) {
     <Screen
       bar={
         <>
-          <TitleBar title={PAGE_TITLE.week} right={<MoreButton onPress={() => setMenu(true)} />} />
+          <TitleBar
+            title={PAGE_TITLE.week}
+            right={<MoreButton onPress={() => setMenu(true)} />}
+            ask={view?.me?.role === 'admin'}
+          />
           <WeekMenu
             visible={menu}
             onClose={() => setMenu(false)}
