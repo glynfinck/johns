@@ -126,11 +126,13 @@ beforeEach(() => {
 // Undoes the web's Platform.OS and Share's stand-in.
 afterEach(() => jest.restoreAllMocks());
 
-it('names the house in the title bar, with how many live there and the stake', async () => {
+it('names the house in the title bar, with how many live there and the stake first on the page', async () => {
   await open();
   const bar = within(screen.getByTestId('title-bar'));
   expect(bar.getByRole('header', { name: 'Flat 3' })).toBeOnTheScreen();
-  expect(bar.getByText(HOUSE_PAGE_COPY.sub(2, '£20'))).toBeOnTheScreen();
+  // Not a second line in the bar: every tab's bar is the same height.
+  expect(bar.queryByText(HOUSE_PAGE_COPY.sub(2, '£20'))).toBeNull();
+  expect(within(screen.getByTestId('top-line')).getByText(HOUSE_PAGE_COPY.sub(2, '£20'))).toBeOnTheScreen();
   // House is a tab's top: there's no way back from it.
   expect(bar.queryByRole('button', { name: FOCUS_SHELL_COPY.back })).toBeNull();
 });

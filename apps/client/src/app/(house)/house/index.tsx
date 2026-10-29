@@ -10,7 +10,7 @@ import { YouSection } from '@/components/house-page/you-section';
 import { PageTitle } from '@/components/page-title';
 import { Reading, ReadFailed } from '@/components/read-state';
 import { Screen } from '@/components/screen';
-import { TitleBar } from '@/components/title-bar';
+import { TitleBar, TopLine } from '@/components/title-bar';
 import { useAway } from '@/hooks/use-away';
 import { useHouse } from '@/hooks/use-house';
 import { useMembership } from '@/hooks/use-membership';
@@ -46,17 +46,7 @@ function HouseFor({ houseId, userId }: { houseId: string; userId: string }) {
   );
 
   const snapshot = view?.snapshot;
-  const bar = (
-    <TitleBar
-      title={snapshot?.house.name ?? PAGE_TITLE.house}
-      sub={
-        snapshot
-          ? HOUSE_PAGE_COPY.sub(snapshot.members.length, formatMoney(snapshot.rules.stakeMinor, snapshot.rules.currency))
-          : undefined
-      }
-      ask={view?.me?.role === 'admin'}
-    />
-  );
+  const bar = <TitleBar title={snapshot?.house.name ?? PAGE_TITLE.house} ask={view?.me?.role === 'admin'} />;
 
   return (
     <Screen bar={bar} refreshing={refreshing} onRefresh={pull} testID="house-screen">
@@ -69,6 +59,12 @@ function HouseFor({ houseId, userId }: { houseId: string; userId: string }) {
         )
       ) : (
         <>
+          <TopLine>
+            {HOUSE_PAGE_COPY.sub(
+              view.snapshot.members.length,
+              formatMoney(view.snapshot.rules.stakeMinor, view.snapshot.rules.currency),
+            )}
+          </TopLine>
           {passUnlocked(view.snapshot.house.pass, view.now) ? (
             <>
               <MonthCard houseId={houseId} userId={userId} view={view} stake={stake} />
