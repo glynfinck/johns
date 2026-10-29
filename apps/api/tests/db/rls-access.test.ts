@@ -10,6 +10,11 @@ import { addJohns, deal, makeHouse, reread, thisWeek } from "@/tests/support/fac
  * through the service role, never by trusting `error === null`.
  */
 
+async function codeOf(houseId: string) {
+  const { data } = await adminClient().from("houses").select("join_code").eq("id", houseId).single();
+  return data!.join_code;
+}
+
 const TABLES = [
   "profiles", "houses", "members", "johns", "weeks", "assignments", "disputes",
   "dispute_votes", "ledger", "month_closes", "events", "reactions", "push_subscriptions",
@@ -184,11 +189,45 @@ describe("roles", () => {
     const { data } = await adminClient().from("members").select("user_id").eq("house_id", house.id);
     expect(data!.map((m) => m.user_id)).toEqual([house.admin.userId]);
     // The last one out can go too. The house stays, history and all, but closed (below).
+    const { data: before } = await adminClient().from("houses").select("join_code").eq("id", house.id).single();
     expectOk(await house.admin.db.rpc("remove_member", { p_house: house.id, p_user: house.admin.userId }));
     const { data: left } = await adminClient().from("members").select("user_id").eq("house_id", house.id);
     expect(left).toEqual([]);
     const { data: empty } = await adminClient().from("houses").select("join_code").eq("id", house.id).single();
-    expect(empty!.join_code).toBe(house.code);
+    expect(empty!.join_code).toBe(before!.join_code);
+  });
+
+  it("changes the code when an admin removes someone, so they can't walk back in", async () => {
+    const house = await makeHouse(["Ava", "Ben", "Cal"]);
+    const [ben, cal] = house.members;
+    // Leaving of your own accord keeps the code: the rest of the house's link still works.
+    expectOk(await cal.db.rpc("remove_member", { p_house: house.id, p_user: cal.userId }));
+    expect(await codeOf(house.id)).toBe(house.code);
+
+    expectOk(await house.admin.db.rpc("remove_member", { p_house: house.id, p_user: ben.userId }));
+    const fresh = await codeOf(house.id);
+    expect(fresh).not.toBe(house.code);
+    expect(fresh).toMatch(/^[A-HJKMNP-Z2-9]{8}$/);
+    const { data: peek } = await ben.db.rpc("house_by_code", { p_code: house.code });
+    expect(peek).toEqual([]);
+    expectRule(await ben.db.rpc("join_house", { p_code: house.code }), "unknown_code");
+    // Someone who leaves can still come back with the house's link as it is now.
+    expectOk(await cal.db.rpc("join_house", { p_code: fresh }));
+  });
+
+  it("gives an admin, and only an admin, a new code", async () => {
+    const house = await makeHouse(["Ava", "Ben"]);
+    const [ben] = house.members;
+    expectDenied(await ben.db.rpc("reset_join_code", { p_house: house.id }));
+    expectDenied(await (await signedInUser("Nosy")).db.rpc("reset_join_code", { p_house: house.id }));
+    expectDenied(await visitor().rpc("reset_join_code", { p_house: house.id }));
+    expect(await codeOf(house.id)).toBe(house.code);
+
+    const { data: code, error } = await house.admin.db.rpc("reset_join_code", { p_house: house.id });
+    expect(error).toBeNull();
+    expect(code).not.toBe(house.code);
+    expect(await codeOf(house.id)).toBe(code);
+    expectRule(await (await signedInUser("Dee")).db.rpc("join_house", { p_code: house.code }), "unknown_code");
   });
 
   it("closes a house once nobody is left: its code opens nothing, for a newcomer or the last one out", async () => {
@@ -252,6 +291,30 @@ describe("roles", () => {
         .eq("house_id", house.id)
         .eq("role", "admin");
       expect(admins).toHaveLength(1);
+    }
+  });
+});
+
+describe("a push subscription", () => {
+  it("has to be a browser's push service, so the API never posts anywhere else", async () => {
+    const me = await signedInUser("Ava");
+    const device = (endpoint: string) => ({ user_id: me.userId, endpoint, p256dh: "p256dh", auth: "auth" });
+    for (const endpoint of [
+      "https://evil.example/hook",
+      "http://fcm.googleapis.com/fcm/send/abc",
+      "https://fcm.googleapis.com.evil.example/fcm/send/abc",
+      "https://169.254.169.254/latest/meta-data",
+    ]) {
+      const { error } = await me.db.from("push_subscriptions").insert(device(endpoint));
+      expect(error?.code, endpoint).toBe("23514");
+    }
+    for (const endpoint of [
+      "https://fcm.googleapis.com/fcm/send/abc",
+      "https://updates.push.services.mozilla.com/wpush/v2/abc",
+      "https://web.push.apple.com/QGxyz",
+      "https://wns2-par02p.notify.windows.com/w/?token=abc",
+    ]) {
+      expectOk(await me.db.from("push_subscriptions").insert(device(endpoint)));
     }
   });
 });

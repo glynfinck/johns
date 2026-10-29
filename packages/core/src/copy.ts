@@ -211,6 +211,9 @@ export const INVITE_COPY = {
   copy: "Copy",
   copied: "Link copied",
   shareTitle: (house: string) => `Join ${house} on Jonz`,
+  /** Admins only: a fresh code, for when a link has gone somewhere it shouldn't. */
+  newCode: "New code",
+  newCodeNote: "The old link and code stop working. Removing someone changes the code too.",
 } as const;
 
 /** The week's board: everyone's Johns, and where each has got to. */
@@ -1060,7 +1063,7 @@ export const PERSON_COPY = {
   remove: (name: string) => `Remove ${name} from the house`,
   removeTitle: (name: string) => `Remove ${name} from the house?`,
   removeBody: (name: string) =>
-    `${name} won’t be in the house any more. Their history stays on the Wall and in Stake history, and they can join again with an invite.`,
+    `${name} won’t be in the house any more. Their history stays on the Wall and in Stake history. The invite code changes, so they’d need a new invite to join again.`,
   removeConfirm: (name: string) => `Remove ${name}`,
 } as const;
 

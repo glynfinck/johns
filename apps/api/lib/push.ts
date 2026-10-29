@@ -79,7 +79,8 @@ export function pushNotifier(db: AdminClient): Notify | undefined {
         await webpush.sendNotification(
           { endpoint: sub.endpoint, keys: { p256dh: sub.p256dh, auth: sub.auth } },
           JSON.stringify(payloadFor(sub.user_id, message, how === "quiet", now)),
-          { TTL: 60 * 60 * 6 },
+          // A push service answers in well under a second; one that hangs mustn't hold up the rest of the tick.
+          { TTL: 60 * 60 * 6, timeout: 10_000 },
         );
       } catch (e) {
         // 404 and 410 mean the browser has thrown the subscription away.

@@ -24,6 +24,12 @@ export const MESSAGE_MAX = 800;
 export const CHAT_MAX_MESSAGES = 24;
 /** Messages a house can send Claude in a day; starter lists are free and unlimited. */
 export const CHAT_TURNS_PER_DAY = 30;
+/**
+ * Messages one person can send Claude in a day, whichever house they're in:
+ * a little over a house's day, so nobody gets more by leaving a house and
+ * starting another.
+ */
+export const CHAT_TURNS_PER_PERSON_PER_DAY = 40;
 /** The most quick answers one question offers. */
 export const CHOICES_MAX = 5;
 

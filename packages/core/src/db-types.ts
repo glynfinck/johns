@@ -1018,6 +1018,10 @@ export type Database = {
         Args: { p_dispute: string; p_uphold: boolean }
         Returns: undefined
       }
+      claim_draft_turn: {
+        Args: { p_house: string; p_house_limit: number; p_user: string; p_user_limit: number }
+        Returns: string
+      }
       close_month: {
         Args: { p_entries: Json; p_house: string; p_month: string }
         Returns: boolean
@@ -1129,6 +1133,7 @@ export type Database = {
         Args: { p_house: string; p_user: string }
         Returns: undefined
       }
+      reset_join_code: { Args: { p_house: string }; Returns: string }
       request_tick: { Args: never; Returns: undefined }
       require_user: { Args: never; Returns: string }
       resolve_dispute: {

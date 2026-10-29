@@ -114,6 +114,7 @@ export function TableSection({
         onClose={() => setSheet(null)}
         code={snapshot.house.joinCode}
         houseName={snapshot.house.name}
+        resetFor={snapshot.members.find((m) => m.userId === userId)?.role === 'admin' ? snapshot.house.id : undefined}
       />
       <RulesSheet
         visible={sheet === 'rules'}

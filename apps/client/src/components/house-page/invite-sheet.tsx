@@ -1,11 +1,14 @@
 import { HOUSE_PAGE_COPY, INVITE_COPY } from '@app/core';
-import { CheckIcon, CopyIcon, Share2Icon } from 'lucide-react-native';
+import { CheckIcon, CopyIcon, RefreshCwIcon, Share2Icon } from 'lucide-react-native';
 import { useState } from 'react';
 import { Platform, Share, StyleSheet, Text, View } from 'react-native';
 
+import { resetJoinCode } from '@/api/settings';
+import { Alert } from '@/components/alert';
 import { Button } from '@/components/button';
 import { Sheet } from '@/components/sheet';
 import { SectionLabel } from '@/components/text';
+import { useMove } from '@/hooks/use-move';
 import { SITE_URL } from '@/links';
 import { SPACE, useTheme } from '@/theme';
 
@@ -27,21 +30,28 @@ function webNavigator(): WebNavigator | undefined {
  * "Share invite" (the system share sheet, as the old invite card) and, on
  * the web, "Copy link". A phone has no clipboard module, and its share
  * sheet has a Copy of its own, so there it's Share invite alone; a browser
- * with no share sheet copies the link from Share invite instead.
+ * with no share sheet copies the link from Share invite instead. An admin
+ * (`resetFor`, the house's id) also gets "New code", quiet under the rest,
+ * for a link that's gone somewhere it shouldn't: the house is read again, so
+ * the new code shows here at once.
  */
 export function InviteSheet({
   visible,
   onClose,
   code,
   houseName,
+  resetFor,
 }: {
   visible: boolean;
   onClose: () => void;
   code: string;
   houseName: string;
+  /** The house's id, for an admin, who can ask for a new code. */
+  resetFor?: string;
 }) {
   const { colors, type } = useTheme();
   const [copied, setCopied] = useState(false);
+  const reset = useMove(resetFor ?? '');
   const url = `${SITE_URL}/join/${code}`;
   const web = webNavigator();
 
@@ -98,6 +108,23 @@ export function InviteSheet({
           />
         ) : null}
       </View>
+      {resetFor ? (
+        <View style={styles.reset}>
+          <Button
+            variant="ghost"
+            icon={RefreshCwIcon}
+            label={INVITE_COPY.newCode}
+            disabled={reset.pending}
+            onPress={() => {
+              setCopied(false);
+              void reset.run(() => resetJoinCode(resetFor));
+            }}
+            testID="new-code"
+          />
+          <Text style={[type.meta, { color: colors.mutedForeground }]}>{INVITE_COPY.newCodeNote}</Text>
+          {reset.problem ? <Alert message={reset.problem} /> : null}
+        </View>
+      ) : null}
     </Sheet>
   );
 }
@@ -107,4 +134,5 @@ const styles = StyleSheet.create({
   // The code to read out across a room: the brand pages' big caps, spaced wide.
   code: { letterSpacing: 6 },
   buttons: { gap: SPACE.sm, marginTop: SPACE.md },
+  reset: { gap: SPACE.xs, marginTop: SPACE.md },
 });
