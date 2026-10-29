@@ -2,6 +2,7 @@ import "server-only";
 
 import {
   CHAT_TURNS_PER_DAY,
+  CHAT_TURNS_PER_PERSON_PER_DAY,
   draftForModel,
   firstName,
   groupDef,
@@ -33,7 +34,10 @@ const REPLY_MAX = 600;
  * list, free; a house with a list already starts from that list and changes
  * it, which is the House Pass's (`pass_needed` without it). Only an admin of
  * the house may ask (the list is theirs to change), and a house gets
- * CHAT_TURNS_PER_DAY turns from Claude a day. When Claude isn't set up or
+ * CHAT_TURNS_PER_DAY turns from Claude a day, a person
+ * CHAT_TURNS_PER_PERSON_PER_DAY. Each turn is written down before Claude is
+ * asked (claim_draft_turn), so turns sent together can't all slip under the
+ * limit. When Claude isn't set up or
  * doesn't answer, offlineTurn answers (a starter list that fits, or the
  * draft left as it is), so setup never stops here. Nothing is written to the
  * John list: the admin keeps what they want of the draft through the list's
@@ -77,13 +81,16 @@ export async function chatTurn(
   if (!canDraft() && ask === askClaude) return offlineTurn(messages, draftNow);
 
   const admin = createAdminClient();
-  const since = new Date(now.getTime() - 24 * 3600_000).toISOString();
-  const { count } = await admin
-    .from("house_drafts")
-    .select("id", { count: "exact", head: true })
-    .eq("house_id", houseId)
-    .gte("created_at", since);
-  if ((count ?? 0) >= CHAT_TURNS_PER_DAY) return { refusal: { code: "P0001", message: "draft_limit" } };
+  const { data: turn, error: limit } = await admin.rpc("claim_draft_turn", {
+    p_house: houseId,
+    p_user: caller.userId,
+    p_house_limit: CHAT_TURNS_PER_DAY,
+    p_user_limit: CHAT_TURNS_PER_PERSON_PER_DAY,
+  });
+  if (limit) {
+    if (limit.message === "draft_limit") return { refusal: { code: "P0001", message: "draft_limit" } };
+    throw new Error(`Couldn't count the day's turns: ${limit.message}`);
+  }
 
   const people = (members ?? []).map((m) => ({ userId: m.user_id, name: m.profiles?.display_name ?? "" })).filter((p) => p.name);
   // The person writing first: "me" in what they say is them.
@@ -100,7 +107,7 @@ export async function chatTurn(
     });
   } catch (e) {
     console.error("draft_failed", e instanceof Error ? e.message : e);
-    await admin.from("house_drafts").insert({ house_id: houseId, user_id: caller.userId, outcome: "failed" });
+    await admin.from("house_drafts").update({ outcome: "failed" }).eq("id", turn);
     return offlineTurn(messages, draftNow);
   }
 
@@ -108,14 +115,10 @@ export async function chatTurn(
   const known = { johnIds: (list?.johns ?? []).map((j) => j.id!), groups: list?.groups ?? [] };
   const tidied = answer.raw.draft ? tidyDraft(answer.raw.draft, people, caller.userId, known) : null;
   const draft = tidied && tidied.johns.length > 0 ? tidied : null;
-  await admin.from("house_drafts").insert({
-    house_id: houseId,
-    user_id: caller.userId,
-    outcome: "ai",
-    johns: draft?.johns.length ?? 0,
-    input_tokens: answer.inputTokens,
-    output_tokens: answer.outputTokens,
-  });
+  await admin
+    .from("house_drafts")
+    .update({ johns: draft?.johns.length ?? 0, input_tokens: answer.inputTokens, output_tokens: answer.outputTokens })
+    .eq("id", turn);
   const reply = answer.raw.reply.replace(/\s+/g, " ").trim().slice(0, REPLY_MAX);
   // Nothing to say and nothing drafted before: a starter list does better than silence.
   if (!reply && !draft && !draftNow) return offlineTurn(messages, draftNow);

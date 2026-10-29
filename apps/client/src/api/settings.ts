@@ -176,6 +176,12 @@ export async function removeMember(houseId: string, userId: string) {
   if (error) throw new Error(humanError(error));
 }
 
+/** A fresh join code for the house, so the old link stops working: admins only (the database checks). */
+export async function resetJoinCode(houseId: string) {
+  const { error } = await supabase.rpc('reset_join_code', { p_house: houseId });
+  if (error) throw new Error(humanError(error));
+}
+
 /** Make a group, or change who's in one. save_group checks they all live here. */
 export async function saveGroup(houseId: string, draft: Omit<GroupDraft, 'id'> & { id?: string }) {
   const parsed = GroupDraft.safeParse(draft);

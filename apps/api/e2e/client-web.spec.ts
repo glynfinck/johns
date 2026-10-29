@@ -46,8 +46,8 @@ test("tab titles, the look, and reminders on this device", async ({ browser }) =
   await context.addInitScript(() => {
     let current: unknown = null;
     const subscription = {
-      endpoint: "https://push.example/e2e-device",
-      toJSON: () => ({ endpoint: "https://push.example/e2e-device", keys: { p256dh: "e2e-p256dh", auth: "e2e-auth" } }),
+      endpoint: "https://fcm.googleapis.com/fcm/send/e2e-device",
+      toJSON: () => ({ endpoint: "https://fcm.googleapis.com/fcm/send/e2e-device", keys: { p256dh: "e2e-p256dh", auth: "e2e-auth" } }),
       unsubscribe: async () => {
         current = null;
         return true;
@@ -100,7 +100,7 @@ test("tab titles, the look, and reminders on this device", async ({ browser }) =
   await reminders.getByTestId("enable-push").click();
   await expect(reminders.getByText(REMINDERS_COPY.turnedOn)).toBeVisible();
   expect(await rows()).toEqual([
-    { user_id: userId, endpoint: "https://push.example/e2e-device", p256dh: "e2e-p256dh", auth: "e2e-auth" },
+    { user_id: userId, endpoint: "https://fcm.googleapis.com/fcm/send/e2e-device", p256dh: "e2e-p256dh", auth: "e2e-auth" },
   ]);
   await reminders.getByTestId("sheet-close").click();
   await expect(reminders).toBeHidden();

@@ -19,8 +19,9 @@ test("the front door leads to Google sign-in through Supabase", async ({ page })
   await expect(page).toHaveURL(/\/signin\?next=%2Fhouse%2Fnew$/);
   await expect(page.getByText(FRONT_DOOR_COPY.startReason)).toBeVisible();
 
-  // The web offers Google alone; Apple is for the iOS app.
-  await expect(page.getByText(SIGN_IN_COPY.sameAccount)).toHaveCount(0);
+  // The web offers Google and Microsoft; Apple is for the iOS app.
+  await expect(page.getByText(SIGN_IN_COPY.sameAccount)).toBeVisible();
+  await expect(page.getByRole("button", { name: SIGN_IN_COPY.microsoft })).toBeVisible();
   await page.route(/\/auth\/v1\/authorize/, (route) =>
     route.fulfill({ status: 200, contentType: "text/html", body: "<p>Google would be here</p>" }),
   );
@@ -35,9 +36,9 @@ test("the front door leads to Google sign-in through Supabase", async ({ page })
   expect(url.searchParams.get("code_challenge_method")).toBe("s256");
 });
 
-test("a failed Google sign-in says so", async ({ page }) => {
+test("a failed sign-in says so, without guessing whose", async ({ page }) => {
   await page.goto("/signin?error=access_denied");
-  await expect(page.getByRole("alert")).toHaveText(SIGN_IN_COPY.failed("Google"));
+  await expect(page.getByRole("alert")).toHaveText(SIGN_IN_COPY.returnFailed);
 });
 
 test("signed out, Today sends you to sign in", async ({ page }) => {
