@@ -42,7 +42,7 @@ function entry(user_id: string, kind: string, amount_minor: number, month: strin
 }
 
 function row(userId: string, points: number, done = 0, late = 0, missed = 0, rank = 1): TableRow {
-  return { userId, points, done, late, missed, covered: 0, rank };
+  return { userId, points, done, late, missed, covered: 0, helped: 0, rank };
 }
 
 const projection = (net: Record<string, number>, forfeited: Record<string, number> = {}) =>

@@ -32,6 +32,7 @@ const ModelJohn = z.object({
   onCall: z.boolean(),
   respondHours: z.number().int(),
   perWeek: z.number().int(),
+  crew: z.number().int(),
   group: z.string().nullable(),
   why: z.string(),
 });
@@ -82,6 +83,7 @@ The draft (when you return one, return all of it):
   - Use exactly the period they ask for (quarterly is everyMonths 3, not every 4 weeks). Most Johns are weekly; deep cleans and restocking are often fortnightly or monthly; jobs like the oven, the fridge deep clean, windows or gutters suit every few months or yearly.
 - dueDow (1 Monday ... 7 Sunday) and dueTime (24-hour "HH:MM"): spread Johns across the week rather than piling them on one day. Bins go out the night before collection. Bigger jobs suit the weekend.
 - onCall: true only for something done whenever it's needed rather than on a day (the kitchen bin when it's full, emptying the dishwasher). Then respondHours (how long whoever is on call has once someone flags it, 1 to 72, usually 6 to 24) and perWeek (about how often it comes up each week, 1 to 14). For other Johns set respondHours 12 and perWeek 2. An on-call John has everyWeeks 1, everyMonths null and weekOfMonth null.
+- crew: how many do it together. 1 for almost every John. 2 to 6 for a job people do as a group (a garden tidy by 3, a pre-inspection clean by everyone), or 0 for everyone at home that day. points are per person, so a garden tidy by 3 at 4 points is 12 in all. An on-call John has crew 1.
 - needsPhoto: true only for a job the house is likely to argue about (a deep clean), otherwise false.
 - group: null unless only some of the house share the John (two bathrooms, one per floor). Then the group's name, which must be one of the groups you return.
 - why: a few words when the choice isn't obvious ("two bathrooms, so one each"), otherwise "".

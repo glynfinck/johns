@@ -110,7 +110,7 @@ describe("trackRecord", () => {
       ["ana", ["clean", "clean", "covered"], 100],
       ["sam", ["clean", "late", "missed"], 50],
     ]);
-    expect(record.rows[1].counts).toEqual({ onTime: 2, late: 1, missed: 1, skipped: 0, covered: 0 });
+    expect(record.rows[1].counts).toEqual({ onTime: 2, late: 1, missed: 1, skipped: 0, covered: 0, helped: 0 });
     expect(record.rows[0].counts.covered).toBe(1);
   });
 

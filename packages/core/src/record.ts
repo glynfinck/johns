@@ -10,13 +10,16 @@
  * The breakdown adds up one person's span the way the deal does
  * (deal.ts carryOver, creditedTo): their share comes off, then each John
  * counts for whoever did it. A miss counts for nobody, a cover for the
- * coverer, a skip or an open John for its holder.
+ * coverer, a skip or an open John for its holder. A John ticked by roll call
+ * (crew.ts) counts for everyone on it, their share each, helpers included
+ * (a "Helped" line); a holder it left off has a miss.
  */
 import { tz } from "@date-fns/tz";
 import { format } from "date-fns";
 
 import { awayDays, type AwayPeriod } from "./away";
 import { RECORD_COPY } from "./copy";
+import { andNames } from "./crew";
 import { creditedTo } from "./deal";
 import { dayLabel, monthLabel, weekRange } from "./format";
 import { localDate, monthOf } from "./week";
@@ -50,12 +53,27 @@ export interface RecordJohn {
   outcome: string | null;
   excused: boolean;
   covered_by: string | null;
+  /** A John done together's job, when read (crew.ts). */
+  job_id?: string | null;
+  /** When its roll call left its holder off, when read. */
+  absent_at?: string | null;
+}
+
+/** Who did a John by roll call: `crew` rows, when read. */
+export interface RecordCrew {
+  job_id: string;
+  assignment_id: string;
+  user_id: string;
+  helper: boolean;
+  points: number | string;
 }
 
 export interface RecordInput {
   weeks: readonly RecordWeek[];
   shares: readonly { week_id: string; user_id: string; share: number | string }[];
   johns: readonly RecordJohn[];
+  /** Roll calls; absent when not read. */
+  crew?: readonly RecordCrew[];
   away: readonly AwayPeriod[];
   memberIds: readonly string[];
   now: Date;
@@ -65,8 +83,8 @@ export interface RecordInput {
 /** How one John went for whoever held it: a cover by someone else is the holder's miss. */
 export type HeldMark = "clean" | "late" | "missed" | "skipped" | "open";
 
-export function heldMark(j: Pick<RecordJohn, "outcome" | "excused" | "covered_by" | "done_at">): HeldMark {
-  if (j.outcome === "missed" || j.outcome === "covered" || j.covered_by) return "missed";
+export function heldMark(j: Pick<RecordJohn, "outcome" | "excused" | "covered_by" | "done_at" | "absent_at">): HeldMark {
+  if (j.outcome === "missed" || j.outcome === "covered" || j.covered_by || j.absent_at) return "missed";
   if (j.outcome === "late") return "late";
   if (j.outcome === "excused" || j.excused) return "skipped";
   if (j.outcome === "done") return "clean";
@@ -87,6 +105,8 @@ export interface RecordCounts {
   skipped: number;
   /** Housemates' Johns they covered. */
   covered: number;
+  /** Johns they helped with, holding no place in them. */
+  helped: number;
 }
 
 export interface RecordRow {
@@ -150,7 +170,7 @@ export function trackRecord(input: RecordInput, span: RecordSpan): TrackRecord {
 
   const rows = input.memberIds.map((userId): RecordRow => {
     const held = johns.filter((j) => j.user_id === userId).sort((a, b) => a.due_at.localeCompare(b.due_at));
-    const counts: RecordCounts = { onTime: 0, late: 0, missed: 0, skipped: 0, covered: 0 };
+    const counts: RecordCounts = { onTime: 0, late: 0, missed: 0, skipped: 0, covered: 0, helped: 0 };
     for (const j of held) {
       const m = heldMark(j);
       if (m === "clean") counts.onTime += 1;
@@ -160,6 +180,7 @@ export function trackRecord(input: RecordInput, span: RecordSpan): TrackRecord {
     }
     const coveredFor = johns.filter((j) => j.covered_by === userId && j.user_id !== userId);
     counts.covered = coveredFor.length;
+    counts.helped = (input.crew ?? []).filter((c) => c.helper && c.user_id === userId && johns.some((j) => j.id === c.assignment_id)).length;
     const settled = counts.onTime + counts.late + counts.missed;
 
     const cells: RecordCell[] =
@@ -188,7 +209,7 @@ export interface BreakdownJohn {
   note: string | null;
 }
 
-export type BreakdownKey = "share" | "onTime" | "late" | "skipped" | "open" | "missed" | "covered";
+export type BreakdownKey = "share" | "onTime" | "late" | "skipped" | "open" | "missed" | "covered" | "helped";
 
 export interface BreakdownLine {
   key: BreakdownKey;
@@ -208,7 +229,7 @@ export interface Breakdown {
   total: number;
 }
 
-const BREAKDOWN_ORDER: readonly BreakdownKey[] = ["share", "onTime", "late", "skipped", "open", "missed", "covered"];
+const BREAKDOWN_ORDER: readonly BreakdownKey[] = ["share", "onTime", "late", "skipped", "open", "missed", "covered", "helped"];
 
 /** A line's points with its sign: "+10", "−15", "0"; to a tenth, since shares come in thirds. */
 export function signedPoints(points: number): string {
@@ -236,26 +257,46 @@ export function recordBreakdown(
 
   const lines = new Map<BreakdownKey, BreakdownLine>(BREAKDOWN_ORDER.map((key) => [key, { key, points: 0, johns: [] }]));
   lines.get("share")!.points = -round(share);
-  const add = (key: BreakdownKey, j: RecordJohn, note: string | null) => {
+  const crew = input.crew ?? [];
+  const crewOf = (j: RecordJohn) => crew.filter((c) => c.job_id === (j.job_id ?? j.id));
+  const add = (key: BreakdownKey, j: RecordJohn, note: string | null, credit?: number) => {
     const line = lines.get(key)!;
-    // What it adds is what the deal credits them with: nothing for a miss.
-    if (creditedTo({ userId: j.user_id, points: j.points, outcome: j.outcome, coveredBy: j.covered_by }) === userId) {
-      line.points += j.points;
-    }
-    line.johns.push({ id: j.id, name: j.name, day: dayLabel(new Date(j.due_at), input.zone), points: j.points, note });
+    // What it adds is what the deal credits them with: nothing for a miss,
+    // their share of a John ticked by roll call they were on.
+    const mine = crewOf(j).find((c) => c.user_id === userId);
+    const points =
+      credit ??
+      (mine
+        ? Number(mine.points)
+        : !j.absent_at && creditedTo({ userId: j.user_id, points: j.points, outcome: j.outcome, coveredBy: j.covered_by }) === userId
+          ? j.points
+          : 0);
+    line.points += points;
+    line.johns.push({ id: j.id, name: j.name, day: dayLabel(new Date(j.due_at), input.zone), points: mine ? round(points) : j.points, note });
+  };
+  /** Who else did it: "with Sam and Mo", or null. */
+  const doneWith = (j: RecordJohn) => {
+    const others = crewOf(j).filter((c) => c.user_id !== userId).map((c) => nameOf(c.user_id));
+    return others.length ? RECORD_COPY.doneWith(andNames(others)) : null;
   };
 
   for (const j of johns) {
     if (j.user_id === userId) {
       const m = heldMark(j);
-      if (m === "missed") add("missed", j, j.covered_by ? RECORD_COPY.coveredIt(nameOf(j.covered_by)) : null);
-      else if (m === "clean") add("onTime", j, null);
-      else if (m === "late") add("late", j, null);
+      if (m === "missed") add("missed", j, j.covered_by ? RECORD_COPY.coveredIt(nameOf(j.covered_by)) : j.absent_at ? RECORD_COPY.leftOff : null);
+      else if (m === "clean") add("onTime", j, doneWith(j));
+      else if (m === "late") add("late", j, doneWith(j));
       else if (m === "skipped") add("skipped", j, null);
-      else add("open", j, null);
+      else add("open", j, doneWith(j));
     } else if (j.covered_by === userId) {
       add("covered", j, RECORD_COPY.coveredFor(nameOf(j.user_id)));
     }
+  }
+  // Helping: a John ticked from a place they didn't hold.
+  for (const c of crew) {
+    if (!c.helper || c.user_id !== userId) continue;
+    const j = johns.find((x) => x.id === c.assignment_id);
+    if (j) add("helped", j, doneWith(j), Number(c.points));
   }
 
   const kept = BREAKDOWN_ORDER.map((key) => lines.get(key)!).filter((l) => l.key === "share" || l.johns.length > 0);

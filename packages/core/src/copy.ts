@@ -895,6 +895,70 @@ export const JOHN_SHEET_COPY = {
 } as const;
 
 /**
+ * Shared Jonz: "Done by" on the John list, a Together John's row and sheet,
+ * and the roll call ("Who did it?") that ticks a John with whoever did it.
+ */
+export const CREW_COPY = {
+  /** The John editor's row, and its choices: 0 is everyone home. */
+  doneBy: "Done by",
+  choice: (crew: number) => (crew === 0 ? "Everyone home" : crew === 1 ? "One person" : `${crew} people`),
+  /** Under the choices, with points per person: "4 pts each, so 12 in all". */
+  each: (points: string) => `${points} each`,
+  inAll: (each: string, total: string) => `${each} each, so ${total} in all`,
+  everyoneEach: (each: string) => `${each} each, for everyone at home that day`,
+  hint: "Effort is per person. Whoever does it shares the points, helpers included.",
+  /** Week's section of Johns done together. */
+  together: "Together",
+  /** A Together John's row: "with Sam and Ada". */
+  with: (names: string) => `with ${names}`,
+  /** The sheet's people, before and after the roll call. */
+  onIt: "On it",
+  didIt: "Who did it",
+  /** Beside someone on a settled roll call. */
+  helped: "Helped",
+  wasntThere: "Wasn’t there",
+  shareOf: (points: string) => `${points}`,
+  /** The roll call. */
+  title: "Who did it?",
+  sub: (john: string, total: string) => `${john} · ${total} shared by whoever did it`,
+  leftOff: (name: string) => `Counts as a miss for ${name}`,
+  addHelper: "Add someone who helped",
+  pickHelper: "Who helped?",
+  noMoreHelpers: "Everyone here is already on it.",
+  /** Under the list: "12 pts ÷ 3", "4 pts each". */
+  split: (total: string, people: number) => `${total} ÷ ${people}`,
+  splitEach: (each: string) => `${each} each`,
+  markDone: "Mark done",
+  photoDone: "Take a photo and mark done",
+  cancel: "Cancel",
+  /** A solo John's way into the roll call. */
+  withHelp: "Done with help",
+  /** You can't leave yourself off: whoever ticks it did it. */
+  youDidIt: "You did it",
+  /** A place left off, while it's checked: "Glyn ticked it at 14:10 without you". */
+  without: (who: string, when: string, whom: string) => `${who} ticked it ${when} without ${whom}`,
+  /** A place left off, once that stands. */
+  missedAbsent: "Left off the roll call, so it’s a miss.",
+  /** Covering a Together John nobody has ticked. */
+  coverBody: (owners: string, points: string, money: string | null) =>
+    `${owners} haven’t done it. If you do, it counts as a miss for each of them, and you get ${points}${money ? ` and ${money}` : ""}.`,
+  /** Why? on a Together John. */
+  needs: (n: number) => (n === 0 ? "Everyone home does it." : `Needs ${n}.`),
+  furthest: (names: string, one: boolean, home: number) =>
+    `${names} ${one ? "was" : "were"} furthest behind of the ${home} home.`,
+  allHome: (names: string, home: number) => `${names} were the ${home} at home that day.`,
+  /** Why? once the roll call has said who did it. */
+  sharedCounts: (names: string, each: string) => `${names} did it, so it counts as ${each} of work each.`,
+  absentCounts: (holder: string, whose: string) =>
+    `${holder} wasn’t there, so it’s ${whose} miss: the part goes to whoever did it, and the work comes back in the next deals.`,
+  /** Pushes. */
+  pushAdded: (who: string, john: string, points: string) => `${who} added you to ${john}, +${points}`,
+  pushAddedBody: "It counts as your work. If you didn’t help, say so on the John.",
+  pushLeftOff: (who: string, john: string) => `${who} ticked ${john} without you`,
+  pushLeftOffBody: "That counts as a miss for you. If you were there, dispute it on the John.",
+} as const;
+
+/**
  * The John sheet's "Why?": why the deal gave the John to whom it did, how
  * it added up, and what slipping would cost (or, once settled, whose work it
  * counted as). `who` is "You" or a first name; `whose`, "your" or "Ben’s".
@@ -1601,6 +1665,7 @@ export const RECORD_COPY = {
       c.missed ? `${c.missed} missed` : null,
       c.skipped ? `${c.skipped} skipped` : null,
       c.covered ? `covered ${c.covered}` : null,
+      c.helped ? `helped ${c.helped}` : null,
     ]
       .filter(Boolean)
       .join(" · "),
@@ -1629,6 +1694,7 @@ export const RECORD_COPY = {
     open: "Still to do",
     missed: "Missed",
     covered: "Covered for others",
+    helped: "Helped",
   } as Record<BreakdownKey, string>,
   yourShare: "Your share",
   /** Under the share: what it is. */
@@ -1638,6 +1704,9 @@ export const RECORD_COPY = {
   openMeta: "Counts as theirs until it’s done or missed",
   coveredIt: (name: string) => `${name} covered it`,
   coveredFor: (name: string) => `for ${name}`,
+  /** A John done together: "with Sam and Mo"; one they helped with: "with Glyn". */
+  doneWith: (names: string) => `with ${names}`,
+  leftOff: "left off the roll call",
   total: (name: string) => `${name}, this span`,
   totalYou: "You, this span",
   /** The breakdown's last word: what the deal does about it, over the weeks it remembers. */

@@ -46,6 +46,11 @@ const MESSAGES: Record<string, string> = {
   pass_needed: "Changing your list with Jonz comes with the House Pass.",
   draft_limit: "That’s enough for one day. Add the draft as it is and change it on the list, or try again tomorrow.",
   john_covered: "A housemate covered this one. Dispute it if it wasn’t done.",
+  roll_call_needed: "A John done together is ticked with who did it. Open it and mark it done there.",
+  not_in_crew: "Whoever ticks it did it, so you’re on the list.",
+  left_off: "The roll call said you weren’t there. Dispute it on the John if you were.",
+  not_your_tick: "Only whoever ticked it can take it back. Dispute it if it’s wrong.",
+  same_job: "You’re both on that John already.",
 };
 
 export function humanError(error: { message?: string; code?: string } | null | undefined): string {

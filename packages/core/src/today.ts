@@ -3,7 +3,8 @@ import { differenceInCalendarDays, format } from "date-fns";
 
 import { currentOrNext, type AwayPeriod } from "./away";
 import { byDoneLatest, isOpen, TODAY_ORDER, type BoardItem, type DisputeView, type WeekBoard } from "./board";
-import { FOCUS_SHELL_COPY, JOHN_SHEET_COPY, NEXT_UP_COPY } from "./copy";
+import { CREW_COPY, FOCUS_SHELL_COPY, JOHN_SHEET_COPY, NEXT_UP_COPY } from "./copy";
+import { andNames } from "./crew";
 import type { Currency, HouseRules } from "./domain";
 import { dateRange, dueInLine, firstName, pointsLabel, relative, sinceLabel, STATUS_LABEL, STATUS_MARK } from "./format";
 import { johnKind } from "./john-row";
@@ -43,9 +44,9 @@ function called(people: readonly Person[], userId: string | null): string {
 /** Settled one way or another: nothing more to do or check. A cover is, once its outcome is stamped (johnSheetMode). */
 const SETTLED: ReadonlySet<LiveStatus> = new Set<LiveStatus>(["done", "late", "excused", "missed", "covered"]);
 
-/** Whose tick it is: the housemate who covered it, or else whoever it was dealt to. */
-export function tickerOf(item: Pick<BoardItem, "userId"> & { coveredBy?: string | null }): string {
-  return item.coveredBy ?? item.userId;
+/** Whose tick it is: the housemate who covered it, whoever ticked its roll call, or else whoever it was dealt to. */
+export function tickerOf(item: Pick<BoardItem, "userId"> & Partial<Pick<BoardItem, "coveredBy" | "crew">>): string {
+  return item.coveredBy ?? item.crew?.tickedBy ?? item.userId;
 }
 
 /** Settled without a forfeit still to see: what "Done (n)" folds away. A missed John stays out, in hazard. */
@@ -341,14 +342,17 @@ export type JohnSheetMode =
  * everyone else, the John's owner included, a housemate's.
  */
 export function johnSheetMode(
-  item: Pick<BoardItem, "userId" | "status"> & Partial<Pick<BoardItem, "coveredBy" | "outcome">>,
+  item: Pick<BoardItem, "userId" | "status"> & Partial<Pick<BoardItem, "coveredBy" | "outcome" | "crew" | "absentAt">>,
   viewerId: string,
 ): JohnSheetMode {
   const ticks = tickerOf(item) === viewerId;
   if (item.status === "covered" && !item.outcome) return ticks ? "yours-checking" : "theirs-checking";
+  // Left off a roll call: a miss once it stands, and until then it can be disputed.
+  if (item.status === "missed" && item.absentAt && !item.outcome) return ticks ? "yours-checking" : "theirs-checking";
   if (SETTLED.has(item.status)) return "settled";
   const yours = item.userId === viewerId;
-  if (item.status === "checking") return yours ? "yours-checking" : "theirs-checking";
+  // Ticked by someone else's roll call: theirs to take back, yours to dispute.
+  if (item.status === "checking") return ticks ? "yours-checking" : "theirs-checking";
   if (item.status === "disputed") return ticks ? "yours-disputed" : "theirs-disputed";
   return yours ? "yours-open" : "theirs-open";
 }
@@ -359,7 +363,7 @@ export function johnSheetMode(
  * the list).
  */
 export function sheetKind(
-  item: Pick<BoardItem, "category" | "groupName" | "points" | "everyWeeks"> & Partial<Pick<BoardItem, "flaggedAt" | "everyMonths">>,
+  item: Pick<BoardItem, "category" | "groupName" | "points" | "everyWeeks"> & Partial<Pick<BoardItem, "flaggedAt" | "everyMonths" | "together">>,
 ): string {
   // A flag comes round when it's flagged, not every N weeks.
   const often = item.flaggedAt
@@ -369,7 +373,8 @@ export function sheetKind(
       : item.everyWeeks
         ? JOHN_SHEET_COPY.every(item.everyWeeks)
         : null;
-  return [johnKind(item.category), item.groupName, pointsLabel(item.points), often]
+  const points = (item.together?.length ?? 1) > 1 ? CREW_COPY.each(pointsLabel(item.points)) : pointsLabel(item.points);
+  return [johnKind(item.category), item.groupName, points, often]
     .filter(Boolean)
     .join(" · ");
 }
@@ -444,7 +449,12 @@ export function tickedLine(item: BoardItem, people: readonly Person[], viewerId:
   const ticker = tickerOf(item);
   const who = ticker === viewerId ? JOHN_SHEET_COPY.you : firstNameIn(people, ticker);
   const verb = item.coveredBy ? JOHN_SHEET_COPY.covered : JOHN_SHEET_COPY.ticked;
-  const ticked = item.doneAt ? verb(who, tickedAt(item.doneAt, now, rules.timezone)) : null;
+  const whom = item.userId === viewerId ? JOHN_SHEET_COPY.byYou : firstNameIn(people, item.userId);
+  const ticked = item.doneAt
+    ? verb(who, tickedAt(item.doneAt, now, rules.timezone))
+    : item.absentAt
+      ? CREW_COPY.without(who, tickedAt(item.absentAt, now, rules.timezone), whom)
+      : null;
   const stands =
     item.standsAt === null
       ? null
@@ -469,7 +479,7 @@ export function settledLine(item: BoardItem, people: readonly Person[], viewerId
     case "excused":
       return JOHN_SHEET_COPY.excused(who);
     case "missed":
-      return JOHN_SHEET_COPY.missed;
+      return item.absentAt ? CREW_COPY.missedAbsent : JOHN_SHEET_COPY.missed;
     case "covered": {
       const coverer = item.coveredBy === viewerId ? JOHN_SHEET_COPY.you : firstNameIn(people, item.coveredBy);
       const yours = item.userId === viewerId;
@@ -496,8 +506,16 @@ export interface CoverOffer {
  */
 export function coverOffer(item: BoardItem, people: readonly Person[], viewerId: string, rules: HouseRules, now: Date): CoverOffer {
   const owner = called(people, item.userId);
+  const holders = item.together ?? [item.userId];
+  // On a Together John you have a place in, you tick it with the roll call.
+  if (holders.includes(viewerId)) return { kind: null, text: null };
   if (canCover(item, viewerId, now, rules.coverGraceHours)) {
-    const money = rules.missedForfeitMinor > 0 ? formatMoney(rules.missedForfeitMinor, rules.currency) : null;
+    const each = rules.missedForfeitMinor * holders.length;
+    const money = each > 0 ? formatMoney(each, rules.currency) : null;
+    if (holders.length > 1) {
+      const owners = andNames(holders.map((id) => called(people, id)));
+      return { kind: "cover", text: CREW_COPY.coverBody(upperFirst(owners), pointsLabel(item.points * holders.length), money) };
+    }
     return { kind: "cover", text: JOHN_SHEET_COPY.coverBody(upperFirst(owner), pointsLabel(item.points), money) };
   }
   if (item.userId !== viewerId && item.status === "overdue") {
@@ -537,6 +555,8 @@ export function cantOptions(
     me.swapTokens > 0 && item.flaggedAt === null
       ? board.items
           .filter((i) => i.userId !== me.userId && isOpen(i.status) && i.flaggedAt === null)
+          // Nobody ends up with two places in one Together John.
+          .filter((i) => !(item.together ?? []).includes(i.userId) && !(i.together ?? []).includes(me.userId))
           .sort((a, b) => a.dueAt.getTime() - b.dueAt.getTime())
       : [];
   if (me.immunityTokens <= 0 && swapFor.length === 0) return null;

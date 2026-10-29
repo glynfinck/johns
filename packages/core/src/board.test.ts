@@ -89,6 +89,7 @@ describe("johnDef", () => {
       when: "day",
       respondHours: 12,
       perWeek: 2,
+      crew: 1,
     });
   });
 
@@ -447,8 +448,8 @@ describe("monthStandings", () => {
       NOW,
     );
     expect(table).toEqual([
-      { userId: "ava", points: 6, done: 1, late: 1, missed: 0, covered: 0, rank: 1 },
-      { userId: "ben", points: 4, done: 1, late: 0, missed: 1, covered: 0, rank: 2 },
+      { userId: "ava", points: 6, done: 1, late: 1, missed: 0, covered: 0, helped: 0, rank: 1 },
+      { userId: "ben", points: 4, done: 1, late: 0, missed: 1, covered: 0, helped: 0, rank: 2 },
     ]);
   });
 

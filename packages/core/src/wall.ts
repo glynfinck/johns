@@ -129,11 +129,15 @@ export function describeEvent(e: WallEvent, nameOf: (userId: string | null) => s
   const possessive = (name: string) => (name === "You" ? "your" : `${name}’s`);
   const b = (text: string): Part => ({ text, bold: true });
   const t = (text: string): Part => ({ text });
+  // A roll call says who else did it: "Glyn did Garden tidy with Sam and Mo."
+  const crew = Array.isArray(e.data.with) ? (e.data.with as unknown[]).filter((id): id is string => typeof id === "string") : [];
+  const withWhom = (): Part[] =>
+    crew.flatMap((id, i) => [t(i === 0 ? " with " : i === crew.length - 1 ? " and " : ", "), b(nameOf(id).replace(/^You$/, "you"))]);
   switch (e.kind) {
     case "done":
-      return { icon: "check", tone: "good", parts: [b(who), t(` did ${john}.`)] };
+      return { icon: "check", tone: "good", parts: [b(who), t(` did ${john}`), ...withWhom(), t(".")] };
     case "late":
-      return { icon: "check", parts: [b(who), t(` did ${john}, late.`)] };
+      return { icon: "check", parts: [b(who), t(` did ${john}`), ...withWhom(), t(", late.")] };
     case "missed":
       return { icon: "x", tone: "hazard", parts: [b(who), t(` missed ${john}.`)] };
     case "covered":

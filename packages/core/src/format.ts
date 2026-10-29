@@ -49,7 +49,9 @@ export function relative(target: Date, now: Date): string {
 
 /** "1 pt", "4 pts": a John's effort points as a label. */
 export function pointsLabel(points: number): string {
-  return `${points} ${points === 1 ? "pt" : "pts"}`;
+  // A John done together shares its points: to a tenth ("1.3 pts").
+  const shown = Math.round(points * 10) / 10;
+  return `${shown} ${shown === 1 ? "pt" : "pts"}`;
 }
 
 /**

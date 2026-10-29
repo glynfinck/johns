@@ -11,6 +11,11 @@ import type { Outcome } from "./domain";
  * A cover is a tick by a housemate instead of the assignee (`coveredBy`).
  * It is checked like any tick and, once it stands, settles as `covered`
  * rather than done or late.
+ *
+ * A place on a Together John that its roll call left off (`absentAt`) is
+ * checked with that roll call and, once it stands, settles as missed. It
+ * shows as missed from the moment of the roll call, as a cover shows as
+ * covered.
  */
 
 export interface AssignmentFacts {
@@ -30,6 +35,8 @@ export interface AssignmentFacts {
   flaggedAt?: Date | null;
   /** Who covered it, when the tick is a housemate's rather than the assignee's. */
   coveredBy?: string | null;
+  /** When a roll call left its holder off (crew.ts). */
+  absentAt?: Date | null;
 }
 
 const HOUR = 3_600_000;
@@ -61,6 +68,10 @@ export function settleOutcome(
   disputeHours: number,
 ): Outcome | null {
   if (a.excused) return "excused";
+  if (a.absentAt) {
+    if (a.disputeOpen || now < standsAt(a.absentAt, disputeHours)) return null;
+    return "missed";
+  }
   if (a.doneAt) {
     if (a.disputeOpen) return null;
     if (now < standsAt(a.doneAt, disputeHours)) return null;
@@ -77,8 +88,8 @@ export type LiveStatus =
   | "due-soon" // not done, due within a day
   | "overdue" // not done, past due, week still open
   | "checking" // ticked, inside the dispute window
-  | "disputed" // ticked, dispute open
-  | Outcome; // "covered" from the moment a housemate covers it, while it's checked too
+  | "disputed" // ticked, dispute open (a place its roll call left off, too)
+  | Outcome; // "covered" from the moment a housemate covers it, while it's checked too; "missed" from a roll call that left its holder off
 
 const DAY = 24 * HOUR;
 
@@ -90,6 +101,7 @@ export function liveStatus(
   if (a.outcome) return a.outcome;
   const settled = settleOutcome(a, now, disputeHours);
   if (settled) return settled;
+  if (a.absentAt) return a.disputeOpen ? "disputed" : "missed";
   if (a.doneAt) return a.disputeOpen ? "disputed" : a.coveredBy ? "covered" : "checking";
   if (now > a.dueAt) return "overdue";
   if (a.dueAt.getTime() - now.getTime() <= DAY) return "due-soon";
@@ -119,11 +131,19 @@ export function coverOpensAt(dueAt: Date, graceHours: number, closes: Date): Dat
  * offers what will work.
  */
 export function canCover(
-  a: { userId: string; doneAt: Date | null; outcome: Outcome | null; excused?: boolean; dueAt: Date; closesAt: Date },
+  a: {
+    userId: string;
+    doneAt: Date | null;
+    outcome: Outcome | null;
+    excused?: boolean;
+    dueAt: Date;
+    closesAt: Date;
+    absentAt?: Date | null;
+  },
   userId: string,
   now: Date,
   graceHours: number,
 ): boolean {
-  if (a.userId === userId || a.doneAt || a.outcome || a.excused) return false;
+  if (a.userId === userId || a.doneAt || a.outcome || a.excused || a.absentAt) return false;
   return now >= coverOpensAt(a.dueAt, graceHours, a.closesAt) && now < a.closesAt;
 }

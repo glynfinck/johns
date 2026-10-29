@@ -36,6 +36,7 @@ export type Database = {
     Tables: {
       assignments: {
         Row: {
+          absent_at: string | null
           category: string
           closes_at: string | null
           covered_by: string | null
@@ -50,6 +51,7 @@ export type Database = {
           group_name: string | null
           house_id: string
           id: string
+          job_id: string | null
           john_id: string | null
           name: string
           needs_photo: boolean
@@ -62,6 +64,7 @@ export type Database = {
           week_id: string
         }
         Insert: {
+          absent_at?: string | null
           category: string
           closes_at?: string | null
           covered_by?: string | null
@@ -76,6 +79,7 @@ export type Database = {
           group_name?: string | null
           house_id: string
           id?: string
+          job_id?: string | null
           john_id?: string | null
           name: string
           needs_photo?: boolean
@@ -88,6 +92,7 @@ export type Database = {
           week_id: string
         }
         Update: {
+          absent_at?: string | null
           category?: string
           closes_at?: string | null
           covered_by?: string | null
@@ -102,6 +107,7 @@ export type Database = {
           group_name?: string | null
           house_id?: string
           id?: string
+          job_id?: string | null
           john_id?: string | null
           name?: string
           needs_photo?: boolean
@@ -193,6 +199,58 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "members"
             referencedColumns: ["house_id", "user_id"]
+          },
+        ]
+      }
+      crew: {
+        Row: {
+          assignment_id: string
+          created_at: string
+          helper: boolean
+          house_id: string
+          job_id: string
+          points: number
+          user_id: string
+        }
+        Insert: {
+          assignment_id: string
+          created_at?: string
+          helper?: boolean
+          house_id: string
+          job_id: string
+          points: number
+          user_id: string
+        }
+        Update: {
+          assignment_id?: string
+          created_at?: string
+          helper?: boolean
+          house_id?: string
+          job_id?: string
+          points?: number
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "crew_assignment_id_fkey"
+            columns: ["assignment_id"]
+            isOneToOne: false
+            referencedRelation: "assignments"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "crew_house_id_fkey"
+            columns: ["house_id"]
+            isOneToOne: false
+            referencedRelation: "houses"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "crew_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
           },
         ]
       }
@@ -568,6 +626,7 @@ export type Database = {
           archived_at: string | null
           category: string
           created_at: string
+          crew: number
           due_dow: number
           due_time: string
           every_months: number | null
@@ -589,6 +648,7 @@ export type Database = {
           archived_at?: string | null
           category?: string
           created_at?: string
+          crew?: number
           due_dow?: number
           due_time?: string
           every_months?: number | null
@@ -610,6 +670,7 @@ export type Database = {
           archived_at?: string | null
           category?: string
           created_at?: string
+          crew?: number
           due_dow?: number
           due_time?: string
           every_months?: number | null
@@ -648,6 +709,7 @@ export type Database = {
           assignment_id: string | null
           counterparty: string | null
           created_at: string
+          doers: string[] | null
           house_id: string
           id: number
           kind: string
@@ -659,6 +721,7 @@ export type Database = {
           assignment_id?: string | null
           counterparty?: string | null
           created_at?: string
+          doers?: string[] | null
           house_id: string
           id?: never
           kind: string
@@ -670,6 +733,7 @@ export type Database = {
           assignment_id?: string | null
           counterparty?: string | null
           created_at?: string
+          doers?: string[] | null
           house_id?: string
           id?: never
           kind?: string
@@ -1140,6 +1204,7 @@ export type Database = {
       my_open_assignment: {
         Args: { p_assignment: string }
         Returns: {
+          absent_at: string | null
           category: string
           closes_at: string | null
           covered_by: string | null
@@ -1154,6 +1219,7 @@ export type Database = {
           group_name: string | null
           house_id: string
           id: string
+          job_id: string | null
           john_id: string | null
           name: string
           needs_photo: boolean
@@ -1202,6 +1268,10 @@ export type Database = {
       resolve_dispute: {
         Args: { p_dispute: string; p_resolution: string }
         Returns: boolean
+      }
+      roll_call: {
+        Args: { p_assignment: string; p_crew: string[]; p_photo_path?: string }
+        Returns: number
       }
       save_group: {
         Args: {

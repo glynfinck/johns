@@ -187,6 +187,7 @@ describe("JohnDraft", () => {
       when: "day",
       respondHours: 12,
       perWeek: 2,
+      crew: 1,
       everyMonths: null,
       weekOfMonth: null,
       anchorMonth: null,

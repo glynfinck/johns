@@ -126,7 +126,7 @@ export interface WeekPerson<T> {
  * without Johns. With a filter, only the people with Johns in its part,
  * showing just those, unfolded.
  */
-export function weekPeople<T extends { userId: string; status: LiveStatus; dueAt: Date; doneAt?: Date | null }>(
+export function weekPeople<T extends { userId: string; status: LiveStatus; dueAt: Date; doneAt?: Date | null; jobId?: string | null }>(
   items: readonly T[],
   memberIds: readonly string[],
   viewerId: string,
@@ -140,12 +140,41 @@ export function weekPeople<T extends { userId: string; status: LiveStatus; dueAt
     const theirs = items.filter((i) => i.userId === userId);
     return {
       userId,
-      ...weekList(theirs, filter),
+      // A John done together has its own row under Together (weekTogether), but counts here.
+      ...weekList(theirs.filter((i) => !i.jobId), filter),
       total: theirs.length,
       done: theirs.filter((i) => weekFinished(i.status)).length,
     };
   });
   return filter ? people.filter((p) => p.rows.length > 0) : people;
+}
+
+/**
+ * Each John done together once (a job's places, crew.ts): the viewer's own
+ * place in it if they have one, else the place its roll call was ticked
+ * from, else its first. What needs doing first; with a filter, only those
+ * with a place in its part.
+ */
+export function weekTogether<
+  T extends { id: string; userId: string; status: LiveStatus; dueAt: Date; doneAt?: Date | null; jobId?: string | null; crew?: { tickedFrom: string } | null },
+>(items: readonly T[], viewerId: string, filter: WeekPart | null = null): T[] {
+  const jobs = new Map<string, T[]>();
+  for (const i of items) if (i.jobId) jobs.set(i.jobId, [...(jobs.get(i.jobId) ?? []), i]);
+  const shown: T[] = [];
+  for (const places of jobs.values()) {
+    if (filter && !places.some((p) => weekPart(p.status) === filter)) continue;
+    const ticked = places[0].crew?.tickedFrom;
+    shown.push(places.find((p) => p.userId === viewerId) ?? places.find((p) => p.id === ticked) ?? places[0]);
+  }
+  return shown.sort((a, b) => Number(weekFinished(a.status)) - Number(weekFinished(b.status)) || byNeed(a, b));
+}
+
+/** The week with each John done together as one row (weekTogether's), for the laptop's table. */
+export function oneRowPerJob<
+  T extends { id: string; userId: string; status: LiveStatus; dueAt: Date; doneAt?: Date | null; jobId?: string | null; crew?: { tickedFrom: string } | null },
+>(items: readonly T[], viewerId: string): T[] {
+  const together = new Set(weekTogether(items, viewerId).map((i) => i.id));
+  return items.filter((i) => !i.jobId || together.has(i.id));
 }
 
 /**

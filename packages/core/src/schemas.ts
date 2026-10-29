@@ -107,6 +107,9 @@ export const JohnDraft = z.object({
   when: z.enum(JOHN_WHEN).default("day"),
   respondHours: z.coerce.number().int().min(1, "Give between 1 and 72 hours.").max(72, "Give between 1 and 72 hours.").default(12),
   perWeek: z.coerce.number().int().min(1).max(14).default(2),
+  // Done by (johns.crew): how many do it together, 1 to 6, or 0 for everyone
+  // home. Its points are per person. On call is always one.
+  crew: z.coerce.number().int().min(0).max(6).default(1),
 }).refine((j) => (j.everyMonths === null) === (j.weekOfMonth === null), "Say which week of the month it lands in.");
 export type JohnDraft = z.infer<typeof JohnDraft>;
 /** A JohnDraft before it is checked: the monthly fields may be left out (a weekly John). */
