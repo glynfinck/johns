@@ -136,15 +136,40 @@ describe("tidyDraft", () => {
     const draft = tidyDraft(
       {
         johns: [
-          { name: "  Oven   clean ", category: "kitchen", points: 14, everyWeeks: 0, dueDow: 9, dueTime: "7:30", why: "nobody does it" },
+          { name: "  Oven   clean ", category: "kitchen", points: 24, everyWeeks: 0, dueDow: 9, dueTime: "7:30", why: "nobody does it" },
           { name: "Plants", category: "garden", points: "2.6", dueTime: "25:00" },
         ],
       },
       people,
       ME,
     );
-    expect(draft.johns[0]).toMatchObject({ name: "Oven clean", points: 10, everyWeeks: 1, dueDow: 7, dueTime: "07:30", why: "nobody does it" });
+    expect(draft.johns[0]).toMatchObject({ name: "Oven clean", points: 20, everyWeeks: 1, everyMonths: null, weekOfMonth: null, dueDow: 7, dueTime: "07:30", why: "nobody does it" });
     expect(draft.johns[1]).toMatchObject({ name: "Plants", category: "other", points: 3, everyWeeks: 1, dueTime: "21:00", when: "day", group: null });
+    for (const j of draft.johns) expect(DraftedJohn.safeParse(j).success).toBe(true);
+  });
+
+  it("takes any period: weeks up to 26, or months on a weekday of the month", () => {
+    const draft = tidyDraft(
+      {
+        johns: [
+          { name: "Fridge deep clean", everyMonths: 3, weekOfMonth: 1, dueDow: 6 },
+          { name: "Gutters", everyMonths: 12, weekOfMonth: 9, everyWeeks: 4 },
+          { name: "Sheets", everyWeeks: 40, everyMonths: null },
+          { name: "Bins", everyMonths: 3, onCall: true },
+          { name: "Windows", everyMonths: "quarterly" },
+          { name: "Boiler service", everyMonths: 99 },
+        ],
+      },
+      people,
+      ME,
+    );
+    const by = (name: string) => draft.johns.find((j) => j.name === name);
+    expect(by("Fridge deep clean")).toMatchObject({ everyWeeks: 1, everyMonths: 3, weekOfMonth: 1, dueDow: 6 });
+    expect(by("Gutters")).toMatchObject({ everyWeeks: 1, everyMonths: 12, weekOfMonth: 5 });
+    expect(by("Sheets")).toMatchObject({ everyWeeks: 26, everyMonths: null, weekOfMonth: null });
+    expect(by("Bins")).toMatchObject({ when: "on_call", everyMonths: null, weekOfMonth: null });
+    expect(by("Windows")).toMatchObject({ everyMonths: null, weekOfMonth: null });
+    expect(by("Boiler service")).toMatchObject({ everyMonths: 60, weekOfMonth: 1 });
     for (const j of draft.johns) expect(DraftedJohn.safeParse(j).success).toBe(true);
   });
 

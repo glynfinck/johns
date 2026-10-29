@@ -108,7 +108,7 @@ it("asks for the week that holds now in the house's own zone, and only open disp
     ['house_id', 'h1'],
   ]);
   // How often each John comes round rides along, for the John sheet.
-  expect(calls('assignments', 'select')).toEqual([['*, johns(every_weeks)'], ['*, johns(every_weeks)']]);
+  expect(calls('assignments', 'select')).toEqual([['*, johns(every_weeks, every_months)'], ['*, johns(every_weeks, every_months)']]);
   // A John from an earlier week that hasn't settled stays its holder's.
   expect(calls('assignments', 'neq')).toEqual([['week_id', 'w1']]);
   expect(calls('assignments', 'not')).toEqual([]);

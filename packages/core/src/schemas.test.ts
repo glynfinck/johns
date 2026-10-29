@@ -181,7 +181,16 @@ describe("JohnDraft", () => {
   };
 
   it("takes a new John, and an edit of one", () => {
-    expect(JohnDraft.parse(john)).toEqual({ ...john, name: "Bins", when: "day", respondHours: 12, perWeek: 2 });
+    expect(JohnDraft.parse(john)).toEqual({
+      ...john,
+      name: "Bins",
+      when: "day",
+      respondHours: 12,
+      perWeek: 2,
+      everyMonths: null,
+      weekOfMonth: null,
+      anchorMonth: null,
+    });
     const id = crypto.randomUUID();
     expect(JohnDraft.parse({ ...john, id, groupId: id })).toMatchObject({ id, groupId: id });
   });
@@ -199,6 +208,17 @@ describe("JohnDraft", () => {
     expect(problem({ when: "sometimes" })).toBeDefined();
   });
 
+  it("takes any period: every 26 weeks, or every few months on a weekday of the month, effort up to 20", () => {
+    expect(JohnDraft.safeParse({ ...john, everyWeeks: 26, points: 20 }).success).toBe(true);
+    expect(JohnDraft.parse({ ...john, everyMonths: 3, weekOfMonth: 1, anchorMonth: 24322 })).toMatchObject({
+      everyMonths: 3,
+      weekOfMonth: 1,
+      anchorMonth: 24322,
+    });
+    expect(JohnDraft.safeParse({ ...john, everyMonths: 60, weekOfMonth: 5 }).success).toBe(true);
+    expect(JohnDraft.safeParse({ ...john, everyMonths: 3 }).error?.issues[0].message).toBe("Say which week of the month it lands in.");
+  });
+
   it("says what’s wrong in words", () => {
     const problem = (patch: object) => JohnDraft.safeParse({ ...john, ...patch }).error?.issues[0].message;
     expect(problem({ name: "" })).toBe("Name the John.");
@@ -208,12 +228,28 @@ describe("JohnDraft", () => {
     expect(problem({ dueTime: "00:00" })).toBeUndefined();
   });
 
+  it("takes any period: every 26 weeks, or every few months on a weekday of the month, effort up to 20", () => {
+    expect(JohnDraft.safeParse({ ...john, everyWeeks: 26, points: 20 }).success).toBe(true);
+    expect(JohnDraft.parse({ ...john, everyMonths: 3, weekOfMonth: 1, anchorMonth: 24322 })).toMatchObject({
+      everyMonths: 3,
+      weekOfMonth: 1,
+      anchorMonth: 24322,
+    });
+    expect(JohnDraft.safeParse({ ...john, everyMonths: 60, weekOfMonth: 5 }).success).toBe(true);
+    expect(JohnDraft.safeParse({ ...john, everyMonths: 3 }).error?.issues[0].message).toBe("Say which week of the month it lands in.");
+  });
+
   it("keeps effort, cadence and the day in range", () => {
     for (const patch of [
       { points: 0 },
-      { points: 11 },
+      { points: 21 },
       { everyWeeks: 0 },
-      { everyWeeks: 5 },
+      { everyWeeks: 27 },
+      { everyMonths: 0, weekOfMonth: 1 },
+      { everyMonths: 61, weekOfMonth: 1 },
+      { everyMonths: 3, weekOfMonth: 6 },
+      { everyMonths: 3 },
+      { weekOfMonth: 1 },
       { dueDow: 0 },
       { dueDow: 8 },
       { category: "garden" },

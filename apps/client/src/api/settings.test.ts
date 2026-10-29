@@ -92,6 +92,9 @@ describe('loadJohnList', () => {
           when: 'day',
           respondHours: 12,
           perWeek: 2,
+          everyMonths: null,
+          weekOfMonth: null,
+          anchorMonth: null,
         },
       ],
       groups: [{ id: 'g1', name: 'Upstairs', memberIds: ['ava'] }],
@@ -121,6 +124,9 @@ describe('saveJohn', () => {
       category: 'kitchen',
       points: 2,
       every_weeks: 1,
+      every_months: null,
+      week_of_month: null,
+      anchor_month: null,
       due_dow: 7,
       due_time: '18:30',
       needs_photo: false,
@@ -132,6 +138,22 @@ describe('saveJohn', () => {
       anchor_week: weekIndex(weekWindow(NOW, 'Europe/London', 1).startsOn),
     });
     expect(callsOf('johns', 'update')).toEqual([]);
+  });
+
+  it('starts a John that repeats in months in the first month it lands from next week', async () => {
+    // Every 3 months on the first Saturday: next week is 26 Oct, so the first is Sat 7 Nov.
+    await saveJohn('h1', RULES, { ...NEW_JOHN, name: 'Fridge', everyWeeks: 4, everyMonths: 3, weekOfMonth: 1, dueDow: 6 }, NOW);
+    const [[row]] = callsOf('johns', 'insert') as [[Record<string, unknown>]];
+    expect(row).toMatchObject({ every_weeks: 1, every_months: 3, week_of_month: 1, anchor_month: 2026 * 12 + 10 });
+  });
+
+  it('keeps the month a John that repeats in months counts from, and clears it going back to weeks', async () => {
+    const id = crypto.randomUUID();
+    const fridge = { ...NEW_JOHN, id, name: 'Fridge', everyMonths: 3, weekOfMonth: 1, anchorMonth: 2026 * 12 + 11, dueDow: 6 as const };
+    await saveJohn('h1', RULES, fridge, NOW);
+    expect(callsOf('johns', 'update')[0][0]).toMatchObject({ every_months: 3, week_of_month: 1, anchor_month: 2026 * 12 + 11 });
+    await saveJohn('h1', RULES, { ...fridge, everyWeeks: 2, everyMonths: null, weekOfMonth: null }, NOW);
+    expect(callsOf('johns', 'update')[1][0]).toMatchObject({ every_weeks: 2, every_months: null, week_of_month: null, anchor_month: null });
   });
 
   it('edits a John in this house only', async () => {

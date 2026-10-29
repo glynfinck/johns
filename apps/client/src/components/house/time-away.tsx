@@ -7,6 +7,7 @@ import {
   DOW_LABEL,
   firstName,
   FOCUS_SHELL_COPY,
+  HISTORY_COPY,
   monthLabel,
   monthWeeks,
   SETUP_COPY,
@@ -37,6 +38,7 @@ import { Sheet } from '@/components/sheet';
 import { Body, Meta } from '@/components/text';
 import { TextButton } from '@/components/text-button';
 import { useMove } from '@/hooks/use-move';
+import { useUndoOffer } from '@/hooks/use-undo-offer';
 import { FONT, RADIUS, SPACE, useTheme, type Theme } from '@/theme';
 
 /**
@@ -292,6 +294,7 @@ function TripRow({ houseId, period, today }: { houseId: string; period: AwayPeri
  */
 export function AwayForm({ houseId, today, weekStarts }: { houseId: string; today: string; weekStarts: IsoDow }) {
   const move = useMove(houseId);
+  const offer = useUndoOffer(houseId);
   const [range, setRange] = useState<DateRange>({ from: null, to: null });
   const [picking, setPicking] = useState(false);
   const [note, setNote] = useState('');
@@ -304,6 +307,7 @@ export function AwayForm({ houseId, today, weekStarts }: { houseId: string; toda
       count = await setAway({ from: range.from!, to: range.to!, note });
     });
     if (!ok) return;
+    offer(HISTORY_COPY.away, 'away');
     setMoved(count);
     setRange({ from: null, to: null });
     setNote('');

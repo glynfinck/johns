@@ -140,7 +140,8 @@ each app's AGENTS.md.
   `undo_cover`, `raise_dispute`,
   `cast_vote`, `use_immunity`, `use_swap`, `confirm_payment`,
   `create_house`, `join_house`, `set_member_role`, `remove_member`,
-  `save_group`, `delete_group`, `set_away`, `cancel_away`, `raise_flag`;
+  `save_group`, `delete_group`, `set_away`, `cancel_away`, `raise_flag`,
+  and `undo_action` / `undo_latest` for Undo (`docs/specs/undo-history.md`);
   a notification's buttons reach `mark_done` and `cast_vote` through the
   service-role-only `push_action`) or a few column
   grants (house settings and the John list, its group included, for admins;
@@ -238,8 +239,10 @@ its Stripe ids in `house_pass_billing`, which housemates can't read:
 `docs/specs/house-pass.md`) → `members`
 (role admin/member, streak, tokens; one house per person via
 `members_one_house`, dropped when "more than one house" ships) → `groups` +
-`group_members` → `johns` (the list: category, points 1–10, every N weeks
-from `anchor_week`, due day and time, needs photo, optional `group_id`) →
+`group_members` → `johns` (the list: category, points 1–20, every N weeks
+from `anchor_week` or every N months from `anchor_month` on a weekday of the
+month, due day and time, needs photo, optional `group_id`:
+`docs/specs/any-length-repeats.md`) →
 `weeks` (unique per house and local start date) + `week_shares` (each
 housemate's share of it) → `assignments` (a snapshot of the John as dealt,
 `group_name`, `due_at`, `due_moved_from`, `done_at`, `photo_path`, `outcome`

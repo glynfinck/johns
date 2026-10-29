@@ -1,4 +1,4 @@
-import { HOUSE_PAGE_COPY, monthCard, settleRows, type SettleRow } from '@app/core';
+import { HISTORY_COPY, HOUSE_PAGE_COPY, monthCard, settleRows, type SettleRow } from '@app/core';
 import type { UseQueryResult } from '@tanstack/react-query';
 import { CheckIcon } from 'lucide-react-native';
 import { StyleSheet, Text, View } from 'react-native';
@@ -13,6 +13,7 @@ import { Row } from '@/components/row';
 import { Lead, Meta, SectionLabel } from '@/components/text';
 import type { HouseView } from '@/hooks/use-house';
 import { useMove } from '@/hooks/use-move';
+import { useUndoOffer } from '@/hooks/use-undo-offer';
 import { SPACE, useTheme } from '@/theme';
 
 /**
@@ -72,6 +73,7 @@ export function MonthCard({ houseId, userId, view, stake }: { houseId: string; u
 /** One settle-up, from your side: the row, and for what's owed to you the button that says it arrived. */
 function SettleUp({ houseId, row }: { houseId: string; row: SettleRow }) {
   const move = useMove(houseId);
+  const offer = useUndoOffer(houseId);
   return (
     <View testID="transfer">
       {/* The months it's from are in the title: two lines, so it isn't cut off. */}
@@ -84,7 +86,11 @@ function SettleUp({ houseId, row }: { houseId: string; row: SettleRow }) {
             label={move.pending ? HOUSE_PAGE_COPY.marking : row.action}
             spoken={move.pending ? undefined : (row.spoken ?? undefined)}
             disabled={move.pending}
-            onPress={() => void move.run(() => confirmPayment(houseId, row.userId, row.amount))}
+            onPress={() =>
+              void move.run(() => confirmPayment(houseId, row.userId, row.amount)).then((done) => {
+                if (done) offer(HISTORY_COPY.paid, 'payment', row.userId);
+              })
+            }
           />
         </View>
       ) : null}

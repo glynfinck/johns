@@ -1,4 +1,16 @@
-import { DEAL_COPY, FOCUS_SHELL_COPY, HOUSE_LOWER_COPY, JOHN_LIST_COPY, NEW_JOHN, NEXT_UP_COPY, PAGE_TITLE, SECTION_LABEL, SETUP_COPY } from '@app/core';
+import {
+  CATEGORY_LABEL,
+  DEAL_COPY,
+  FOCUS_SHELL_COPY,
+  HOUSE_LOWER_COPY,
+  JOHN_LIST_COPY,
+  NEW_JOHN,
+  NEXT_UP_COPY,
+  PAGE_TITLE,
+  REPEAT_COPY,
+  SECTION_LABEL,
+  SETUP_COPY,
+} from '@app/core';
 import { router, Slot } from 'expo-router';
 import { act, fireEvent, screen, waitFor, within } from 'expo-router/testing-library';
 import { useContext } from 'react';
@@ -72,6 +84,18 @@ async function pick(form: ReturnType<typeof within>, setting: string, choice: st
   await fireEvent.press(form.getByRole('button', { name: new RegExp(`^${setting}, `) }));
   await fireEvent.press(form.getByRole('radio', { name: choice }));
 }
+
+/** A word in the timing sentence, opened: its choices take the form's place until Done. */
+async function word(form: ReturnType<typeof within>, what: string, label: string) {
+  await fireEvent.press(form.getByRole('button', { name: REPEAT_COPY.word(what, label) }));
+}
+
+/** The timing sentence, as it reads: its words are laid out apart, so joined here with spaces. */
+const sentence = () =>
+  within(screen.getByTestId('john-sentence'))
+    .getAllByText(/./)
+    .map((t) => t.props.children)
+    .join(' ');
 
 beforeEach(() => {
   jest.clearAllMocks();
@@ -147,12 +171,21 @@ describe('an admin', () => {
     await fireEvent.changeText(form.getByTestId('john-name'), 'Shower');
     await pick(form, JOHN_LIST_COPY.kind, 'Bathroom');
     await pick(form, JOHN_LIST_COPY.effort, '5 pts');
-    await pick(form, JOHN_LIST_COPY.often, JOHN_LIST_COPY.every[2]);
-    await pick(form, JOHN_LIST_COPY.due, 'Monday');
-    // A picked setting closes again and says what it's set to.
-    expect(form.getByRole('button', { name: `${JOHN_LIST_COPY.due}, Monday` })).toBeCollapsed();
-    expect(form.queryByRole('radio')).toBeNull();
+    // When it comes round reads as a sentence, each word opening its own choices.
+    expect(sentence()).toBe('Every week on Sunday by 21:00');
+    await word(form, REPEAT_COPY.often, 'week');
+    expect(screen.getByTestId('picker-often')).toBeOnTheScreen();
+    expect(screen.queryByTestId('john-name')).toBeNull();
+    await fireEvent.press(form.getByRole('radio', { name: 'Every 2 weeks' }));
+    await fireEvent.press(form.getByTestId('timing-done'));
+    await word(form, REPEAT_COPY.day, 'Sunday');
+    await fireEvent.press(within(form.getByTestId('timing-days')).getByRole('radio', { name: 'Monday' }));
+    await fireEvent.press(form.getByTestId('timing-done'));
+    await word(form, REPEAT_COPY.time, '21:00');
     await fireEvent.changeText(form.getByTestId('john-time'), '18:30');
+    await fireEvent.press(form.getByTestId('timing-done'));
+    expect(sentence()).toBe('Every 2 weeks on Monday by 18:30');
+    expect(form.getByTestId('john-next')).toHaveTextContent(/^Next: /);
     const photo = form.getByRole('checkbox', { name: `${JOHN_LIST_COPY.photo}, ${SETUP_COPY.photoMeta}` });
     expect(photo).not.toBeChecked();
     await fireEvent.press(photo);
@@ -177,6 +210,90 @@ describe('an admin', () => {
     await waitFor(() => expect(screen.queryByRole('header', { name: JOHN_LIST_COPY.add })).toBeNull());
     // The list is read again with the change.
     expect(loadJohnList).toHaveBeenCalledTimes(2);
+  });
+
+  it('sets a John to come round every few months, on a weekday of the month', async () => {
+    await open();
+    await fireEvent.press(screen.getByRole('button', { name: JOHN_LIST_COPY.add }));
+    const form = within(screen.getByTestId('john-form'));
+    await fireEvent.changeText(form.getByTestId('john-name'), 'Fridge deep clean');
+    await pick(form, JOHN_LIST_COPY.effort, '8 pts');
+    await word(form, REPEAT_COPY.often, 'week');
+    await fireEvent.press(form.getByRole('radio', { name: 'Every 3 months' }));
+    // Into months, it lands on the first of its day.
+    expect(within(form.getByTestId('timing-unit')).getByRole('radio', { name: REPEAT_COPY.units.months })).toBeChecked();
+    await fireEvent.press(form.getByTestId('timing-done'));
+    expect(sentence()).toMatch(/^Every 3 months from \w+ on the first Sunday by 21:00$/);
+    await word(form, REPEAT_COPY.which('Sunday'), 'first');
+    // Each choice says when it would land.
+    expect(form.getByRole('radio', { name: /^Last/ })).toBeOnTheScreen();
+    await fireEvent.press(form.getByRole('radio', { name: /^Last/ }));
+    await fireEvent.press(form.getByTestId('timing-done'));
+    await word(form, REPEAT_COPY.day, 'Sunday');
+    await fireEvent.press(within(form.getByTestId('timing-days')).getByRole('radio', { name: 'Saturday' }));
+    await fireEvent.press(form.getByTestId('timing-done'));
+    expect(sentence()).toMatch(/^Every 3 months from \w+ on the last Saturday by 21:00$/);
+    // It starts in the first of the next three months it can, unless told another.
+    await fireEvent.press(form.getByRole('button', { name: new RegExp(`^${REPEAT_COPY.startsIn}: `) }));
+    const months = within(form.getByTestId('picker-from')).getAllByRole('radio');
+    expect(months).toHaveLength(3);
+    expect(months[0]).toBeChecked();
+    await fireEvent.press(months[1]);
+    expect(within(form.getByTestId('picker-from')).getAllByRole('radio')[1]).toBeChecked();
+    await fireEvent.press(form.getByTestId('timing-done'));
+    await fireEvent.press(form.getByTestId('save-john'));
+    expect(saveJohn).toHaveBeenCalledWith(
+      'h1',
+      snapshot().rules,
+      { ...NEW_JOHN, name: 'Fridge deep clean', points: 8, everyWeeks: 1, everyMonths: 3, weekOfMonth: 5, dueDow: 6, anchorMonth: expect.any(Number) },
+      expect.any(Date),
+    );
+  });
+
+  it('takes any period, up to years', async () => {
+    await open();
+    await fireEvent.press(screen.getByRole('button', { name: JOHN_LIST_COPY.add }));
+    const form = within(screen.getByTestId('john-form'));
+    await word(form, REPEAT_COPY.often, 'week');
+    await fireEvent.press(form.getByRole('button', { name: `${REPEAT_COPY.more}: ${REPEAT_COPY.often}` }));
+    expect(form.getByTestId('stepper-value')).toHaveTextContent('2');
+    await fireEvent.press(within(form.getByTestId('timing-unit')).getByRole('radio', { name: REPEAT_COPY.units.years }));
+    await fireEvent.press(form.getByTestId('timing-done'));
+    // A John that comes round in years starts in a month, rather than from one.
+    expect(sentence()).toMatch(/^Every 2 years in \w+ on the first Sunday by 21:00$/);
+    await fireEvent.changeText(form.getByTestId('john-name'), 'Gutters');
+    await fireEvent.press(form.getByTestId('save-john'));
+    expect(saveJohn).toHaveBeenCalledWith(
+      'h1',
+      snapshot().rules,
+      { ...NEW_JOHN, name: 'Gutters', everyMonths: 24, weekOfMonth: 1 },
+      expect.any(Date),
+    );
+  });
+
+  it('switches a John to on call, with how often it comes up and how long whoever has it gets', async () => {
+    await open();
+    await fireEvent.press(screen.getByRole('button', { name: JOHN_LIST_COPY.add }));
+    const form = within(screen.getByTestId('john-form'));
+    await fireEvent.changeText(form.getByTestId('john-name'), 'Kitchen bin');
+    await fireEvent.press(within(form.getByTestId('john-timing')).getByRole('radio', { name: JOHN_LIST_COPY.onCall }));
+    expect(sentence()).toBe('On call, up to 2 times a week, done within 12 hours');
+    expect(form.getByTestId('on-call-note')).toBeOnTheScreen();
+    expect(form.queryByTestId('john-next')).toBeNull();
+    await word(form, REPEAT_COPY.timesAWeek, REPEAT_COPY.times(2));
+    await fireEvent.press(form.getByRole('button', { name: `${REPEAT_COPY.more}: ${REPEAT_COPY.timesAWeek}` }));
+    await fireEvent.press(form.getByTestId('timing-done'));
+    await word(form, REPEAT_COPY.within, JOHN_LIST_COPY.respondHours(12));
+    await fireEvent.press(form.getByRole('radio', { name: JOHN_LIST_COPY.respondHours(4) }));
+    await fireEvent.press(form.getByTestId('timing-done'));
+    expect(sentence()).toBe('On call, up to 3 times a week, done within 4 hours');
+    await fireEvent.press(form.getByTestId('save-john'));
+    expect(saveJohn).toHaveBeenCalledWith(
+      'h1',
+      snapshot().rules,
+      { ...NEW_JOHN, name: 'Kitchen bin', when: 'on_call', perWeek: 3, respondHours: 4 },
+      expect.any(Date),
+    );
   });
 
   it('adds the first John from the empty list', async () => {
@@ -208,10 +325,11 @@ describe('an admin', () => {
     const form = within(screen.getByTestId('john-form'));
     expect(form.getByTestId('john-name')).toHaveDisplayValue('Bins');
     expect(form.getByRole('button', { name: `${JOHN_LIST_COPY.kind}, Bins & recycling` })).toBeOnTheScreen();
-    expect(form.getByRole('button', { name: `${JOHN_LIST_COPY.due}, Thursday` })).toBeOnTheScreen();
-    // An open setting ticks what it's set to.
-    await fireEvent.press(form.getByRole('button', { name: `${JOHN_LIST_COPY.due}, Thursday` }));
-    expect(form.getByRole('radio', { name: 'Thursday' })).toBeChecked();
+    expect(sentence()).toBe('Every week on Thursday by 07:00');
+    // An open word ticks what it's set to.
+    await word(form, REPEAT_COPY.day, 'Thursday');
+    expect(within(form.getByTestId('timing-days')).getByRole('radio', { name: 'Thursday' })).toBeChecked();
+    await fireEvent.press(form.getByTestId('timing-done'));
     await fireEvent.press(form.getByRole('button', { name: JOHN_LIST_COPY.remove }));
     expect(archiveJohn).toHaveBeenCalledWith('h1', 'j1', expect.any(Date));
   });
@@ -241,7 +359,8 @@ describe('an admin', () => {
     await fireEvent.press(screen.getByRole('button', { name: JOHN_LIST_COPY.add }));
     const form = within(screen.getByTestId('john-form'));
     await fireEvent.press(form.getByRole('button', { name: new RegExp(`^${JOHN_LIST_COPY.kind}, `) }));
-    expect(form.getAllByRole('radio')).toHaveLength(6);
+    const kinds = form.getAllByRole('radio').filter((r) => Object.values(CATEGORY_LABEL).includes(r.props.accessibilityLabel));
+    expect(kinds).toHaveLength(6);
     expect(form.queryAllByTestId('lid-dot', { includeHiddenElements: true })).toHaveLength(0);
   });
 });

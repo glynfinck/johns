@@ -16,6 +16,7 @@ import {
   weekSummary,
   weekUnticked,
   whoDeals,
+  type JohnDef,
   type WeekPart,
 } from '@app/core';
 import { RepeatIcon } from 'lucide-react-native';
@@ -30,6 +31,7 @@ import { Chip } from '@/components/status-mark';
 import { TextButton } from '@/components/text-button';
 import { MoreButton, TitleBar } from '@/components/title-bar';
 import { TableSection } from '@/components/house-page/table-section';
+import { ComingUpSection } from '@/components/week/coming-up';
 import { FairnessFooter } from '@/components/week/fair-shares';
 import { PersonSection } from '@/components/week/person-section';
 import { WeekSummaryBar } from '@/components/week/summary';
@@ -67,7 +69,9 @@ function WeekFor({ houseId, userId }: { houseId: string; userId: string }) {
   const away = useAway(houseId, view?.snapshot);
   const shares = useTable(houseId, view?.snapshot);
   // Before the first deal an admin's Week offers it as Today's checklist does, which counts the John list.
-  const list = useJohnList(houseId, view?.board.notStarted === true && view.me?.role === 'admin');
+  const forDeal = view?.board.notStarted === true && view.me?.role === 'admin';
+  // Once a week is dealt, the list says what's coming up.
+  const list = useJohnList(houseId, forDeal || view?.board.week != null);
   useReadOnFocus(away.refetch, { skipFirst: true });
   const { refreshing, pull } = usePull(houseId, () =>
     Promise.all([query.refetch(), ...(view ? [away.refetch(), shares.refetch()] : [])]),
@@ -100,7 +104,7 @@ function WeekFor({ houseId, userId }: { houseId: string; userId: string }) {
     >
       <PageTitle page={PAGE_TITLE.week} />
       {view ? (
-        <Board view={view} wide={wide} away={away} shares={shares} johns={list.data?.johns ?? null} />
+        <Board view={view} wide={wide} away={away} shares={shares} johns={forDeal ? (list.data?.johns ?? null) : null} list={list.data?.johns ?? null} />
       ) : query.isError ? (
         <ReadFailed onRetry={() => void query.refetch()} />
       ) : (
@@ -116,12 +120,15 @@ function Board({
   away: awayRead,
   shares: sharesRead,
   johns,
+  list,
 }: {
   view: HouseView;
   wide: boolean;
   away: ReturnType<typeof useAway>;
   shares: ReturnType<typeof useTable>;
   johns: readonly unknown[] | null;
+  /** The John list, once read: for what's coming up. */
+  list: readonly JohnDef[] | null;
 }) {
   const away = awayRead.data;
   const shares = sharesRead.data;
@@ -181,7 +188,7 @@ function Board({
       }
     />
   );
-  const list = wide ? (
+  const johnRows = wide ? (
     <WeekTable {...weekList(board.items, shown)} context={context} />
   ) : (
     weekPeople(board.items, memberIds, userId, shown).map((person) => (
@@ -207,6 +214,7 @@ function Board({
         awayMakeup={house.awayMakeup}
       />
     ) : null;
+  const coming = list ? <ComingUpSection johns={list} startsOn={week.startsOn} weekStarts={rules.weekStarts} /> : null;
   const record = (
     <View style={styles.record}>
       <TextButton label={RECORD_COPY.open} href="/week/record" chevron align="start" testID="week-record" />
@@ -221,7 +229,12 @@ function Board({
       <>
         {summaryBar}
         <Columns
-          main={list}
+          main={
+            <>
+              {johnRows}
+              {coming}
+            </>
+          }
           side={
             <>
               {passUnlocked(house.pass, now) ? (
@@ -241,7 +254,8 @@ function Board({
   return (
     <>
       {summaryBar}
-      {list}
+      {johnRows}
+      {coming}
       {fair}
       {record}
     </>

@@ -11,7 +11,7 @@ import { z } from "zod";
 // the new draft when it changed. A small, cheap model is plenty for this,
 // with structured outputs so the answer is always JSON of the right shape;
 // core's tidyDraft and tidyAsk still check every value, because a schema
-// can't say "between 1 and 10" to the model. The call goes through Vercel's
+// can't say "between 1 and 20" to the model. The call goes through Vercel's
 // AI Gateway, as Pub Golf's does: on Vercel it signs in with the project's
 // OIDC token, so there is no key to keep.
 
@@ -24,6 +24,8 @@ const ModelJohn = z.object({
   category: z.enum(CATEGORIES),
   points: z.number().int(),
   everyWeeks: z.number().int(),
+  everyMonths: z.number().int().nullable(),
+  weekOfMonth: z.number().int().nullable(),
   dueDow: z.number().int(),
   dueTime: z.string(),
   needsPhoto: z.boolean(),
@@ -73,10 +75,13 @@ How to talk:
 The draft (when you return one, return all of it):
 - Draft the Johns this house actually needs: usually 6 to 15. Cover the usual (kitchen, bathroom, bins, floors) even when nobody mentions them, and add anything specific they mention. Name each John in a few plain words, sentence case ("Bathroom clean", "Bins out").
 - category: kitchen, bathroom, bins, floors, errands, or other.
-- points (effort): 1 for about 5 minutes (taking the bins out), 2 for about 15 minutes, 3 for about half an hour, 5 for about an hour (a deep clean), 8 to 10 only for half a day or more. Similar jobs get similar points.
-- everyWeeks: 1 for weekly, 2 for fortnightly, up to 4. Most Johns are weekly; deep cleans and restocking are often fortnightly or every 4 weeks.
+- points (effort): 1 for about 5 minutes (taking the bins out), 2 for about 15 minutes, 3 for about half an hour, 5 for about an hour (a deep clean), 8 to 10 for half a day, up to 20 for a whole day. Similar jobs get similar points.
+- How often, any period. A John repeats either in weeks or in months:
+  - In weeks: everyWeeks 1 for weekly, 2 for fortnightly, up to 26; everyMonths null and weekOfMonth null.
+  - Monthly or less often: everyMonths 1 for monthly, 2 for every other month, 3 for quarterly, 6 for twice a year, 12 for yearly, 24 for every two years (up to 60), with everyWeeks 1. It lands on a weekday of the month: dueDow is the day and weekOfMonth says which one (1 first, 2 second, 3 third, 4 fourth, 5 last), so "the first Saturday every 3 months" is everyMonths 3, weekOfMonth 1, dueDow 6.
+  - Use exactly the period they ask for (quarterly is everyMonths 3, not every 4 weeks). Most Johns are weekly; deep cleans and restocking are often fortnightly or monthly; jobs like the oven, the fridge deep clean, windows or gutters suit every few months or yearly.
 - dueDow (1 Monday ... 7 Sunday) and dueTime (24-hour "HH:MM"): spread Johns across the week rather than piling them on one day. Bins go out the night before collection. Bigger jobs suit the weekend.
-- onCall: true only for something done whenever it's needed rather than on a day (the kitchen bin when it's full, emptying the dishwasher). Then respondHours (how long whoever is on call has once someone flags it, 1 to 72, usually 6 to 24) and perWeek (about how often it comes up each week, 1 to 14). For other Johns set respondHours 12 and perWeek 2.
+- onCall: true only for something done whenever it's needed rather than on a day (the kitchen bin when it's full, emptying the dishwasher). Then respondHours (how long whoever is on call has once someone flags it, 1 to 72, usually 6 to 24) and perWeek (about how often it comes up each week, 1 to 14). For other Johns set respondHours 12 and perWeek 2. An on-call John has everyWeeks 1, everyMonths null and weekOfMonth null.
 - needsPhoto: true only for a job the house is likely to argue about (a deep clean), otherwise false.
 - group: null unless only some of the house share the John (two bathrooms, one per floor). Then the group's name, which must be one of the groups you return.
 - why: a few words when the choice isn't obvious ("two bathrooms, so one each"), otherwise "".

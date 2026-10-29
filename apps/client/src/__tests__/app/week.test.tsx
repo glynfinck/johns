@@ -4,9 +4,11 @@ import {
   FOCUS_SHELL_COPY,
   humanError,
   JOHN_SHEET_COPY,
+  NEW_JOHN,
   NEXT_UP_COPY,
   NOT_DEALT_COPY,
   PAGE_TITLE,
+  REPEAT_COPY,
   TABLE_COPY,
   WEEK_COPY,
   WEEK_SUMMARY_COPY,
@@ -134,6 +136,7 @@ beforeEach(() => {
   mockViewer.id = 'priya';
   (useWindowDimensions as jest.Mock).mockReturnValue(PHONE);
   read.mockResolvedValue(busyWeek());
+  (loadJohnList as jest.Mock).mockResolvedValue({ johns: [], groups: [] });
   (loadAway as jest.Mock).mockResolvedValue({ today: '2026-10-21', periods: [] });
   (loadTable as jest.Mock).mockResolvedValue({
     month: '2026-10',
@@ -525,12 +528,35 @@ describe('the fairness footer', () => {
   });
 });
 
+describe('coming up', () => {
+  // The fridge deep clean, first Saturday every 3 months from November 2026.
+  const fridge = { ...NEW_JOHN, id: 'fridge', name: 'Fridge deep clean', points: 8, everyMonths: 3, weekOfMonth: 1, anchorMonth: 2026 * 12 + 10, dueDow: 6 as const };
+
+  it('lists the long Johns that land in the next four weeks, with when and how often', async () => {
+    (loadJohnList as jest.Mock).mockResolvedValue({ johns: [{ ...NEW_JOHN, id: 'j1', name: 'Bins out' }, fridge], groups: [] });
+    await open();
+    const section = await screen.findByTestId('coming-up');
+    expect(within(section).getByText(REPEAT_COPY.comingUp)).toBeOnTheScreen();
+    const rows = within(section).getAllByTestId('coming-up-john');
+    expect(rows).toHaveLength(1);
+    expect(within(rows[0]).getByText('Fridge deep clean')).toBeOnTheScreen();
+    expect(within(rows[0]).getByText('Sat 7 Nov · every 3 months')).toBeOnTheScreen();
+  });
+
+  it('shows nothing when no long John lands soon', async () => {
+    (loadJohnList as jest.Mock).mockResolvedValue({ johns: [{ ...fridge, anchorMonth: 2026 * 12 + 11 }], groups: [] });
+    await open();
+    await waitFor(() => expect(loadJohnList).toHaveBeenCalled());
+    expect(screen.queryByTestId('coming-up')).toBeNull();
+  });
+});
+
 describe('before the deal', () => {
   const notDealt = () => snapshot({ week: null, assignments: [], house: { ...snapshot().house, everDealt: false } });
 
   it('gives the admin the first deal as Today does, "Deal week 1", amber once there are Johns and housemates', async () => {
     read.mockResolvedValue(notDealt());
-    (loadJohnList as jest.Mock).mockResolvedValue({ johns: [{ id: 'j1' }], groups: [] });
+    (loadJohnList as jest.Mock).mockResolvedValue({ johns: [{ ...NEW_JOHN, id: 'j1', name: 'Bins out' }], groups: [] });
     await open();
     expect(screen.getByRole('header', { name: WEEK_SUMMARY_COPY.notDealt })).toBeOnTheScreen();
     expect(screen.queryByTestId('week-summary')).toBeNull();
@@ -542,7 +568,7 @@ describe('before the deal', () => {
 
   it("keeps it outline in a house of one, which may deal alone, as Today's checklist does", async () => {
     read.mockResolvedValue(snapshot({ ...notDealt(), members: [snapshot().members[0]] }));
-    (loadJohnList as jest.Mock).mockResolvedValue({ johns: [{ id: 'j1' }], groups: [] });
+    (loadJohnList as jest.Mock).mockResolvedValue({ johns: [{ ...NEW_JOHN, id: 'j1', name: 'Bins out' }], groups: [] });
     await open();
     await waitFor(() => expect(loadJohnList).toHaveBeenCalled());
     expect(await screen.findByRole('button', { name: NEXT_UP_COPY.dealWeek1 })).not.toHaveStyle({ backgroundColor: BIN_NIGHT.light.hivis });
@@ -561,7 +587,7 @@ describe('before the deal', () => {
 
   it("says why when the database won't deal, under the button", async () => {
     read.mockResolvedValue(notDealt());
-    (loadJohnList as jest.Mock).mockResolvedValue({ johns: [{ id: 'j1' }], groups: [] });
+    (loadJohnList as jest.Mock).mockResolvedValue({ johns: [{ ...NEW_JOHN, id: 'j1', name: 'Bins out' }], groups: [] });
     (dealThisWeek as jest.Mock).mockRejectedValue(new Error('Only the house admins can do that.'));
     await open();
     await fireEvent.press(await screen.findByRole('button', { name: NEXT_UP_COPY.dealWeek1 }));

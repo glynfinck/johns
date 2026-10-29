@@ -1,4 +1,4 @@
-import { firstName, PERSON_COPY } from '@app/core';
+import { firstName, HISTORY_COPY, PERSON_COPY } from '@app/core';
 import { ShieldCheckIcon, ShieldOffIcon, UserMinusIcon } from 'lucide-react-native';
 import { useState } from 'react';
 import { StyleSheet, View } from 'react-native';
@@ -11,6 +11,7 @@ import { Group, GroupItem } from '@/components/group';
 import { Row, RowIcon } from '@/components/row';
 import { Section } from '@/components/section';
 import { useMove } from '@/hooks/use-move';
+import { useUndoOffer } from '@/hooks/use-undo-offer';
 import { SECTION_GAP, useTheme } from '@/theme';
 
 /**
@@ -19,12 +20,13 @@ import { SECTION_GAP, useTheme } from '@/theme';
  * words, after a confirm. Remove sits in a group of its own under Admin,
  * as Leave does on House, so it can't be taken for its neighbour. Each goes
  * through the calls House's members list uses, and the database decides; a
- * refusal is a sentence where it was made.
+ * refusal is a sentence where it was made. Either offers Undo in a toast.
  */
 export function PersonAdmin({ houseId, person }: { houseId: string; person: Housemate }) {
   const { colors } = useTheme();
   const role = useMove(houseId);
   const remove = useMove(houseId);
+  const offer = useUndoOffer(houseId);
   const [confirming, setConfirming] = useState(false);
   const name = firstName(person.name);
   const admin = person.role === 'admin';
@@ -37,7 +39,11 @@ export function PersonAdmin({ houseId, person }: { houseId: string; person: Hous
           title={admin ? PERSON_COPY.makeHousemate : PERSON_COPY.makeAdmin}
           meta={admin ? PERSON_COPY.makeHousemateMeta : PERSON_COPY.makeAdminMeta}
           disabled={role.pending}
-          onPress={() => void role.run(() => setRole(houseId, person.userId, admin ? 'member' : 'admin'))}
+          onPress={() =>
+            void role.run(() => setRole(houseId, person.userId, admin ? 'member' : 'admin')).then((done) => {
+              if (done) offer(admin ? HISTORY_COPY.madeHousemate(name) : HISTORY_COPY.madeAdmin(name), 'role', person.userId);
+            })
+          }
           testID="toggle-admin"
         />
         {role.problem ? (
@@ -67,7 +73,9 @@ export function PersonAdmin({ houseId, person }: { houseId: string; person: Hous
         problem={remove.problem}
         onConfirm={() =>
           void remove.run(() => removeMember(houseId, person.userId)).then((done) => {
-            if (done) setConfirming(false);
+            if (!done) return;
+            setConfirming(false);
+            offer(HISTORY_COPY.removed(name), 'remove', person.userId);
           })
         }
         onClose={() => setConfirming(false)}

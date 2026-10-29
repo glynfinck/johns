@@ -1,4 +1,4 @@
-import { dueInLine, firstName, ON_CALL_COPY, type HouseRules, type OnCallItem } from '@app/core';
+import { dueInLine, firstName, HISTORY_COPY, ON_CALL_COPY, type HouseRules, type OnCallItem } from '@app/core';
 import { BellRingIcon, CheckIcon } from 'lucide-react-native';
 
 import type { Housemate } from '@/api/board';
@@ -10,6 +10,7 @@ import { Row } from '@/components/row';
 import { Section } from '@/components/section';
 import { TextButton } from '@/components/text-button';
 import { useMove } from '@/hooks/use-move';
+import { useUndoOffer } from '@/hooks/use-undo-offer';
 
 /**
  * On call: the house's on-call Johns this week (the bins, whenever they're
@@ -36,6 +37,7 @@ export function OnCall({
 }) {
   const sheet = useJohnSheet();
   const move = useMove(houseId);
+  const offer = useUndoOffer(houseId);
   if (items.length === 0) return null;
   const nameOf = (id: string) => firstName(members.find((m) => m.userId === id)?.name ?? 'Housemate');
 
@@ -59,14 +61,23 @@ export function OnCall({
         }
         const mine = item.holderId === userId;
         const meta = `${mine ? ON_CALL_COPY.youreOnCall : ON_CALL_COPY.holder(nameOf(item.holderId))} · ${ON_CALL_COPY.times(item.times)}`;
-        const flagIt = () => move.run(() => raiseFlag(item.johnId));
+        // The flag's id, once raised: what the toast's Undo takes back.
+        const raised = { id: '' };
+        const flagIt = async () => {
+          if (await move.run(async () => (raised.id = await raiseFlag(item.johnId)))) {
+            offer(HISTORY_COPY.flagged, 'flag', raised.id);
+          }
+        };
         // Whoever is on call did it before anyone asked: flag it and tick it. A
         // photo John is only flagged, and lands on Today to tick with the photo.
-        const doneIt = () =>
-          move.run(async () => {
-            const id = await raiseFlag(item.johnId);
-            if (!item.needsPhoto) await markDone(id);
+        const doneIt = async () => {
+          const ok = await move.run(async () => {
+            raised.id = await raiseFlag(item.johnId);
+            if (!item.needsPhoto) await markDone(raised.id);
           });
+          if (ok && !item.needsPhoto) offer(HISTORY_COPY.ticked, 'tick', raised.id);
+          else if (ok) offer(HISTORY_COPY.flagged, 'flag', raised.id);
+        };
         return (
           <Row
             key={item.johnId}

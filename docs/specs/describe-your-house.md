@@ -57,7 +57,8 @@ Today, Week and House.
   afterwards: names cut to fit, numbers put in range, unknown kinds made
   Other, duplicates dropped, group members matched to housemates by name,
   at most 30 Johns and 6 groups. Effort follows the John list's existing
-  scale (points 1 to 10).
+  scale (points 1 to 20), and how often any period the list takes, in weeks
+  or months (`docs/specs/any-length-repeats.md`).
 - Each turn asked of Claude is a `house_drafts` row (outcome, how many
   Johns drafted, tokens), readable only by the service role. The chat is
   never stored.
