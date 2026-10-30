@@ -34,6 +34,57 @@ export type Database = {
   }
   public: {
     Tables: {
+      admin_audit: {
+        Row: {
+          action: string
+          actor: string | null
+          after: Json | null
+          at: string
+          before: Json | null
+          id: number
+          reason: string | null
+          target_id: string | null
+          target_kind: string
+        }
+        Insert: {
+          action: string
+          actor?: string | null
+          after?: Json | null
+          at?: string
+          before?: Json | null
+          id?: never
+          reason?: string | null
+          target_id?: string | null
+          target_kind: string
+        }
+        Update: {
+          action?: string
+          actor?: string | null
+          after?: Json | null
+          at?: string
+          before?: Json | null
+          id?: never
+          reason?: string | null
+          target_id?: string | null
+          target_kind?: string
+        }
+        Relationships: []
+      }
+      app_owners: {
+        Row: {
+          added_at: string
+          user_id: string
+        }
+        Insert: {
+          added_at?: string
+          user_id: string
+        }
+        Update: {
+          added_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       assignments: {
         Row: {
           absent_at: string | null
@@ -1092,6 +1143,48 @@ export type Database = {
           },
         ]
       }
+      notices: {
+        Row: {
+          body: string
+          created_at: string
+          created_by: string | null
+          ends_at: string | null
+          id: string
+          kind: string
+          link_label: string | null
+          link_url: string | null
+          starts_at: string
+          title: string
+          updated_at: string
+        }
+        Insert: {
+          body?: string
+          created_at?: string
+          created_by?: string | null
+          ends_at?: string | null
+          id?: string
+          kind: string
+          link_label?: string | null
+          link_url?: string | null
+          starts_at?: string
+          title: string
+          updated_at?: string
+        }
+        Update: {
+          body?: string
+          created_at?: string
+          created_by?: string | null
+          ends_at?: string | null
+          id?: string
+          kind?: string
+          link_label?: string | null
+          link_url?: string | null
+          starts_at?: string
+          title?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       notification_prefs: {
         Row: {
           checks: boolean
@@ -1569,6 +1662,7 @@ export type Database = {
         Returns: string
       }
       delete_group: { Args: { p_group: string }; Returns: undefined }
+      end_notice: { Args: { p_id: string }; Returns: undefined }
       flag_sharers: { Args: { p_john: string }; Returns: string[] }
       hand_over: { Args: { p_house: string; p_to: string }; Returns: undefined }
       house_balances: {
@@ -1607,6 +1701,7 @@ export type Database = {
       is_admin: { Args: { h: string }; Returns: boolean }
       is_member: { Args: { h: string }; Returns: boolean }
       house_has_paid_pass: { Args: { p_house: string }; Returns: boolean }
+      is_owner: { Args: never; Returns: boolean }
       join_house: { Args: { p_code: string }; Returns: string }
       leave_pass: { Args: never; Returns: undefined }
       mark_done: {
@@ -1675,6 +1770,7 @@ export type Database = {
         Args: { p_at: string; p_by?: string; p_john: string }
         Returns: string
       }
+      owner_status: { Args: never; Returns: Json }
       plan_john: {
         Args: { p_assignment: string; p_at: string }
         Returns: undefined
@@ -1734,6 +1830,19 @@ export type Database = {
           p_house: string
           p_members: string[]
           p_name: string
+        }
+        Returns: string
+      }
+      save_notice: {
+        Args: {
+          p_body: string
+          p_ends_at: string | null
+          p_id: string | null
+          p_kind: string
+          p_link_label: string | null
+          p_link_url: string | null
+          p_starts_at: string | null
+          p_title: string
         }
         Returns: string
       }
