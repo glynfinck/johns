@@ -56,6 +56,7 @@ export const HISTORY_COPY = {
   swapped: "Swapped.",
   disputed: "Dispute raised.",
   paid: "Marked received.",
+  inSplitwise: "Marked as added to Splitwise.",
   away: "Time away booked.",
   madeAdmin: (name: string) => `${name} is an admin now.`,
   madeHousemate: (name: string) => `${name} is a housemate now.`,

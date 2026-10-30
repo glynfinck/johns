@@ -95,6 +95,10 @@ export type BestTime = (typeof BEST_TIMES)[number];
 export const BEST_TIME_HOUR: Record<BestTime, number> = { morning: 9, afternoon: 14, evening: 19 };
 
 /** The knobs a house turns. Money is always in minor units (pence, cents). */
+/** Where a house settles up at month end (houses.settle_in): here, by marking what arrives, or in Splitwise. */
+export const SETTLE_IN = ["jonz", "splitwise"] as const;
+export type SettleIn = (typeof SETTLE_IN)[number];
+
 export interface HouseRules {
   timezone: string;
   currency: Currency;

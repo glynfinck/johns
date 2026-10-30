@@ -209,6 +209,31 @@ describe("confirm_payment", () => {
     await adminClient().from("ledger").insert({ house_id: house.id, user_id: ben.userId, kind: "forfeit", amount_minor: -300, month: "2099-01" });
     expectRule(await ava.db.rpc("confirm_payment", { p_house: house.id, p_from: ben.userId, p_amount: 1 }), "more_than_owed");
   });
+
+  it("marks a debt moved into Splitwise as a payment, says so on the Wall, and takes nothing else as where it went", async () => {
+    const house = await makeHouse(["Ava", "Ben"]);
+    const [ava, ben] = house.everyone;
+    // Where the house settles up is an admin's setting, like the rest of the rules.
+    // (RLS makes a housemate's update touch nothing rather than fail.)
+    await ben.db.from("houses").update({ settle_in: "splitwise" }).eq("id", house.id);
+    expect((await adminClient().from("houses").select("settle_in").eq("id", house.id).single()).data!.settle_in).toBe("jonz");
+    expectOk(await ava.db.from("houses").update({ settle_in: "splitwise" }).eq("id", house.id));
+    expect((await adminClient().from("houses").select("settle_in").eq("id", house.id).single()).data!.settle_in).toBe("splitwise");
+    expect((await adminClient().from("houses").update({ settle_in: "venmo" }).eq("id", house.id)).error).not.toBeNull();
+    await adminClient().from("month_closes").insert({ house_id: house.id, month: "2026-09" });
+    await adminClient().from("ledger").insert([
+      { house_id: house.id, user_id: ben.userId, kind: "share", amount_minor: -250, month: "2026-09" },
+      { house_id: house.id, user_id: ava.userId, kind: "share", amount_minor: 250, month: "2026-09" },
+    ]);
+    expectRule(await ava.db.rpc("confirm_payment", { p_house: house.id, p_from: ben.userId, p_amount: 250, p_via: "cash" }), "bad_payment");
+    // Only the person owed, as with money received.
+    expectRule(await ben.db.rpc("confirm_payment", { p_house: house.id, p_from: ava.userId, p_amount: 250, p_via: "splitwise" }), "more_than_owed");
+    expectOk(await ava.db.rpc("confirm_payment", { p_house: house.id, p_from: ben.userId, p_amount: 250, p_via: "splitwise" }));
+    const { data: ledger } = await adminClient().from("ledger").select("user_id, kind, amount_minor").eq("house_id", house.id).eq("kind", "payment");
+    expect(ledger!.map((r) => r.amount_minor).sort((a, b) => a - b)).toEqual([-250, 250]);
+    const { data: events } = await adminClient().from("events").select("data").eq("house_id", house.id).eq("kind", "paid");
+    expect(events!.map((e) => e.data)).toEqual([{ to: ava.userId, amount: 250, via: "splitwise" }]);
+  });
 });
 
 describe("reactions", () => {

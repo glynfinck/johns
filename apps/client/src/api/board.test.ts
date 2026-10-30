@@ -85,6 +85,7 @@ it('reads the house, its people and this week in one go', async () => {
 
   expect(snapshot.house).toEqual({ id: 'h1', name: 'Flat 3', joinCode: 'AB3DEF7H', everDealt: true,
     awayMakeup: 100,
+    settleIn: 'jonz',
     pass: { plan: 'trial', until: new Date('2026-11-01T09:00:00Z'), buyerId: null },
   });
   expect(snapshot.rules).toMatchObject({ timezone: 'Europe/London', currency: 'GBP', weekStarts: 1, disputeHours: 24 });
