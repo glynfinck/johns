@@ -78,10 +78,10 @@ export function passLine(pass: HousePass, now: Date, zone: string): string {
  * opens; they're set to land on the same tiers.
  */
 export const PASS_PRICES: Record<Currency, { yearly: number; monthly: number; founding: number }> = {
-  USD: { yearly: 2999, monthly: 399, founding: 4900 },
-  CAD: { yearly: 3999, monthly: 499, founding: 6499 },
-  GBP: { yearly: 2499, monthly: 349, founding: 3999 },
-  EUR: { yearly: 2999, monthly: 399, founding: 4900 },
+  USD: { yearly: 4999, monthly: 599, founding: 6900 },
+  CAD: { yearly: 6499, monthly: 799, founding: 8999 },
+  GBP: { yearly: 3999, monthly: 499, founding: 5499 },
+  EUR: { yearly: 4999, monthly: 599, founding: 6900 },
 };
 
 export interface PassOffer {
@@ -119,6 +119,15 @@ export const PASS_LOOKUP_KEYS: Record<PassPurchase, string> = {
 /** The plan a Stripe price is for, by its lookup key; null for any other price. */
 export function purchaseOfLookupKey(key: string | null | undefined): PassPurchase | null {
   return PASS_PURCHASES.find((plan) => PASS_LOOKUP_KEYS[plan] === key) ?? null;
+}
+
+/**
+ * The plan a Stripe price is for. A price set aside when its lookup key moved
+ * to a new price (a price change) has no key, but houses still subscribed to
+ * it renew on it, so its metadata plan names it.
+ */
+export function purchaseOfPrice(price: { lookup_key: string | null; metadata?: Record<string, string> | null }): PassPurchase | null {
+  return purchaseOfLookupKey(price.lookup_key) ?? PASS_PURCHASES.find((plan) => plan === price.metadata?.plan) ?? null;
 }
 
 /** When a house's free month ends: PASS_TRIAL_DAYS after it was made. */

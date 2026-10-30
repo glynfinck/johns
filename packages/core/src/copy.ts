@@ -1703,6 +1703,13 @@ export const PASS_COPY = {
   notBuyer: "Only the housemate who bought the House Pass can change it.",
   nothingToManage: "There’s no plan to manage yet.",
   free: "Free for every house, always: the deal, the housemate check, reminders, covering and time away. No ads.",
+  /** Under the plans: what the Pass pays for, said plainly. */
+  money: `Where the money goes: the servers, the AI, card and app store fees, and the time it takes one person to keep ${APP_NAME} going. No investors, no ads.`,
+  /** For a house whose free month or plan has ended and can't pay: the Pass for free, by email. */
+  hardship: "Money tight? Ask and we’ll give your house the Pass for free.",
+  askFree: "Ask for a free Pass",
+  /** The email that link starts. */
+  askFreeSubject: "Free House Pass",
   /** Under the plans while they're on sale: how renewing works, and the terms that say so. */
   renewal: "Yearly and monthly plans renew until you cancel, and you can cancel any time.",
   terms: "House Pass terms",

@@ -46,8 +46,8 @@ house checks each tick, and the month's Stake settles who did their share.
   list; ask it for changes later.
 - **Reminders** by push notification. Tick a John, or answer a
   housemate's dispute, from the notification itself.
-- **The House Pass.** One price for the whole house, $29.99 a year (or
-  $3.99 a month), with a free month first.
+- **The House Pass.** One price for the whole house, $49.99 a year (or
+  $5.99 a month), with a free month first.
 
 It works on any phone and spreads out on a laptop, in the Bin Night house
 style: council signage, hi-vis amber, a bin-lid colour per kind of John.
