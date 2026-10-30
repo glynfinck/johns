@@ -22,7 +22,7 @@ import { LidDot } from '@/components/lid';
 import { Lead, Meta, SectionLabel } from '@/components/text';
 import { TextButton } from '@/components/text-button';
 import { useTick } from '@/hooks/use-tick';
-import { NARROW, SPACE, TAP, useTheme } from '@/theme';
+import { CONTENT_MAX, GUTTER, INSET, NARROW, SPACE, TAP, useTheme } from '@/theme';
 
 /** What the card shows beside a John: the tokens you hold that can skip or swap it. */
 export interface CantHeld {
@@ -247,7 +247,8 @@ const styles = StyleSheet.create({
   // The dot or the sign, centred on the first line of words.
   mark: { height: 20, justifyContent: 'center' },
   shrink: { flexShrink: 1 },
-  buttons: { flexDirection: 'row', gap: SPACE.sm, marginTop: SPACE.lg, minHeight: TAP },
+  // No wider than on a phone's page, so Mark done doesn't run the width of a laptop's main column.
+  buttons: { flexDirection: 'row', gap: SPACE.sm, marginTop: SPACE.lg, minHeight: TAP, maxWidth: CONTENT_MAX - 2 * (GUTTER + INSET) },
   grow: { flex: 1 },
   problem: { marginTop: SPACE.sm },
   onward: { marginTop: SPACE.xs },

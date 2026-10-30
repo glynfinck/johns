@@ -69,11 +69,12 @@ export const GROUP_RADIUS = 10;
 /** The widest a screen's content gets, on every tab. */
 export const CONTENT_MAX = 680;
 /**
- * A laptop page that spreads (Today, Week, House) keeps to this from
- * COLUMNS_MIN: a main column about as wide as CONTENT_MAX and ASIDE beside it.
+ * The widest the main column of a page in two columns gets (Today, Week,
+ * House on a laptop): it grows with the window up to this, and past it the
+ * room falls between it and the side panel.
  */
-export const PAGE_MAX = 1120;
-/** The side column of a page in two columns. */
+export const MAIN_MAX = 1040;
+/** The side panel of a page in two columns: its content, inside a GUTTER each side. */
 export const ASIDE = 380;
 /** The page's own width from which a page that spreads goes to two columns. */
 export const COLUMNS_MIN = 1000;

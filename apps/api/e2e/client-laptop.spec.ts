@@ -4,8 +4,9 @@ import { expect, test, type Locator, type Page } from "@playwright/test";
 import { admin, CLIENT_URL, cleanUp, dealtHouseInClient } from "./auth";
 
 // Today, Week and House on a laptop: Today and Week spread into two columns
-// beside the rail, House lists its pages beside them with a panel for a
-// John, and a window too narrow for them keeps the phone's way.
+// beside the rail, the second a panel docked to the window's right edge,
+// House lists its pages beside them with a panel for a John, and a window
+// too narrow for them keeps the phone's way.
 // SHOTS=<folder> also saves each page, in daylight and after dark.
 test.use({ baseURL: CLIENT_URL });
 
@@ -30,6 +31,26 @@ async function topOf(box: Locator): Promise<number> {
 /** A section's group of rows: the last of its two children, under its header. */
 function groupOf(section: Locator): Locator {
   return section.locator(":scope > div").last();
+}
+
+/**
+ * The page holds the window's edges, as a desktop app's does: the title bar's
+ * Title starts where the main column's words do, its sparkles sit at the
+ * window's right edge, and the side panel runs from the bar's hairline to
+ * that edge.
+ */
+async function holdsTheEdges(page: Page, screen: Locator, firstCard: Locator) {
+  const window = page.viewportSize()?.width ?? 0;
+  const bar = await screen.getByTestId("title-bar").boundingBox();
+  const title = await screen.getByTestId("title-bar").getByRole("heading").boundingBox();
+  const card = await firstCard.boundingBox();
+  const side = await screen.getByTestId("column-side").boundingBox();
+  const ask = await screen.getByTestId("ask-jonz").boundingBox();
+  // The card's words are INSET in from its edge.
+  expect(title?.x ?? 0).toBeCloseTo((card?.x ?? 0) + 16, 0);
+  expect((ask?.x ?? 0) + (ask?.width ?? 0)).toBeGreaterThan(window - 32);
+  expect((side?.x ?? 0) + (side?.width ?? 0)).toBeCloseTo(window, 0);
+  expect(side?.y ?? 0).toBeCloseTo((bar?.y ?? 0) + (bar?.height ?? 0), 0);
 }
 
 test("each place spreads out on a laptop, and a narrow window keeps the phone's way", async ({ browser }, info) => {
@@ -69,6 +90,7 @@ test("each place spreads out on a laptop, and a narrow window keeps the phone's 
   await expect(today.getByTestId("column-side").getByTestId("week-glance")).toBeVisible();
   // The columns share a top edge: Next up's card and the group beside it, under the day's line and its label.
   expect(await topOf(today.getByTestId("next-up"))).toBeCloseTo(await topOf(groupOf(today.getByTestId("week-glance"))), 0);
+  await holdsTheEdges(page, today, today.getByTestId("next-up"));
   await shoot(page, "today");
 
   await page.getByRole("tab", { name: SECTION_LABEL.week }).click();
@@ -76,12 +98,9 @@ test("each place spreads out on a laptop, and a narrow window keeps the phone's 
   const week = page.getByTestId("week-screen");
   await expect(week.getByTestId("column-main").getByTestId("week-table")).toBeVisible();
   await expect(week.getByTestId("column-side").getByTestId("house-table")).toBeVisible();
-  // The summary runs across both columns; under it the board and the Table start level, and so do their rows.
-  const summary = await week.getByTestId("week-summary").boundingBox();
-  const columns = await week.getByTestId("columns").boundingBox();
-  expect(summary?.width).toBeCloseTo(columns?.width ?? 0, 0);
-  expect(await topOf(groupOf(week.getByTestId("week-table")))).toBeCloseTo(await topOf(groupOf(week.getByTestId("house-table"))), 0);
-  expect(await topOf(week.getByTestId("week-row").nth(1))).toBeCloseTo(await topOf(week.getByTestId("standing").nth(1)), 0);
+  // The summary heads the board in the main column, with the Table in the panel beside it.
+  await expect(week.getByTestId("column-main").getByTestId("week-summary")).toBeVisible();
+  await holdsTheEdges(page, week, week.getByTestId("week-summary"));
   await shoot(page, "week");
 
   // The Table shows the week or the month from the menu in its header, dropped from its words.

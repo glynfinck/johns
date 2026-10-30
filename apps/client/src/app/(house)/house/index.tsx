@@ -114,9 +114,9 @@ function HouseSections({
       <LeaveSection houseId={houseId} userId={userId} view={view} />
     </>
   );
-  // On a laptop the line heads the month card's column, a section label's height, so the card and the Wall's
-  // group beside it share a top edge; over the locked pair, which start with labels of their own, it heads both.
-  if (two && unlocked) {
+  // On a laptop the line heads the main column, a section label's height, so the month card and the Wall's
+  // group in the panel beside it share a top edge.
+  if (two) {
     return (
       <Columns
         main={
@@ -127,14 +127,6 @@ function HouseSections({
         }
         side={lower}
       />
-    );
-  }
-  if (two) {
-    return (
-      <>
-        {top}
-        <Columns main={money} side={lower} />
-      </>
     );
   }
   return (
