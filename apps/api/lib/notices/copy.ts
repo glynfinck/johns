@@ -3,17 +3,18 @@ import { z } from "zod";
 
 // The copy of the notices kept outside Supabase, in Vercel Global Config
 // (Edge Config), so a status notice still shows while the database is down.
-// Reading it needs EDGE_CONFIG, the store's connection string, which Vercel
-// adds to the project when the store is connected. Writing it needs the store's
-// id and a Vercel token: EDGE_CONFIG_ID and VERCEL_API_TOKEN. Without them
-// there is no copy, and GET /api/notices only reads the database.
+// Reading it needs GLOBAL_CONFIG (EDGE_CONFIG before Vercel's rename), the
+// store's connection string, which Vercel adds to the project when the store
+// is connected. Writing it needs the store's id and a Vercel token:
+// EDGE_CONFIG_ID and VERCEL_API_TOKEN, plus VERCEL_TEAM_ID for a team's store.
+// Without them there is no copy, and GET /api/notices only reads the database.
 
 const KEY = "notices";
 const Copy = z.object({ notices: z.array(Notice), savedAt: z.string() });
 
 /** The copy's read address from the connection string, or null when there is no store. */
 function readUrl(): string | null {
-  const connection = process.env.EDGE_CONFIG;
+  const connection = process.env.GLOBAL_CONFIG ?? process.env.EDGE_CONFIG;
   if (!connection) return null;
   try {
     const url = new URL(connection);
@@ -49,7 +50,7 @@ export async function writeCopy(notices: NoticeT[], now: Date): Promise<void> {
   const token = process.env.VERCEL_API_TOKEN;
   if (!id || !token) return;
   const team = process.env.VERCEL_TEAM_ID ? `?teamId=${encodeURIComponent(process.env.VERCEL_TEAM_ID)}` : "";
-  const response = await fetch(`https://api.vercel.com/v1/edge-config/${encodeURIComponent(id)}/items${team}`, {
+  const response = await fetch(`https://api.vercel.com/v1/global-config/${encodeURIComponent(id)}/items${team}`, {
     method: "PATCH",
     headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
     body: JSON.stringify({

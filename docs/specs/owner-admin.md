@@ -42,7 +42,7 @@ the owner admin viewer (https://claude.ai/artifact/97GEyJDGnrWxB8HTbbrXmo).
   `GET /api/notices` reads them as anon with a 3 s timeout. When the database
   doesn't answer, it falls back to the copy in Vercel Global Config.
   `POST /api/notices/copy` (owner only) rewrites that copy after each save.
-  Without `EDGE_CONFIG`, `EDGE_CONFIG_ID` and `VERCEL_API_TOKEN` there is no
+  Without `GLOBAL_CONFIG`, `EDGE_CONFIG_ID` and `VERCEL_API_TOKEN` there is no
   copy, and the owner is told the copy didn't update.
 - **In the app.**
   - One band at a time: status first, then offers, then news (`noticeToShow`).
