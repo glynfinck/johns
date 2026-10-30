@@ -1631,6 +1631,19 @@ export const HOUSE_DRAFT_COPY = {
   privacy: "What you write is sent to Anthropic’s Claude, through Vercel, to draft the list.",
   /** While Jonz is answering. */
   thinking: `${APP_NAME} is thinking…`,
+  /**
+   * What Jonz is doing while it answers, one after another on a timer (the
+   * answer comes back whole, so these are what every turn does, never live).
+   * The second says "your list" once there is one to look at.
+   */
+  thinkingSteps: (list: boolean) => [
+    "Reading what you wrote",
+    list ? "Looking at your list" : "Picturing your house",
+    "Weighing who does what",
+    "Writing a reply",
+  ],
+  /** Over Jonz's answer, folded: how long it took. Opens to the steps. */
+  thought: (seconds: number) => `Thought for ${seconds}s`,
   /** The day picker's name, for a screen reader. */
   pickDay: "Pick a day",
   /** The draft card: its label, the line under it, and how it opens and closes. */

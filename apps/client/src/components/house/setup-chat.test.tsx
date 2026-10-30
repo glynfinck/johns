@@ -1,6 +1,6 @@
 import { HOUSE_DRAFT_COPY, RESET_COPY, STEADY_COPY, type ChatReset, listAsDraft, NEW_JOHN, NEXT_UP_COPY, starterDraft, tidyDraft, type HouseRules, type JohnDef } from '@app/core';
 import { QueryClientProvider } from '@tanstack/react-query';
-import { fireEvent, render, screen } from '@testing-library/react-native';
+import { act, fireEvent, render, screen } from '@testing-library/react-native';
 import { router } from 'expo-router';
 import type { ReactNode } from 'react';
 
@@ -147,6 +147,30 @@ it('sends the chat so far and the draft with each change, and keeps the draft wh
   );
   expect(await screen.findByText('That’s all of it.')).toBeTruthy();
   expect(screen.getAllByTestId('draft-card')).toHaveLength(1);
+});
+
+it('shows what Jonz is doing while it thinks, then folds it over the answer to open', async () => {
+  let reply: (value: unknown) => void = () => undefined;
+  chat.mockReturnValue(new Promise((resolve) => (reply = resolve)));
+  await open();
+  await say(HOUSE);
+  expect(screen.getByLabelText(HOUSE_DRAFT_COPY.thinking)).toBeTruthy();
+  expect(screen.getByTestId('chat-thinking-step', { includeHiddenElements: true })).toHaveTextContent(HOUSE_DRAFT_COPY.thinkingSteps(false)[0]);
+  await act(async () => reply({ reply: 'Here’s a first go.', ask: null, draft: drafted, source: 'ai' }));
+  expect(screen.queryByTestId('chat-thinking')).toBeNull();
+  expect(screen.queryByTestId('chat-thought-steps')).toBeNull();
+  await fireEvent.press(screen.getByTestId('chat-thought'));
+  expect(screen.getByTestId('chat-thought-steps')).toHaveTextContent(HOUSE_DRAFT_COPY.thinkingSteps(false)[0]);
+});
+
+it('says "your list" while it thinks once there is a draft, and a starter list has no fold', async () => {
+  await open();
+  await fireEvent.press(screen.getByTestId('starter-family'));
+  expect(screen.queryByTestId('chat-thought')).toBeNull();
+  chat.mockReturnValue(new Promise(() => undefined));
+  await say('Add the oven');
+  expect(HOUSE_DRAFT_COPY.thinkingSteps(true)[1]).toBe('Looking at your list');
+  expect(screen.getByTestId('chat-thinking')).toBeTruthy();
 });
 
 it('answers a question with a tap: a quick answer, or a day', async () => {

@@ -43,6 +43,7 @@ import { Row, RowIcon } from '@/components/row';
 import { Section } from '@/components/section';
 import { Segmented } from '@/components/segmented';
 import { ResetsCard } from '@/components/house/resets-card';
+import { stepsShown, Thinking, ThoughtFold } from '@/components/house/thinking';
 import { ChoiceRow } from '@/components/setup/choice-row';
 import { Body, Meta } from '@/components/text';
 import { TextButton } from '@/components/text-button';
@@ -58,7 +59,15 @@ type Person = { userId: string; name: string };
  */
 type Turn =
   | { role: 'user'; text: string }
-  | { role: 'assistant'; text: string; ask: ChatAsk | null; draft: HouseDraft | null; resets?: ChatReset[] }
+  | {
+      role: 'assistant';
+      text: string;
+      ask: ChatAsk | null;
+      draft: HouseDraft | null;
+      resets?: ChatReset[];
+      /** How long Jonz thought, and the steps it showed meanwhile; a starter list has none. */
+      thought?: { seconds: number; steps: string[] };
+    }
   | { role: 'done'; added: number };
 
 /** The box's inside height for one line: a thumb tall with its edge. */
@@ -149,6 +158,8 @@ export function SetupChat({
   const draftAt = turns.findLastIndex((t) => t.role === 'assistant' && t.draft !== null);
   const last = turns.at(-1);
   const ask = !busy && last?.role === 'assistant' ? last.ask : null;
+  // What Jonz shows itself doing while it answers: "your list" once there's a draft or a list to look at.
+  const steps = HOUSE_DRAFT_COPY.thinkingSteps(draft !== null);
 
   function answered(reply: Turn & { role: 'assistant' }, said: Turn[]) {
     setTurns([...said, reply]);
@@ -167,12 +178,15 @@ export function SetupChat({
     setText('');
     setProblem(null);
     setSending(true);
+    const asked = Date.now();
     try {
       const messages: ChatMessage[] = next
         .flatMap((t) => (t.role === 'done' || !t.text ? [] : [{ role: t.role, text: t.text }]))
         .slice(-CHAT_MAX_MESSAGES);
       const answer = await sendChat(houseId, messages, draft);
-      answered({ role: 'assistant', text: answer.reply, ask: answer.ask, draft: answer.draft, resets: answer.resets }, next);
+      const took = Date.now() - asked;
+      const thought = { seconds: Math.max(1, Math.round(took / 1000)), steps: stepsShown(steps, took) };
+      answered({ role: 'assistant', text: answer.reply, ask: answer.ask, draft: answer.draft, resets: answer.resets, thought }, next);
     } catch (reason) {
       // Refused (too many today, say): what was said goes back in the box to try again.
       setTurns(before);
@@ -268,6 +282,7 @@ export function SetupChat({
           }
           return (
             <View key={at} style={styles.said}>
+              {turn.thought ? <ThoughtFold seconds={turn.thought.seconds} steps={turn.thought.steps} /> : null}
               {turn.text ? <Body testID="chat-reply">{turn.text}</Body> : null}
               {/* The question's answers sit under the question, over the draft it's about. */}
               {turn === last && ask ? <AskCard ask={ask} weekStarts={rules.weekStarts} onAnswer={(a) => void send(a)} /> : null}
@@ -294,7 +309,7 @@ export function SetupChat({
           );
         })}
 
-        {sending ? <Meta testID="chat-thinking">{HOUSE_DRAFT_COPY.thinking}</Meta> : null}
+        {sending ? <Thinking steps={steps} /> : null}
       </ScrollView>
 
       {done ? null : gated ? (
