@@ -135,7 +135,7 @@ describe("WEEK_COPY", () => {
   it("counts and tallies in words", () => {
     expect(WEEK_COPY.doneOf(0, 0)).toBe("0 of 0");
     expect(WEEK_COPY.doneOf(3, 7)).toBe("3 of 7");
-    expect(WEEK_COPY.tally(1, 0, "in 5h")).toBe("1 not done · 0 fine · closes in 5h");
+    expect(WEEK_COPY.tally(1, 0, "in 5h")).toBe("1 not done, 0 fine, closes in 5h");
     expect(WEEK_COPY.disputeOn("Bins", "Still full")).toBe("Bins: “Still full”");
   });
 });
@@ -158,15 +158,15 @@ describe("SECTIONS", () => {
   it("counts the house and your standing in words", () => {
     expect(SHELL_COPY.housemates(1)).toBe("1 housemate");
     expect(SHELL_COPY.housemates(4)).toBe("4 housemates");
-    expect(SHELL_COPY.standing(0, 1)).toBe("0-week streak · 1 token");
-    expect(SHELL_COPY.standing(5, 0)).toBe("5-week streak · 0 tokens");
+    expect(SHELL_COPY.standing(0, 1)).toBe("0-week streak, 1 token");
+    expect(SHELL_COPY.standing(5, 0)).toBe("5-week streak, 0 tokens");
   });
 });
 
 describe("TABLE_COPY", () => {
   it("tells a record without the zeros", () => {
     expect(TABLE_COPY.record({ done: 3, late: 0, missed: 0 })).toBe("3 done");
-    expect(TABLE_COPY.record({ done: 0, late: 1, missed: 2 })).toBe("0 done · 1 late · 2 missed");
+    expect(TABLE_COPY.record({ done: 0, late: 1, missed: 2 })).toBe("0 done, 1 late, 2 missed");
   });
 
   it("says where you stand against your share", () => {
@@ -204,9 +204,9 @@ describe("STAKE_COPY", () => {
 
 describe("JOHN_LIST_COPY", () => {
   it("says how often and when, short", () => {
-    expect(JOHN_LIST_COPY.when(1, "Sunday", "21:00")).toBe("Every week · due Sun 21:00");
-    expect(JOHN_LIST_COPY.when(4, "Monday", "09:30")).toBe("Every 4 weeks · due Mon 09:30");
-    expect(JOHN_LIST_COPY.when(6, "Friday", "18:00")).toBe("Every 6 weeks · due Fri 18:00");
+    expect(JOHN_LIST_COPY.when(1, "Sunday", "21:00")).toBe("Every week, due Sun 21:00");
+    expect(JOHN_LIST_COPY.when(4, "Monday", "09:30")).toBe("Every 4 weeks, due Mon 09:30");
+    expect(JOHN_LIST_COPY.when(6, "Friday", "18:00")).toBe("Every 6 weeks, due Fri 18:00");
   });
 
   it("rounds the house’s weekly effort", () => {
@@ -267,7 +267,7 @@ describe("AWAY_COPY", () => {
     expect(AWAY_COPY.dayLabel("Sunday 8 November", 3)).toBe("Sunday 8 November, 3 away");
     expect(AWAY_COPY.dayLabel("Monday 2 November", 0)).toBe("Monday 2 November, everyone home");
     expect([1, 2, 3, 5].map(AWAY_COPY.shade)).toEqual(["1 away", "2 away", "3 or more", "3 or more"]);
-    expect(AWAY_COPY.dayCount(3, 2)).toBe("3 away · 2 home");
+    expect(AWAY_COPY.dayCount(3, 2)).toBe("3 away, 2 home");
     expect(AWAY_COPY.backOn("Tue 10 Nov")).toBe("Back Tue 10 Nov");
   });
 });

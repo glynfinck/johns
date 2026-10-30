@@ -14,7 +14,7 @@ import { useState } from 'react';
 import { StyleSheet, Text, View } from 'react-native';
 
 import type { Housemate } from '@/api/board';
-import { LidDot } from '@/components/lid';
+import { LidBar } from '@/components/lid';
 import { STATUS_ICON } from '@/components/status-mark';
 import { Lead, Meta } from '@/components/text';
 import { INSET, SPACE, useTheme } from '@/theme';
@@ -116,7 +116,7 @@ function ModeContent({ item, context, onRollCall }: { item: BoardItem; context: 
 }
 
 /**
- * The sheet's head: the lid dot before the kind, then the group, the
+ * The sheet's head: the lid bar before the kind, then the group, the
  * points and how often; the John's name in full as the Lead; then, while
  * it's to do, when it's due and what lateness costs its owner (capped at
  * what's left of their stake, once the Stake is read), and once it's
@@ -135,7 +135,7 @@ function JohnSheetHeader({ item, context }: { item: BoardItem; context: JohnShee
       {/* In full, as everything in the sheet is: it may take a second line. */}
       <View style={[styles.line, styles.top]}>
         <View style={styles.mark}>
-          <LidDot category={item.category} />
+          <LidBar category={item.category} />
         </View>
         <Meta numberOfLines={2} style={styles.shrink}>
           {sheetKind(item)}

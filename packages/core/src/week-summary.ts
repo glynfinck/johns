@@ -195,13 +195,13 @@ export function weekList<T extends { status: LiveStatus; dueAt: Date; doneAt?: D
 }
 
 /**
- * A person's header, on the right: "1 of 3 done · 6 pts", or nothing for
+ * A person's header, on the right: "1 of 3 done, 6 pts", or nothing for
  * someone with no Johns this week. Their time away has a line of its own
  * under it (weekAwayNote), so neither is ever cut short.
  */
 export function weekPersonMeta(p: { done: number; total: number; points: number }): string | null {
   if (p.total === 0) return null;
-  return `${WEEK_SUMMARY_COPY.doneOf(p.done, p.total)} · ${pointsLabel(p.points)}`;
+  return `${WEEK_SUMMARY_COPY.doneOf(p.done, p.total)}, ${pointsLabel(p.points)}`;
 }
 
 /**
@@ -231,7 +231,7 @@ export function weekAwayNote(
 /**
  * On a laptop, where the house is one table rather than a group per person,
  * everyone's time away in one line under the summary, in Week's order:
- * "Megan is away 28–31 Oct · You’re away all week". Null when nobody is.
+ * "Megan is away 28–31 Oct. You’re away all week." Null when nobody is.
  */
 export function weekAwayLine(
   notes: readonly { userId: string; away: string | null }[],
@@ -241,12 +241,13 @@ export function weekAwayLine(
   const said = notes
     .filter((n): n is { userId: string; away: string } => n.away !== null)
     .map((n) => WEEK_SUMMARY_COPY.isAway(weekWho(n.userId, viewerId, nameOf), n.away, n.userId === viewerId));
-  return said.length > 0 ? said.join(" · ") : null;
+  // Each is a sentence of its own ("You’re away all week"), so each ends as one.
+  return said.length > 0 ? `${said.join(". ")}.` : null;
 }
 
 /**
  * The summary's first line: the week's days and when it ends, in the house's
- * zone. "19–25 Oct · ends tonight", "· ends tomorrow", "· ends Sun".
+ * zone. "19–25 Oct, ends tonight", ", ends tomorrow", ", ends Sun".
  */
 export function weekRangeLine(startsAt: Date, endsAt: Date, now: Date, zone: string): string {
   const days = weekRange(startsAt, endsAt, zone);
@@ -277,7 +278,7 @@ export function weekWho(userId: string, viewerId: string, nameOf: (userId: strin
 
 /**
  * A John's row on the laptop's table, to a screen reader, which can't see
- * the columns: "Descale the kettle, Kitchen · was due Sun, Tom, 1 pt, Overdue".
+ * the columns: "Descale the kettle, Kitchen, was due Sun, Tom, 1 pt, Overdue".
  * Upcoming says nothing for its status, as its row shows none.
  */
 export function weekSpokenRow(

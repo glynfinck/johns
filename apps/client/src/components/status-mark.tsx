@@ -38,7 +38,7 @@ export function Chip({
   return (
     <View testID={testID} style={[styles.chip, tone === 'good' && styles.bare, { borderColor: edge }]}>
       {Icon ? <Icon size={14} strokeWidth={tone === 'good' ? 2.5 : 2} color={tone === 'good' ? colors.good : ink} aria-hidden /> : null}
-      <Text numberOfLines={1} style={[type.sectionLabel, styles.word, { color: ink }]}>
+      <Text numberOfLines={1} style={[type.caps, styles.word, { color: ink }]}>
         {label}
       </Text>
     </View>

@@ -8,7 +8,7 @@ import { FONT, LEADING, ROW_GAP, ROW_MIN, SPACE, useTheme } from '@/theme';
 /**
  * Finished things, folded away inside a group: a row that says what it holds
  * ("Done (2)", from FOCUS_SHELL_COPY.done) and shows its rows under it when
- * opened. `meta` follows the label on the same line, after a " · " ("1 late"
+ * opened. `meta` follows the label on the same line, after a comma ("1 late"
  * with its hazard mark, or a time), and keeps its room while a long label
  * gives way. `aria-expanded` says whether it's open.
  */
@@ -47,7 +47,7 @@ export function Fold({
         </View>
         <View style={styles.line}>
           <Text numberOfLines={1} style={[type.body, styles.label]}>
-            {meta != null ? `${label} ·` : label}
+            {meta != null ? `${label},` : label}
           </Text>
           {meta != null ? <View style={styles.meta}>{meta}</View> : null}
         </View>

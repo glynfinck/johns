@@ -360,7 +360,7 @@ describe("changing a list that's already there", () => {
   it("says what changed in words", () => {
     const [bath] = base.johns;
     expect(changedLine(bath, { ...bath, name: "Upstairs bathroom", everyWeeks: 2, dueDow: 6, group: null })).toBe(
-      "was “Bathroom” · was every week, Sun 21:00 · was Upstairs",
+      "was “Bathroom”, was every week, Sun 21:00, was Upstairs",
     );
   });
 

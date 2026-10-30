@@ -70,7 +70,7 @@ export function AwayDates({
       </View>
       <View style={styles.week} aria-hidden>
         {days.map((d) => (
-          <Text key={d} style={[type.sectionLabel, styles.dow]}>
+          <Text key={d} style={[type.caps, styles.dow]}>
             {d.slice(0, 1)}
           </Text>
         ))}
@@ -102,7 +102,7 @@ export function AwayDates({
               >
                 {/* The 1st of a month says which month it starts, over its number. */}
                 {date.endsWith('-01') ? (
-                  <Text style={[type.sectionLabel, styles.month, { color: ink }]}>{monthLabel(date.slice(0, 7)).slice(0, 3)}</Text>
+                  <Text style={[type.caps, styles.month, { color: ink }]}>{monthLabel(date.slice(0, 7)).slice(0, 3)}</Text>
                 ) : null}
                 {/* A day gone by stays readable, muted and in a lighter weight, not faded. */}
                 <Text style={[type.body, styles.date, past && styles.pastDate, { color: ink }]}>{Number(date.slice(8))}</Text>

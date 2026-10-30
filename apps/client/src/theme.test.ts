@@ -36,7 +36,7 @@ describe("Focus's type", () => {
     expect(roles.map((r) => [r.fontSize, r.lineHeight])).toEqual([
       [28, 32],
       [22, 28],
-      [12, 16],
+      [15, 20],
       [17, 22],
       [16, 24],
       [14, 20],
@@ -45,12 +45,25 @@ describe("Focus's type", () => {
     for (const role of roles) expect(role.fontVariant).toEqual(['tabular-nums']);
   });
 
-  it('sets the title and the section labels in caps, the labels quiet', () => {
+  it('sets only the title in caps; a section is named in sentence case, as a heading', () => {
     expect(type.title).toMatchObject({ fontFamily: FONT.black, textTransform: 'uppercase' });
-    expect(type.sectionLabel).toMatchObject({ fontFamily: FONT.extrabold, textTransform: 'uppercase' });
-    expect(type.sectionLabel.color).toBe(BIN_NIGHT.light.mutedForeground);
+    expect(type.sectionLabel).toMatchObject({ fontFamily: FONT.extrabold, color: BIN_NIGHT.light.foreground });
+    expect(type.sectionLabel.textTransform).toBeUndefined();
+    expect(type.sectionLabel.letterSpacing).toBeUndefined();
     expect(type.meta.color).toBe(BIN_NIGHT.light.mutedForeground);
     expect(type.rowTitle.textTransform).toBeUndefined();
+  });
+
+  it("keeps small tracked caps for a grid's small print and the chips, quiet", () => {
+    expect(type.caps).toMatchObject({ fontFamily: FONT.extrabold, fontSize: 12, textTransform: 'uppercase' });
+    expect(type.caps.color).toBe(BIN_NIGHT.light.mutedForeground);
+  });
+
+  it('sets the street plate in Black caps, smaller than the title it sits under', () => {
+    expect(type.plate).toMatchObject({ fontFamily: FONT.black, textTransform: 'uppercase', fontVariant: ['tabular-nums'] });
+    expect(type.plate.fontSize).toBeLessThan(type.title.fontSize ?? 0);
+    expect(type.plate.fontSize).toBeGreaterThan(type.lead.fontSize ?? 0);
+    expect(dark.plate.color).toBe(BIN_NIGHT.dark.foreground);
   });
 
   it('follows the scheme into the dark', () => {
@@ -78,7 +91,7 @@ describe('Overpass', () => {
     });
   });
 
-  it('gives the middle dot a width of its own in each, so " · " keeps the space after it', () => {
+  it('gives the middle dot a width of its own in each, so ", " keeps the space after it', () => {
     for (const file of FILES) {
       const font = readFileSync(join(__dirname, '../assets/fonts', `${file}.ttf`));
       // GDEF's glyph classes: 1 a base, which keeps its advance; 3 a mark, which a shaper draws with none.

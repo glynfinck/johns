@@ -44,7 +44,7 @@ beforeEach(() => {
 it('lists the admins, and the only one is told leaving hands over', async () => {
   const list = await open();
   expect(list.getAllByTestId('admin-row')).toHaveLength(1);
-  expect(list.getByText(`Priya · ${ADMINS_COPY.started}`)).toBeOnTheScreen();
+  expect(list.getByText(ADMINS_COPY.you('Priya'))).toBeOnTheScreen();
   // The only admin can't step themselves down here.
   expect(list.queryByTestId('remove-admin')).toBeNull();
   expect(screen.getByText(new RegExp(ADMINS_COPY.onlyAdmin))).toBeOnTheScreen();

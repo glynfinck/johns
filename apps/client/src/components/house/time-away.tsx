@@ -100,7 +100,7 @@ export function AwayMonth({
           </View>
           <View style={styles.week} aria-hidden>
             {days.map((d) => (
-              <Text key={d} style={[type.sectionLabel, styles.dow]}>
+              <Text key={d} style={[type.caps, styles.dow]}>
                 {d.slice(0, 1)}
               </Text>
             ))}
@@ -209,7 +209,7 @@ function DaySheet({
                   key={t.id}
                   leading={<Avatar name={who?.name ?? FOCUS_SHELL_COPY.formerHousemate} userId={t.userId} me={t.userId === me} />}
                   title={who ? name(who) : FOCUS_SHELL_COPY.formerHousemate}
-                  meta={[AWAY_COPY.backOn(dateRange(back, back)), t.note || null].filter(Boolean).join(' · ')}
+                  meta={[AWAY_COPY.backOn(dateRange(back, back)), t.note || null].filter(Boolean).join(', ')}
                   testID="day-away"
                 />
               );

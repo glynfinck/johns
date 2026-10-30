@@ -19,7 +19,7 @@ export interface LabelValue {
   value: string;
 }
 
-/** One kind of John on the list, as its own section: "Kitchen · 3". */
+/** One kind of John on the list, as its own section: "Kitchen, 3". */
 export interface JohnKind {
   category: Category;
   label: string;
@@ -44,7 +44,7 @@ function dueLine(john: Pick<JohnDef, "dueDow" | "dueTime"> & Partial<Pick<JohnDe
   return dueWords({ weekOfMonth: john.weekOfMonth ?? null }, john.dueTime, DOW_LABEL[john.dueDow].slice(0, 3));
 }
 
-/** A John's meta line on the list: "Every week · Sun 21:00 · photo", then the group that shares it, if one does. */
+/** A John's meta line on the list: "Every week, Sun 21:00, photo", then the group that shares it, if one does. */
 export function scheduleLine(
   john: Pick<JohnDef, "everyWeeks" | "dueDow" | "dueTime" | "needsPhoto"> &
     Partial<Pick<JohnDef, "when" | "respondHours" | "perWeek" | "everyMonths" | "weekOfMonth">>,
@@ -57,7 +57,7 @@ export function scheduleLine(
     groupName || null,
   ]
     .filter(Boolean)
-    .join(" · ");
+    .join(", ");
 }
 
 /** A John as a housemate who can't edit it reads it: kind, who shares it, effort, how often, when, and the photo. */
@@ -186,12 +186,12 @@ export function myTrips(periods: readonly AwayPeriod[], userId: string, today: s
 
 /** Your own trip's meta line under its dates: whether you're away now, and where. */
 export function tripMeta(period: AwayPeriod, today: string): string {
-  return [tripStarted(period, today) ? SETUP_COPY.awayNow : null, period.note || null].filter(Boolean).join(" · ");
+  return [tripStarted(period, today) ? SETUP_COPY.awayNow : null, period.note || null].filter(Boolean).join(", ");
 }
 
-/** A housemate's time away as a meta line: "28–31 Oct · Mum's 60th in Cork". */
+/** A housemate's time away as a meta line: "28–31 Oct, Mum's 60th in Cork". */
 export function awayMeta(period: AwayPeriod): string {
-  return [dateRange(period.startsOn, period.endsOn), period.note || null].filter(Boolean).join(" · ");
+  return [dateRange(period.startsOn, period.endsOn), period.note || null].filter(Boolean).join(", ");
 }
 
 /**

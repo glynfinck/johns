@@ -14,16 +14,16 @@ import { EmptyState } from './empty-state';
 import { Field } from './field';
 import { Fold } from './fold';
 import { CardRows, Group, GroupItem } from './group';
-import { LidDot } from './lid';
+import { LidBar } from './lid';
 import { Row } from './row';
 import { Section } from './section';
 import { Segmented } from './segmented';
 import { Chip, StatusMark } from './status-mark';
 import { Body, Lead, Meta, RowTitle, SectionLabel, Title } from './text';
 import { TextButton } from './text-button';
-import { TickCircle } from './tick-circle';
+import { TickBox } from './tick-box';
 
-// Focus's pieces. Decoration (hairlines, lid dots, badges, avatars) is hidden
+// Focus's pieces. Decoration (hairlines, lid bars, badges, avatars) is hidden
 // from screen readers, so queries ask for hidden elements to find it.
 const HIDDEN = { includeHiddenElements: true };
 const light = BIN_NIGHT.light;
@@ -53,7 +53,7 @@ describe('the type roles', () => {
 describe('Row', () => {
   it('is one button a thumb tall, its title on one line', async () => {
     const onPress = jest.fn();
-    await render(<Row title="Bins out" meta="Thu 07:00 · 2 pts" onPress={onPress} testID="row" />);
+    await render(<Row title="Bins out" meta="Thu 07:00, 2 pts" onPress={onPress} testID="row" />);
     const button = screen.getByRole('button', { name: /Bins out/ });
     expect(button).toHaveStyle({ minHeight: TAP });
     // Two lines make the row 64; one line, ROW_MIN.
@@ -81,7 +81,7 @@ describe('Row', () => {
       <Row
         title="Bins out"
         onPress={open}
-        leading={<TickCircle state="open" label="Mark Bins out done" onPress={tick} />}
+        leading={<TickBox state="open" label="Mark Bins out done" onPress={tick} />}
         trailing={<TextButton label="Undo" onPress={jest.fn()} />}
       />,
     );
@@ -104,9 +104,9 @@ describe('Row', () => {
     expect(screen.getByRole('button', { name: 'Thanks' })).toBeOnTheScreen();
   });
 
-  it('leads its meta line with the lid dot, and sets a value in figures', async () => {
+  it('leads its meta line with the lid bar, and sets a value in figures', async () => {
     await render(<Row title="Bins out" lid="bins" meta="2 pts" trailing="12" />);
-    expect(screen.getByTestId('lid-dot', HIDDEN)).toHaveStyle({ backgroundColor: light.bin.bins });
+    expect(screen.getByTestId('lid-bar', HIDDEN)).toHaveStyle({ backgroundColor: light.bin.bins });
     expect(screen.getByText('12')).toHaveStyle({ fontVariant: ['tabular-nums'] });
   });
 
@@ -283,13 +283,13 @@ describe('Section', () => {
 
   it('keeps the label whole: words on the right move under it when the line is full, a line each', async () => {
     await render(
-      <Section label="Megan" leading={<Avatar name="Megan" size={24} />} right={['1 of 3 done · 2 pts', 'away 28–31 Oct']}>
+      <Section label="Megan" leading={<Avatar name="Megan" size={24} />} right={['1 of 3 done, 2 pts', 'away 28–31 Oct']}>
         <Row title="Bins out" />
       </Section>,
     );
     // The header wraps, rather than shrinking the label to fit the words beside it.
     expect(header('Megan')).toHaveStyle({ flexWrap: 'wrap', marginBottom: LABEL_GAP });
-    const counts = screen.getByText('1 of 3 done · 2 pts');
+    const counts = screen.getByText('1 of 3 done, 2 pts');
     const away = screen.getByText('away 28–31 Oct');
     for (const line of [counts, away]) {
       expect(line).toHaveProp('numberOfLines', 1);
@@ -335,44 +335,44 @@ describe('Chip', () => {
   });
 });
 
-describe('TickCircle', () => {
+describe('TickBox', () => {
   it('is a checkbox a thumb wide, checked once ticked', async () => {
     const onPress = jest.fn();
-    const { rerender } = await render(<TickCircle state="open" label="Mark Bins done" onPress={onPress} />);
+    const { rerender } = await render(<TickBox state="open" label="Mark Bins done" onPress={onPress} />);
     const box = screen.getByRole('checkbox', { name: 'Mark Bins done' });
     expect(box).toHaveStyle({ width: TAP, height: TAP });
     expect(box).not.toBeChecked();
     await fireEvent.press(box);
     expect(onPress).toHaveBeenCalledTimes(1);
 
-    await rerender(<TickCircle state="checking" label="Undo" onPress={onPress} />);
+    await rerender(<TickBox state="checking" label="Undo" onPress={onPress} />);
     expect(screen.getByRole('checkbox', { name: 'Undo' })).toBeChecked();
   });
 
   it('is busy, and not pressable, while a tick is on its way', async () => {
     const onPress = jest.fn();
-    await render(<TickCircle state="busy" label="Mark Bins done" onPress={onPress} />);
+    await render(<TickBox state="busy" label="Mark Bins done" onPress={onPress} />);
     const box = screen.getByRole('checkbox');
     expect(box).toBeBusy();
     expect(box).toBeDisabled();
   });
 
-  it("fills green only once it's done, green at 40% while it's checked, a hazard ring disputed", async () => {
-    const { rerender } = await render(<TickCircle state="done" label="Done" />);
+  it("is a square plate with the sign's border, green only once it's done, green at 40% while it's checked, hazard disputed", async () => {
+    const { rerender } = await render(<TickBox state="done" label="Done" />);
     // Without a press, a picture of the state.
-    const circle = () => screen.getByTestId('tick-circle');
-    expect(circle()).toHaveStyle({ backgroundColor: light.good, width: LEADING, height: LEADING });
-    await rerender(<TickCircle state="checking" label="Checking" />);
-    expect(circle()).toHaveStyle({ backgroundColor: withAlpha(light.good, 0.4), borderColor: light.good });
-    await rerender(<TickCircle state="disputed" label="Disputed" />);
-    expect(circle()).toHaveStyle({ backgroundColor: 'transparent', borderColor: light.hazard });
-    await rerender(<TickCircle state="open" label="Open" />);
-    expect(circle()).toHaveStyle({ backgroundColor: 'transparent', borderColor: light.mutedForeground });
+    const box = () => screen.getByTestId('tick-box');
+    expect(box()).toHaveStyle({ backgroundColor: light.good, width: LEADING - 4, height: LEADING - 4, borderRadius: 5, borderWidth: 3 });
+    await rerender(<TickBox state="checking" label="Checking" />);
+    expect(box()).toHaveStyle({ backgroundColor: withAlpha(light.good, 0.4), borderColor: light.good });
+    await rerender(<TickBox state="disputed" label="Disputed" />);
+    expect(box()).toHaveStyle({ backgroundColor: 'transparent', borderColor: light.hazard });
+    await rerender(<TickBox state="open" label="Open" />);
+    expect(box()).toHaveStyle({ backgroundColor: 'transparent', borderColor: light.mutedForeground });
     expect(screen.getByRole('image', { name: 'Open' })).toBeOnTheScreen();
   });
 
   it('counts a disputed tick as ticked', async () => {
-    await render(<TickCircle state="disputed" label="Disputed" onPress={jest.fn()} />);
+    await render(<TickBox state="disputed" label="Disputed" onPress={jest.fn()} />);
     expect(screen.getByRole('checkbox', { name: 'Disputed' })).toBeChecked();
   });
 });
@@ -578,7 +578,7 @@ describe('the small marks', () => {
   });
 
   it("dots a John's lid colour", async () => {
-    await render(<LidDot category="floors" />);
-    expect(screen.getByTestId('lid-dot', HIDDEN)).toHaveStyle({ backgroundColor: light.bin.floors });
+    await render(<LidBar category="floors" />);
+    expect(screen.getByTestId('lid-bar', HIDDEN)).toHaveStyle({ backgroundColor: light.bin.floors });
   });
 });

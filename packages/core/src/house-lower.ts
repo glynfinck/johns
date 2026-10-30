@@ -529,8 +529,8 @@ export interface HouseSetupValues {
 
 /**
  * House setup's rows, each with its current value: the Johns and their
- * effort in an average week ("13 · about 23 pts a week"), the money rules
- * ("£20 stake · £1 late · £3 missed"), who is away next ("Megan, 29 Oct–1
+ * effort in an average week ("13, about 23 pts a week"), the money rules
+ * ("£20 stake, £1 late, £3 missed"), who is away next ("Megan, 29 Oct–1
  * Nov", or "You, …"), and how many groups. Time away lists only people who
  * still live here, earliest first.
  */

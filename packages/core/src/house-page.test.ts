@@ -77,9 +77,9 @@ describe("month words", () => {
 describe("joinParts", () => {
   it("joins segments with a middle dot and merges neighbours of one tone", () => {
     expect(joinParts([[{ text: "1 pt" }], [{ text: "7 late", hazard: true }, { text: " in Oct" }], [{ text: "away" }]])).toEqual([
-      { text: "1 pt · " },
+      { text: "1 pt, " },
       { text: "7 late", hazard: true },
-      { text: " in Oct · away" },
+      { text: " in Oct, away" },
     ]);
   });
 
@@ -101,14 +101,14 @@ describe("monthCard", () => {
       lead: HOUSE_PAGE_COPY.up,
       figure: "£4.01",
       good: true,
-      meta: "Nothing forfeited · shared out 1 Nov",
+      meta: "Nothing forfeited, shared out 1 Nov",
     });
   });
 
   it("says you're down, in ink, with what you forfeited", () => {
     const card = monthCard(stake({ tom: -934 }, { tom: 1000 }), "tom", "GBP");
     expect(card).toMatchObject({ lead: HOUSE_PAGE_COPY.down, figure: "£9.34", good: false });
-    expect(card.meta).toBe("£10 forfeited · shared out 1 Nov");
+    expect(card.meta).toBe("£10 forfeited, shared out 1 Nov");
   });
 
   it("says nothing's forfeited yet in a quiet month, without saying it twice", () => {
@@ -124,7 +124,7 @@ describe("monthCard", () => {
   it("says you're even when what you forfeited came back", () => {
     const card = monthCard(stake({ sam: 0 }, { sam: 200 }), "sam", "GBP");
     expect(card.lead).toBe(HOUSE_PAGE_COPY.even);
-    expect(card.meta).toBe("£2 forfeited · shared out 1 Nov");
+    expect(card.meta).toBe("£2 forfeited, shared out 1 Nov");
   });
 
   it("treats someone not in the month as square", () => {
@@ -269,10 +269,10 @@ describe("tableLines", () => {
 
   it("says points, then streak and tokens", () => {
     const [priya, sam] = tableLines({ ...base, rows: [row("priya", 7), row("sam", 1)], column: 680 });
-    expect(priya.meta).toEqual([{ text: "7 pts · 5-week streak" }]);
-    expect(sam.meta).toEqual([{ text: "1 pt · 6-week streak · 1 immunity" }]);
+    expect(priya.meta).toEqual([{ text: "7 pts, 5-week streak" }]);
+    expect(sam.meta).toEqual([{ text: "1 pt, 6-week streak, 1 immunity" }]);
     const swapper = MEMBERS.map((m) => (m.userId === "tom" ? { ...m, swapTokens: 1 } : m));
-    expect(tableLines({ ...base, members: swapper, rows: [row("tom", 3)] })[0].meta).toEqual([{ text: "3 pts · swap ready" }]);
+    expect(tableLines({ ...base, members: swapper, rows: [row("tom", 3)] })[0].meta).toEqual([{ text: "3 pts, swap ready" }]);
   });
 
   it("puts the month's late and missed first, in hazard, then time away", () => {
@@ -282,8 +282,8 @@ describe("tableLines", () => {
       monthRows: [row("tom", 6, 2, 7, 1), row("megan", 20, 8)],
       away,
     });
-    expect(lines[0].meta).toEqual([{ text: "1 pt · " }, { text: "7 late, 1 missed", hazard: true, icon: "x" }, { text: " in Oct" }]);
-    expect(lines[1].meta).toEqual([{ text: "5 pts · away 29 Oct–1 Nov" }]);
+    expect(lines[0].meta).toEqual([{ text: "1 pt, " }, { text: "7 late, 1 missed", hazard: true, icon: "x" }, { text: " in Oct" }]);
+    expect(lines[1].meta).toEqual([{ text: "5 pts, away 29 Oct–1 Nov" }]);
     // Only late: late's clock marks it.
     const [late] = tableLines({ ...base, rows: [row("tom", 1)], monthRows: [row("tom", 6, 2, 2, 0)] });
     expect(late.meta[1]).toEqual({ text: "2 late", hazard: true, icon: "clock" });
@@ -294,14 +294,14 @@ describe("tableLines", () => {
     const text = (line: { meta: { text: string }[] }) => line.meta.map((p) => p.text).join("");
     // The month's misses come first; time away doesn't fit after them, so nothing lesser is said instead.
     const [missed] = tableLines({ ...base, members: busy, rows: [row("megan", 2)], monthRows: [row("megan", 2, 0, 0, 1)], away });
-    expect(text(missed)).toBe("2 pts · 1 missed in Oct");
+    expect(text(missed)).toBe("2 pts, 1 missed in Oct");
     const [home] = tableLines({ ...base, members: busy, rows: [row("megan", 2)], column: 680 });
-    expect(text(home)).toBe("2 pts · 3-week streak · 2 immunity");
+    expect(text(home)).toBe("2 pts, 3-week streak, 2 immunity");
     const [gone] = tableLines({ ...base, members: busy, rows: [row("megan", 2)], away });
-    expect(text(gone)).toBe("2 pts · away 29 Oct–1 Nov");
+    expect(text(gone)).toBe("2 pts, away 29 Oct–1 Nov");
     // On the narrowest phone the tokens are left out whole rather than cut off.
     const [narrow] = tableLines({ ...base, members: busy, rows: [row("megan", 2)], column: 360 });
-    expect(text(narrow)).toBe("2 pts · 3-week streak");
+    expect(text(narrow)).toBe("2 pts, 3-week streak");
     expect(tableLines({ ...base, members: busy, rows: [row("megan", 2)] })[0].meta).toEqual(narrow.meta);
   });
 
@@ -309,10 +309,10 @@ describe("tableLines", () => {
     const text = (line: { meta: { text: string }[] }) => line.meta.map((p) => p.text).join("");
     // Two-digit points and "+£4.01": the immunity token would be cut off, so it's left out.
     const [owed] = tableLines({ ...base, rows: [row("sam", 31)], projection: projection({ sam: 401 }), column: 390 });
-    expect([text(owed), owed.money]).toEqual(["31 pts · 6-week streak", "+£4.01"]);
+    expect([text(owed), owed.money]).toEqual(["31 pts, 6-week streak", "+£4.01"]);
     // Level money is short, which leaves room for it.
     const [level] = tableLines({ ...base, rows: [row("sam", 31)], projection: projection({}), column: 390 });
-    expect([text(level), level.money]).toEqual(["31 pts · 6-week streak · 1 immunity", "£0"]);
+    expect([text(level), level.money]).toEqual(["31 pts, 6-week streak, 1 immunity", "£0"]);
   });
 
   it("fits the meta line to the column it's in", () => {
@@ -344,7 +344,7 @@ describe("tableLines", () => {
   it("leaves the money off until the Stake is read", () => {
     const [line] = tableLines({ ...base, rows: [row("sam", 0)], column: 390 });
     // The room for it is kept, so the line doesn't lose its end when the money lands.
-    expect(line).toMatchObject({ money: null, losing: false, meta: [{ text: "0 pts · 6-week streak" }] });
+    expect(line).toMatchObject({ money: null, losing: false, meta: [{ text: "0 pts, 6-week streak" }] });
   });
 
   it("shows nobody for an empty table, and a former housemate by name", () => {
@@ -381,12 +381,12 @@ describe("a housemate's page", () => {
       {
         key: "month",
         title: "October",
-        meta: [{ text: "2 on time · " }, { text: "7 late, 1 missed", hazard: true, icon: "x" }],
+        meta: [{ text: "2 on time, " }, { text: "7 late, 1 missed", hazard: true, icon: "x" }],
         value: "6 pts",
       },
     ]);
     expect(recordLines(row("tom", 0, 0, 1, 0), null, "2026-10")[0].meta).toEqual([
-      { text: "0 on time · " },
+      { text: "0 on time, " },
       { text: "1 late", hazard: true, icon: "clock" },
     ]);
     expect(recordLines(row("tom", 0), undefined, "2026-10").map((l) => l.key)).toEqual(["week"]);
@@ -503,11 +503,11 @@ describe("a housemate's page", () => {
       { id: "theirs", userId: "tom", startsOn: "2026-11-01", endsOn: "2026-11-01", note: null },
     ];
     expect(awayLines(periods, "megan", "2026-10-26").map((l) => [l.title, l.meta[0].text])).toEqual([
-      ["25–28 Oct", "Away now · Cork"],
+      ["25–28 Oct", "Away now, Cork"],
       ["20–27 Dec", PERSON_COPY.booked],
     ]);
     // The last day away still counts as away.
-    expect(awayLines(periods, "megan", "2026-10-28")[0].meta[0].text).toBe("Away now · Cork");
+    expect(awayLines(periods, "megan", "2026-10-28")[0].meta[0].text).toBe("Away now, Cork");
     // None: the page says so in a sentence of its own.
     expect(awayLines(periods, "sam", "2026-10-26")).toEqual([]);
   });
@@ -531,14 +531,14 @@ describe("stakeHistory", () => {
     expect(months.map((m) => m.label)).toEqual(["October 2026", "September 2026"]);
     // A payment between two others shows once, without its amount: that's only theirs to see.
     expect(months[0].lines.map((l) => [l.kind, l.title, l.meta, l.amount, l.losing])).toEqual([
-      ["late", "Descale the kettle", "Tom · late · Tue 20 Oct", "−£1", true],
-      ["missed", "Bins out", "Tom · missed · Sun 18 Oct", "−£3", true],
+      ["late", "Descale the kettle", "Tom, late, Tue 20 Oct", "−£1", true],
+      ["missed", "Bins out", "Tom, missed, Sun 18 Oct", "−£3", true],
       ["payment", "Tom paid Megan", STAKE_HISTORY_COPY.received("Mon 12 Oct"), null, false],
     ]);
     expect(months[1].lines.map((l) => [l.title, l.meta, l.amount])).toEqual([
-      [STAKE_HISTORY_COPY.capRefund, "Tom · Thu 1 Oct", "+£3"],
-      [STAKE_HISTORY_COPY.share, "You · Thu 1 Oct", "+£4.01"],
-      [STAKE_HISTORY_COPY.aJohn, "You · forfeit · Tue 8 Sep", "−£1"],
+      [STAKE_HISTORY_COPY.capRefund, "Tom, Thu 1 Oct", "+£3"],
+      [STAKE_HISTORY_COPY.share, "You, Thu 1 Oct", "+£4.01"],
+      [STAKE_HISTORY_COPY.aJohn, "You, forfeit, Tue 8 Sep", "−£1"],
     ]);
   });
 
@@ -549,8 +549,8 @@ describe("stakeHistory", () => {
     ]);
     // ...and paying as going back on yours, which would read as a gain.
     expect(stakeHistory({ ...input, me: "tom", whole: false })[0].lines.map((l) => [l.title, l.meta, l.amount])).toEqual([
-      ["Descale the kettle", "Late · Tue 20 Oct", "−£1"],
-      ["Bins out", "Missed · Sun 18 Oct", "−£3"],
+      ["Descale the kettle", "Late, Tue 20 Oct", "−£1"],
+      ["Bins out", "Missed, Sun 18 Oct", "−£3"],
       ["You paid Megan", STAKE_HISTORY_COPY.received("Mon 12 Oct"), "£2.66"],
     ]);
   });
@@ -603,9 +603,9 @@ describe("stakeHistory", () => {
       }),
     ];
     expect(stakeHistory({ ...input, ledger: settled, me: "sam", whole: true })[0].lines.map((l) => [l.id, l.meta])).toEqual([
-      [2, "You · Thu 1 Oct"],
-      [1, "Tom · late · Wed 30 Sep"],
-      [3, "Tom · missed · Tue 29 Sep"],
+      [2, "You, Thu 1 Oct"],
+      [1, "Tom, late, Wed 30 Sep"],
+      [3, "Tom, missed, Tue 29 Sep"],
     ]);
   });
 

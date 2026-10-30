@@ -35,7 +35,7 @@ export interface PageMember {
 
 type Named = Pick<PageMember, "userId" | "name">;
 
-const DOT = " · ";
+const COMMA = ", ";
 
 /** The 15th of a `yyyy-MM` month at noon UTC: the same month in every time zone. */
 function midMonth(month: string): Date {
@@ -79,7 +79,7 @@ function called(members: readonly Named[], userId: string | null, me: string): s
   return userId === me ? HOUSE_PAGE_COPY.you : firstNameIn(members, userId);
 }
 
-/** Segments joined by " · ", neighbours of the same tone merged into one part. */
+/** Segments joined by commas, neighbours of the same tone merged into one part. */
 export function joinParts(segments: readonly (readonly MetaPart[])[]): MetaPart[] {
   const out: MetaPart[] = [];
   const push = (part: MetaPart) => {
@@ -91,7 +91,7 @@ export function joinParts(segments: readonly (readonly MetaPart[])[]): MetaPart[
   segments
     .filter((segment) => segment.some((part) => part.text))
     .forEach((segment, i) => {
-      if (i > 0) push({ text: DOT });
+      if (i > 0) push({ text: COMMA });
       segment.forEach(push);
     });
   return out;
@@ -121,7 +121,7 @@ export interface MonthCardView {
   figure: string | null;
   /** The figure is green: only when you're up. */
   good: boolean;
-  /** "Nothing forfeited · shared out 1 Nov". */
+  /** "Nothing forfeited, shared out 1 Nov". */
   meta: string;
 }
 
@@ -135,7 +135,7 @@ export function monthCard(stake: Pick<StakeView, "month" | "projection">, me: st
   const meta = [
     forfeited > 0 ? HOUSE_PAGE_COPY.forfeited(formatMoney(forfeited, currency)) : HOUSE_PAGE_COPY.nothingForfeited,
     HOUSE_PAGE_COPY.sharedOut(day),
-  ].join(DOT);
+  ].join(COMMA);
   if (net > 0) return { label, lead: HOUSE_PAGE_COPY.up, figure: formatMoney(net, currency), good: true, meta };
   if (net < 0) return { label, lead: HOUSE_PAGE_COPY.down, figure: formatMoney(-net, currency), good: false, meta };
   if (forfeited === 0) {
@@ -550,7 +550,7 @@ export function awayLines(periods: readonly AwayPeriod[], personId: string, toda
   return theirs.map((p) => ({
     key: p.id,
     title: dateRange(p.startsOn, p.endsOn),
-    meta: [{ text: [p.startsOn <= today ? PERSON_COPY.awayNow : PERSON_COPY.booked, p.note ?? ""].filter(Boolean).join(DOT) }],
+    meta: [{ text: [p.startsOn <= today ? PERSON_COPY.awayNow : PERSON_COPY.booked, p.note ?? ""].filter(Boolean).join(COMMA) }],
   }));
 }
 
@@ -597,7 +597,7 @@ export interface HistoryMonth {
 function historyLine(row: HistoryRow, input: { me: string; whole: boolean; members: readonly Named[]; currency: Currency; zone: string }): HistoryLine {
   const { me, whole, members, currency } = input;
   const day = dayLabel(new Date(happened(row)), input.zone);
-  const whose = (words: string) => (whole ? [called(members, row.user_id, me), words] : [words]).join(DOT);
+  const whose = (words: string) => (whole ? [called(members, row.user_id, me), words] : [words]).join(COMMA);
   const signed = formatSigned(row.amount_minor, currency);
   switch (row.kind) {
     case "forfeit": {
@@ -608,7 +608,7 @@ function historyLine(row: HistoryRow, input: { me: string; whole: boolean; membe
         id: row.id,
         kind,
         title: row.john?.name ?? STAKE_HISTORY_COPY.aJohn,
-        meta: whole ? [called(members, row.user_id, me), word.toLowerCase(), day].join(DOT) : [word, day].join(DOT),
+        meta: whole ? [called(members, row.user_id, me), word.toLowerCase(), day].join(COMMA) : [word, day].join(COMMA),
         amount: signed,
         losing: row.amount_minor < 0,
       };

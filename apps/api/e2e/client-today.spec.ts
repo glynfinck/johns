@@ -47,7 +47,7 @@ test("tick a John, take it back, and tick one with a photo", async ({ context, p
   await expect(nextUp.getByTestId("next-up-name")).toHaveText("Bins out");
   await expect(rest).toHaveCount(1);
 
-  // The bath from its row: its circle asks for the photo, from the browser's file chooser here.
+  // The bath from its row: its tick box asks for the photo, from the browser's file chooser here.
   const bath = row("Clean the bath");
   await expect(bath.getByRole("checkbox", { name: NEXT_UP_COPY.tick("Clean the bath") })).toHaveCount(0);
   const chooser = page.waitForEvent("filechooser");

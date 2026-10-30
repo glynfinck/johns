@@ -130,8 +130,8 @@ permanent once a store has seen them.
   "•••"), `PageTitle` (the browser tab's title on the web from core's
   `pageTitle`, nothing on a phone), `Section`, `Group`, `Row` (the one row,
   everywhere), `Fold`, `Card` (at most one stand-alone card a screen),
-  `TickCircle`, `StatusMark` and `Chip` (core's `STATUS_MARK`, drawn),
-  `LidDot`, `Avatar`, `CountBadge`, `Button`, `TextButton`, `TextLink`,
+  `TickBox`, `StatusMark` and `Chip` (core's `STATUS_MARK`, drawn),
+  `LidBar`, `Avatar`, `CountBadge`, `Button`, `TextButton`, `TextLink`,
   `Field`, `Alert`, `Segmented`, `EmptyState`, `Reading` and `ReadFailed`
   (a first read on its way, or "Try again"), toasts, and the brand pieces
   (`Wordmark`, `HazardTape`, `SignInPanel`). `john-row.tsx` is a John as a
@@ -292,7 +292,12 @@ permanent once a store has seen them.
 - **Type:** Overpass, loaded behind the splash screen in `_layout.tsx`. Text
   goes through six roles (`useTheme().type`, drawn by `components/text.tsx`):
   `Title` (once per screen, in the title bar), `Lead`, `SectionLabel`,
-  `RowTitle`, `Body` and `Meta`, never an inline size. `Heading` stays for
+  `RowTitle`, `Body` and `Meta`, never an inline size. Only the title is in
+  caps: a section is named in sentence case, as a heading, never a small
+  tracked-caps label over it. `type.caps` (12 tracked caps) is only a grid's
+  small print (a calendar's weekdays, a table's column heads) and a
+  `StatusMark`'s word. A meta line joins its facts with commas, or makes them
+  a sentence, never " · ". `Heading` stays for
   the brand pages (the front door, sign-in, joining) and the pages for a
   missing link or a screen that failed to draw. On iOS and Android each
   weight is its own family, so a style names the family from `FONT`;
@@ -300,17 +305,21 @@ permanent once a store has seen them.
 - **The fonts are patched copies**, in `assets/fonts`: Overpass 400, 700,
   800 and 900 from `@expo-google-fonts/overpass`, with one change. Overpass
   calls its middle dot a mark, and a text shaper gives a mark no width, so
-  every meta line's " · " drew its dot on the space after it ("Bathroom
-  ·tomorrow"). In these copies the dot is a base glyph and keeps its
-  width; nothing else differs. The README there has the command that made
+  a " · " drew its dot on the space after it ("Bathroom ·tomorrow"). In
+  these copies the dot is a base glyph and keeps its width; nothing else
+  differs. (Meta lines no longer use the dot, but anything that does draws
+  it right.) The README there has the command that made
   them (run it again after upgrading the package), and `theme.test.ts`
   checks the dot in each.
 - **Signage:** `Wordmark` (the road sign) and the full `HazardTape` belong to
   the brand pages and the invite sheet (`Sheet`'s `tape`, with the code in
-  big caps). Inside the house, tape is otherwise only a row's 4pt edge on an
-  overdue or missed John, a lid colour only a `LidDot` before a John's
-  category, and where a John has got to a `StatusMark`. Decoration is
-  `aria-hidden`.
+  big caps). Inside the house the sign shows in three places: Today's next
+  John on a `StreetPlate` (white, the inset ink border, the name in
+  `type.plate`; the border turns hazard once it's overdue), each John's
+  `TickBox` (a small square plate with the sign's border) and the tab icons,
+  stroked as the J is. Tape is otherwise only a row's 4pt edge on an overdue
+  or missed John, a lid colour only a `LidBar` before a John's category, and
+  where a John has got to a `StatusMark`. Decoration is `aria-hidden`.
 - **Controls** are at least `TAP` (48) tall; links get the same target
   (`TextLink`, or `Button` with `href`, which is an anchor on the web).
 - **`Link asChild` merges its child's style by spreading it**, so a child
@@ -378,7 +387,7 @@ Prefer those package docs over stale assumptions, and follow deprecation notices
 
 - RNTL 14: `render`, `rerender`, `fireEvent` and `act` are async. Await them.
 - Queries skip `aria-hidden` elements; pass `{ includeHiddenElements: true }`
-  to find decoration such as a `LidDot`.
+  to find decoration such as a `LidBar`.
 - `jest.config.js` maps `lucide-react-native` to its CommonJS build, because
   its React Native entry is an ES module Jest can't load.
 - TypeScript 6 no longer loads every `@types` package, so `tsconfig.json`

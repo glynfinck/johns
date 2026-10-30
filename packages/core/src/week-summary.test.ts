@@ -227,10 +227,10 @@ describe("weekList", () => {
 
 describe("weekPersonMeta", () => {
   it("says how many are done and the points", () => {
-    expect(weekPersonMeta({ done: 1, total: 3, points: 6 })).toBe("1 of 3 done · 6 pts");
-    expect(weekPersonMeta({ done: 1, total: 2, points: 1 })).toBe("1 of 2 done · 1 pt");
-    expect(weekPersonMeta({ done: 0, total: 2, points: 0 })).toBe("0 of 2 done · 0 pts");
-    expect(weekPersonMeta({ done: 2, total: 2, points: 1.5 })).toBe("2 of 2 done · 1.5 pts");
+    expect(weekPersonMeta({ done: 1, total: 3, points: 6 })).toBe("1 of 3 done, 6 pts");
+    expect(weekPersonMeta({ done: 1, total: 2, points: 1 })).toBe("1 of 2 done, 1 pt");
+    expect(weekPersonMeta({ done: 0, total: 2, points: 0 })).toBe("0 of 2 done, 0 pts");
+    expect(weekPersonMeta({ done: 2, total: 2, points: 1.5 })).toBe("2 of 2 done, 1.5 pts");
   });
 
   it("says nothing for someone with no Johns", () => {
@@ -286,11 +286,11 @@ describe("weekAwayLine", () => {
         "sam",
         nameOf,
       ),
-    ).toBe("You’re away all week · Megan is away 28–31 Oct");
+    ).toBe("You’re away all week. Megan is away 28–31 Oct.");
   });
 
   it("names someone who has left as a former housemate", () => {
-    expect(weekAwayLine([{ userId: "cal", away: "away 21–22 Oct" }], "sam", nameOf)).toBe("A former housemate is away 21–22 Oct");
+    expect(weekAwayLine([{ userId: "cal", away: "away 21–22 Oct" }], "sam", nameOf)).toBe("A former housemate is away 21–22 Oct.");
   });
 
   it("is nothing when nobody's away", () => {
@@ -306,44 +306,44 @@ describe("weekRangeLine", () => {
   const endsAt = new Date("2026-10-26T00:00:00Z");
 
   it("says the week ends tonight on its last day, across the clocks going back", () => {
-    expect(weekRangeLine(startsAt, endsAt, new Date("2026-10-25T23:30:00Z"), ZONE)).toBe("19–25 Oct · ends tonight");
-    expect(weekRangeLine(startsAt, endsAt, new Date("2026-10-25T00:30:00Z"), ZONE)).toBe("19–25 Oct · ends tonight");
+    expect(weekRangeLine(startsAt, endsAt, new Date("2026-10-25T23:30:00Z"), ZONE)).toBe("19–25 Oct, ends tonight");
+    expect(weekRangeLine(startsAt, endsAt, new Date("2026-10-25T00:30:00Z"), ZONE)).toBe("19–25 Oct, ends tonight");
   });
 
   it("says tomorrow the day before, and the weekday before that", () => {
-    expect(weekRangeLine(startsAt, endsAt, new Date("2026-10-24T12:00:00Z"), ZONE)).toBe("19–25 Oct · ends tomorrow");
-    expect(weekRangeLine(startsAt, endsAt, new Date("2026-10-19T08:00:00Z"), ZONE)).toBe("19–25 Oct · ends Sun");
+    expect(weekRangeLine(startsAt, endsAt, new Date("2026-10-24T12:00:00Z"), ZONE)).toBe("19–25 Oct, ends tomorrow");
+    expect(weekRangeLine(startsAt, endsAt, new Date("2026-10-19T08:00:00Z"), ZONE)).toBe("19–25 Oct, ends Sun");
   });
 
   it("says it has ended from the moment it ends", () => {
-    expect(weekRangeLine(startsAt, endsAt, endsAt, ZONE)).toBe("19–25 Oct · ended");
+    expect(weekRangeLine(startsAt, endsAt, endsAt, ZONE)).toBe("19–25 Oct, ended");
   });
 
   it("reads the days in the house's zone, not the device's", () => {
     // The same instants, for a house in New York: its week is the 18th to the 25th's evening.
-    expect(weekRangeLine(startsAt, endsAt, new Date("2026-10-25T12:00:00Z"), "America/New_York")).toBe("18–25 Oct · ends tonight");
+    expect(weekRangeLine(startsAt, endsAt, new Date("2026-10-25T12:00:00Z"), "America/New_York")).toBe("18–25 Oct, ends tonight");
   });
 
   it("spans two months", () => {
     const start = new Date("2026-10-26T00:00:00Z");
     const end = new Date("2026-11-02T00:00:00Z");
-    expect(weekRangeLine(start, end, new Date("2026-10-28T12:00:00Z"), ZONE)).toBe("26 Oct–1 Nov · ends Sun");
+    expect(weekRangeLine(start, end, new Date("2026-10-28T12:00:00Z"), ZONE)).toBe("26 Oct–1 Nov, ends Sun");
   });
 });
 
 describe("weekSpokenRow", () => {
   it("says every column in a sentence: name, meta, whose, points and status", () => {
-    expect(weekSpokenRow({ name: "Descale the kettle", status: "overdue" }, "Kitchen · was due Sun", "Tom", 1)).toBe(
-      "Descale the kettle, Kitchen · was due Sun, Tom, 1 pt, Overdue",
+    expect(weekSpokenRow({ name: "Descale the kettle", status: "overdue" }, "Kitchen, was due Sun", "Tom", 1)).toBe(
+      "Descale the kettle, Kitchen, was due Sun, Tom, 1 pt, Overdue",
     );
-    expect(weekSpokenRow({ name: "Bins out", status: "checking" }, "Bins · stands in 21h", "You", 0)).toBe(
-      "Bins out, Bins · stands in 21h, You, 0 pts, Done, being checked",
+    expect(weekSpokenRow({ name: "Bins out", status: "checking" }, "Bins, stands in 21h", "You", 0)).toBe(
+      "Bins out, Bins, stands in 21h, You, 0 pts, Done, being checked",
     );
   });
 
   it("says no status for an upcoming John, which shows none", () => {
-    expect(weekSpokenRow({ name: "Bins out", status: "upcoming" }, "Bins · Thu 07:00", "Megan", 2)).toBe(
-      "Bins out, Bins · Thu 07:00, Megan, 2 pts",
+    expect(weekSpokenRow({ name: "Bins out", status: "upcoming" }, "Bins, Thu 07:00", "Megan", 2)).toBe(
+      "Bins out, Bins, Thu 07:00, Megan, 2 pts",
     );
   });
 });

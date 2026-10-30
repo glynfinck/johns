@@ -53,7 +53,7 @@ describe("johnsByKind", () => {
       john({ id: "d", category: "other" }),
     ];
     const kinds = johnsByKind(list);
-    expect(kinds.map((k) => k.label)).toEqual(["Kitchen · 1", "Bins & recycling · 2", "Everything else · 1"]);
+    expect(kinds.map((k) => k.label)).toEqual(["Kitchen (1)", "Bins & recycling (2)", "Everything else (1)"]);
     // Within a kind, the list's own order.
     expect(kinds[1].johns.map((j) => j.id)).toEqual(["a", "c"]);
   });
@@ -66,32 +66,32 @@ describe("johnsByKind", () => {
 describe("scheduleLine", () => {
   it("says how often, the day and time, and the photo", () => {
     expect(scheduleLine(john({ everyWeeks: 1, dueDow: 7, dueTime: "21:00", needsPhoto: true }))).toBe(
-      "Every week · Sun 21:00 · photo",
+      "Every week, Sun 21:00, photo",
     );
   });
 
   it("leaves out the photo when there's none, and adds the group that shares it", () => {
     expect(scheduleLine(john({ everyWeeks: 2, dueDow: 4, dueTime: "07:00" }), "Upstairs bathroom")).toBe(
-      "Every 2 weeks · Thu 07:00 · Upstairs bathroom",
+      "Every 2 weeks, Thu 07:00, Upstairs bathroom",
     );
-    expect(scheduleLine(john({ everyWeeks: 1, dueDow: 1, dueTime: "09:30" }), null)).toBe("Every week · Mon 09:30");
+    expect(scheduleLine(john({ everyWeeks: 1, dueDow: 1, dueTime: "09:30" }), null)).toBe("Every week, Mon 09:30");
   });
 
   it("says a cadence the list doesn't name", () => {
-    expect(scheduleLine(john({ everyWeeks: 6, dueDow: 3, dueTime: "12:00" }))).toBe("Every 6 weeks · Wed 12:00");
+    expect(scheduleLine(john({ everyWeeks: 6, dueDow: 3, dueTime: "12:00" }))).toBe("Every 6 weeks, Wed 12:00");
   });
 
   it("says a monthly John's period and which of its weekday", () => {
-    expect(scheduleLine(john({ everyMonths: 3, weekOfMonth: 1, dueDow: 6, dueTime: "21:00" }))).toBe("Every 3 months · first Sat 21:00");
-    expect(scheduleLine(john({ everyMonths: 6, weekOfMonth: 5, dueDow: 7, dueTime: "10:00" }))).toBe("Twice a year · last Sun 10:00");
-    expect(scheduleLine(john({ everyMonths: 12, weekOfMonth: 2, dueDow: 1, dueTime: "09:00" }))).toBe("Every year · second Mon 09:00");
+    expect(scheduleLine(john({ everyMonths: 3, weekOfMonth: 1, dueDow: 6, dueTime: "21:00" }))).toBe("Every 3 months, first Sat 21:00");
+    expect(scheduleLine(john({ everyMonths: 6, weekOfMonth: 5, dueDow: 7, dueTime: "10:00" }))).toBe("Twice a year, last Sun 10:00");
+    expect(scheduleLine(john({ everyMonths: 12, weekOfMonth: 2, dueDow: 1, dueTime: "09:00" }))).toBe("Every year, second Mon 09:00");
   });
 
   it("says an on-call John's window and how often, not a day", () => {
     expect(scheduleLine(john({ when: "on_call", respondHours: 12, perWeek: 3 }), "Downstairs")).toBe(
-      "On call · within 12 hours · about 3 times a week · Downstairs",
+      "On call, within 12 hours, about 3 times a week, Downstairs",
     );
-    expect(scheduleLine(john({ when: "on_call", respondHours: 1, perWeek: 1 }))).toBe("On call · within 1 hour · about once a week");
+    expect(scheduleLine(john({ when: "on_call", respondHours: 1, perWeek: 1 }))).toBe("On call, within 1 hour, about once a week");
   });
 });
 
@@ -297,12 +297,12 @@ describe("time away lines", () => {
 
   it("says where your trip is, and whether it's begun", () => {
     expect(tripMeta(trip, "2026-10-26")).toBe("Mum's 60th in Cork");
-    expect(tripMeta(trip, "2026-10-28")).toBe("Away now · Mum's 60th in Cork");
+    expect(tripMeta(trip, "2026-10-28")).toBe("Away now, Mum's 60th in Cork");
     expect(tripMeta({ ...trip, note: null }, "2026-10-26")).toBe("");
   });
 
   it("gives a housemate's trip its dates and where", () => {
-    expect(awayMeta(trip)).toBe("28–31 Oct · Mum's 60th in Cork");
+    expect(awayMeta(trip)).toBe("28–31 Oct, Mum's 60th in Cork");
     expect(awayMeta({ ...trip, endsOn: "2026-11-01", note: "" })).toBe("28 Oct–1 Nov");
   });
 });

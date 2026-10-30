@@ -92,7 +92,7 @@ function WallFor({ houseId, userId }: { houseId: string; userId: string }) {
     body = (
       <>
         {days.map((day) => (
-          <Section key={day.date} label={day.label} right={day.sub ?? undefined} plain testID="wall-day">
+          <Section key={day.date} label={day.label} right={day.sub ?? undefined} testID="wall-day">
             {day.items.map((item) =>
               'fold' in item ? (
                 <Fold

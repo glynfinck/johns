@@ -61,8 +61,8 @@ it('says it affects everyone, under its label', async () => {
 it('shows what each page is set to now', async () => {
   await open();
   // The bins every week (1) and the bathroom every other (4 / 2).
-  await rowSays('to-johns', /Johns.*2 · about 3 pts a week/);
-  expect(screen.getByTestId('to-rules')).toHaveTextContent(/Rules.*£20 stake · £1 late · £3 missed/);
+  await rowSays('to-johns', /Johns.*2 Johns, about 3 pts a week/);
+  expect(screen.getByTestId('to-rules')).toHaveTextContent(/Rules.*£20 stake, £1 late, £3 missed/);
   await rowSays('to-away', /Time away.*Sam, 29 Oct–1 Nov/);
   // Priya is an admin: Groups shows before there are any.
   expect(screen.getByTestId('to-groups')).toHaveTextContent(/Groups.*None/);
@@ -90,7 +90,7 @@ it('keeps Groups from a housemate until the house has one', async () => {
   const members = snapshot().members.map((m) => ({ ...m, role: 'member' as const }));
   (loadHouse as jest.Mock).mockResolvedValue(snapshot({ members }));
   await open();
-  await rowSays('to-johns', /2 ·/);
+  await rowSays('to-johns', /2 Johns,/);
   expect(screen.queryByTestId('to-groups')).toBeNull();
 });
 

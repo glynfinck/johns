@@ -62,7 +62,7 @@ export function passDaysLeft(pass: HousePass, now: Date): number | null {
   return ms <= 0 ? 0 : Math.ceil(ms / 86_400_000);
 }
 
-/** The Pass in a few words, for its row on House: "Founding house", "Free month · 12 days left", "Yearly · renews 12 Nov". */
+/** The Pass in a few words, for its row on House: "Founding house", "Free month, 12 days left", "Yearly, renews 12 Nov". */
 export function passLine(pass: HousePass, now: Date, zone: string): string {
   if (pass.plan === "founding") return PASS_COPY.founding;
   const day = format(pass.until!, "d MMM", { in: tz(zone) });

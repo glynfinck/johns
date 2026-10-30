@@ -39,7 +39,7 @@ describe("the reset sheet", () => {
     expect(sheet.title).toBe("Reset this week?");
     expect(sheet.body).toBe("Everyone keeps the Johns they were dealt. Ticks, covers and flags from 26 Oct–1 Nov are cleared.");
     expect(sheet.lines).toEqual([
-      { key: "ticks", label: "6 ticks cleared", value: "Ada 3 · Sam 2 · you 1" },
+      { key: "ticks", label: "6 ticks cleared", value: "Ada 3, Sam 2, you 1" },
       { key: "balances", label: "Balances", value: "Ada −7 pts" },
       { key: "stake", label: "Stake", value: "£2 of forfeits removed" },
       { key: "track", label: "Track record", value: "This week shows open again" },
@@ -84,7 +84,7 @@ describe("a reset in History and on the Wall", () => {
 describe("Ask Jonz's Resets card", () => {
   it("puts a reset's numbers in one line, without the Track record", () => {
     const line = resetItemLine({ kind: "reset", ask: { kind: "week", week: "w1" }, preview: preview(), words: {} }, words());
-    expect(line).toEqual({ title: "Reset this week", meta: "6 ticks cleared · Ada −7 pts · £2 of forfeits removed", told: ["ada", "sam"] });
+    expect(line).toEqual({ title: "Reset this week", meta: "6 ticks cleared, Ada −7 pts, £2 of forfeits removed", told: ["ada", "sam"] });
   });
 
   it("says an undo in History's words, and tells whoever's move it was", () => {

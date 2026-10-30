@@ -8,7 +8,7 @@ import { INSET, TAP, useTheme } from '@/theme';
 
 /**
  * One tappable line on the page, onward to where it's about: where you
- * stand ("Joint 2nd this week · up £4.01 in October ›", to House), or your
+ * stand ("Joint 2nd this week, up £4.01 in October ›", to House), or your
  * time away ("You're away 28–31 Oct ›", to change the dates). Body, not
  * bold: it's a sentence, not a button.
  */

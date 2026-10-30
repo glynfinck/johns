@@ -34,7 +34,7 @@ import { SheetLines, SheetSection } from './parts';
  * (whoever ticks it did it), then everyone else with a place in it, all
  * ticked; untick someone who wasn't there and it says what that means
  * ("Counts as a miss for Sam"). "Add someone who helped" lists the rest of
- * the house to add. Under the list, how the points split ("12 pts ÷ 3 ·
+ * the house to add. Under the list, how the points split ("12 pts ÷ 3,
  * 4 pts each"), then Mark done (with a photo, for a photo John) and Cancel.
  */
 export function RollCall({ item, context, onCancel }: { item: BoardItem; context: JohnSheetContext; onCancel: () => void }) {
@@ -126,7 +126,7 @@ export function RollCall({ item, context, onCancel }: { item: BoardItem; context
           )}
           <GroupItem>
             <Meta testID="roll-call-split">
-              {`${CREW_COPY.split(pointsLabel(plan.total), crew.length)} · ${CREW_COPY.splitEach(shareLabel(plan.each))}`}
+              {`${CREW_COPY.split(pointsLabel(plan.total), crew.length)}, ${CREW_COPY.splitEach(shareLabel(plan.each))}`}
             </Meta>
           </GroupItem>
         </Section>

@@ -168,7 +168,7 @@ describe('the summary', () => {
 
   it('says the week ends, in a line above the bar', async () => {
     await open();
-    expect(within(screen.getByTestId('week-summary')).getByText(/ · ends /)).toBeOnTheScreen();
+    expect(within(screen.getByTestId('week-summary')).getByText(/, ends /)).toBeOnTheScreen();
   });
 
   it('filters the list by a part of the legend, and shows everything when pressed again', async () => {
@@ -238,8 +238,8 @@ describe('on a phone', () => {
     expect(groups.map((g) => g.props.testID)).toEqual(['person-priya', 'person-sam']);
     const you = screen.getByTestId('person-priya');
     expect(within(you).getByRole('header', { name: WEEK_COPY.you })).toBeOnTheScreen();
-    expect(within(you).getByText('1 of 3 done · 2 pts')).toBeOnTheScreen();
-    expect(within(screen.getByTestId('person-sam')).getByText('0 of 2 done · 4 pts')).toBeOnTheScreen();
+    expect(within(you).getByText('1 of 3 done, 2 pts')).toBeOnTheScreen();
+    expect(within(screen.getByTestId('person-sam')).getByText('0 of 2 done, 4 pts')).toBeOnTheScreen();
   });
 
   it('shows a John done together once, under Together, and counts it in each person\'s group', async () => {
@@ -251,9 +251,9 @@ describe('on a phone', () => {
     expect(together.getAllByTestId('week-row')).toHaveLength(1);
     expect(together.getByText('Garden tidy')).toBeOnTheScreen();
     expect(together.getByText(/with Sam/)).toBeOnTheScreen();
-    expect(within(screen.getByTestId('person-priya')).getByText('0 of 1 done · 0 pts')).toBeOnTheScreen();
+    expect(within(screen.getByTestId('person-priya')).getByText('0 of 1 done, 0 pts')).toBeOnTheScreen();
     expect(within(screen.getByTestId('person-priya')).queryByText('Garden tidy')).toBeNull();
-    // Ticked from its sheet, with who did it: no circle to tick it from.
+    // Ticked from its sheet, with who did it: no tick box to tick it from.
     await fireEvent.press(together.getByText('Garden tidy'));
     expect(mockOpen).toHaveBeenCalledWith('g1', undefined);
   });
@@ -269,7 +269,7 @@ describe('on a phone', () => {
     );
     await open();
     const fold = within(screen.getByTestId('person-priya')).getByRole('button', { name: /Done \(1\)/ });
-    expect(within(fold).getByText('Done (1) ·')).toBeOnTheScreen();
+    expect(within(fold).getByText('Done (1),')).toBeOnTheScreen();
     expect(within(fold).getByText('1 late')).toBeOnTheScreen();
     expect(fold).not.toBeExpanded();
     expect(screen.queryByText('Wipe the hob')).toBeNull();
@@ -278,7 +278,7 @@ describe('on a phone', () => {
     expect(within(row('Wipe the hob')).getByTestId('status-late')).toBeOnTheScreen();
   });
 
-  it('ticks your open John from its circle, and a photo John goes to the camera first', async () => {
+  it('ticks your open John from its tick box, and a photo John goes to the camera first', async () => {
     read.mockResolvedValue(
       busyWeek({
         assignments: [
@@ -304,7 +304,7 @@ describe('on a phone', () => {
     expect(await within(screen.getByTestId('person-priya')).findByText('This week has closed.')).toBeOnTheScreen();
   });
 
-  it("never ticks a housemate's John: its circle is only a picture, saying what Today's would", async () => {
+  it("never ticks a housemate's John: its tick box is only a picture, saying what Today's would", async () => {
     await open();
     const sam = screen.getByTestId('person-sam');
     expect(within(sam).queryByRole('checkbox')).toBeNull();
@@ -398,7 +398,7 @@ describe('on a phone', () => {
     expect(mockOpen).toHaveBeenCalledTimes(4);
     expect(mockOpen).toHaveBeenLastCalledWith('a5', 'vote');
     // Cal, who raised it, has left the house since.
-    expect(within(row('Mop the floor')).getByText('Disputed by a former housemate · 5h left')).toBeOnTheScreen();
+    expect(within(row('Mop the floor')).getByText('Disputed by a former housemate, 5h left')).toBeOnTheScreen();
   });
 
   it('marks overdue Johns with the hazard mark', async () => {
@@ -445,7 +445,7 @@ describe('on a phone', () => {
     const sam = screen.getByTestId('person-sam');
     // Each on a line of its own, so neither is cut short on a small phone.
     expect(await within(sam).findByText('away 21–23 Oct')).toBeOnTheScreen();
-    expect(within(sam).getByText('0 of 2 done · 4 pts')).toBeOnTheScreen();
+    expect(within(sam).getByText('0 of 2 done, 4 pts')).toBeOnTheScreen();
     const cal = screen.getByTestId('person-cal');
     expect(within(cal).getByText('away all week')).toBeOnTheScreen();
     expect(within(cal).getByText(WEEK_SUMMARY_COPY.nothing)).toBeOnTheScreen();
@@ -479,9 +479,9 @@ describe('on a phone', () => {
       busyWeek({ assignments: busyWeek().assignments.map((a) => (a.id === 'a2' ? { ...a, done_at: at(-1) } : a)) }),
     );
     await open();
-    expect(within(row('Hoover the stairs')).getByText(/^Floors · stands in \d+h$/)).toBeOnTheScreen();
+    expect(within(row('Hoover the stairs')).getByText(/^Floors, stands in \d+h$/)).toBeOnTheScreen();
     expect(within(row('Hoover the stairs')).getByRole('button', { name: NEXT_UP_COPY.undo('Hoover the stairs') })).toBeOnTheScreen();
-    expect(within(row('Clean the bath')).getByText(/^Bathroom · stands in /)).toBeOnTheScreen();
+    expect(within(row('Clean the bath')).getByText(/^Bathroom, stands in /)).toBeOnTheScreen();
   });
 
   it("opens your own disputed John on nothing in particular, as you can't vote on it", async () => {
@@ -492,8 +492,8 @@ describe('on a phone', () => {
     );
     await open();
     const mop = row('Mop the floor');
-    // The flag on its circle and the meta line say it's disputed; its points trail, as on Today.
-    expect(within(mop).getByText('Disputed by a former housemate · 5h left')).toBeOnTheScreen();
+    // The flag on its tick box and the meta line say it's disputed; its points trail, as on Today.
+    expect(within(mop).getByText('Disputed by a former housemate, 5h left')).toBeOnTheScreen();
     expect(within(mop).queryByTestId('status-disputed')).toBeNull();
     expect(within(mop).getByText('2 pts')).toBeOnTheScreen();
     await fireEvent.press(within(mop).getByRole('button'));
@@ -557,7 +557,7 @@ describe('coming up', () => {
     const rows = within(section).getAllByTestId('coming-up-john');
     expect(rows).toHaveLength(1);
     expect(within(rows[0]).getByText('Fridge deep clean')).toBeOnTheScreen();
-    expect(within(rows[0]).getByText('Sat 7 Nov · every 3 months')).toBeOnTheScreen();
+    expect(within(rows[0]).getByText('Sat 7 Nov, every 3 months')).toBeOnTheScreen();
   });
 
   it('shows nothing when no long John lands soon', async () => {
@@ -737,7 +737,7 @@ describe('on a laptop', () => {
     await open();
     // Each row says every column to a screen reader, which can't see them.
     expect(
-      within(row('Clean the bath')).getByRole('button', { name: /^Clean the bath, Bathroom · stands in .*, Sam, 2 pts, Done, being checked$/ }),
+      within(row('Clean the bath')).getByRole('button', { name: /^Clean the bath, Bathroom, stands in .*, Sam, 2 pts, Done, being checked$/ }),
     ).toBeOnTheScreen();
     expect(within(row('Bins out')).getByText(WEEK_COPY.you)).toBeOnTheScreen();
     expect(within(row('Clean the bath')).getByText('Sam')).toBeOnTheScreen();
@@ -746,7 +746,7 @@ describe('on a laptop', () => {
     expect(mockOpen).toHaveBeenLastCalledWith('a5', 'vote');
   });
 
-  it('ticks your John from its circle and opens the sheet from the row', async () => {
+  it('ticks your John from its tick box and opens the sheet from the row', async () => {
     await open();
     await fireEvent.press(within(row('Bins out')).getByRole('checkbox'));
     expect(markDone).toHaveBeenCalledWith('a1');
@@ -763,7 +763,7 @@ describe('on a laptop', () => {
     });
     await open();
     const summary = screen.getByTestId('week-summary');
-    expect(await within(summary).findByText('Sam is away 21–23 Oct')).toBeOnTheScreen();
+    expect(await within(summary).findByText('Sam is away 21–23 Oct.')).toBeOnTheScreen();
     expect(within(summary).getByTestId('swap-ready')).toHaveTextContent(WEEK_SUMMARY_COPY.swapReady);
   });
 

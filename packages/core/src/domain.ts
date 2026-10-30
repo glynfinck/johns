@@ -26,7 +26,7 @@ export const CATEGORY_LABEL: Record<Category, string> = {
 
 /**
  * A kind as a line about one John says it, short enough to leave room for
- * when: "Bins · today 21:00", "Other · was due Tue".
+ * when: "Bins, today 21:00", "Other, was due Tue".
  */
 export const CATEGORY_SHORT: Record<Category, string> = {
   kitchen: "Kitchen",

@@ -148,11 +148,14 @@ it("reads the house under Focus's title bar, and leaves signing out to House", a
 });
 
 describe('Next up', () => {
-  it('shows your next John, what it is, when it is due and what late costs', async () => {
+  it('posts your next John on a plate, with what it is, when it is due and what late costs', async () => {
     const card = await open();
-    expect(within(card).getByText(NEXT_UP_COPY.label)).toBeOnTheScreen();
+    // The plate says it's next: "Next up" is heard, not shown.
+    expect(within(card).queryByText(NEXT_UP_COPY.label)).toBeNull();
+    expect(within(card).getByRole('button', { name: `${NEXT_UP_COPY.label}: Bins out` })).toBeOnTheScreen();
     expect(within(card).getByText('Bins out')).toBeOnTheScreen();
-    expect(screen.getByTestId('next-up-meta')).toHaveTextContent(/^Bins · due .+ · £1 if late$/);
+    expect(within(card).getByTestId('plate-border')).toBeOnTheScreen();
+    expect(screen.getByTestId('next-up-meta')).toHaveTextContent(/^Bins, due .+, £1 if late$/);
     expect(within(card).getByRole('button', { name: JOHN_COPY.markDone })).toBeOnTheScreen();
     expect(within(card).getByRole('button', { name: NEXT_UP_COPY.photo })).toBeOnTheScreen();
     // Not overdue, and no token to spend: no hazard, no way to skip.
@@ -171,7 +174,7 @@ describe('Next up', () => {
     // The tick waits for the house in the rest of the week, with Undo.
     const rows = within(screen.getByTestId('rest-of-week')).getAllByTestId('my-john');
     expect(rows[0]).toHaveTextContent(/Bins out/);
-    expect(rows[0]).toHaveTextContent(/Bins · stands in 2\dh/);
+    expect(rows[0]).toHaveTextContent(/Bins, stands in 2\dh/);
   });
 
   it('ticks with a photo from the camera', async () => {
@@ -199,12 +202,13 @@ describe('Next up', () => {
     expect(await within(card).findByRole('alert')).toHaveTextContent('That week has closed.');
   });
 
-  it('wears the hazard edge when overdue, keeps its kind, and says what it costs now', async () => {
+  it("draws the plate's border in hazard when overdue, keeps its kind, and says what it costs now", async () => {
     read.mockResolvedValue(snapshot({ assignments: [assignment({ due_at: at(-3) })] }));
     await open();
-    expect(screen.getByTestId('overdue-edge', { includeHiddenElements: true })).toBeOnTheScreen();
+    expect(screen.getByTestId('overdue-edge')).toBeOnTheScreen();
+    expect(screen.queryByTestId('plate-border')).toBeNull();
     expect(screen.getByTestId('next-up-meta')).toHaveTextContent(/^Bins$/);
-    expect(screen.getByTestId('next-up-overdue')).toHaveTextContent(/^Overdue since .+ · £1 now, £3 if missed$/);
+    expect(screen.getByTestId('next-up-overdue')).toHaveTextContent(/^Overdue since .+, £1 now, £3 if missed$/);
   });
 
   it('says no more than lateness can still cost you this month', async () => {
@@ -221,7 +225,7 @@ describe('Next up', () => {
     );
     read.mockResolvedValue(snapshot({ assignments: [assignment({ due_at: at(1) })] }));
     await open();
-    await waitFor(() => expect(screen.getByTestId('next-up-meta')).toHaveTextContent(/ · £0\.50 if late$/));
+    await waitFor(() => expect(screen.getByTestId('next-up-meta')).toHaveTextContent(/, £0\.50 if late$/));
   });
 
   it('opens the John sheet from its name', async () => {
@@ -420,7 +424,7 @@ describe('Needs you', () => {
     expect(within(section).getByText(`${NEXT_UP_COPY.needsYou}`)).toBeOnTheScreen();
     const row = within(section).getByTestId('vote-row');
     expect(within(row).getByText('Vote on Sam’s Clean the bath')).toBeOnTheScreen();
-    expect(row).toHaveTextContent(/Megan says it’s not done · closes in 1[78]h/);
+    expect(row).toHaveTextContent(/Megan says it’s not done, closes in 1[78]h/);
     expect(within(row).getByTestId('avatar', { includeHiddenElements: true })).toHaveTextContent('SA');
   });
 
@@ -459,7 +463,7 @@ describe('Needs you', () => {
 });
 
 describe('the rest of your week', () => {
-  it('lists your other Johns, ticked from their circle, with the finished ones folded', async () => {
+  it('lists your other Johns, ticked from their tick box, with the finished ones folded', async () => {
     await open();
     const section = screen.getByTestId('rest-of-week');
     expect(within(section).getByText(NEXT_UP_COPY.rest)).toBeOnTheScreen();
@@ -474,9 +478,9 @@ describe('the rest of your week', () => {
     const fold = screen.getByTestId('done-fold');
     expect(fold).toHaveTextContent(FOCUS_SHELL_COPY.done(1));
     await fireEvent.press(fold);
-    // Done once: the green circle, then the points it earned, not a second mark.
+    // Done once: the green box, then the points it earned, not a second mark.
     const hob = within(section).getAllByTestId('my-john')[1];
-    expect(hob).toHaveTextContent(/^Wipe the hobKitchen · done .+2 pts$/);
+    expect(hob).toHaveTextContent(/^Wipe the hobKitchen, done .+2 pts$/);
     expect(within(hob).getByLabelText(NEXT_UP_COPY.stateLabel.done)).toBeOnTheScreen();
     expect(within(hob).queryByTestId('status-done')).toBeNull();
   });
@@ -503,11 +507,11 @@ describe('the rest of your week', () => {
     await open();
     const section = screen.getByTestId('rest-of-week');
     const stairs = within(section).getByTestId('my-john');
-    expect(stairs).toHaveTextContent(/^Hoover the stairsDisputed by Sam · 1[78]h left2 pts$/);
+    expect(stairs).toHaveTextContent(/^Hoover the stairsDisputed by Sam, 1[78]h left2 pts$/);
     expect(within(stairs).getByLabelText(NEXT_UP_COPY.stateLabel.disputed)).toBeOnTheScreen();
     await fireEvent.press(screen.getByTestId('done-fold'));
     const hob = within(section).getAllByTestId('my-john')[1];
-    expect(hob).toHaveTextContent(/^Wipe the hobKitchen · skipped with immunity$/);
+    expect(hob).toHaveTextContent(/^Wipe the hobKitchen, skipped with immunity$/);
     // Never spoken as "Not done".
     expect(within(hob).queryByLabelText(NEXT_UP_COPY.stateLabel.open)).toBeNull();
   });
@@ -524,7 +528,7 @@ describe('the rest of your week', () => {
     );
     await open();
     const fold = within(screen.getByTestId('done-fold'));
-    expect(fold.getByText(`${FOCUS_SHELL_COPY.done(2)} ·`)).toBeOnTheScreen();
+    expect(fold.getByText(`${FOCUS_SHELL_COPY.done(2)},`)).toBeOnTheScreen();
     expect(fold.getByText(WEEK_SUMMARY_COPY.late(1))).toBeOnTheScreen();
   });
 
@@ -565,7 +569,7 @@ it('says where you stand in one line, on to House', async () => {
   await open();
   // Priya alone has points this week; Sam's forfeit is in the pot.
   const line = await screen.findByTestId('standing-line');
-  expect(line).toHaveTextContent(/^1st this week · up £3 in October$/);
+  expect(line).toHaveTextContent(/^1st this week, up £3 in October$/);
   // No trip coming: no line about one.
   expect(screen.queryByTestId('away-line')).toBeNull();
   await fireEvent.press(line);
@@ -609,7 +613,7 @@ describe('On call', () => {
     await open();
     const section = within(await screen.findByTestId('on-call'));
     expect(section.getByText('Empty the bins')).toBeOnTheScreen();
-    expect(section.getByText(`${ON_CALL_COPY.holder('Sam')} · ${ON_CALL_COPY.times(0)}`)).toBeOnTheScreen();
+    expect(section.getByText(`${ON_CALL_COPY.holder('Sam')}, ${ON_CALL_COPY.times(0)}`)).toBeOnTheScreen();
     await fireEvent.press(section.getByTestId('on-call-flag'));
     await waitFor(() => expect(raiseFlag).toHaveBeenCalledWith('j-bins'));
     expect(markDone).not.toHaveBeenCalled();
@@ -620,7 +624,7 @@ describe('On call', () => {
     read.mockResolvedValue(snapshot({ onCall: [{ ...BINS_ON_CALL, user_id: 'priya' }] }));
     await open();
     const section = within(await screen.findByTestId('on-call'));
-    expect(section.getByText(`${ON_CALL_COPY.youreOnCall} · ${ON_CALL_COPY.times(0)}`)).toBeOnTheScreen();
+    expect(section.getByText(`${ON_CALL_COPY.youreOnCall}, ${ON_CALL_COPY.times(0)}`)).toBeOnTheScreen();
     await fireEvent.press(section.getByTestId('on-call-done'));
     await waitFor(() => expect(markDone).toHaveBeenCalledWith('f1'));
     expect(raiseFlag).toHaveBeenCalledWith('j-bins');
@@ -641,7 +645,7 @@ describe('On call', () => {
     await open();
     const section = within(await screen.findByTestId('on-call'));
     expect(section.getByTestId('on-call-flagged')).toBeOnTheScreen();
-    expect(section.getByText(new RegExp(`^${ON_CALL_COPY.flagged('Sam')} · due `))).toBeOnTheScreen();
+    expect(section.getByText(new RegExp(`^${ON_CALL_COPY.flagged('Sam')}, due `))).toBeOnTheScreen();
     expect(section.queryByTestId('on-call-flag')).toBeNull();
   });
 

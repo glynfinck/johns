@@ -5,7 +5,7 @@ import { Section } from '@/components/section';
 
 /**
  * The rest of your week: your other Johns as rows, the same rows Week draws
- * (ticked from their circle, Undo while the house checks one), and the
+ * (ticked from their tick box, Undo while the house checks one), and the
  * finished ones folded into "Done (n)". Nothing when there are none.
  */
 export function RestOfWeek({ going, finished, context }: { going: BoardItem[]; finished: BoardItem[]; context: JohnRowContext }) {

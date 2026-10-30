@@ -4,7 +4,7 @@ import { StyleSheet, View } from 'react-native';
 import { CountBadge } from '@/components/badge';
 import { Group } from '@/components/group';
 import { Meta, SectionLabel } from '@/components/text';
-import { INSET, LABEL_GAP, ROW_GAP, SPACE, TAP, useTheme } from '@/theme';
+import { INSET, LABEL_GAP, ROW_GAP, SPACE, TAP } from '@/theme';
 
 /** The label's line. */
 const LINE = 24;
@@ -33,13 +33,10 @@ export function Section({
   leading,
   tag,
   right,
-  plain = false,
   children,
   testID,
 }: {
   label: string;
-  /** The label in sentence case, as a day is named on the Wall ("Today"), rather than in small caps. */
-  plain?: boolean;
   /** What waits, as a badge after the label ("Needs you", 1). Nothing at zero. */
   count?: number;
   /** Before the label: an Avatar of size 24 (Week's person header). */
@@ -48,14 +45,13 @@ export function Section({
   tag?: ReactNode;
   /**
    * A string is set as Meta; a few strings are a Meta line each, the second
-   * under the first ("1 of 3 done · 6 pts", then "away 28–31 Oct"). Anything
+   * under the first ("1 of 3 done, 6 pts", then "away 28–31 Oct"). Anything
    * else is a control.
    */
   right?: ReactNode | readonly string[];
   children: ReactNode;
   testID?: string;
 }) {
-  const { type } = useTheme();
   const lines = metaLines(right);
   const control = right != null && lines === null;
   return (
@@ -67,7 +63,7 @@ export function Section({
             numberOfLines={1}
             // The badge is silent: the heading says the count.
             accessibilityLabel={count ? `${label}, ${count}` : undefined}
-            style={[styles.words, plain && [type.rowTitle, styles.plain]]}
+            style={styles.words}
           >
             {label}
           </SectionLabel>
@@ -122,6 +118,5 @@ const styles = StyleSheet.create({
   meta: { flexShrink: 1, marginLeft: 'auto', alignItems: 'flex-end', paddingTop: 2 },
   end: { textAlign: 'right' },
   // A day's name sits on the label's 24pt line, a little smaller than a row's title.
-  plain: { fontSize: 15, lineHeight: 20, textTransform: 'none', letterSpacing: 0 },
   control: { flexShrink: 0, marginLeft: 'auto', marginVertical: -OVERHANG },
 });

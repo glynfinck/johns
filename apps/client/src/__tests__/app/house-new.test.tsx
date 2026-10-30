@@ -11,7 +11,7 @@ jest.mock('@/locale', () => ({ deviceTimeZone: () => 'America/St_Johns', deviceC
 
 const create = createHouse as jest.Mock;
 /** The defaults line as it's drawn: its parts between middle dots, as every Meta line's are. */
-const line = (...parts: string[]) => parts.join(' · ');
+const line = (...parts: string[]) => parts.join(', ');
 
 beforeEach(() => jest.clearAllMocks());
 

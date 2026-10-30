@@ -139,7 +139,7 @@ function PassReadOut({
       <View style={styles.words}>
         <Body testID="pass-lead">{founding ? PASS_COPY.foundingLead : PASS_COPY.lead}</Body>
         <Meta testID="pass-line">
-          {buyer ? `${passLine(pass, now, rules.timezone)} · ${PASS_COPY.boughtBy(buyer)}` : passLine(pass, now, rules.timezone)}
+          {buyer ? `${passLine(pass, now, rules.timezone)}, ${PASS_COPY.boughtBy(buyer)}` : passLine(pass, now, rules.timezone)}
         </Meta>
         {waiting ? <Meta testID="pass-bought">{PASS_COPY.bought}</Meta> : null}
       </View>

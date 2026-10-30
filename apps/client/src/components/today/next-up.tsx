@@ -16,9 +16,9 @@ import { Pressable, StyleSheet, Text, View, useWindowDimensions } from 'react-na
 import { Alert } from '@/components/alert';
 import { Button } from '@/components/button';
 import { Card } from '@/components/card';
-import { HazardTape } from '@/components/hazard-tape';
 import { useJohnSheet } from '@/components/john-sheet';
-import { LidDot } from '@/components/lid';
+import { LidBar } from '@/components/lid';
+import { StreetPlate } from '@/components/street-plate';
 import { Lead, Meta, SectionLabel } from '@/components/text';
 import { TextButton } from '@/components/text-button';
 import { useTick } from '@/hooks/use-tick';
@@ -101,11 +101,13 @@ export function NextUpCard({ lead, body, children }: { lead: string; body?: stri
 }
 
 /**
- * Your next John: its name as the Lead (which opens the John sheet), what
- * it is, when it's due and what being late costs, then amber "Mark done"
- * with a photo beside it (a photo John leads with the camera), and, while
- * you hold a token, the way to skip or swap it. Overdue, it wears the 4pt
- * hazard edge and says since when on a line of its own.
+ * Your next John, posted on the pavement rather than in a card: its name on
+ * a street-name plate (which opens the John sheet), what it is, when it's
+ * due and what being late costs, then amber "Mark done" with a photo beside
+ * it (a photo John leads with the camera), and, while you hold a token, the
+ * way to skip or swap it. The plate says it's next, so there's no "Next up"
+ * over it to read, only to hear. Overdue, the plate's border turns hazard
+ * and a line of its own says since when.
  */
 function NextJohn({
   houseId,
@@ -133,40 +135,35 @@ function NextJohn({
   const narrow = useWindowDimensions().width < NARROW;
 
   return (
-    <Card testID="next-up" style={[styles.edged, offersCant && styles.quietEnd]}>
-      {meta.overdue ? (
-        <View aria-hidden pointerEvents="none" style={styles.edge} testID="overdue-edge">
-          <HazardTape tone="hazard" width={4} height="100%" />
-        </View>
-      ) : null}
-      <SectionLabel style={styles.label}>{NEXT_UP_COPY.label}</SectionLabel>
+    <View testID="next-up" style={styles.posted}>
       <Pressable
         accessibilityRole="button"
+        accessibilityLabel={`${NEXT_UP_COPY.label}: ${item.name}`}
         onPress={() => sheet.open(item.id)}
         onPressIn={() => setPressed(true)}
         onPressOut={() => setPressed(false)}
-        style={[styles.name, pressed && styles.pressed]}
+        style={pressed && styles.pressed}
         testID="next-up-name"
       >
-        <Lead>{item.name}</Lead>
+        <StreetPlate tone={meta.overdue ? 'hazard' : 'ink'}>{item.name}</StreetPlate>
       </Pressable>
-      {/* Not a row: the card's meta may wrap to a second line on a narrow phone rather than lose the cost. */}
-      <View style={styles.meta}>
+      {/* Not a row: the meta may wrap to a second line on a narrow phone rather than lose the cost. */}
+      <View style={[styles.meta, styles.underPlate]}>
         <View style={styles.mark}>
-          <LidDot category={item.category} />
+          <LidBar category={item.category} />
         </View>
         <Meta numberOfLines={2} style={styles.shrink} testID="next-up-meta">
-          {meta.due ? `${meta.kind} · ${meta.due}` : meta.kind}
+          {meta.due ? `${meta.kind}, ${meta.due}` : meta.kind}
         </Meta>
       </View>
       {meta.overdue ? (
-        <View style={styles.meta} testID="next-up-overdue">
+        <View style={[styles.meta, styles.words]} testID="next-up-overdue">
           <View style={styles.mark}>
             <TriangleAlertIcon size={14} color={colors.hazard} aria-hidden />
           </View>
           <Text numberOfLines={2} style={[type.meta, styles.shrink]}>
             <Text style={{ color: colors.hazard }}>{meta.overdue.since}</Text>
-            {meta.overdue.cost ? ` · ${meta.overdue.cost}` : ''}
+            {meta.overdue.cost ? `, ${meta.overdue.cost}` : ''}
           </Text>
         </View>
       ) : null}
@@ -214,7 +211,7 @@ function NextJohn({
       ) : null}
 
       {offersCant ? (
-        <View style={styles.onward}>
+        <View style={[styles.onward, styles.words]}>
           <TextButton
             label={NEXT_UP_COPY.cant(cant.immunity, cant.swap)}
             chevron
@@ -225,30 +222,28 @@ function NextJohn({
           />
         </View>
       ) : null}
-    </Card>
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
-  // Room for the hazard edge, which sits on the card's left.
-  edged: { position: 'relative' },
+  // Where a card would be, without one: the plate and the buttons span it,
+  // no wider than a phone's page, so neither runs the width of a laptop's main column.
+  posted: { alignSelf: 'stretch', maxWidth: CONTENT_MAX - 2 * GUTTER },
+  // The lines under the plate start where its words do, on the page's leading edge.
+  words: { paddingHorizontal: INSET },
+  underPlate: { paddingHorizontal: INSET, marginTop: SPACE.md },
   // A quiet text button ends the card: its own 48 target is the room below.
   quietEnd: { paddingBottom: SPACE.sm },
-  edge: { position: 'absolute', left: 0, top: 0, bottom: 0, width: 4 },
   // Overpass's caps sit high in their line.
   label: { paddingTop: 2 },
-  // The name is a thumb-sized target of its own, reaching past its words by
-  // as much as makes a one-line Lead (28) 48 tall, and a fixed 8 from the
-  // label and the meta line however many lines the name takes.
-  name: { paddingVertical: (TAP - 28) / 2, marginVertical: SPACE.sm - (TAP - 28) / 2, alignSelf: 'stretch' },
   pressed: { opacity: 0.6 },
   lead: { marginTop: SPACE.sm },
   meta: { flexDirection: 'row', alignItems: 'flex-start', gap: 6 },
   // The dot or the sign, centred on the first line of words.
   mark: { height: 20, justifyContent: 'center' },
   shrink: { flexShrink: 1 },
-  // No wider than on a phone's page, so Mark done doesn't run the width of a laptop's main column.
-  buttons: { flexDirection: 'row', gap: SPACE.sm, marginTop: SPACE.lg, minHeight: TAP, maxWidth: CONTENT_MAX - 2 * (GUTTER + INSET) },
+  buttons: { flexDirection: 'row', gap: SPACE.sm, marginTop: SPACE.lg, minHeight: TAP },
   grow: { flex: 1 },
   problem: { marginTop: SPACE.sm },
   onward: { marginTop: SPACE.xs },

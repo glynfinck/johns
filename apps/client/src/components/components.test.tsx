@@ -6,7 +6,7 @@ import { TAP } from '@/theme';
 
 import { Button } from './button';
 import { HazardTape } from './hazard-tape';
-import { LidDot } from './lid';
+import { LidBar } from './lid';
 import { Heading } from './text';
 import { Wordmark } from './wordmark';
 
@@ -53,11 +53,11 @@ describe('Bin Night components', () => {
     expect(screen.getByRole('header', { name: 'The Table' })).toBeOnTheScreen();
   });
 
-  it('colours a lid dot by its kind, and an unknown kind as other', async () => {
-    const { rerender } = await render(<LidDot category="bathroom" />);
-    expect(screen.getByTestId('lid-dot', HIDDEN)).toHaveStyle({ backgroundColor: BIN_NIGHT.light.bin.bathroom });
-    await rerender(<LidDot category="garden" />);
-    expect(screen.getByTestId('lid-dot', HIDDEN)).toHaveStyle({ backgroundColor: BIN_NIGHT.light.bin.other });
+  it('colours a lid bar by its kind, and an unknown kind as other', async () => {
+    const { rerender } = await render(<LidBar category="bathroom" />);
+    expect(screen.getByTestId('lid-bar', HIDDEN)).toHaveStyle({ backgroundColor: BIN_NIGHT.light.bin.bathroom });
+    await rerender(<LidBar category="garden" />);
+    expect(screen.getByTestId('lid-bar', HIDDEN)).toHaveStyle({ backgroundColor: BIN_NIGHT.light.bin.other });
   });
 
   it('draws hazard tape', async () => {

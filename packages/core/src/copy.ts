@@ -151,7 +151,7 @@ export const NO_HOUSE_COPY = {
 export const TODAY_COPY = {
   title: "Your Johns",
   thisWeek: "This week",
-  thisWeekRange: (range: string) => `This week · ${range}`,
+  thisWeekRange: (range: string) => `This week, ${range}`,
   left: (count: number) => (count === 1 ? "John left this week" : "Johns left this week"),
   streak: (weeks: number) => `${weeks} ${weeks === 1 ? "week" : "weeks"}`,
   immunity: (tokens: number) => `${tokens} immunity`,
@@ -180,7 +180,7 @@ export const JOHN_COPY = {
   keepIt: "Keep it",
   standsIn: (when: string) => `Stands ${when} unless someone disputes it.`,
   disputed: (reason: string) => `Disputed: “${reason}”`,
-  votes: (uphold: number, reject: number, closes: string) => `${uphold} say not done, ${reject} say fine · closes ${closes}`,
+  votes: (uphold: number, reject: number, closes: string) => `${uphold} say not done, ${reject} say fine, closes ${closes}`,
   dueBeforeYouGo: (was: string) => `Due before you go: it was due ${was}, while you’re away.`,
   dueBeforeTheyGo: (owner: string, was: string) => `Due before ${owner} goes: it was due ${was}, while they’re away.`,
 } as const;
@@ -226,7 +226,7 @@ export const WEEK_COPY = {
   disputes: "Disputes",
   /** A dispute in the laptop's side column, after whose it is ("Ben's", "Your"). */
   disputeOn: (john: string, reason: string) => `${john}: “${reason}”`,
-  tally: (uphold: number, reject: number, closes: string) => `${uphold} not done · ${reject} fine · closes ${closes}`,
+  tally: (uphold: number, reject: number, closes: string) => `${uphold} not done, ${reject} fine, closes ${closes}`,
 } as const;
 
 /** Housemate check: disputing a tick, and voting on one. */
@@ -270,7 +270,7 @@ export const SECTION_LABEL: Record<Section, string> = {
 export const SHELL_COPY = {
   housemates: (count: number) => `${count} ${count === 1 ? "housemate" : "housemates"}`,
   close: "Close",
-  standing: (streak: number, tokens: number) => `${streak}-week streak · ${tokens} ${tokens === 1 ? "token" : "tokens"}`,
+  standing: (streak: number, tokens: number) => `${streak}-week streak, ${tokens} ${tokens === 1 ? "token" : "tokens"}`,
 } as const;
 
 const waitingForYourVote = (count: number) => `${count} waiting for your vote`;
@@ -311,11 +311,11 @@ export const TABLE_COPY = {
   eyebrow: "Effort points",
   title: "The Table",
   thisWeek: "This week",
-  beside: "The Table · this week",
+  beside: "The Table, this week",
   full: "Full table",
-  /** A housemate's week or month in a line: "3 done · 1 late · 1 missed". */
+  /** A housemate's week or month in a line: "3 done, 1 late, 1 missed". */
   record: (r: { done: number; late: number; missed: number; covered?: number }) =>
-    `${r.done} done${r.late ? ` · ${r.late} late` : ""}${r.missed ? ` · ${r.missed} missed` : ""}${r.covered ? ` · ${r.covered} covered` : ""}`,
+    `${r.done} done${r.late ? `, ${r.late} late` : ""}${r.missed ? `, ${r.missed} missed` : ""}${r.covered ? `, ${r.covered} covered` : ""}`,
   shares: "Fair shares",
   sharesBody:
     "What each of you has done since you joined, against your share. A missed John comes back to whoever missed it, and covering for someone counts as yours. Each deal hands a little more to whoever is behind, never more than half a week extra, until it evens out.",
@@ -388,9 +388,9 @@ const EVERY: Record<number, string> = { 1: "Every week", 2: "Every 2 weeks", 3: 
 export const JOHN_LIST_COPY = {
   empty: "No Johns yet. Start with the ones that cause arguments: bins, the bathroom, the kitchen.",
   every: EVERY,
-  /** "Every 2 weeks · due Sun 21:00". */
+  /** "Every 2 weeks, due Sun 21:00". */
   when: (everyWeeks: number, day: string, time: string) =>
-    `${EVERY[everyWeeks] ?? `Every ${everyWeeks} weeks`} · due ${day.slice(0, 3)} ${time}`,
+    `${EVERY[everyWeeks] ?? `Every ${everyWeeks} weeks`}, due ${day.slice(0, 3)} ${time}`,
   needsPhoto: "needs a photo",
   perWeek: (points: number) =>
     `About ${Math.round(points)} points a week across the house. Changes apply from the next deal.`,
@@ -420,9 +420,9 @@ export const JOHN_LIST_COPY = {
   timesAWeek: "About how often",
   timesAWeekHint: "Only used to deal it fairly. Every time it’s flagged counts.",
   perWeekLabel: (n: number) => (n === 1 ? "Once a week" : `${n} times a week`),
-  /** "On call · within 12 hours · about 3 times a week". */
+  /** "On call, within 12 hours, about 3 times a week". */
   onCallWhen: (hours: number, perWeek: number) =>
-    `On call · within ${hours === 1 ? "1 hour" : `${hours} hours`} · about ${perWeek === 1 ? "once" : `${perWeek} times`} a week`,
+    `On call, within ${hours === 1 ? "1 hour" : `${hours} hours`}, about ${perWeek === 1 ? "once" : `${perWeek} times`} a week`,
   save: "Save",
   create: "Add John",
   saving: "Saving…",
@@ -497,8 +497,8 @@ export const REPEAT_COPY = {
   // Week's Johns that come round every few weeks or months, before they're dealt.
   comingUp: "Coming up",
   comingUpNote: "Dealt each week as it comes",
-  /** A coming-up row's meta line: "Sat 7 Nov · every 3 months". */
-  comingUpWhen: (date: string, often: string) => `${date} · ${often.toLocaleLowerCase()}`,
+  /** A coming-up row's meta line: "Sat 7 Nov, every 3 months". */
+  comingUpWhen: (date: string, often: string) => `${date}, ${often.toLocaleLowerCase()}`,
 } as const;
 
 /** On-call Johns on Today, the John sheet and Week: who has them, and flagging them. */
@@ -510,10 +510,10 @@ export const ON_CALL_COPY = {
   youreOnCall: "You’re on call",
   /** "Alex is on call". */
   holder: (name: string) => `${name} is on call`,
-  /** "Flagged by Sam · due 9am": the John sheet's and Today's meta line. */
+  /** "Flagged by Sam, due 9am": the John sheet's and Today's meta line. */
   flaggedBy: (name: string) => `Flagged by ${name}`,
   flaggedAgain: "Still needs doing after a miss",
-  /** A row's meta line: "Bins · flagged by Sam · today 21:00". */
+  /** A row's meta line: "Bins, flagged by Sam, today 21:00". */
   flaggedByInline: (name: string) => `flagged by ${name}`,
   flaggedAgainInline: "open again after a miss",
   /** "Flagged, with Alex": what a housemate sees once it's flagged. */
@@ -729,7 +729,7 @@ export const AWAY_COPY = {
   /** The key under the calendar, one shade at a time: 1, 2, then 3 or more. */
   shade: (away: number) => (away >= 3 ? "3 or more" : `${away} away`),
   tapADay: "Tap a day to see who’s away and who’s home.",
-  dayCount: (away: number, home: number) => `${away} away · ${home} home`,
+  dayCount: (away: number, home: number) => `${away} away, ${home} home`,
   awayLabel: "Away",
   homeLabel: "Home",
   everyoneHome: "Nobody. Everyone’s home.",
@@ -790,7 +790,7 @@ export const NEXT_UP_COPY = {
   anAdmin: "An admin",
   /** Someone who has left, named mid-sentence. */
   someoneGone: "a former housemate",
-  /** A John row's circle, spoken (on Today and Week alike), when it isn't a tick. */
+  /** A John row's tick box, spoken (on Today and Week alike), when it isn't a tick. */
   stateLabel: {
     open: "Not done",
     checking: "Ticked, being checked",
@@ -835,13 +835,13 @@ export const JOHN_SHEET_COPY = {
   fromLibrary: "From your library",
   cant: "If you can’t",
   skip: "Skip with immunity",
-  skipMeta: (tokens: number) => `No forfeit · you have ${tokens}`,
+  skipMeta: (tokens: number) => `No forfeit, you have ${tokens}`,
   /** What spending immunity means, before it's spent. */
   skipSentence: (john: string, left: number) =>
     `Skip ${john} this week? No forfeit, and ${left <= 0 ? "your immunity is used up" : `you’ll have ${left} left`}.`,
   skipIt: "Skip it",
   swap: "Swap this John",
-  swapMeta: "You topped a week · trade it once",
+  swapMeta: "You topped a week, trade it once",
   swapFor: "Their open Johns",
   swapBody: (john: string) => `Pick one to take instead. They get ${john}.`,
   you: "You",
@@ -854,7 +854,7 @@ export const JOHN_SHEET_COPY = {
   disputedBy: (name: string) => `Disputed by ${name}`,
   byYou: "you",
   /** The vote so far, in the buttons' order: fine, then not done. */
-  tally: (fine: number, notDone: number, closes: string) => `${fine} fine · ${notDone} not done · ${closes}`,
+  tally: (fine: number, notDone: number, closes: string) => `${fine} fine, ${notDone} not done, ${closes}`,
   yourTick: "The house is voting on your tick.",
   /** Undoing a tick after its due time, before it's undone. */
   undoTitle: (john: string) => `Undo ${john}?`,
@@ -880,7 +880,7 @@ export const JOHN_SHEET_COPY = {
   /** A settled cover: "Glyn did it for Sam on Tue at 23:04, so it counts as Sam’s miss." */
   coveredSettled: (who: string, owner: string, whose: string, when: string | null) =>
     `${who} did it for ${owner}${when ? ` ${when}` : ""}, so it counts as ${whose} miss.`,
-  coveredWasDue: (when: string) => `Covered · was due ${when}`,
+  coveredWasDue: (when: string) => `Covered, was due ${when}`,
   your: "your",
 } as const;
 
@@ -1004,8 +1004,8 @@ export const WHY_COPY = {
 export const WEEK_SUMMARY_COPY = {
   /** The summary, to a screen reader. */
   soFar: "This week so far",
-  /** The week's days and when it ends: "19–25 Oct · ends tonight". */
-  range: (days: string, ends: string) => `${days} · ${ends}`,
+  /** The week's days and when it ends: "19–25 Oct, ends tonight". */
+  range: (days: string, ends: string) => `${days}, ${ends}`,
   endsTonight: "ends tonight",
   endsTomorrow: "ends tomorrow",
   /** The week's last day: "ends Sun". */
@@ -1020,16 +1020,16 @@ export const WEEK_SUMMARY_COPY = {
   part: (count: number, label: string) => `${count} ${label}`,
   showOnly: "Shows only these Johns. Press again to show them all.",
   swapReady: "Swap ready",
-  /** A person's header: "1 of 3 done · 6 pts", and under it "away 29 Oct–1 Nov". */
+  /** A person's header: "1 of 3 done, 6 pts", and under it "away 29 Oct–1 Nov". */
   doneOf: (done: number, total: number) => `${done} of ${total} done`,
   away: (days: string) => `away ${days}`,
   awayAllWeek: "away all week",
-  /** On a laptop, who's away, under the summary: "Megan is away 28–31 Oct · You’re away all week". */
+  /** On a laptop, who's away, under the summary: "Megan is away 28–31 Oct, You’re away all week". */
   isAway: (who: string, note: string, you: boolean) => `${you ? "You’re" : `${who} is`} ${note}`,
   nothing: "Nothing this week.",
   /** After a fold's "Done (2)", in hazard: "1 late". */
   late: (count: number) => `${count} late`,
-  /** An open John's circle that doesn't tick, spoken: Today's word (the client e2e asks for it by this name). */
+  /** An open John's tick box that doesn't tick, spoken: Today's word (the client e2e asks for it by this name). */
   notDone: NEXT_UP_COPY.stateLabel.open,
   vote: "Vote",
   voteOn: (john: string) => `Vote on ${john}`,
@@ -1063,9 +1063,9 @@ export const WEEK_SUMMARY_COPY = {
 
 /** House: the month card and settling up, and the Table with its invite and rules sheets. */
 export const HOUSE_PAGE_COPY = {
-  /** Under the house's name: "4 housemates · £20 a month each". */
+  /** Under the house's name: "4 housemates, £20 a month each". */
   sub: (housemates: number, stake: string) =>
-    `${housemates} ${housemates === 1 ? "housemate" : "housemates"} · ${stake} a month each`,
+    `${housemates} ${housemates === 1 ? "housemate" : "housemates"}, ${stake} a month each`,
   /** The month card's label: "October so far". */
   soFar: (month: string) => `${month} so far`,
   /** The Lead, before the figure: "You’re up £4.01". */
@@ -1150,7 +1150,8 @@ export const ADMINS_COPY = {
   title: "Admins",
   meta: (admins: number, everyone: number) => `${admins} of ${everyone}`,
   note: "Admins change the list, the rules and who’s in, and fix mistakes. What they change is posted on the Wall.",
-  started: "You",
+  /** You, in the list: "Priya (you)". */
+  you: (name: string) => `${name} (you)`,
   add: "Add an admin",
   addTitle: "Add an admin",
   addBody: "They can change the list and the rules, and fix anyone’s mistakes.",
@@ -1162,8 +1163,8 @@ export const ADMINS_COPY = {
 } as const;
 
 export const PERSON_COPY = {
-  /** Under their name: "Admin", or "You · Admin" on your own page. */
-  sub: (admin: boolean, you: boolean) => `${you ? "You · " : ""}${admin ? "Admin" : "Housemate"}`,
+  /** Under their name: "Admin", or "You, admin" on your own page. */
+  sub: (admin: boolean, you: boolean) => (you ? `You, ${admin ? "admin" : "housemate"}` : admin ? "Admin" : "Housemate"),
   record: "Their record",
   yourRecord: "Your record",
   thisWeek: "This week",
@@ -1260,7 +1261,7 @@ export const WALL_FEED_COPY = {
   everything: "That’s everything.",
   today: "Today",
   yesterday: "Yesterday",
-  /** How long ago, after the meta line's words: "Checking · 3h". */
+  /** How long ago, after the meta line's words: "Checking, 3h". */
   justNow: "just now",
   minutes: (n: number) => `${n} min`,
   hours: (n: number) => `${n}h`,
@@ -1354,8 +1355,8 @@ export const WALL_FEED_COPY = {
   react: "React",
   /** A reaction and how many gave it, to a screen reader: "Nice one, 2". */
   tally: (label: string, count: number) => `${label}, ${count}`,
-  /** A reaction's button in an event's sheet: "Nice one · 2". */
-  reactionCount: (label: string, count: number) => (count > 0 ? `${label} · ${count}` : label),
+  /** A reaction's button in an event's sheet: "Nice one, 2". */
+  reactionCount: (label: string, count: number) => (count > 0 ? `${label}, ${count}` : label),
 } as const;
 
 /** House: the Wall's latest, House setup's rows, You, and leaving. */
@@ -1373,12 +1374,12 @@ export const HOUSE_LOWER_COPY = {
   groups: "Groups",
   // Each setup row's value.
   noJohns: "None yet",
-  johnsValue: (count: number, perWeek: string) => `${count} · ${perWeek}`,
+  johnsValue: (count: number, perWeek: string) => `${count} ${count === 1 ? "John" : "Johns"}, ${perWeek}`,
   perWeek: (points: number) =>
     points < 1 ? "less than 1 pt a week" : `about ${points} ${points === 1 ? "pt" : "pts"} a week`,
   /** `stake` is null for a house that stakes nothing. */
   rulesValue: (stake: string | null, late: string, missed: string) =>
-    `${stake ? `${stake} stake` : "No stake"} · ${late} late · ${missed} missed`,
+    `${stake ? `${stake} stake` : "No stake"}, ${late} late, ${missed} missed`,
   nobodyAway: "Nobody’s away",
   awayValue: (who: string, range: string) => `${who}, ${range}`,
   noGroups: "None",
@@ -1420,8 +1421,8 @@ export const HOUSE_LOWER_COPY = {
 
 /** House setup: the Johns, Rules, Time away and Groups pages. */
 export const SETUP_COPY = {
-  /** A kind of John as a section of the John list: "Kitchen · 3". */
-  kind: (label: string, count: number) => `${label} · ${count}`,
+  /** A kind of John as a section of the John list: "Kitchen (3)". */
+  kind: (label: string, count: number) => `${label} (${count})`,
   /** In a John's meta line: the tick needs a photo. */
   photo: "photo",
   /** How often, for a gap the list doesn't name. */
@@ -1558,7 +1559,7 @@ export const HOUSE_DRAFT_COPY = {
   pickDay: "Pick a day",
   /** The draft card: its label, the line under it, and how it opens and closes. */
   draftLabel: "Your draft",
-  draftMeta: (n: number, points: number) => `${n === 1 ? "1 John" : `${n} Johns`} · ${points} pts a week`,
+  draftMeta: (n: number, points: number) => `${n === 1 ? "1 John" : `${n} Johns`}, ${points} pts a week`,
   seeAll: (n: number) => `See all ${n}`,
   showLess: "Show less",
   fromStarter: "Here’s a starter list. Tell me what’s different about your house and I’ll change it, or untick any you don’t want.",
@@ -1610,9 +1611,9 @@ export const PASS_COPY = {
   sectionNote: "For everyone here",
   // The row's value (pass.ts passLine).
   founding: "Founding house",
-  trialLeft: (days: number) => `Free month · ${days} ${days === 1 ? "day" : "days"} left`,
+  trialLeft: (days: number) => `Free month, ${days} ${days === 1 ? "day" : "days"} left`,
   trialEnded: "Free month ended",
-  renews: (plan: string, day: string) => `${plan} · renews ${day}`,
+  renews: (plan: string, day: string) => `${plan}, renews ${day}`,
   ended: (day: string) => `Ended ${day}`,
   // The page.
   lead: "One Pass covers the whole house. Anyone can buy it, and everyone gets the extras.",
@@ -1672,12 +1673,12 @@ export const RECORD_COPY = {
   span: "Show",
   spans: { week: "Week", month: "Month", year: "Year", all: "All" } as Record<RecordSpan, string>,
   nothingYet: "Nothing dealt yet",
-  yearRange: (year: string, weeks: number) => `${year} · ${weeks} ${weeks === 1 ? "week" : "weeks"}`,
-  allRange: (since: string, weeks: number) => `Since ${since} · ${weeks} ${weeks === 1 ? "week" : "weeks"}`,
+  yearRange: (year: string, weeks: number) => `${year}, ${weeks} ${weeks === 1 ? "week" : "weeks"}`,
+  allRange: (since: string, weeks: number) => `Since ${since}, ${weeks} ${weeks === 1 ? "week" : "weeks"}`,
   onTime: "On time",
   /** A row's figure: "94%", or a dash with nothing settled. */
   pct: (pct: number | null) => (pct === null ? "–" : `${pct}%`),
-  /** A row's meta: "6 on time · 1 late · 1 missed · covered 2". */
+  /** A row's meta: "6 on time, 1 late, 1 missed, covered 2". */
   counts: (c: RecordCounts) =>
     [
       `${c.onTime} on time`,
@@ -1688,7 +1689,7 @@ export const RECORD_COPY = {
       c.helped ? `helped ${c.helped}` : null,
     ]
       .filter(Boolean)
-      .join(" · "),
+      .join(", "),
   you: (name: string) => `${name} (you)`,
   key: "Key",
   marks: {

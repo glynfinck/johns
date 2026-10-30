@@ -47,8 +47,8 @@ const EFFORT = Array.from({ length: 20 }, (_, i) => ({ value: i + 1, label: poin
 const CREW = CREW_CHOICES.map((n) => ({ value: n, label: CREW_COPY.choice(n) }));
 
 /**
- * The house's list of Johns, a section per kind ("Kitchen · 3"), each John a
- * row: its lid dot, how often and when, and its points. Admins add and edit
+ * The house's list of Johns, a section per kind ("Kitchen, 3"), each John a
+ * row: its lid bar, how often and when, and its points. Admins add and edit
  * in a sheet; everyone else reads a John's details there. Changes land in the
  * next deal. Several page children, so it goes straight in a Screen.
  */
@@ -126,7 +126,7 @@ export function JohnList({
           <Section key={kind.category} label={kind.label} testID={`kind-${kind.category}`}>
             {kind.johns.map((j) => {
               const schedule = scheduleLine(j, groupName(j.groupId));
-              const line = j.crew === 1 ? schedule : `${schedule} · ${CREW_COPY.choice(j.crew)}`;
+              const line = j.crew === 1 ? schedule : `${schedule}, ${CREW_COPY.choice(j.crew)}`;
               return (
                 <Row
                   key={j.id}

@@ -102,7 +102,7 @@ it("opens a day's sheet: who's away, when they're back, and who's home", async (
   // The trip that began first first, by first name, with the day they're back.
   const [tom, sam] = sheet.getAllByTestId('day-away');
   expect(tom).toHaveTextContent(/Tom.*Back Tue 27 Oct$/);
-  expect(sam).toHaveTextContent(/Sam.*Back Thu 29 Oct · Lisbon$/);
+  expect(sam).toHaveTextContent(/Sam.*Back Thu 29 Oct, Lisbon$/);
   expect(sheet.getByTestId('day-home')).toHaveTextContent(/You$/);
   // On a day, keeping the sheet open.
   await fireEvent.press(sheet.getByRole('button', { name: AWAY_COPY.dayAfter }));
@@ -125,7 +125,7 @@ it('calls your own trip yours on the calendar, and says when everyone is away', 
   await open();
   await fireEvent.press(screen.getByRole('button', { name: 'Monday 26 October, 1 away' }));
   const sheet = within(screen.getByTestId('away-day-sheet'));
-  expect(sheet.getByTestId('day-away')).toHaveTextContent(/You.*Back Thu 29 Oct · Lisbon$/);
+  expect(sheet.getByTestId('day-away')).toHaveTextContent(/You.*Back Thu 29 Oct, Lisbon$/);
   expect(sheet.getByTestId('day-home')).toHaveTextContent(/Sam$/);
   await fireEvent.press(sheet.getByRole('button', { name: AWAY_COPY.dayAfter }));
   await fireEvent.press(sheet.getByRole('button', { name: AWAY_COPY.dayAfter }));
@@ -157,7 +157,7 @@ describe('your own trips', () => {
     });
     await open();
     const mine = within(screen.getByTestId('my-trip'));
-    expect(screen.getByTestId('my-trip')).toHaveTextContent(new RegExp(`20–24 Oct.*${SETUP_COPY.awayNow} · Cork`));
+    expect(screen.getByTestId('my-trip')).toHaveTextContent(new RegExp(`20–24 Oct.*${SETUP_COPY.awayNow}, Cork`));
     await fireEvent.press(mine.getByRole('button', { name: `${AWAY_COPY.back}, 20–24 Oct` }));
     expect(cancelAway).toHaveBeenCalledWith('p1');
   });

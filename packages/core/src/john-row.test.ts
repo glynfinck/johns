@@ -76,12 +76,12 @@ describe("johnKind", () => {
 });
 
 describe("johnRow", () => {
-  it("ticks your own open John from its circle, overdue included, and names the move", () => {
+  it("ticks your own open John from its tick box, overdue included, and names the move", () => {
     expect(row({ status: "due-soon" })).toEqual({
-      circle: "open",
-      circleLabel: "Mark a done",
+      tick: "open",
+      tickLabel: "Mark a done",
       ticks: true,
-      meta: "Kitchen · tomorrow 21:00",
+      meta: "Kitchen, tomorrow 21:00",
       lid: true,
       trailing: "status",
       points: 2,
@@ -91,25 +91,25 @@ describe("johnRow", () => {
     expect(row({ status: "upcoming" })).toMatchObject({ ticks: true, trailing: "points" });
     expect(row({ status: "overdue", needsPhoto: true })).toMatchObject({
       ticks: true,
-      circleLabel: "Take a photo of a and mark it done",
+      tickLabel: "Take a photo of a and mark it done",
       trailing: "status",
       hazardEdge: true,
     });
   });
 
   it("never ticks a housemate's John, a finished one or a missed one", () => {
-    expect(row({ userId: "tom", status: "overdue" })).toMatchObject({ ticks: false, circleLabel: "Not done", hazardEdge: true });
+    expect(row({ userId: "tom", status: "overdue" })).toMatchObject({ ticks: false, tickLabel: "Not done", hazardEdge: true });
     for (const status of ["checking", "disputed", "done", "late", "missed", "excused"] as const) {
       expect(row({ status }).ticks).toBe(false);
     }
-    expect(row({ status: "missed" })).toMatchObject({ circle: "open", circleLabel: "Missed", hazardEdge: true, trailing: "status" });
+    expect(row({ status: "missed" })).toMatchObject({ tick: "open", tickLabel: "Missed", hazardEdge: true, trailing: "status" });
   });
 
   it("offers Undo on your tick being checked, and a housemate's tick shows its mark and opens on Dispute", () => {
-    expect(row({ status: "checking" })).toMatchObject({ circle: "checking", trailing: "undo", focus: null });
+    expect(row({ status: "checking" })).toMatchObject({ tick: "checking", trailing: "undo", focus: null });
     expect(row({ userId: "megan", status: "checking" })).toMatchObject({
-      circle: "checking",
-      circleLabel: "Ticked, being checked",
+      tick: "checking",
+      tickLabel: "Ticked, being checked",
       trailing: "status",
       focus: "dispute",
     });
@@ -117,7 +117,7 @@ describe("johnRow", () => {
 
   it("asks for your vote on a dispute until you've given it; otherwise its flag says it, and the points trail", () => {
     const waiting = item("a", { userId: "priya", status: "disputed", dispute: dispute() });
-    expect(johnRow(waiting, "sam", now, ZONE, nameOf)).toMatchObject({ circle: "disputed", trailing: "vote", focus: "vote" });
+    expect(johnRow(waiting, "sam", now, ZONE, nameOf)).toMatchObject({ tick: "disputed", trailing: "vote", focus: "vote" });
     expect(row({ userId: "priya", status: "disputed", dispute: dispute({ myVote: false }) })).toMatchObject({
       trailing: "points",
       focus: "vote",
@@ -126,13 +126,13 @@ describe("johnRow", () => {
     expect(row({ status: "disputed", dispute: dispute() })).toMatchObject({ trailing: "points", focus: null });
   });
 
-  it("ends a finished John with what it earned, as the green circle says done; late keeps its mark, excused has nothing", () => {
-    expect(row({ status: "done", points: 3 })).toMatchObject({ circle: "done", circleLabel: "Done", trailing: "points", points: 3 });
+  it("ends a finished John with what it earned, as the green box says done; late keeps its mark, excused has nothing", () => {
+    expect(row({ status: "done", points: 3 })).toMatchObject({ tick: "done", tickLabel: "Done", trailing: "points", points: 3 });
     // Half, rounded down, for a late one.
-    expect(row({ status: "late", points: 3 })).toMatchObject({ circle: "done", circleLabel: "Done late", trailing: "status", points: 1 });
+    expect(row({ status: "late", points: 3 })).toMatchObject({ tick: "done", tickLabel: "Done late", trailing: "status", points: 1 });
     expect(row({ status: "excused", points: 3 })).toMatchObject({
-      circle: "excused",
-      circleLabel: "Skipped with immunity",
+      tick: "excused",
+      tickLabel: "Skipped with immunity",
       trailing: null,
       points: 0,
     });
@@ -151,8 +151,8 @@ describe("johnRow", () => {
       const john = item("a", { userId: "tom", status, dispute: status === "disputed" ? dispute({ myVote: false }) : null, standsAt: at(5) });
       const mine = johnRow(john, "tom", now, ZONE, nameOf);
       const theirs = johnRow(john, "sam", now, ZONE, nameOf);
-      expect([theirs.circle, theirs.meta, theirs.lid, theirs.points, theirs.hazardEdge]).toEqual([
-        mine.circle,
+      expect([theirs.tick, theirs.meta, theirs.lid, theirs.points, theirs.hazardEdge]).toEqual([
+        mine.tick,
         mine.meta,
         mine.lid,
         mine.points,
@@ -166,51 +166,51 @@ describe("johnRow's meta line", () => {
   const meta = (overrides: Partial<BoardItem>, viewer = "sam") => row(overrides, viewer).meta;
 
   it("leads with the kind, then when it's due, mid-sentence", () => {
-    expect(meta({ category: "bathroom", status: "due-soon", dueAt: new Date("2026-10-22T20:00:00Z") })).toBe("Bathroom · today 21:00");
-    expect(meta({ category: "floors", dueAt: new Date("2026-10-23T06:30:00Z") })).toBe("Floors · tomorrow 07:30");
+    expect(meta({ category: "bathroom", status: "due-soon", dueAt: new Date("2026-10-22T20:00:00Z") })).toBe("Bathroom, today 21:00");
+    expect(meta({ category: "floors", dueAt: new Date("2026-10-23T06:30:00Z") })).toBe("Floors, tomorrow 07:30");
   });
 
   it("says when an overdue or missed John was due, short enough to sit beside its mark", () => {
-    expect(meta({ category: "other", status: "overdue", dueAt: new Date("2026-10-20T20:00:00Z") })).toBe("Other · was due Tue");
-    expect(meta({ status: "missed", dueAt: new Date("2026-10-21T22:30:00Z") })).toBe("Kitchen · was due Wed");
-    expect(meta({ status: "overdue", dueAt: new Date("2026-10-22T08:00:00Z") })).toBe("Kitchen · was due 09:00");
+    expect(meta({ category: "other", status: "overdue", dueAt: new Date("2026-10-20T20:00:00Z") })).toBe("Other, was due Tue");
+    expect(meta({ status: "missed", dueAt: new Date("2026-10-21T22:30:00Z") })).toBe("Kitchen, was due Wed");
+    expect(meta({ status: "overdue", dueAt: new Date("2026-10-22T08:00:00Z") })).toBe("Kitchen, was due 09:00");
     // A week or more back, the date too.
-    expect(meta({ status: "missed", dueAt: new Date("2026-10-15T08:00:00Z") })).toBe("Kitchen · was due Thu 15 Oct");
+    expect(meta({ status: "missed", dueAt: new Date("2026-10-15T08:00:00Z") })).toBe("Kitchen, was due Thu 15 Oct");
   });
 
   it("says when a tick stands, yours or a housemate's", () => {
-    expect(meta({ userId: "megan", category: "bins", status: "checking", standsAt: at(21) })).toBe("Bins · stands in 21h");
-    expect(meta({ status: "checking", standsAt: at(0.5) })).toBe("Kitchen · stands in 30 min");
-    expect(meta({ status: "checking", standsAt: at(-1) })).toBe("Kitchen · stands any minute");
+    expect(meta({ userId: "megan", category: "bins", status: "checking", standsAt: at(21) })).toBe("Bins, stands in 21h");
+    expect(meta({ status: "checking", standsAt: at(0.5) })).toBe("Kitchen, stands in 30 min");
+    expect(meta({ status: "checking", standsAt: at(-1) })).toBe("Kitchen, stands any minute");
     expect(meta({ status: "checking", standsAt: null })).toBe("Kitchen");
   });
 
   it("says who disputed it and how long is left, with no lid dot", () => {
     expect(row({ userId: "priya", status: "disputed", dispute: dispute() })).toMatchObject({
-      meta: "Disputed by Megan · 17h left",
+      meta: "Disputed by Megan, 17h left",
       lid: false,
     });
     expect(meta({ userId: "priya", status: "disputed", dispute: dispute({ raisedBy: "sam", myVote: true }) })).toBe(
-      "Disputed by you · 17h left",
+      "Disputed by you, 17h left",
     );
     expect(meta({ status: "disputed", dispute: dispute({ raisedBy: null, closesAt: at(-1) }) })).toBe(
-      "Disputed by a former housemate · closing now",
+      "Disputed by a former housemate, closing now",
     );
     expect(row({ status: "disputed", dispute: null })).toMatchObject({ meta: "Disputed", lid: false });
   });
 
   it("says when a finished one was done, and that immunity excused one", () => {
-    expect(meta({ status: "done", doneAt: new Date("2026-10-21T13:10:00Z") })).toBe("Kitchen · done yesterday 14:10");
-    expect(meta({ status: "late", doneAt: new Date("2026-10-12T13:10:00Z") })).toBe("Kitchen · done Mon 12 Oct");
-    expect(meta({ status: "late", doneAt: null, dueAt: new Date("2026-10-22T08:00:00Z") })).toBe("Kitchen · today 09:00");
-    expect(meta({ status: "excused" })).toBe("Kitchen · skipped with immunity");
+    expect(meta({ status: "done", doneAt: new Date("2026-10-21T13:10:00Z") })).toBe("Kitchen, done yesterday 14:10");
+    expect(meta({ status: "late", doneAt: new Date("2026-10-12T13:10:00Z") })).toBe("Kitchen, done Mon 12 Oct");
+    expect(meta({ status: "late", doneAt: null, dueAt: new Date("2026-10-22T08:00:00Z") })).toBe("Kitchen, today 09:00");
+    expect(meta({ status: "excused" })).toBe("Kitchen, skipped with immunity");
   });
 
   it("says a John pulled forward by time away is due before they go", () => {
     const moved = { status: "due-soon" as const, dueAt: new Date("2026-10-22T22:59:00Z"), movedFrom: at(48) };
-    expect(meta(moved)).toBe("Kitchen · today 23:59, before you go");
-    expect(meta({ ...moved, userId: "megan" })).toBe("Kitchen · today 23:59, before Megan goes");
-    expect(meta({ ...moved, userId: "cal" })).toBe("Kitchen · today 23:59, before a former housemate goes");
+    expect(meta(moved)).toBe("Kitchen, today 23:59, before you go");
+    expect(meta({ ...moved, userId: "megan" })).toBe("Kitchen, today 23:59, before Megan goes");
+    expect(meta({ ...moved, userId: "cal" })).toBe("Kitchen, today 23:59, before a former housemate goes");
   });
 });
 

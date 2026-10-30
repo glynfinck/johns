@@ -59,7 +59,7 @@ beforeEach(() => {
 it('says in numbers what resetting the week changes, before anything does', async () => {
   const sheet = await open();
   expect(await sheet.findByText('3 ticks cleared')).toBeOnTheScreen();
-  expect(sheet.getByText('Sam 2 · you 1')).toBeOnTheScreen();
+  expect(sheet.getByText('Sam 2, you 1')).toBeOnTheScreen();
   expect(sheet.getByText('Sam −4 pts')).toBeOnTheScreen();
   expect(sheet.getByText('£3 of forfeits removed')).toBeOnTheScreen();
   expect(sheet.getByText('1 flag')).toBeOnTheScreen();

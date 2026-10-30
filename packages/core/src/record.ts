@@ -125,7 +125,7 @@ export interface RecordRow {
 
 export interface TrackRecord {
   span: RecordSpan;
-  /** "19–25 Oct", "October 2026", "2026 · 44 weeks", "Since 6 Oct 2025 · 55 weeks". */
+  /** "19–25 Oct", "October 2026", "2026, 44 weeks", "Since 6 Oct 2025, 55 weeks". */
   range: string;
   /** The weeks in the span, earliest first. */
   weeks: RecordWeek[];

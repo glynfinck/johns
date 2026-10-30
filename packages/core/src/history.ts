@@ -202,9 +202,9 @@ export function undoneWhat(kind: string, name: string | null): string {
 export function historyMeta(item: HistoryItem, time: string, nameOf: (userId: string | null) => string): string {
   if (item.undoneAt) {
     const by = item.undoneBy && item.undoneBy !== item.actor ? HISTORY_COPY.undoneBy(nameOf(item.undoneBy)) : HISTORY_COPY.undone;
-    return `${time} · ${by}`;
+    return `${time}, ${by}`;
   }
-  return item.reach ? time : `${time} · ${HISTORY_COPY.locked}`;
+  return item.reach ? time : `${time}, ${HISTORY_COPY.locked}`;
 }
 
 export interface HistoryDay {
