@@ -1,6 +1,6 @@
 import { BIN_NIGHT, NOTICE_COPY, safeNoticeLink, type Notice } from '@app/core';
 import { router } from 'expo-router';
-import { GiftIcon, InfoIcon, TriangleAlertIcon, WifiOffIcon, XIcon, type LucideIcon } from 'lucide-react-native';
+import { GiftIcon, NewspaperIcon, TriangleAlertIcon, WifiOffIcon, XIcon, type LucideIcon } from 'lucide-react-native';
 import type { ReactNode } from 'react';
 import { Linking, Pressable, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaInsetsContext, useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -55,7 +55,7 @@ export function NoticeBand({ children }: { children: ReactNode }) {
 const ICON: Record<Tone, LucideIcon> = {
   status: TriangleAlertIcon,
   offer: GiftIcon,
-  news: InfoIcon,
+  news: NewspaperIcon,
 };
 
 function linkAction(notice: Notice): { label: string; onPress: () => void } | undefined {

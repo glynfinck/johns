@@ -1,11 +1,11 @@
 import { ADMIN_COPY, NOTICE_KINDS, type NoticeKind } from '@app/core';
-import { GiftIcon, InfoIcon, TriangleAlertIcon, type LucideIcon } from 'lucide-react-native';
+import { GiftIcon, NewspaperIcon, TriangleAlertIcon, type LucideIcon } from 'lucide-react-native';
 import { useState } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 
 import { GROUP_RADIUS, SPACE, TAP, useTheme } from '@/theme';
 
-const ICON: Record<NoticeKind, LucideIcon> = { status: TriangleAlertIcon, offer: GiftIcon, news: InfoIcon };
+const ICON: Record<NoticeKind, LucideIcon> = { status: TriangleAlertIcon, offer: GiftIcon, news: NewspaperIcon };
 
 /**
  * The ways in to a new notice, named by what's happening rather than by a
