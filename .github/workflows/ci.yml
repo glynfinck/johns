@@ -39,6 +39,10 @@ jobs:
       - name: Unit tests
         run: npm test
 
+      # The deal's deliberate breaks still fit its code (running them all takes minutes: npm run breaks -w @app/core).
+      - name: Deal breaks fit
+        run: npm run breaks -w @app/core -- --check
+
       - name: Typecheck
         run: npm run typecheck
 

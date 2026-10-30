@@ -722,6 +722,21 @@ describe("todayPage", () => {
   const theirs = item("theirs", { userId: "priya", status: "upcoming", dueAt: at(30) });
   const stake = buildStake({ ledger: [], closedMonths: [], memberIds: [ME, "priya"], stakeMinor: 2000, month: "2026-10" });
 
+  it("offers a swap for a John you'd rather not, and shows asks made to you, once they're read", () => {
+    const mineNot = item("next", { johnId: "bins", dueAt: at(3) });
+    const theirsKeen = item("theirs", { johnId: "hob", userId: "priya", status: "upcoming", dueAt: at(30) });
+    const members = PEOPLE.map((p) => ({
+      ...p,
+      prefs: { days: [], bestTime: null, rather: (p.userId === ME ? { bins: -1 } : { bins: 1 }) as Record<string, 1 | -1> },
+    }));
+    const b = board([mineNot, theirsKeen]);
+    expect(page({ board: b, mine: [mineNot], members })).toMatchObject({ swap: null, offers: [] });
+    const now = new Date(at(0));
+    expect(page({ board: b, mine: [mineNot], members, offers: [], now }).swap).toMatchObject({ kind: "suggest", theirs: { id: "theirs" } });
+    const ask = { id: "o1", mine: "theirs", theirs: "next", asked_by: "priya", asked_to: ME, expires_at: at(10).toISOString() };
+    expect(page({ board: b, mine: [mineNot], members, offers: [ask], now }).offers).toHaveLength(1);
+  });
+
   it("puts your next John on the card and the rest beside it", () => {
     const later = item("later", { status: "upcoming", dueAt: at(40) });
     const done = item("done", { status: "done" });

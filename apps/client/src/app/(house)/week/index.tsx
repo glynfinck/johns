@@ -13,6 +13,7 @@ import {
   weekAwayNote,
   weekFairness,
   weekList,
+  weekLookAhead,
   weekPeople,
   weekRangeLine,
   weekSummary,
@@ -37,6 +38,7 @@ import { MoreButton, TitleBar } from '@/components/title-bar';
 import { TableSection } from '@/components/house-page/table-section';
 import { ComingUpSection } from '@/components/week/coming-up';
 import { FairnessFooter } from '@/components/week/fair-shares';
+import { AheadWeeks, TurnsNextSection, WaitingSection } from '@/components/week/look-ahead';
 import { PersonSection } from '@/components/week/person-section';
 import { WeekSummaryBar } from '@/components/week/summary';
 import { WeekEmpty } from '@/components/week/week-empty';
@@ -56,8 +58,11 @@ import { INSET, WIDE } from '@/theme';
  * time away and, for admins, the John list and re-dealing. Then the summary,
  * whose legend filters the list; Johns done together, one row each; one
  * group per person, you first, finished Johns folded (from WIDE on the web, one table row per John instead, with
- * who's away and your swap under the summary); and the deal's fairness in a
- * sentence, which opens the fair shares, and the way to the track record.
+ * who's away and your swap under the summary); then what the deal looked
+ * ahead to: the Johns waiting their turn, and whose turn is next (in
+ * Classic, the next two weeks person by person); the long Johns coming up
+ * that nothing else has named yet; and the deal's fairness in a sentence,
+ * which opens the fair shares, and the way to the track record.
  * Tapping any John opens its sheet.
  */
 export default function Week() {
@@ -231,7 +236,18 @@ function Board({
         awayMakeup={house.awayMakeup}
       />
     ) : null;
-  const coming = list ? <ComingUpSection johns={list} startsOn={week.startsOn} weekStarts={rules.weekStarts} /> : null;
+  // What the deal looked ahead to, once the list is read to name the Johns.
+  const look = list
+    ? weekLookAhead({ list, state: snapshot.steady, mode: rules.dealMode, items: board.items, memberIds, viewerId: userId, nameOf })
+    : null;
+  const ahead = look ? (
+    <>
+      <WaitingSection rows={look.waiting} />
+      <TurnsNextSection rows={look.turns} userId={userId} nameOf={nameOf} />
+      <AheadWeeks sections={look.weeks} userId={userId} nameOf={nameOf} />
+    </>
+  ) : null;
+  const coming = look ? <ComingUpSection johns={look.comingUp} startsOn={week.startsOn} weekStarts={rules.weekStarts} /> : null;
   const record = (
     <View style={styles.record}>
       <TextButton label={RECORD_COPY.open} href="/week/record" chevron align="start" testID="week-record" />
@@ -247,6 +263,7 @@ function Board({
           <>
             {summaryBar}
             {johnRows}
+            {ahead}
             {coming}
           </>
         }
@@ -269,6 +286,7 @@ function Board({
     <>
       {summaryBar}
       {johnRows}
+      {ahead}
       {coming}
       {fair}
       {record}

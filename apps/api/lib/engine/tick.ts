@@ -1,22 +1,19 @@
 import {
-  awayOn,
-  comesBack,
+  addDaysTo,
+  AHEAD_WEEKS,
   crewByJob,
-  dueAt,
+  dealtMembers,
   dueInLine,
   earnsImmunity,
-  fairSharesExplained,
   forfeitFor,
-  graceDue,
-  homeForWeek,
   isCleanWeek,
-  isLong,
-  landsInWeek,
   localDate,
   monthOf,
   monthWindow,
   NOTIFY_COPY,
   ON_CALL_COPY,
+  ON_CALL_WEEKS,
+  onCallUsual,
   passOf,
   passUnlocked,
   prefsOf,
@@ -26,19 +23,22 @@ import {
   settleMonth,
   settleOutcome,
   standings,
+  steadyAhead,
+  steadyDeal,
   tableInputs,
-  togetherPlaces,
   USUAL_WEEKS,
   verdict,
-  weekShares,
+  weekStateOf,
   weekWindow,
   weekWinners,
   type AwayPeriod,
   type Database,
-  type DealJohn,
   type IsoDow,
+  type Json,
   type Outcome,
   type PushKind,
+  type SteadyDealArgs,
+  type SteadyLastTurn,
   type WeekWindow,
 } from "@app/core";
 import type { SupabaseClient } from "@supabase/supabase-js";
@@ -60,7 +60,7 @@ export type Db = SupabaseClient<Database>;
 type HouseRow = Database["public"]["Tables"]["houses"]["Row"];
 type MemberRow = Pick<
   Database["public"]["Tables"]["members"]["Row"],
-  "user_id" | "role" | "joined_at" | "streak" | "immunity_tokens" | "swap_tokens"
+  "user_id" | "role" | "joined_at" | "streak" | "immunity_tokens" | "swap_tokens" | "suits_days" | "rather"
 >;
 
 export interface PushMessage {
@@ -108,7 +108,7 @@ export async function loadHouse(db: Db, houseId: string) {
   const members = must(
     await db
       .from("members")
-      .select("user_id, role, joined_at, streak, immunity_tokens, swap_tokens")
+      .select("user_id, role, joined_at, streak, immunity_tokens, swap_tokens, suits_days, rather")
       .eq("house_id", houseId)
       .order("joined_at")
       .order("user_id"),
@@ -195,12 +195,15 @@ export async function loadBalances(
 }
 
 /**
- * Deal a week's Johns with fair shares. With `replace`, re-deal a week nobody
- * has ticked anything in yet (deal_week refuses otherwise).
+ * Deal a week's Johns with Steady weeks (@app/core steady-deal.ts): the
+ * house's mode and points budget, everyone's preferences, Classic's orders of
+ * turns and the Johns waiting from the week before. With `replace`, re-deal a
+ * week nobody has ticked anything in yet (deal_week refuses otherwise).
  *
  * A John with a group goes only to that group's members (or to everyone, if
- * nobody in the group lives here any more); nobody is handed a John due on a
- * day they are away; a John nobody who shares it is home for is skipped.
+ * nobody in the group lives here any more); nobody is handed a John on a day
+ * they are away; a John nobody who shares it is home for waits. Someone who
+ * moved in after the week was first dealt starts the next Monday.
  */
 export async function dealWeek(
   db: Db,
@@ -211,69 +214,102 @@ export async function dealWeek(
   replace: boolean,
 ): Promise<{ weekId: string | null; byUser: Map<string, string[]> }> {
   const rules = rulesOf(house);
-  const memberIds = members.map((m) => m.user_id);
-  const list = must(await db.from("johns").select("*").eq("house_id", house.id).is("archived_at", null), "johns");
-  const repeatOf = (j: (typeof list)[number]) => ({
-    everyWeeks: j.every_weeks,
-    everyMonths: j.every_months,
-    weekOfMonth: j.week_of_month,
-    anchorMonth: j.anchor_month,
-    anchorWeek: j.anchor_week,
-    dueDow: j.due_dow as IsoDow,
-  });
-  const due = list.filter((j) => landsInWeek(repeatOf(j), week.startsOn, rules.weekStarts));
-  // A long John that was missed comes back in the next deal rather than waiting for its turn (repeat.ts comesBack).
-  const waiting = list.filter((j) => j.kind !== "on_call" && isLong(repeatOf(j)) && !due.includes(j));
-  const back = new Set<string>();
-  if (waiting.length > 0) {
-    const lastOf = must(
-      await db
-        .from("assignments")
-        .select("john_id, due_at, outcome")
-        .in("john_id", waiting.map((j) => j.id))
-        .lt("due_at", week.startsAt.toISOString())
-        .order("due_at", { ascending: false })
-        .limit(200),
-      "long Johns' last turns",
-    );
-    for (const j of waiting) {
-      const last = lastOf.find((a) => a.john_id === j.id);
-      if (comesBack(last && { outcome: last.outcome, dueAt: new Date(last.due_at) }, week.startsAt)) back.add(j.id);
-    }
-  }
-  const johns = list.filter((j) => due.includes(j) || back.has(j.id));
-
   const byUser = new Map<string, string[]>();
-  if (johns.length === 0 || members.length === 0) return { weekId: null, byUser };
+  const [list, existing, previous] = await Promise.all([
+    db.from("johns").select("*").eq("house_id", house.id).is("archived_at", null).order("created_at"),
+    db.from("weeks").select("created_at").eq("house_id", house.id).eq("starts_on", week.startsOn).maybeSingle(),
+    db
+      .from("weeks")
+      .select("turns, waiting")
+      .eq("house_id", house.id)
+      .lt("starts_on", week.startsOn)
+      .order("starts_on", { ascending: false })
+      .limit(1)
+      .maybeSingle(),
+  ]).then(([l, e, p]) => [must(l, "johns"), must(e, "this week"), must(p, "last week")] as const);
+  const dealt = dealtMembers(
+    members.map((m) => ({ ...m, joinedAt: new Date(m.joined_at) })),
+    existing ? new Date(existing.created_at) : null,
+    now,
+  );
+  const memberIds = dealt.map((m) => m.user_id);
+  if (list.length === 0 || memberIds.length === 0) return { weekId: null, byUser };
 
   const lastDay = localDate(new Date(week.endsAt.getTime() - 1), rules.timezone);
-  const [groups, awayRows, recent] = await Promise.all([
+  // Time away read to the end of the weeks the deal looks ahead to, for Week's whose turn next.
+  const lastAhead = addDaysTo(lastDay, 7 * AHEAD_WEEKS);
+  const johnIds = list.map((j) => j.id);
+  const [groups, awayRows, recent, onCallRows] = await Promise.all([
     db.from("groups").select("id, name, group_members(user_id)").eq("house_id", house.id),
     db
       .from("away")
       .select("id, user_id, starts_on, ends_on, note")
       .eq("house_id", house.id)
-      .lte("starts_on", lastDay)
+      .lte("starts_on", lastAhead)
       .gte("ends_on", week.startsOn),
     db
       .from("assignments")
-      .select("john_id, user_id, due_at")
-      .in("john_id", johns.map((j) => j.id))
-      .lt("due_at", week.startsAt.toISOString())
+      .select("john_id, user_id, due_at, outcome, job_id, flagged_at, weeks!inner(starts_on)")
+      .in("john_id", johnIds)
+      .is("flagged_at", null)
+      .lt("weeks.starts_on", week.startsOn)
       .order("due_at", { ascending: false })
-      .limit(500),
-  ]).then(([g, a, r]) => [must(g, "groups"), must(a, "away"), must(r, "recent assignments")] as const);
+      .limit(1000),
+    db
+      .from("on_call")
+      .select("john_id, user_id, week_id, weeks!inner(starts_on)")
+      .in("john_id", johnIds)
+      .lt("weeks.starts_on", week.startsOn)
+      // Newest first: ordered by the week itself (PostgREST orders by a many-to-one embed's column this way).
+      .order("weeks(starts_on)", { ascending: false })
+      .limit(200),
+  ]).then(([g, a, r, o]) => [must(g, "groups"), must(a, "away"), must(r, "recent assignments"), must(o, "last on call")] as const);
 
-  const lastBy = new Map<string, string>();
-  // A John done together: everyone with a place in its last turn.
-  const lastTurn = new Map<string, { dueAt: string; userIds: string[] }>();
+  // Each John's last turn before this week: who had it (everyone with a place, for a John done together), and
+  // whether its one holder missed it.
+  const last = new Map<string, SteadyLastTurn>();
   for (const r of recent) {
     if (!r.john_id) continue;
-    if (!lastBy.has(r.john_id)) lastBy.set(r.john_id, r.user_id);
-    const turn = lastTurn.get(r.john_id);
-    if (!turn) lastTurn.set(r.john_id, { dueAt: r.due_at, userIds: [r.user_id] });
-    else if (turn.dueAt === r.due_at) turn.userIds.push(r.user_id);
+    const startsOn = r.weeks!.starts_on;
+    const turn = last.get(r.john_id);
+    if (!turn) {
+      last.set(r.john_id, {
+        startsOn,
+        userIds: [r.user_id],
+        ...(r.outcome === "missed" && !r.job_id ? { missed: { userId: r.user_id, dueAt: new Date(r.due_at) } } : {}),
+      });
+    } else if (turn.startsOn === startsOn && r.job_id && !turn.userIds.includes(r.user_id)) {
+      (turn.userIds as string[]).push(r.user_id);
+    }
   }
+  for (const r of onCallRows) if (!last.has(r.john_id)) last.set(r.john_id, { startsOn: r.weeks!.starts_on, userIds: [r.user_id] });
+
+  // On call counts toward the budget at what it usually takes: its flags a week over its last 4 weeks on call.
+  const onCall = list.filter((j) => j.kind === "on_call");
+  const onCallPoints = new Map<string, number>();
+  if (onCall.length > 0) {
+    const weeksOf = new Map<string, string[]>();
+    for (const r of onCallRows) {
+      const ws = weeksOf.get(r.john_id) ?? [];
+      if (ws.length < ON_CALL_WEEKS && !ws.includes(r.week_id)) weeksOf.set(r.john_id, [...ws, r.week_id]);
+    }
+    const flagWeeks = [...new Set([...weeksOf.values()].flat())];
+    const flags = flagWeeks.length
+      ? must(
+          await db.from("assignments").select("john_id, week_id").in("week_id", flagWeeks).not("flagged_at", "is", null),
+          "recent flags",
+        )
+      : [];
+    for (const j of onCall) {
+      const usual = onCallUsual(
+        j.points,
+        weeksOf.get(j.id) ?? [],
+        flags.filter((f) => f.john_id === j.id && f.week_id).map((f) => f.week_id!),
+      );
+      if (usual !== null) onCallPoints.set(j.id, usual);
+    }
+  }
+
   const away: AwayPeriod[] = awayRows.map((a) => ({
     id: a.id,
     userId: a.user_id,
@@ -281,99 +317,84 @@ export async function dealWeek(
     endsOn: a.ends_on,
     note: a.note,
   }));
-
-  const midWeek = now > week.startsAt;
-  const sharersOf = (j: (typeof johns)[number]) => {
+  const sharersOf = (j: (typeof list)[number]) => {
     const group = j.group_id ? groups.find((g) => g.id === j.group_id) : undefined;
     const inGroup = (group?.group_members ?? []).map((m) => m.user_id).filter((id) => memberIds.includes(id));
     return { sharers: inGroup.length > 0 ? inGroup : memberIds, groupName: inGroup.length > 0 ? group!.name : null };
   };
-  const planned = johns
-    .filter((j) => j.kind !== "on_call")
-    .map((j) => {
-      let due = dueAt(week, rules.timezone, rules.weekStarts, j.due_dow as IsoDow, j.due_time.slice(0, 5));
-      if (midWeek) due = graceDue(due, now, week.endsAt);
-      const { sharers, groupName } = sharersOf(j);
-      const day = localDate(due, rules.timezone);
-      const deal: DealJohn = {
-        johnId: j.id,
-        points: j.points,
-        lastUserId: lastBy.get(j.id) ?? null,
-        ...(j.crew !== 1 ? { lastUserIds: lastTurn.get(j.id)?.userIds ?? [] } : {}),
-        sharers,
-        home: sharers.filter((id) => !awayOn(away, id, day)),
-      };
-      // Done together: a place per person, sharing a job (crew.ts).
-      const jobId = j.crew !== 1 ? crypto.randomUUID() : null;
-      return { john: j, due, groupName, deal, jobId, places: togetherPlaces(deal, j.crew, jobId ?? "") };
-    });
-
-  // An on-call John puts someone on call for the week. It weighs in the deal
-  // as often as it needs doing, but adds nothing to the stored shares: each
-  // flag adds its own points when it is raised (open_flag), so what the house
-  // owes follows what it was actually handed.
-  const onCall = johns.filter((j) => j.kind === "on_call");
-  const lastOnCall = new Map<string, string>();
-  if (onCall.length > 0) {
-    const previous = must(
-      await db
-        .from("on_call")
-        .select("john_id, user_id, weeks!inner(starts_on)")
-        .in("john_id", onCall.map((j) => j.id))
-        .lt("weeks.starts_on", week.startsOn)
-        .order("starts_on", { referencedTable: "weeks", ascending: false })
-        .limit(200),
-      "last on call",
-    );
-    for (const r of previous) if (!lastOnCall.has(r.john_id)) lastOnCall.set(r.john_id, r.user_id);
-  }
-  const onCallDeals: DealJohn[] = onCall.map((j) => {
-    const { sharers } = sharersOf(j);
-    return {
-      johnId: j.id,
-      points: j.points * j.per_week,
-      lastUserId: lastOnCall.get(j.id) ?? null,
-      sharers,
-      home: homeForWeek(away, sharers, week.startsOn, lastDay),
-    };
-  });
-
-  const dayDeals = planned.flatMap((p) => p.places);
-  const makeup = house.away_makeup / 100;
-  const shares = weekShares(dayDeals, memberIds, makeup);
-  const weighed = weekShares([...dayDeals, ...onCallDeals], memberIds, makeup);
   const { balances } = await loadBalances(db, house.id, week.startsOn, memberIds);
-  const dealt = fairSharesExplained(
-    [...dayDeals, ...onCallDeals],
-    memberIds.map((id) => ({ userId: id, balance: balances.get(id) ?? 0, share: weighed.get(id) ?? 0 })),
-    `${house.id}:${week.startsOn}`,
-  );
+  const args: SteadyDealArgs = {
+    mode: house.deal_mode === "classic" ? "classic" : "smart",
+    budget: house.deal_budget,
+    week,
+    zone: rules.timezone,
+    weekStarts: rules.weekStarts,
+    now,
+    members: dealt.map((m) => ({
+      userId: m.user_id,
+      balance: balances.get(m.user_id) ?? 0,
+      suits: m.suits_days,
+      rather: ratherOf(m.rather),
+    })),
+    johns: list.map((j) => ({
+      id: j.id,
+      points: j.points,
+      kind: j.kind === "on_call" ? "on_call" : "day",
+      perWeek: j.per_week,
+      crew: j.crew,
+      keepDay: j.keep_day,
+      repeat: {
+        everyWeeks: j.every_weeks,
+        everyMonths: j.every_months,
+        weekOfMonth: j.week_of_month,
+        anchorMonth: j.anchor_month,
+        anchorWeek: j.anchor_week,
+        dueDow: j.due_dow as IsoDow,
+      },
+      dueTime: j.due_time,
+      sharers: sharersOf(j).sharers,
+    })),
+    away,
+    last,
+    previous: previous ? weekStateOf(previous) : null,
+    onCallPoints,
+    makeup: house.away_makeup / 100,
+    seed: `${house.id}:${week.startsOn}`,
+  };
+  const plan = steadyDeal(args);
 
-  const assignments = dealt.flatMap((d) => {
-    const p = planned.find((x) => x.places.some((place) => place.johnId === d.johnId));
-    if (!p) return [];
-    byUser.set(d.userId, [...(byUser.get(d.userId) ?? []), p.john.name]);
+  // Done together: one job per John, so its places stay together (crew.ts).
+  const jobs = new Map<string, string>();
+  const johnOf = new Map(list.map((j) => [j.id, j]));
+  const assignments = plan.places.flatMap((p) => {
+    const j = johnOf.get(p.johnId)!;
+    if (!p.dueAt) return [];
+    if (p.together && !jobs.has(j.id)) jobs.set(j.id, crypto.randomUUID());
+    byUser.set(p.userId, [...(byUser.get(p.userId) ?? []), j.name]);
     return [
       {
-        john_id: p.john.id,
-        user_id: d.userId,
-        name: p.john.name,
-        category: p.john.category,
-        points: p.john.points,
-        needs_photo: p.john.needs_photo,
-        due_at: p.due.toISOString(),
-        group_name: p.groupName,
-        dealt: d.why,
-        job_id: p.jobId,
+        john_id: j.id,
+        user_id: p.userId,
+        name: j.name,
+        category: j.category,
+        points: j.points,
+        needs_photo: j.needs_photo,
+        due_at: p.dueAt.toISOString(),
+        group_name: sharersOf(j).groupName,
+        dealt: p.why as unknown as Json,
+        job_id: p.together ? jobs.get(j.id)! : null,
       },
     ];
   });
-  const onCallRows = dealt.flatMap((d) => {
-    const j = onCall.find((x) => x.id === d.johnId);
-    if (!j) return [];
-    byUser.set(d.userId, [...(byUser.get(d.userId) ?? []), ON_CALL_COPY.dealtAs(j.name)]);
-    return [{ john_id: j.id, user_id: d.userId }];
+  const onCallDealt = plan.places.flatMap((p) => {
+    if (p.dueAt) return [];
+    const j = johnOf.get(p.johnId)!;
+    byUser.set(p.userId, [...(byUser.get(p.userId) ?? []), ON_CALL_COPY.dealtAs(j.name)]);
+    return [{ john_id: j.id, user_id: p.userId }];
   });
+  if (assignments.length === 0 && onCallDealt.length === 0 && Object.keys(plan.state.waiting).length === 0) {
+    return { weekId: null, byUser };
+  }
 
   const weekId = must(
     await db.rpc("deal_week", {
@@ -382,13 +403,20 @@ export async function dealWeek(
       p_starts_at: week.startsAt.toISOString(),
       p_ends_at: week.endsAt.toISOString(),
       p_assignments: assignments,
-      p_shares: memberIds.map((id) => ({ user_id: id, share: Math.round((shares.get(id) ?? 0) * 100) / 100 })),
+      p_shares: memberIds.map((id) => ({ user_id: id, share: Math.round((plan.shares.get(id) ?? 0) * 100) / 100 })),
       p_replace: replace,
-      p_on_call: onCallRows,
+      p_on_call: onCallDealt,
+      p_state: { ...plan.state, ahead: steadyAhead(args, plan) } as unknown as Json,
     }),
     "deal_week",
   );
   return { weekId: weekId ?? null, byUser };
+}
+
+/** A member's "rather do" and "rather not", as stored: John id → 1 or −1. */
+function ratherOf(json: Json): Record<string, number> {
+  if (!json || typeof json !== "object" || Array.isArray(json)) return {};
+  return Object.fromEntries(Object.entries(json).filter((e): e is [string, number] => e[1] === 1 || e[1] === -1));
 }
 
 async function ensureCurrentWeek(
@@ -676,21 +704,36 @@ const HOUR = 3_600_000;
  * passed over for good; someone in quiet hours is passed over until a tick
  * after they end, while there's still time.
  */
+/** A planned John's reminder: sent once at its planned time (Plan it), in place of the usual two. */
+const PLANNED = 3;
+
 async function sendReminders(db: Db, house: HouseRow, now: Date, notify: Notify) {
   const zone = rulesOf(house).timezone;
-  const soon = must(
-    await db
+  const [dueSoon, planned] = await Promise.all([
+    db
       .from("assignments")
-      .select("id, user_id, name, due_at, needs_photo, reminded, job_id")
+      .select("id, user_id, name, due_at, needs_photo, reminded, job_id, planned_at")
       .eq("house_id", house.id)
       .is("outcome", null)
       .is("done_at", null)
       .is("absent_at", null)
+      .is("planned_at", null)
       .lt("reminded", 2)
       .gt("due_at", now.toISOString())
       .lte("due_at", new Date(now.getTime() + 24 * HOUR).toISOString()),
-    "reminders",
-  );
+    // A plan's reminder comes at its time, and up to two hours after if the clock was away.
+    db
+      .from("assignments")
+      .select("id, user_id, name, due_at, needs_photo, reminded, job_id, planned_at")
+      .eq("house_id", house.id)
+      .is("outcome", null)
+      .is("done_at", null)
+      .is("absent_at", null)
+      .lt("reminded", PLANNED)
+      .lte("planned_at", now.toISOString())
+      .gt("planned_at", new Date(now.getTime() - 2 * HOUR).toISOString()),
+  ]).then(([a, b]) => [must(a, "reminders"), must(b, "planned reminders")] as const);
+  const soon = [...dueSoon, ...planned];
   if (soon.length === 0) return 0;
   const prefs = must(
     await db
@@ -702,7 +745,7 @@ async function sendReminders(db: Db, house: HouseRow, now: Date, notify: Notify)
   let sent = 0;
   for (const a of soon) {
     const left = new Date(a.due_at).getTime() - now.getTime();
-    const stage = left <= 3 * HOUR ? 2 : 1;
+    const stage = a.planned_at ? PLANNED : left <= 3 * HOUR ? 2 : 1;
     if (a.reminded >= stage) continue;
     const when = reminderFor(prefsOf(prefs.find((p) => p.user_id === a.user_id)), now, zone);
     if (when === "wait") continue;
@@ -718,9 +761,15 @@ async function sendReminders(db: Db, house: HouseRow, now: Date, notify: Notify)
     );
     if (claimed.length === 0 || when === "skip") continue;
     const due = dueInLine(new Date(a.due_at), now, zone);
-    const body = stage === 2 ? NOTIFY_COPY.dueSoonBody(due) : NOTIFY_COPY.dueTomorrowBody(due);
+    const body =
+      stage === PLANNED ? NOTIFY_COPY.plannedBody(due) : stage === 2 ? NOTIFY_COPY.dueSoonBody(due) : NOTIFY_COPY.dueTomorrowBody(due);
     await notify([a.user_id], {
-      title: stage === 2 ? NOTIFY_COPY.dueSoonTitle(a.name) : NOTIFY_COPY.dueTomorrowTitle(a.name),
+      title:
+        stage === PLANNED
+          ? NOTIFY_COPY.plannedTitle(a.name)
+          : stage === 2
+            ? NOTIFY_COPY.dueSoonTitle(a.name)
+            : NOTIFY_COPY.dueTomorrowTitle(a.name),
       body: a.needs_photo ? `Due ${due}. ${NOTIFY_COPY.needsPhoto}` : body,
       url: "/today",
       kind: "reminders",

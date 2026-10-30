@@ -11,6 +11,10 @@ describe("humanError", () => {
     expect(humanError({ message: "no_johns" })).toBe("Add at least one John first.");
     expect(humanError({ message: "nobody_home" })).toBe("Everyone who shares that John is away today.");
     expect(humanError({ message: "not_on_call" })).toMatch(/can’t be flagged/);
+    expect(humanError({ message: "plan_time" })).toBe("Pick a time from now until the end of this week.");
+    expect(humanError({ message: "bad_prefs" })).toMatch(/morning, afternoon or evening/);
+    expect(humanError({ message: "already_asked" })).toBe("You’ve already asked about that John today.");
+    expect(humanError({ message: "swap_gone" })).toMatch(/^That ask has run out/);
   });
 
   it("finds the code inside a longer message, as the engine wraps it", () => {
@@ -26,7 +30,7 @@ describe("humanError", () => {
   });
 
   it("writes its apostrophes curly, as the rest of the copy does", () => {
-    for (const code of ["own_john", "already_disputed", "week_started", "unknown_timezone", "more_than_owed", "not_yours", "not_on_call", "not_dealt", "nobody_home"]) {
+    for (const code of ["own_john", "already_disputed", "week_started", "unknown_timezone", "more_than_owed", "not_yours", "not_on_call", "not_dealt", "nobody_home", "bad_prefs", "plan_time", "already_asked", "swap_gone"]) {
       expect(humanError({ message: code })).not.toContain("'");
     }
     expect(humanError({ code: "42501" })).not.toContain("'");

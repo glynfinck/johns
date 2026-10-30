@@ -33,6 +33,7 @@ export const PAGE_TITLE = {
   describe: "Describe your house",
   ask: `Ask ${APP_NAME}`,
   pass: "House Pass",
+  prefs: "Preferences",
 } as const;
 
 /** A page that isn't there, and a page that broke. */
@@ -615,6 +616,9 @@ export const NOTIFY_COPY = {
   dueSoonTitle: (john: string) => `${john} is due soon`,
   dueTomorrowBody: (due: string) => `Due ${due}. Tick it here when it’s done.`,
   dueSoonBody: (due: string) => `Due ${due}. A few hours left to do it on time.`,
+  /** Plan it: the reminder at the time you planned. */
+  plannedTitle: (john: string) => `Time for ${john}`,
+  plannedBody: (due: string) => `You planned it for now. Due ${due}.`,
   needsPhoto: "It needs a photo, so tick it in the app.",
   dealTitle: "This week’s Johns",
   disputedTitle: (john: string) => `Your ${john} tick is disputed`,
@@ -977,9 +981,43 @@ export const WHY_COPY = {
   moved: (dealtTo: string, holder: string) => `It was dealt to ${dealtTo}, and came to ${holder} in a swap or while they were away.`,
   /** Before the deal kept its working. */
   unknown: "This one was dealt before Jonz kept its working.",
+  /** Steady weeks: a miss came back to whoever missed it. */
+  back: (who: string, you: boolean) =>
+    you ? "You missed it last time, so it came back to you. A miss counts for nobody." : `${who} missed it last time, so it came back to them. A miss counts for nobody.`,
+  /** Steady weeks: their one John this week. `whose` is "yours" or "Ben’s". */
+  oneEach: (whose: string) =>
+    `Everyone home gets one John of their own before anyone gets a second, and whoever is furthest behind picks first. This one is ${whose}.`,
+  /** Steady weeks: the most budget left. `who` mid-sentence. */
+  mostRoom: (who: string) => `It went to whoever had the most of this week’s budget left: ${who}.`,
+  /** Classic: their turn. `whose` is "your" or "Ben’s". */
+  turn: (whose: string) => `The house takes turns in order, and this week it’s ${whose} turn.`,
+  /** Classic: whoever's turn it was is away or full. */
+  nextInLine: (who: string) =>
+    `Whoever’s turn it was is away or has a full week, so the next in line does it: ${who}. Whoever was skipped stays first in line.`,
+  /** It waited for room before this. */
+  waited: (weeks: number) => `It waited ${weeks === 1 ? "a week" : `${weeks} weeks`} for room in someone’s budget first.`,
+  /** It went a little over someone's budget, having waited a week. `whose` is "your" or "Ben’s". */
+  stretched: (whose: string) =>
+    `Nobody else had room, but it had already waited a week, so it went a little over ${whose} budget rather than wait again.`,
+  /** It went back to whoever did it last time, having waited two weeks. */
+  againWaited: "It had waited two weeks, so it went back to whoever did it last time rather than wait again.",
+  /** Its day: moved off its own day, and why. */
+  movedTaken: (who: string, you: boolean) =>
+    `It’s on another day than usual because ${who} already ${you ? "have" : "has"} a John on its own day.`,
+  movedSuits: (who: string) => `It’s on a day that suits ${who} better.`,
+  movedAway: (who: string, you: boolean) => `It’s on another day than usual because ${who} ${you ? "are" : "is"} away on its own day.`,
+  movedGone: "It’s on another day than usual because the week was dealt after its own day.",
   addsUp: "How it added up",
   /** Under the rows: what the figures are. */
   key: "Work done over recent weeks against each share, with this week’s Johns dealt before it. Below zero is behind.",
+  /** Under the rows, with a budget: what the figures are. */
+  keyBudget: "Work done against the house’s average, and how much of this week’s budget each had left before it. Below zero is behind.",
+  /** Under the rows, in Classic: what the figures are. */
+  keyTurns: "Who was next in line for this John, among those home.",
+  /** A row's figure in Classic: "1st in line". */
+  inLine: (place: number) => `${place}${place === 1 ? "st" : place === 2 ? "nd" : place === 3 ? "rd" : "th"} in line`,
+  /** A row's note with a budget: "2 left", "0.5 left". */
+  left: (room: number) => `${Math.max(0, Math.round(room * 10) / 10)} left`,
   dealtIt: "Dealt it",
   hadItLast: "Had it last time",
   handedMost: "Already handed the most extra",
@@ -1733,4 +1771,115 @@ export const RECORD_COPY = {
   /** The breakdown's last word: what the deal does about it, over the weeks it remembers. */
   next: "What happens next",
   someoneGone: "A former housemate",
+} as const;
+
+/** Budgets' names: Light, Usual and Busy. */
+const BUDGET_WORD: Record<number, string> = { 2: "Light", 4: "Usual", 6: "Busy" };
+
+/**
+ * Steady weeks (steady.ts): how the house shares Johns and its budget, Keep
+ * its day, each person's preferences, Plan it, Johns waiting their turn, and
+ * the swap offered for a John you'd rather not do.
+ */
+export const STEADY_COPY = {
+  /** House rules. */
+  workload: "Workload",
+  mode: "How you share Johns",
+  modeName: { smart: "Smart", classic: "Classic" } as Record<string, string>,
+  modeMeta: {
+    smart: "Turns planned for you from points, who did what recently, and everyone’s preferences. Nobody gets the same John twice running.",
+    classic: "Take turns in a set order. Every John goes round everyone the same way each time.",
+  } as Record<string, string>,
+  modeFoot: "Both use your budget, one a day and fresh starts.",
+  /** Describe your house, once the first list is in: the one question it asks about the deal. */
+  modeAsk: "One last thing: how should the house share Johns?",
+  modeLater: "You can change this any time in House rules.",
+  budget: "Effort each week",
+  /** "Light, 2 points"; "No limit". */
+  budgetName: (budget: number) => (budget === 0 ? "No limit" : `${BUDGET_WORD[budget] ?? "Up to"}, ${budget} points`),
+  /** As the rules read: "Light, 2 points each". */
+  budgetEach: (budget: number) => (budget === 0 ? "No limit" : `${BUDGET_WORD[budget] ?? "Up to"}, ${budget} points each`),
+  suggested: "Suggested.",
+  johnsEach: (n: number) =>
+    n < 1.5 ? "About one John each." : `About ${["two", "three", "four", "five", "six"][Math.round(n) - 2] ?? Math.round(n)} each.`,
+  everyWeek: "Everything, every week.",
+  onTime: "Everything on its own schedule.",
+  mostWeekly: "Most come round every week.",
+  /** How often weekly Johns come round on a budget; `all`: every John on the list is weekly. */
+  weeklyEvery: (lo: number, hi: number, all: boolean) =>
+    `${all ? "Each comes" : "Weekly Johns come"} round every ${lo === hi ? (lo === 1 ? "week" : `${lo} weeks`) : `${lo} to ${hi} weeks`}.`,
+  someWait: "Some wait a few weeks for their turn.",
+  noLimit: "Everything, however long the list.",
+  budgetFoot: "Everyone gets at least one John, even one bigger than the budget.",
+  tooLong: (need: number) =>
+    `Your list asks about ${Math.round(need)} points a week each. Taking some off, or making some less often, would help.`,
+
+  /** The John form. */
+  keepDay: "Keep its day",
+  keepDayMeta: "Always on its own day, whatever the budget, like bins night.",
+  /** In the list's line: "Every week, due Thu 20:00, keeps its day". */
+  keepsDay: "keeps its day",
+
+  /** Preferences, under House, You. */
+  prefs: "Preferences",
+  prefsNone: "No preferences",
+  days: "Days that suit me",
+  daysHint: "Your Johns land on these days, unless a John keeps its own day.",
+  anyDay: "Any day",
+  anyTime: "Any",
+  bestTime: "My best time",
+  bestTimeHint: "It’s the time Plan it suggests.",
+  time: { morning: "Morning", afternoon: "Afternoon", evening: "Evening" } as Record<string, string>,
+  /** In a sentence: "mornings". */
+  timeOften: { morning: "mornings", afternoon: "afternoons", evening: "evenings" } as Record<string, string>,
+  noPreference: "No preference",
+  johns: "Johns",
+  rather: { "1": "Rather do", "0": "No preference", "-1": "Rather not" } as Record<string, string>,
+  prefsNote: "These change when you get a John and the order of turns. Everyone still does their fair share.",
+  prefsSaved: "Preferences saved",
+
+  /** Plan it. */
+  plan: "Plan it",
+  planTitle: "When will you do it?",
+  planBody: (due: string) => `Due ${due}. We’ll remind you at the time you pick.`,
+  /** A time to pick: "Your best time: morning". */
+  yourBest: (time: string) => `Your best time: ${time.toLowerCase()}`,
+  planFor: (when: string) => `Plan for ${when}`,
+  /** On the John: "Thu 08:30, reminder set". */
+  planned: (when: string) => `${when}, reminder set`,
+  plannedToast: (when: string) => `Planned for ${when}`,
+  change: "Change",
+  unplan: "Clear the plan",
+  unplanned: "Plan cleared",
+
+  /** Week. */
+  waiting: "Waiting their turn",
+  /** A waiting John's meta: "2 points, waiting a week". */
+  waitingFor: (weeks: number) => (weeks <= 1 ? "waiting a week" : `waiting ${weeks} weeks`),
+  waitingNote: "Johns over the budget wait their turn, the longest waiting first. Nobody falls behind for one they weren’t handed.",
+  turnsNext: "Whose turn next",
+  /** After a John's kind: "Ada’s turn, next week"; "your turn, week of 23 Nov". */
+  turnOf: (whose: string, when: string) => `${whose} turn, ${when}`,
+  nextWeek: "next week",
+  weekOf: (date: string) => `week of ${date}`,
+  yourTurn: "your",
+  /** On a John in Smart: who had it before. "after Ada"; "after you". */
+  after: (who: string) => `after ${who}`,
+
+  /** A John you'd rather not, on Today. */
+  someone: "A housemate",
+  ratherDoIt: (name: string) => `${name} would rather do it`,
+  swapFor: (name: string, john: string, points: string) => `Swap it for ${name}’s ${john}, ${points}`,
+  ask: (name: string) => `Ask ${name}`,
+  askNote: (name: string, john: string) => `If ${name} says no or doesn’t answer by tonight, ${john} stays yours.`,
+  asked: (name: string) => `Asked ${name}. If they say no or don’t answer by tonight, it stays yours.`,
+  /** Asked: on the other person's Today. */
+  offerTitle: (name: string) => `${name} asks to swap`,
+  offerBody: (theirs: string, yours: string, points: string) => `Your ${yours} for their ${theirs}, ${points}. You’d rather do ${theirs}.`,
+  accept: "Swap",
+  decline: "No thanks",
+  swapped: "Swapped",
+  declined: "It stays theirs",
+  pushTitle: (name: string) => `${name} asks to swap`,
+  pushBody: (theirs: string, yours: string) => `Their ${theirs} for your ${yours}. Answer in Jonz by tonight.`,
 } as const;

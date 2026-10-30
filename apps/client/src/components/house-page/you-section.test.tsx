@@ -1,4 +1,4 @@
-import { HOUSE_COPY, HOUSE_LOWER_COPY, ME_COPY } from '@app/core';
+import { HOUSE_COPY, HOUSE_LOWER_COPY, ME_COPY, STEADY_COPY } from '@app/core';
 import { fireEvent, screen, waitFor, within } from 'expo-router/testing-library';
 
 import { signOut } from '@/api/auth';
@@ -41,6 +41,17 @@ beforeEach(() => {
   (reminderSupport as jest.Mock).mockReturnValue('none');
   (remindersOn as jest.Mock).mockResolvedValue(false);
   for (const move of [renameMe, signOut]) (move as jest.Mock).mockResolvedValue(undefined);
+});
+
+it('says your preferences in a line, and pushes their page', async () => {
+  await open();
+  expect(screen.getByTestId('to-prefs')).toHaveTextContent(new RegExp(`${STEADY_COPY.prefs}.*${STEADY_COPY.prefsNone}`));
+  const base = snapshot();
+  (loadHouse as jest.Mock).mockResolvedValue(
+    snapshot({ members: base.members.map((m) => (m.userId === 'priya' ? { ...m, prefs: { days: [3, 6], bestTime: 'evening', rather: {} } } : m)) }),
+  );
+  await open();
+  expect(screen.getByTestId('to-prefs')).toHaveTextContent(/Wed, Sat, evenings/);
 });
 
 it('shows your name, and changes it in a sheet', async () => {

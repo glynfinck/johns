@@ -62,6 +62,10 @@ const MESSAGES: Record<string, string> = {
   left_off: "The roll call said you weren’t there. Dispute it on the John if you were.",
   not_your_tick: "Only whoever ticked it can take it back. Dispute it if it’s wrong.",
   same_job: "You’re both on that John already.",
+  bad_prefs: "Those didn’t save. Pick days of the week, and morning, afternoon or evening.",
+  plan_time: "Pick a time from now until the end of this week.",
+  already_asked: "You’ve already asked about that John today.",
+  swap_gone: "That ask has run out, so the Johns stay as they were.",
 };
 
 export function humanError(error: { message?: string; code?: string } | null | undefined): string {

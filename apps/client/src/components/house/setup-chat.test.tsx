@@ -1,4 +1,4 @@
-import { HOUSE_DRAFT_COPY, RESET_COPY, type ChatReset, listAsDraft, NEW_JOHN, NEXT_UP_COPY, starterDraft, tidyDraft, type HouseRules, type JohnDef } from '@app/core';
+import { HOUSE_DRAFT_COPY, RESET_COPY, STEADY_COPY, type ChatReset, listAsDraft, NEW_JOHN, NEXT_UP_COPY, starterDraft, tidyDraft, type HouseRules, type JohnDef } from '@app/core';
 import { QueryClientProvider } from '@tanstack/react-query';
 import { fireEvent, render, screen } from '@testing-library/react-native';
 import { router } from 'expo-router';
@@ -7,6 +7,7 @@ import type { ReactNode } from 'react';
 import { applyDraft, sendChat } from '@/api/draft';
 import { undoAction } from '@/api/history';
 import { applyReset } from '@/api/resets';
+import { saveDealMode } from '@/api/settings';
 import { testQueryClient } from '@/testing/query';
 
 import { SetupChat } from './setup-chat';
@@ -14,6 +15,7 @@ import { SetupChat } from './setup-chat';
 jest.mock('@/api/draft', () => ({ applyDraft: jest.fn(), sendChat: jest.fn() }));
 jest.mock('@/api/history', () => ({ undoAction: jest.fn() }));
 jest.mock('@/api/resets', () => ({ applyReset: jest.fn() }));
+jest.mock('@/api/settings', () => ({ saveDealMode: jest.fn() }));
 jest.mock('@/api/supabase', () => ({ supabase: {} }));
 jest.mock('expo-router', () => ({ ...jest.requireActual('expo-router'), router: { dismissTo: jest.fn() } }));
 
@@ -30,6 +32,8 @@ const RULES: HouseRules = {
   disputeHours: 24,
   coverGraceHours: 3,
   lateHours: 24,
+  dealMode: 'smart',
+  dealBudget: 4,
 };
 const people = [{ userId: ME, name: 'Glyn Finck' }];
 const drafted = tidyDraft(
@@ -94,6 +98,36 @@ it('shows the draft in the chat with every John kept, opens it into its groups, 
   expect(screen.queryByTestId('chat-input')).toBeNull();
   await fireEvent.press(screen.getByTestId('chat-open-list'));
   expect(router.dismissTo).toHaveBeenCalledWith('/house/johns');
+});
+
+it('asks once the list is in how the house shares Johns, Smart already chosen, and saves a change at a tap', async () => {
+  const save = saveDealMode as jest.Mock;
+  save.mockResolvedValue(undefined);
+  await open();
+  await say(HOUSE);
+  await screen.findByText('Here’s a first go.');
+  expect(screen.queryByTestId('chat-mode')).toBeNull();
+  await fireEvent.press(screen.getByRole('button', { name: HOUSE_DRAFT_COPY.keep(2) }));
+  expect(await screen.findByText(STEADY_COPY.modeAsk)).toBeTruthy();
+  expect(screen.getByTestId('chat-mode-smart')).toBeChecked();
+  expect(screen.getByTestId('chat-mode-smart')).toHaveTextContent(STEADY_COPY.suggested, { exact: false });
+  expect(screen.getByTestId('chat-mode-classic')).not.toBeChecked();
+  await fireEvent.press(screen.getByTestId('chat-mode-smart'));
+  expect(save).not.toHaveBeenCalled();
+  await fireEvent.press(screen.getByTestId('chat-mode-classic'));
+  expect(save).toHaveBeenCalledWith('h1', 'classic');
+  expect(await screen.findByTestId('chat-mode-classic')).toBeChecked();
+  expect(screen.getByTestId('chat-mode-smart')).not.toBeChecked();
+});
+
+it('puts the choice back and says why when saving it is refused', async () => {
+  (saveDealMode as jest.Mock).mockRejectedValue(new Error('Only the house admins can do that.'));
+  await open();
+  await fireEvent.press(screen.getByTestId('starter-family'));
+  await fireEvent.press(screen.getByRole('button', { name: /^Add / }));
+  await fireEvent.press(await screen.findByTestId('chat-mode-classic'));
+  expect(await screen.findByText('Only the house admins can do that.')).toBeTruthy();
+  expect(screen.getByTestId('chat-mode-smart')).toBeChecked();
 });
 
 it('sends the chat so far and the draft with each change, and keeps the draft when Jonz only talks', async () => {
@@ -188,6 +222,8 @@ describe('with a list already', () => {
     await fireEvent.press(screen.getByRole('button', { name: HOUSE_DRAFT_COPY.apply(2) }));
     expect(keep).toHaveBeenCalledWith('h1', RULES, base, changed, [`change:${BATH}`, 'add:1'], { johns, groups: [] }, expect.any(Date));
     expect(await screen.findByText(HOUSE_DRAFT_COPY.applied(1))).toBeTruthy();
+    // The house was asked how it shares Johns when it was new; House rules has it now.
+    expect(screen.queryByTestId('chat-mode')).toBeNull();
   });
 
   it('offers the House Pass in place of the message box when the house hasn’t got it', async () => {

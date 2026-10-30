@@ -80,6 +80,7 @@ const PUSHED = [
   { row: "to-rules", path: "/house/rules", title: PAGE_TITLE.rules },
   { row: "to-away", path: "/house/away", title: PAGE_TITLE.away },
   { row: "to-pass", path: "/house/pass", title: PAGE_TITLE.pass },
+  { row: "to-prefs", path: "/house/prefs", title: PAGE_TITLE.prefs },
 ];
 
 test.describe("a house with its week dealt", () => {
@@ -148,6 +149,7 @@ test.describe("a house with its week dealt", () => {
     "/house/stake",
     "/house/pass",
     "/house/describe",
+    "/house/prefs",
   ]) {
     test(`${path} opened cold, and after a refresh, still goes back to House`, async ({ page }) => {
       await page.goto(path);

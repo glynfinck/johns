@@ -1,12 +1,17 @@
 import {
+  myPrefsOf,
   passOf,
+  weekStateOf,
   weekWindow,
   rulesOf,
   type AssignmentRow,
   type DisputeRow,
   type HousePass,
   type HouseRules,
+  type MyPrefs,
   type OnCallRow,
+  type SteadyAheadWeek,
+  type SwapOfferRow,
   type WeekRow,
 } from '@app/core';
 
@@ -26,6 +31,8 @@ export interface Housemate {
   streak: number;
   immunityTokens: number;
   swapTokens: number;
+  /** Days that suit them, their best time and the Johns they'd rather do or not (House, You, Preferences). */
+  prefs: MyPrefs;
 }
 
 export interface HouseSnapshot {
@@ -46,6 +53,10 @@ export interface HouseSnapshot {
   disputes: DisputeRow[];
   /** Who is on call for each on-call John this week. */
   onCall: OnCallRow[];
+  /** What this week's deal kept: the Johns waiting their turn (John id → weeks waited) and the next two weeks as it would hand them out. */
+  steady: { waiting: Record<string, number>; ahead: SteadyAheadWeek[] };
+  /** Asks to swap still open that you made or were asked (only the two of them can read one). */
+  offers: SwapOfferRow[];
 }
 
 /** One read of a house: its rules and people, and this week's Johns and disputes. */
@@ -54,7 +65,7 @@ export async function loadHouse(houseId: string, now: Date): Promise<HouseSnapsh
     supabase.from('houses').select('*').eq('id', houseId).single(),
     supabase
       .from('members')
-      .select('user_id, role, streak, immunity_tokens, swap_tokens, profiles(display_name, avatar_url)')
+      .select('user_id, role, streak, immunity_tokens, swap_tokens, suits_days, best_time, rather, profiles(display_name, avatar_url)')
       .eq('house_id', houseId)
       .order('joined_at'),
   ]);
@@ -65,13 +76,13 @@ export async function loadHouse(houseId: string, now: Date): Promise<HouseSnapsh
   const window = weekWindow(now, rules.timezone, rules.weekStarts);
   const { data: week, error: weekError } = await supabase
     .from('weeks')
-    .select('id, starts_on, starts_at, ends_at')
+    .select('id, starts_on, starts_at, ends_at, waiting, ahead')
     .eq('house_id', houseId)
     .eq('starts_on', window.startsOn)
     .maybeSingle();
   if (weekError) throw weekError;
 
-  const [assignments, carried, disputes, onCall] = week
+  const [assignments, carried, disputes, onCall, offers] = week
     ? await Promise.all([
         // With how often each comes round, from the John it was dealt from (the John sheet says so).
         supabase.from('assignments').select('*, johns(every_weeks, every_months), crew(user_id, helper, points)').eq('week_id', week.id).order('due_at'),
@@ -89,8 +100,15 @@ export async function loadHouse(houseId: string, now: Date): Promise<HouseSnapsh
           .eq('house_id', houseId)
           .is('resolution', null),
         supabase.from('on_call').select('john_id, user_id, johns(name, category, needs_photo, archived_at)').eq('week_id', week.id),
+        supabase
+          .from('swap_offers')
+          .select('id, mine, theirs, asked_by, asked_to, expires_at')
+          .eq('house_id', houseId)
+          .is('answer', null)
+          .gt('expires_at', now.toISOString()),
       ])
     : [
+        { data: [], error: null },
         { data: [], error: null },
         { data: [], error: null },
         { data: [], error: null },
@@ -100,6 +118,7 @@ export async function loadHouse(houseId: string, now: Date): Promise<HouseSnapsh
   if (carried.error) throw carried.error;
   if (disputes.error) throw disputes.error;
   if (onCall.error) throw onCall.error;
+  if (offers.error) throw offers.error;
 
   return {
     house: {
@@ -119,10 +138,13 @@ export async function loadHouse(houseId: string, now: Date): Promise<HouseSnapsh
       streak: m.streak,
       immunityTokens: m.immunity_tokens,
       swapTokens: m.swap_tokens,
+      prefs: myPrefsOf(m),
     })),
-    week: week ?? null,
+    week: week ? { id: week.id, starts_on: week.starts_on, starts_at: week.starts_at, ends_at: week.ends_at } : null,
     assignments: [...(assignments.data ?? []), ...(carried.data ?? [])],
     disputes: disputes.data ?? [],
     onCall: onCall.data ?? [],
+    steady: (({ waiting, ahead }) => ({ waiting, ahead }))(weekStateOf(week ?? {})),
+    offers: offers.data ?? [],
   };
 }

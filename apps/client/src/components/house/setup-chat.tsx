@@ -2,6 +2,7 @@ import {
   CATEGORIES,
   changedLine,
   CHAT_MAX_MESSAGES,
+  DEAL_MODES,
   draftChanges,
   DOW_LABEL,
   HOUSE_DRAFT_COPY,
@@ -13,10 +14,12 @@ import {
   scheduleLine,
   STARTER_KINDS,
   starterDraft,
+  STEADY_COPY,
   weeklyEffort,
   type ChatAsk,
   type ChatMessage,
   type ChatReset,
+  type DealMode,
   type DraftChange,
   type DraftedJohn,
   type GroupDef,
@@ -32,6 +35,7 @@ import { useRef, useState } from 'react';
 import { KeyboardAvoidingView, Platform, Pressable, ScrollView, StyleSheet, Text, TextInput, View, type ScrollViewInstance } from 'react-native';
 
 import { applyDraft, sendChat } from '@/api/draft';
+import { saveDealMode } from '@/api/settings';
 import { Alert } from '@/components/alert';
 import { Button } from '@/components/button';
 import { Group } from '@/components/group';
@@ -239,8 +243,8 @@ export function SetupChat({
             );
           }
           if (turn.role === 'done') {
-            return (
-              <Group key={at} testID="chat-done">
+            const row = (
+              <Group testID="chat-done">
                 <Row
                   title={editing ? HOUSE_DRAFT_COPY.applied(turn.added) : HOUSE_DRAFT_COPY.added(turn.added)}
                   meta={editing ? HOUSE_DRAFT_COPY.appliedMeta : HOUSE_DRAFT_COPY.addedMeta}
@@ -251,6 +255,15 @@ export function SetupChat({
                   testID="chat-open-list"
                 />
               </Group>
+            );
+            // A new house's one question about the deal, asked once its first list is in.
+            return editing ? (
+              <View key={at}>{row}</View>
+            ) : (
+              <View key={at} style={styles.said}>
+                {row}
+                <ModeAsk houseId={houseId} start={rules.dealMode} />
+              </View>
             );
           }
           return (
@@ -368,6 +381,55 @@ function SendButton({ onPress, disabled }: { onPress: () => void; disabled: bool
         <ArrowUpIcon size={18} color={disabled ? colors.mutedForeground : colors.onHivis} aria-hidden />
       </View>
     </Pressable>
+  );
+}
+
+// Smart is the suggested one, as in House rules.
+const MODES = DEAL_MODES.map((m) => ({
+  mode: m,
+  label: STEADY_COPY.modeName[m],
+  meta: m === 'smart' ? `${STEADY_COPY.suggested} ${STEADY_COPY.modeMeta[m]}` : STEADY_COPY.modeMeta[m],
+}));
+
+/**
+ * How the house shares Johns, asked once a new house has its list: Smart
+ * (chosen already, as every house starts) or Classic, each saying what it
+ * means. A tap saves it; House rules can change it after.
+ */
+function ModeAsk({ houseId, start }: { houseId: string; start: DealMode }) {
+  const move = useMove(houseId);
+  const [mode, setMode] = useState(start);
+
+  async function pick(next: DealMode) {
+    if (next === mode) return;
+    const was = mode;
+    setMode(next);
+    if (!(await move.run(() => saveDealMode(houseId, next)))) setMode(was);
+  }
+
+  return (
+    <>
+      <Body>{STEADY_COPY.modeAsk}</Body>
+      <Group testID="chat-mode">
+        <View accessibilityRole="radiogroup" accessibilityLabel={STEADY_COPY.mode}>
+          {MODES.map((m) => (
+            <ChoiceRow
+              key={m.mode}
+              role="radio"
+              label={m.label}
+              meta={m.meta}
+              metaLines={4}
+              checked={m.mode === mode}
+              disabled={move.pending}
+              onPress={() => void pick(m.mode)}
+              testID={`chat-mode-${m.mode}`}
+            />
+          ))}
+        </View>
+      </Group>
+      {move.problem ? <Alert message={move.problem} /> : null}
+      <Meta>{`${STEADY_COPY.modeFoot} ${STEADY_COPY.modeLater}`}</Meta>
+    </>
   );
 }
 

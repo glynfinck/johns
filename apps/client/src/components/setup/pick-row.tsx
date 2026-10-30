@@ -7,18 +7,20 @@ import { ChoiceRow } from '@/components/setup/choice-row';
 import { Body, RowTitle } from '@/components/text';
 import { ROW_GAP, ROW_MIN, SPACE, TABULAR, useTheme } from '@/theme';
 
-/** One choice a PickRow offers: its words in the list, and `short` for the row's value. */
+/** One choice a PickRow offers: its words in the list, `short` for the row's value, and `meta` for what it does. */
 export interface PickOption<T> {
   value: T;
   label: string;
   short?: string;
+  meta?: string;
 }
 
 /**
  * A setting with a few values, as a row in a group: its name, what it's set
  * to, and a chevron. Pressed, it opens in place into the choices as radio
- * rows under it (a short select that never leaves the page or the sheet);
- * picking one closes it again. `aria-expanded` says whether it's open.
+ * rows under it (a short select that never leaves the page or the sheet),
+ * each with a line on what it does when it has `meta`; picking one closes it
+ * again. `aria-expanded` says whether it's open.
  */
 export function PickRow<T extends string | number>({
   label,
@@ -73,6 +75,8 @@ export function PickRow<T extends string | number>({
               key={String(option.value)}
               role="radio"
               label={option.label}
+              meta={option.meta}
+              metaLines={4}
               checked={option.value === value}
               onPress={() => {
                 setOpen(false);

@@ -1,5 +1,5 @@
 import { apiPost } from './http';
-import { markDone, rollCall, spendImmunity, spendSwap, undoDone } from './johns';
+import { answerSwap, askSwap, markDone, planJohn, rollCall, spendImmunity, spendSwap, undoDone } from './johns';
 import { supabase } from './supabase';
 
 jest.mock('./supabase', () => ({ supabase: { rpc: jest.fn() } }));
@@ -45,6 +45,26 @@ it('swaps one of yours for a housemate\'s through use_swap', async () => {
   expect(rpc).toHaveBeenCalledWith('use_swap', { p_mine: 'a1', p_theirs: 'a2' });
   rpc.mockResolvedValue({ data: null, error: { message: 'no_swap', code: 'P0001' } });
   await expect(spendSwap('a1', 'a2')).rejects.toThrow("You don’t have a swap token.");
+});
+
+it('asks to swap through the swaps route, which tells them, and answers through answer_swap', async () => {
+  const [mine, theirs, offerId] = ['00000000-0000-4000-8000-0000000000a1', '00000000-0000-4000-8000-0000000000a2', '00000000-0000-4000-8000-0000000000f1'];
+  post.mockResolvedValue({ ok: true, offerId });
+  await expect(askSwap(mine, theirs)).resolves.toBe(offerId);
+  expect(post).toHaveBeenCalledWith('/api/swaps', { mine, theirs }, expect.anything());
+  await answerSwap(offerId, true);
+  expect(rpc).toHaveBeenCalledWith('answer_swap', { p_offer: offerId, p_accept: true });
+  rpc.mockResolvedValue({ data: null, error: { message: 'swap_gone', code: 'P0001' } });
+  await expect(answerSwap(offerId, false)).rejects.toThrow(/^That ask has run out/);
+});
+
+it('plans a John through plan_john, and clears the plan with null', async () => {
+  await planJohn('a1', new Date('2026-11-07T10:00:00Z'));
+  expect(rpc).toHaveBeenCalledWith('plan_john', { p_assignment: 'a1', p_at: '2026-11-07T10:00:00.000Z' });
+  await planJohn('a1', null);
+  expect(rpc).toHaveBeenLastCalledWith('plan_john', { p_assignment: 'a1', p_at: null });
+  rpc.mockResolvedValue({ data: null, error: { message: 'plan_time', code: 'P0001' } });
+  await expect(planJohn('a1', new Date())).rejects.toThrow('Pick a time from now until the end of this week.');
 });
 
 it("says the database's refusal in words", async () => {

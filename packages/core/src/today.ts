@@ -13,6 +13,8 @@ import { canCover, coverOpensAt, type LiveStatus } from "./outcome";
 import type { TableRow } from "./points";
 import { oftenWords } from "./repeat";
 import type { StakeView } from "./stake";
+import { NO_PREFS, type MyPrefs } from "./steady-prefs";
+import { swapAsk, swapOffersToYou, type SwapAsk, type SwapOfferRow, type SwapOfferToYou } from "./steady-swap";
 import { addDaysTo, monthOf } from "./week";
 
 // Today as Focus shows it, and the John sheet: which John is Next up and
@@ -638,6 +640,10 @@ export interface TodayPage {
   away: string | null;
   /** Where you stand (standingLine), once the week is out. */
   standing: string | null;
+  /** A John you'd rather not that someone would rather do, or your ask about it (steady-swap.ts). */
+  swap: SwapAsk<BoardItem> | null;
+  /** Asks to swap made to you, still open. */
+  offers: SwapOfferToYou<BoardItem>[];
 }
 
 /** Today's card, rows and lines from the week, you, your trips and the Stake (each null until it's read). */
@@ -648,11 +654,14 @@ export function todayPage(input: {
   userId: string;
   /** You in the house, with the tokens you hold; null if you've just left. */
   me: { userId: string; immunityTokens: number; swapTokens: number } | null;
-  members: readonly (Person & { role: string })[];
+  members: readonly (Person & { role: string; prefs?: MyPrefs })[];
   rules: HouseRules;
   /** Time away as read: today in the house and everyone's trips. */
   away: { today: string; periods: readonly AwayPeriod[] } | null;
   stake: Pick<StakeView, "month" | "stakeMinor" | "projection"> | null;
+  /** Asks to swap still open that you made or were asked, as read. */
+  offers?: readonly SwapOfferRow[];
+  now?: Date;
 }): TodayPage {
   const { board, mine, userId, away, stake, rules } = input;
   const state = nextUpState({
@@ -671,5 +680,15 @@ export function todayPage(input: {
     room: shown ? forfeitRoom(stake, userId, monthOf(shown.dueAt, rules.timezone)) : null,
     away: away && state.kind !== "away" ? awayLine(away.periods, userId, away.today) : null,
     standing: board.week ? standingLine({ table: board.table, userId, stake, currency: rules.currency }) : null,
+    ...swapsFor(input),
   };
+}
+
+/** Today's swaps, once everyone's preferences and the open asks are read. */
+function swapsFor(input: Parameters<typeof todayPage>[0]): Pick<TodayPage, "swap" | "offers"> {
+  const { offers, now } = input;
+  if (!offers || !now) return { swap: null, offers: [] };
+  const members = input.members.map((m) => ({ userId: m.userId, name: m.name, prefs: m.prefs ?? NO_PREFS }));
+  const args = { items: input.board.items, viewerId: input.userId, members, offers, now };
+  return { swap: swapAsk(args), offers: swapOffersToYou(args) };
 }

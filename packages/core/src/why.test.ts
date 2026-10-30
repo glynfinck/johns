@@ -223,3 +223,83 @@ describe("johnWhy: a John done together", () => {
     );
   });
 });
+
+describe("johnWhy: Steady weeks", () => {
+  const budget = (over: Partial<DealWhy>): DealWhy => ({
+    to: ME,
+    by: "mostRoom",
+    mode: "smart",
+    budget: 4,
+    weighed: [
+      { userId: ME, standing: -1, room: 2 },
+      { userId: "priya", standing: 1, room: 0.5 },
+    ],
+    away: [],
+    ...over,
+  });
+
+  it("says it went to whoever had the most budget left, and shows what each had left", () => {
+    const view = why(item(budget({})));
+    expect(view.answer).toBe(WHY_COPY.mostRoom("you"));
+    expect(view.key).toBe(WHY_COPY.keyBudget);
+    expect(view.rows.map((r) => [r.name, r.value, r.meta])).toEqual([
+      ["You", "−1", `${WHY_COPY.dealtIt}, ${WHY_COPY.left(2)}`],
+      ["Priya", "+1", WHY_COPY.left(0.5)],
+    ]);
+  });
+
+  it("says it was your one John, or a housemate's", () => {
+    expect(why(item(budget({ by: "oneEach" }))).answer).toBe(WHY_COPY.oneEach(WHY_COPY.yours));
+    expect(why(item(budget({ by: "oneEach" })), "priya").answer).toBe(WHY_COPY.oneEach("Sam’s"));
+  });
+
+  it("says a missed John came back to whoever missed it", () => {
+    expect(why(item(budget({ by: "back", weighed: [] }))).answer).toBe(WHY_COPY.back("You", true));
+  });
+
+  it("says how long it waited, and when it went over a budget or back to last time's holder", () => {
+    expect(why(item(budget({ waited: 2, stretched: true }))).answer).toBe(
+      `${WHY_COPY.mostRoom("you")} ${WHY_COPY.waited(2)} ${WHY_COPY.stretched("your")}`,
+    );
+    expect(why(item(budget({ waited: 2, again: true }))).answer).toBe(
+      `${WHY_COPY.mostRoom("you")} ${WHY_COPY.waited(2)} ${WHY_COPY.againWaited}`,
+    );
+  });
+
+  it("says why it's on another day", () => {
+    expect(why(item(budget({ moved: "suits" }))).answer).toBe(`${WHY_COPY.mostRoom("you")} ${WHY_COPY.movedSuits("you")}`);
+    expect(why(item(budget({ moved: "gone" }))).answer).toBe(`${WHY_COPY.mostRoom("you")} ${WHY_COPY.movedGone}`);
+  });
+
+  it("shows Classic's line of turns", () => {
+    const view = why(
+      item({
+        to: ME,
+        by: "nextInLine",
+        mode: "classic",
+        budget: 4,
+        weighed: [
+          { userId: ME, standing: 0, place: 1, room: 2 },
+          { userId: "priya", standing: 0, place: 2, room: 0 },
+        ],
+        away: [],
+      }),
+    );
+    expect(view.answer).toBe(WHY_COPY.nextInLine("you"));
+    expect(view.key).toBe(WHY_COPY.keyTurns);
+    expect(view.rows.map((r) => [r.name, r.value, r.meta])).toEqual([
+      ["You", WHY_COPY.inLine(1), WHY_COPY.dealtIt],
+      ["Priya", WHY_COPY.inLine(2), null],
+    ]);
+    expect(why(item({ to: ME, by: "turn", mode: "classic", budget: 0, weighed: [], away: [] }), "priya").answer).toBe(
+      WHY_COPY.turn("Sam’s"),
+    );
+  });
+
+  it("reads a dealt record back, keeping only what it knows", () => {
+    const back = readDealt({ ...budget({ waited: 1, moved: "gone", stretched: true }), moved: "gone" });
+    expect(back).toMatchObject({ by: "mostRoom", mode: "smart", budget: 4, waited: 1, stretched: true, moved: "gone" });
+    expect(readDealt({ ...budget({}), moved: "elsewhere", waited: 0 })).not.toHaveProperty("moved");
+    expect(readDealt({ ...budget({}), waited: 0 })).not.toHaveProperty("waited");
+  });
+});

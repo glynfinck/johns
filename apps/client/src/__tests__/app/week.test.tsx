@@ -9,9 +9,11 @@ import {
   NOT_DEALT_COPY,
   PAGE_TITLE,
   REPEAT_COPY,
+  STEADY_COPY,
   TABLE_COPY,
   WEEK_COPY,
   WEEK_SUMMARY_COPY,
+  type SteadyAheadWeek,
 } from '@app/core';
 import { QueryClientProvider, type QueryClient } from '@tanstack/react-query';
 import { Slot } from 'expo-router';
@@ -431,7 +433,7 @@ describe('on a phone', () => {
   it("says in a person's header when they're away, and gives someone with no Johns a group too", async () => {
     read.mockResolvedValue(
       busyWeek({
-        members: [...snapshot().members, { userId: 'cal', name: 'Cal', photo: null, role: 'member', streak: 0, immunityTokens: 0, swapTokens: 0 }],
+        members: [...snapshot().members, { userId: 'cal', name: 'Cal', photo: null, role: 'member', streak: 0, immunityTokens: 0, swapTokens: 0, prefs: { days: [], bestTime: null, rather: {} } }],
       }),
     );
     (loadAway as jest.Mock).mockResolvedValue({
@@ -565,6 +567,58 @@ describe('coming up', () => {
     await open();
     await waitFor(() => expect(loadJohnList).toHaveBeenCalled());
     expect(screen.queryByTestId('coming-up')).toBeNull();
+  });
+});
+
+describe('the look ahead', () => {
+  const LIST = [
+    { ...NEW_JOHN, id: 'j1', name: 'Bins out', category: 'bins' as const },
+    { ...NEW_JOHN, id: 'mop', name: 'Mopping', category: 'floors' as const, points: 3 },
+    { ...NEW_JOHN, id: 'kitchen', name: 'Kitchen', points: 2 },
+  ];
+  const WEEKS: SteadyAheadWeek[] = [
+    { startsOn: '2026-10-26', johns: { mop: ['sam'], j1: ['priya'] } },
+    { startsOn: '2026-11-02', johns: { kitchen: ['priya'], j1: ['sam'] } },
+  ];
+  // Bins out is this week's (a1); Mopping waits; Kitchen comes round in a fortnight.
+  const dealt = (dealMode: 'smart' | 'classic') =>
+    snapshot({
+      rules: { ...snapshot().rules, dealMode },
+      assignments: snapshot().assignments.map((a) => (a.id === 'a1' ? { ...a, john_id: 'j1' } : a)),
+      steady: { waiting: { mop: 2 }, ahead: WEEKS },
+    });
+
+  it('lists the Johns waiting their turn, with when it comes, and whose turn is next', async () => {
+    read.mockResolvedValue(dealt('smart'));
+    (loadJohnList as jest.Mock).mockResolvedValue({ johns: LIST, groups: [] });
+    await open();
+    const waiting = within(await screen.findByTestId('week-waiting'));
+    expect(waiting.getByText(STEADY_COPY.waiting)).toBeOnTheScreen();
+    expect(waiting.getByTestId('waiting-john')).toHaveTextContent(/Mopping.*Floors, next week.*3 pts/);
+    expect(screen.getByText(STEADY_COPY.waitingNote)).toBeOnTheScreen();
+    const next = within(screen.getByTestId('week-turns-next'));
+    expect(next.getAllByTestId('turn-next')).toHaveLength(1);
+    expect(next.getByTestId('turn-next')).toHaveTextContent(/Kitchen.*Kitchen, your turn, week of 2 Nov/);
+  });
+
+  it('shows Classic as the next two weeks, person by person', async () => {
+    read.mockResolvedValue(dealt('classic'));
+    (loadJohnList as jest.Mock).mockResolvedValue({ johns: LIST, groups: [] });
+    await open();
+    const weeks = await screen.findAllByTestId('week-ahead');
+    expect(weeks).toHaveLength(2);
+    expect(weeks[0]).toHaveTextContent(/^Next week.*You.*Bins out.*Sam.*Mopping/);
+    expect(weeks[1]).toHaveTextContent(/^Week of 2 Nov.*You.*Kitchen.*Sam.*Bins out/);
+    expect(screen.queryByTestId('week-turns-next')).toBeNull();
+  });
+
+  it('shows nothing of it for a week dealt before Steady weeks', async () => {
+    (loadJohnList as jest.Mock).mockResolvedValue({ johns: LIST, groups: [] });
+    await open();
+    await waitFor(() => expect(loadJohnList).toHaveBeenCalled());
+    expect(screen.queryByTestId('week-waiting')).toBeNull();
+    expect(screen.queryByTestId('week-turns-next')).toBeNull();
+    expect(screen.queryByTestId('week-ahead')).toBeNull();
   });
 });
 

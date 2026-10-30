@@ -146,13 +146,13 @@ describe("dealing with groups", () => {
 });
 
 describe("time away", () => {
-  /** Three housemates and six two-point Johns, all due on the week's Sunday evening. */
+  /** Three housemates and six two-point Johns, all kept to the week's Sunday evening. */
   async function threeHouse() {
     const house = await makeHouse(["Ava", "Ben", "Cal"]);
     const week = weeksAgo(2);
     await addJohns(
       house.id,
-      ["Bins", "Hob", "Hoover", "Mop", "Shop", "Plants"].map((name) => ({ name, points: 2, dueDow: 7 as const })),
+      ["Bins", "Hob", "Hoover", "Mop", "Shop", "Plants"].map((name) => ({ name, points: 2, dueDow: 7 as const, keepDay: true })),
       week,
     );
     return { house, week, cal: house.everyone[2] };

@@ -8,6 +8,9 @@ import { track } from "./scope";
 
 export const ZONE = "Europe/London";
 
+/** When everyone in a test house moved in: long before any week a test deals. */
+export const SINCE = "2020-01-01T00:00:00Z";
+
 export interface House {
   id: string;
   code: string;
@@ -37,6 +40,16 @@ export async function makeHouse(names: string[] = ["Ava", "Ben", "Cal"]): Promis
     if (joinError) throw joinError;
     members.push(m);
   }
+  // Everyone has lived here since before any week a test deals: the deal leaves out someone who moved in after
+  // a week was dealt (they start the next Monday), and tests deal weeks in the past.
+  for (const [i, a] of [admin, ...members].entries()) {
+    const { error: backdate } = await adminClient()
+      .from("members")
+      .update({ joined_at: new Date(Date.parse(SINCE) + i * 1000).toISOString() })
+      .eq("house_id", id!)
+      .eq("user_id", a.userId);
+    if (backdate) throw backdate;
+  }
   return { id: id!, code: house!.join_code, admin, members, everyone: [admin, ...members] };
 }
 
@@ -56,6 +69,8 @@ export interface JohnSpec {
   onCall?: { respondHours?: number; perWeek?: number };
   /** Done by: how many do it together (1 to 6), or 0 for everyone home. */
   crew?: number;
+  /** Always dealt, always on its own day, whatever the budget. */
+  keepDay?: boolean;
 }
 
 export async function addJohns(houseId: string, specs: JohnSpec[], anchor: WeekWindow) {
@@ -82,6 +97,7 @@ export async function addJohns(houseId: string, specs: JohnSpec[], anchor: WeekW
         respond_hours: s.onCall?.respondHours ?? 12,
         per_week: s.onCall?.perWeek ?? 2,
         crew: s.crew ?? 1,
+        keep_day: s.keepDay ?? false,
       })),
     )
     .select("id, name");

@@ -42,6 +42,8 @@ const RULES: HouseRules = {
   disputeHours: 24,
   coverGraceHours: 3,
   lateHours: 24,
+  dealMode: "smart",
+  dealBudget: 4,
 };
 
 describe("johnsByKind", () => {
@@ -134,6 +136,8 @@ describe("johnFacts", () => {
 describe("rulesRows", () => {
   it("reads the rules out in plain words", () => {
     expect(rulesRows(RULES, 100)).toEqual([
+      { label: "How you share Johns", value: "Smart" },
+      { label: "Effort each week", value: "Usual, 4 points each" },
       { label: "Stake", value: "£20 a month" },
       { label: "Late John", value: "−£1" },
       { label: "Missed John", value: "−£3" },
@@ -157,10 +161,14 @@ describe("rulesRows", () => {
         disputeHours: 1,
         coverGraceHours: 1,
         lateHours: 48,
+        dealMode: "classic",
+        dealBudget: 0,
       },
       50,
     );
     expect(rows.map((r) => r.value)).toEqual([
+      "Classic",
+      "No limit",
       "$25.50 a month",
       "−$0.75",
       "−$3",
@@ -177,7 +185,7 @@ describe("rulesRows", () => {
       { ...RULES, stakeMinor: 0, lateForfeitMinor: 0, missedForfeitMinor: 0, disputeHours: 0, coverGraceHours: 0 },
       0,
     );
-    expect(rows.map((r) => r.value).slice(0, 7)).toEqual([
+    expect(rows.map((r) => r.value).slice(2, 9)).toEqual([
       "None",
       "Nothing",
       "Nothing",
@@ -189,7 +197,7 @@ describe("rulesRows", () => {
   });
 
   it("says a make-up rate it has no words for as a share", () => {
-    expect(rulesRows(RULES, 75)[6].value).toBe("75% made up");
+    expect(rulesRows(RULES, 75)[8].value).toBe("75% made up");
   });
 });
 
@@ -421,6 +429,8 @@ describe("the rules form", () => {
       coverGraceHours: 3,
       lateHours: 24,
       awayMakeup: 100,
+      dealMode: "smart",
+      dealBudget: 4,
       stake: "20",
       late: "1",
       missed: "3",
@@ -438,6 +448,8 @@ describe("the rules form", () => {
     expect(rulesChanged({ ...start, lateHours: 48 }, start)).toBe(true);
     expect(rulesChanged({ ...start, currency: "EUR" }, start)).toBe(true);
     expect(rulesChanged({ ...start, late: "a quid" }, start)).toBe(true);
+    expect(rulesChanged({ ...start, dealMode: "classic" }, start)).toBe(true);
+    expect(rulesChanged({ ...start, dealBudget: 2 }, start)).toBe(true);
   });
 
   it("gives the settings to save, money in minor units", () => {
@@ -455,6 +467,8 @@ describe("the rules form", () => {
         coverGraceHours: 3,
         lateHours: 24,
         awayMakeup: 100,
+        dealMode: "smart",
+        dealBudget: 4,
       },
     });
   });

@@ -116,8 +116,10 @@ export async function dealtHouseInClient(
       name: j.name,
       category: j.category ?? "other",
       points: 2,
-      // Sunday night: anything already due when the week is dealt gets a day's grace.
+      // Sunday night: anything already due when the week is dealt gets a day's grace. Each keeps its day, so
+      // the deal's one a day doesn't move any of them off Sunday, and the order a test names them in holds.
       due_dow: 7,
+      keep_day: true,
       due_time: j.dueTime ?? "21:00",
       every_weeks: 1,
       anchor_week: weekIndex(week.startsOn),
