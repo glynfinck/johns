@@ -6,7 +6,7 @@ before you spend the time.
 
 ## Reporting a bug or asking for something
 
-Open an [issue](https://github.com/glynfinck/jonz/issues/new/choose) and pick
+Open an [issue](https://github.com/jonzapp/jonz/issues/new/choose) and pick
 **Something's broken** or **An idea**. For anything about security, follow
 [SECURITY.md](SECURITY.md) instead.
 

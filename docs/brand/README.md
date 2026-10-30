@@ -151,7 +151,7 @@ For GitHub in Safari, tap **aA**, then **Request Desktop Website**.
    the publisher is verified, which needs a business Microsoft AI Cloud
    Partner Program account and an `@jonz.app` email.
 4. **GitHub**. Open the repo's
-   [Settings](https://github.com/glynfinck/jonz/settings), then **Social
+   [Settings](https://github.com/jonzapp/jonz/settings), then **Social
    preview**, then **Edit**, and upload `social-preview.png`.
 5. **App Store Connect and Google Play**, once the accounts exist: icon
    `icon-1024.png` (Apple) or `icon-512.png` (Play), the store frames and
