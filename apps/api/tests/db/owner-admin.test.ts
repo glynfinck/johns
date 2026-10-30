@@ -1,5 +1,5 @@
 import { createHmac } from "node:crypto";
-import { afterAll, beforeAll, describe, expect, it } from "vitest";
+import { beforeEach, describe, expect, it } from "vitest";
 
 import { GET as noticesRoute } from "@/app/api/notices/route";
 import { adminClient, signedInUser, visitor, type Actor } from "@/tests/support/clients";
@@ -59,11 +59,20 @@ function notice(over: Partial<{ p_kind: string; p_title: string; p_starts_at: st
   };
 }
 
+/** Leaves an entry in the audit log, and no notice showing. */
+async function endedNotice() {
+  const saved = await owner.db.rpc("save_notice", notice());
+  expectOk(saved);
+  expectOk(await owner.db.rpc("end_notice", { p_id: saved.data! }));
+}
+
 let owner: Actor;
 let ownerNoCode: Actor;
 let housemate: Actor;
 
-beforeAll(async () => {
+// Users live for one test (tests/db/setup.ts deletes them after each), and
+// deleting one cascades their app_owners row, so every test gets its own.
+beforeEach(async () => {
   owner = await signedInUser("Owner");
   ownerNoCode = await signedInUser("Owner without a code");
   housemate = await signedInUser("Housemate");
@@ -71,10 +80,6 @@ beforeAll(async () => {
   await passSecondFactor(owner);
   // A housemate with a second factor of their own is still not the owner.
   await passSecondFactor(housemate);
-});
-
-afterAll(async () => {
-  await db.from("app_owners").delete().in("user_id", [owner.userId, ownerNoCode.userId]);
 });
 
 describe("who the owner is", () => {
@@ -160,12 +165,14 @@ describe("reading notices", () => {
 
 describe("the audit log", () => {
   it("is read by the owner with the code, and nobody else", async () => {
+    await endedNotice();
     expect((await owner.db.from("admin_audit").select("id").limit(1)).data!.length).toBe(1);
     expect((await ownerNoCode.db.from("admin_audit").select("id")).data).toEqual([]);
     expect((await housemate.db.from("admin_audit").select("id")).data).toEqual([]);
   });
 
   it("can only grow: no one changes or deletes an entry, the owner and the service role included", async () => {
+    await endedNotice();
     const { data: entry } = await db.from("admin_audit").select("id").order("id", { ascending: false }).limit(1).single();
     expectDenied(await db.from("admin_audit").update({ reason: "tidied" }).eq("id", entry!.id));
     expectDenied(await db.from("admin_audit").delete().eq("id", entry!.id));

@@ -60,8 +60,11 @@ the owner admin viewer (https://claude.ai/artifact/97GEyJDGnrWxB8HTbbrXmo).
   editor rises as a sheet, and an audit entry opens as its own page
   (`/admin/audit/[id]`).
 - **Page actions.** The title bar holds only the title, the same on every
-  page. An action sits next to what it changes: "Add a notice" is the first
-  row of the list, as "Add a John" is in the app.
+  page. An action sits next to what it changes.
+- **Starting a notice.** Under what people see now, three tiles say what's
+  happening: Something's wrong (an outage), An offer, and News. Each opens the
+  editor with that kind chosen; Something's wrong also offers the ready-made
+  outage words.
 - **Long lists.**
   - Timelines (the audit log) load 50 older entries as you scroll. Each read
     starts from the last entry shown (keyset, not offset), so it stays fast.
