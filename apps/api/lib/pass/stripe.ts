@@ -1,5 +1,6 @@
 import "server-only";
 
+import { PASS_LOOKUP_KEYS, purchaseOfPrice } from "@app/core";
 import Stripe from "stripe";
 
 // The few calls the House Pass makes to Stripe, behind one small interface,
@@ -12,7 +13,7 @@ export interface SubscriptionView {
   status: string;
   customer: string;
   metadata: Record<string, string>;
-  /** The lookup key of its price (lib PASS_LOOKUP_KEYS). */
+  /** The lookup key of its plan (PASS_LOOKUP_KEYS), also for a price whose key has since moved on. */
   lookupKey: string | null;
   /** Unix seconds: the end of the period paid for, or of the trial. */
   periodEnd: number;
@@ -85,12 +86,13 @@ export function passStripe(sdk: Stripe | null = stripeSdk()): PassStripe | null 
     async subscription(id) {
       const sub = await sdk.subscriptions.retrieve(id);
       const item = sub.items.data[0];
+      const plan = item ? purchaseOfPrice(item.price) : null;
       return {
         id: sub.id,
         status: sub.status,
         customer: typeof sub.customer === "string" ? sub.customer : sub.customer.id,
         metadata: sub.metadata,
-        lookupKey: item?.price.lookup_key ?? null,
+        lookupKey: plan ? PASS_LOOKUP_KEYS[plan] : null,
         periodEnd: item?.current_period_end ?? sub.ended_at ?? 0,
         endedAt: sub.ended_at,
       };

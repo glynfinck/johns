@@ -12,6 +12,7 @@ import {
   passFreeUntil,
   passPurchaseRefusal,
   purchaseOfLookupKey,
+  purchaseOfPrice,
   subscriptionLive,
   type PassSubscription,
   PASS_PRICES,
@@ -116,13 +117,13 @@ describe("passOffers", () => {
   it("puts Yearly first, with what it works out at a month", () => {
     const offers = passOffers("USD");
     expect(offers.map((o) => o.plan)).toEqual(["yearly", "monthly", "founding"]);
-    expect(offers[0].price).toBe("$29.99 a year");
-    expect(offers[0].meta).toBe("About $2.50 a month");
-    expect(offers[1].price).toBe("$3.99 a month");
-    expect(offers[2].price).toBe("$49 once");
+    expect(offers[0].price).toBe("$49.99 a year");
+    expect(offers[0].meta).toBe("About $4.17 a month");
+    expect(offers[1].price).toBe("$5.99 a month");
+    expect(offers[2].price).toBe("$69 once");
   });
 
-  it("has a whole-minor-unit price in every house currency, Yearly cheaper than twelve months", () => {
+  it("has a whole-minor-unit price in every house currency, Yearly cheaper than twelve months, Founding dearer than a year", () => {
     for (const currency of CURRENCIES) {
       const p = PASS_PRICES[currency];
       for (const minor of [p.yearly, p.monthly, p.founding]) expect(Number.isInteger(minor) && minor > 0).toBe(true);
@@ -138,6 +139,15 @@ describe("purchaseOfLookupKey", () => {
     for (const plan of PASS_PURCHASES) expect(purchaseOfLookupKey(PASS_LOOKUP_KEYS[plan])).toBe(plan);
     expect(purchaseOfLookupKey("pass_trial")).toBeNull();
     expect(purchaseOfLookupKey(null)).toBeNull();
+  });
+});
+
+describe("purchaseOfPrice", () => {
+  it("goes by lookup key, then by the metadata plan of a price whose key moved on", () => {
+    expect(purchaseOfPrice({ lookup_key: "pass_yearly", metadata: {} })).toBe("yearly");
+    expect(purchaseOfPrice({ lookup_key: null, metadata: { plan: "monthly" } })).toBe("monthly");
+    expect(purchaseOfPrice({ lookup_key: null, metadata: { plan: "lifetime" } })).toBeNull();
+    expect(purchaseOfPrice({ lookup_key: null })).toBeNull();
   });
 });
 
