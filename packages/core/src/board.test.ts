@@ -90,7 +90,14 @@ describe("johnDef", () => {
       respondHours: 12,
       perWeek: 2,
       crew: 1,
+      keepDay: false,
     });
+  });
+
+  it("reads a John that keeps its day, and never an on-call John", () => {
+    const row = { id: "j", name: "Bins", category: "bins", points: 1, every_weeks: 1, due_dow: 4, due_time: "20:00", needs_photo: false, group_id: null };
+    expect(johnDef({ ...row, keep_day: true }).keepDay).toBe(true);
+    expect(johnDef({ ...row, keep_day: true, kind: "on_call" }).keepDay).toBe(false);
   });
 
   it("reads a John that repeats in months, with the month it counts from", () => {
@@ -247,6 +254,8 @@ describe("rulesOf", () => {
         dispute_hours: 24,
         cover_grace_hours: 3,
         late_hours: 48,
+        deal_mode: "classic",
+        deal_budget: 2,
       }),
     ).toEqual({
       timezone: "Europe/London",
@@ -258,6 +267,8 @@ describe("rulesOf", () => {
       disputeHours: 24,
       coverGraceHours: 3,
       lateHours: 48,
+      dealMode: "classic",
+      dealBudget: 2,
     });
   });
 });

@@ -45,6 +45,8 @@ export interface JohnDef {
   perWeek: number;
   /** Done by: how many do it together (1 to 6), or 0 for everyone home (crew.ts). Its points are per person. */
   crew: number;
+  /** Keeps its day: always dealt, on its own day, whatever the budget (steady.ts). Never on call. */
+  keepDay: boolean;
 }
 
 /** Where a new John starts in the editor: a weekly kitchen John, due Sunday night, for the whole house. */
@@ -64,13 +66,14 @@ export const NEW_JOHN: Omit<JohnDef, "id"> = {
   respondHours: 12,
   perWeek: 2,
   crew: 1,
+  keepDay: false,
 };
 
 /** A John on the list, from its row (a read without the on-call or monthly columns gets a weekly John due on a day). */
 export function johnDef(
   row: Pick<Row<"johns">, "id" | "name" | "category" | "points" | "every_weeks" | "due_dow" | "due_time" | "needs_photo" | "group_id"> &
     Partial<
-      Pick<Row<"johns">, "kind" | "respond_hours" | "per_week" | "every_months" | "week_of_month" | "anchor_month" | "anchor_week" | "crew">
+      Pick<Row<"johns">, "kind" | "respond_hours" | "per_week" | "every_months" | "week_of_month" | "anchor_month" | "anchor_week" | "crew" | "keep_day">
     >,
 ): JohnDef {
   return {
@@ -91,6 +94,7 @@ export function johnDef(
     respondHours: row.respond_hours ?? NEW_JOHN.respondHours,
     perWeek: row.per_week ?? NEW_JOHN.perWeek,
     crew: row.kind === "on_call" ? 1 : (row.crew ?? 1),
+    keepDay: row.kind !== "on_call" && (row.keep_day ?? false),
   };
 }
 
@@ -141,6 +145,8 @@ export function rulesOf(
     | "dispute_hours"
     | "cover_grace_hours"
     | "late_hours"
+    | "deal_mode"
+    | "deal_budget"
   >,
 ): HouseRules {
   return {
@@ -153,6 +159,8 @@ export function rulesOf(
     disputeHours: house.dispute_hours,
     coverGraceHours: house.cover_grace_hours,
     lateHours: house.late_hours,
+    dealMode: house.deal_mode === "classic" ? "classic" : "smart",
+    dealBudget: house.deal_budget,
   };
 }
 
@@ -194,6 +202,8 @@ export type AssignmentRow = Pick<
   absent_at?: string | null;
   /** Who did it, on the place a roll call was ticked from (`crew(user_id, helper, points)`), when read. */
   crew?: CrewRow[] | null;
+  /** When its holder planned to do it (Plan it), when read. */
+  planned_at?: string | null;
 };
 
 /** An open dispute, with its votes: `disputes` and `dispute_votes` as read. */
@@ -262,6 +272,8 @@ export interface BoardItem {
   absentAt?: Date | null;
   /** Who did it, once a roll call ticked it: on every place it settled. */
   crew?: Crew | null;
+  /** When its holder planned to do it (Plan it): they're reminded then. */
+  plannedAt?: Date | null;
 }
 
 export interface WeekBoard {
@@ -363,6 +375,7 @@ export function buildWeekBoard(input: {
         together: a.job_id ? sorted.filter((x) => x.job_id === a.job_id).map((x) => x.user_id) : null,
         absentAt,
         crew: crews.get(job) ?? null,
+        plannedAt: a.planned_at ? new Date(a.planned_at) : null,
       };
     });
 
@@ -557,12 +570,13 @@ export function monthStandings(
   return standings(table, memberIds, jobs);
 }
 
-const DEALT_BY: ReadonlySet<string> = new Set(["only", "behind", "fewer", "draw"]);
+const DEALT_BY: ReadonlySet<string> = new Set(["only", "behind", "fewer", "draw", "back", "oneEach", "mostRoom", "turn", "nextInLine"]);
+const MOVED: ReadonlySet<string> = new Set(["taken", "suits", "away", "gone"]);
 
 /** A stored DealWhy, or null when there is none or it isn't one (a shape this build doesn't know). */
 export function readDealt(json: Json | null | undefined): DealWhy | null {
   if (!json || typeof json !== "object" || Array.isArray(json)) return null;
-  const { to, by, weighed, away } = json;
+  const { to, by, weighed, away, mode, budget, waited, stretched, again, moved } = json;
   if (typeof to !== "string" || typeof by !== "string" || !DEALT_BY.has(by)) return null;
   if (!Array.isArray(weighed) || !Array.isArray(away)) return null;
   const people: DealWhy["weighed"] = [];
@@ -574,7 +588,20 @@ export function readDealt(json: Json | null | undefined): DealWhy | null {
       standing: w.standing,
       ...(w.last === true ? { last: true as const } : {}),
       ...(w.full === true ? { full: true as const } : {}),
+      ...(typeof w.room === "number" ? { room: w.room } : {}),
+      ...(typeof w.place === "number" ? { place: w.place } : {}),
     });
   }
-  return { to, by: by as DealWhy["by"], weighed: people, away: away.filter((id): id is string => typeof id === "string") };
+  return {
+    to,
+    by: by as DealWhy["by"],
+    weighed: people,
+    away: away.filter((id): id is string => typeof id === "string"),
+    ...(mode === "smart" || mode === "classic" ? { mode } : {}),
+    ...(typeof budget === "number" ? { budget } : {}),
+    ...(typeof waited === "number" && waited > 0 ? { waited } : {}),
+    ...(stretched === true ? { stretched: true as const } : {}),
+    ...(again === true ? { again: true as const } : {}),
+    ...(typeof moved === "string" && MOVED.has(moved) ? { moved: moved as DealWhy["moved"] } : {}),
+  };
 }

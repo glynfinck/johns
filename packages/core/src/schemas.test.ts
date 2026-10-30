@@ -145,6 +145,11 @@ describe("HouseSettings", () => {
     });
   });
 
+  it("takes how the house shares Johns and its budget, when the form has them", () => {
+    expect(HouseSettings.parse({ ...rules, dealMode: "classic", dealBudget: "2" })).toMatchObject({ dealMode: "classic", dealBudget: 2 });
+    expect(HouseSettings.parse({ ...rules, dealBudget: 0 }).dealBudget).toBe(0);
+  });
+
   it("says what’s wrong in words", () => {
     const problem = (patch: object) => HouseSettings.safeParse({ ...rules, ...patch }).error?.issues[0].message;
     expect(problem({ name: "  " })).toBe("Give the house a name.");
@@ -160,6 +165,8 @@ describe("HouseSettings", () => {
       { weekStarts: 0 },
       { weekStarts: 8 },
       { disputeHours: 73 },
+      { dealMode: "random" },
+      { dealBudget: 3 },
       { awayMakeup: 75 },
       { stakeMinor: 2.5 },
     ]) {
@@ -188,6 +195,7 @@ describe("JohnDraft", () => {
       respondHours: 12,
       perWeek: 2,
       crew: 1,
+      keepDay: false,
       everyMonths: null,
       weekOfMonth: null,
       anchorMonth: null,

@@ -7,6 +7,7 @@ import {
   deleteGroup,
   loadJohnList,
   removeMember,
+  saveDealMode,
   saveGroup,
   saveJohn,
   setRole,
@@ -47,6 +48,8 @@ const RULES: HouseRules = {
   disputeHours: 24,
   coverGraceHours: 3,
   lateHours: 24,
+  dealMode: 'smart',
+  dealBudget: 4,
 };
 const NOW = new Date('2026-10-21T12:00:00Z');
 const callsOf = (table: string, method: string) => mockCalls.filter(([t, m]) => t === table && m === method).map(([, , a]) => a);
@@ -96,6 +99,7 @@ describe('loadJohnList', () => {
           weekOfMonth: null,
           anchorMonth: null,
           crew: 1,
+          keepDay: false,
         },
       ],
       groups: [{ id: 'g1', name: 'Upstairs', memberIds: ['ava'] }],
@@ -117,6 +121,13 @@ describe('saveJohn', () => {
     expect(row).toMatchObject({ name: 'Bins', kind: 'on_call', respond_hours: 8, per_week: 3 });
   });
 
+  it('writes Keep its day, and never on an on-call John', async () => {
+    await saveJohn('h1', RULES, { ...NEW_JOHN, name: 'Bins', keepDay: true }, NOW);
+    await saveJohn('h1', RULES, { ...NEW_JOHN, name: 'Dishes', when: 'on_call', keepDay: true }, NOW);
+    const rows = (callsOf('johns', 'insert') as [Record<string, unknown>][]).map(([row]) => row);
+    expect(rows.map((r) => r.keep_day)).toEqual([true, false]);
+  });
+
   it("adds a John whose cadence counts from the house's current week", async () => {
     await saveJohn('h1', RULES, { ...NEW_JOHN, name: ' Hob ', dueTime: '18:30' }, NOW);
     const [[row]] = callsOf('johns', 'insert') as [[Record<string, unknown>]];
@@ -136,6 +147,7 @@ describe('saveJohn', () => {
       respond_hours: 12,
       per_week: 2,
       crew: 1,
+      keep_day: false,
       house_id: 'h1',
       anchor_week: weekIndex(weekWindow(NOW, 'Europe/London', 1).startsOn),
     });
@@ -228,6 +240,20 @@ describe('updateHouse', () => {
       ],
     ]);
     expect(callsOf('houses', 'eq')).toEqual([['id', 'h1']]);
+  });
+
+  it('writes how the house shares Johns and its budget when the form has them', async () => {
+    await updateHouse('h1', { ...settings, dealMode: 'classic', dealBudget: 2 });
+    const [[row]] = callsOf('houses', 'update') as [[Record<string, unknown>]];
+    expect(row).toMatchObject({ deal_mode: 'classic', deal_budget: 2 });
+  });
+
+  it('writes only how the house shares Johns when Describe your house asks it', async () => {
+    await saveDealMode('h1', 'classic');
+    expect(callsOf('houses', 'update')).toEqual([[{ deal_mode: 'classic' }]]);
+    expect(callsOf('houses', 'eq')).toEqual([['id', 'h1']]);
+    mockAnswers.houses = { data: [], error: null };
+    await expect(saveDealMode('h1', 'smart')).rejects.toThrow('Only the house admins can do that.');
   });
 
   it('says what is wrong with the rules first', async () => {

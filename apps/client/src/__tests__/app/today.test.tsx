@@ -11,6 +11,8 @@ import {
   NOT_DEALT_COPY,
   ON_CALL_COPY,
   PAGE_TITLE,
+  planLabel,
+  STEADY_COPY,
   WEEK_SUMMARY_COPY,
   type DisputeRow,
   TODAY_COPY,
@@ -21,12 +23,12 @@ import { fireEvent, renderRouter, screen, waitFor, within } from 'expo-router/te
 import { Text, useWindowDimensions } from 'react-native';
 
 import { loadAway } from '@/api/away';
-import type { Housemate } from '@/api/board';
+import type { HouseSnapshot, Housemate } from '@/api/board';
 import { loadHouse } from '@/api/board';
 import { castVote } from '@/api/disputes';
 import { raiseFlag } from '@/api/flags';
 import { catchUp } from '@/api/house';
-import { markDone, undoDone } from '@/api/johns';
+import { answerSwap, askSwap, markDone, planJohn, undoDone } from '@/api/johns';
 import { pickPhoto } from '@/api/photos';
 import { dealThisWeek, loadJohnList } from '@/api/settings';
 import { loadStake } from '@/api/stake';
@@ -44,7 +46,15 @@ jest.mock('@/api/house', () => ({ catchUp: jest.fn() }));
 jest.mock('@/api/stake', () => ({ loadStake: jest.fn(), confirmPayment: jest.fn() }));
 jest.mock('@/api/disputes', () => ({ castVote: jest.fn(), raiseDispute: jest.fn() }));
 jest.mock('@/api/flags', () => ({ raiseFlag: jest.fn() }));
-jest.mock('@/api/johns', () => ({ markDone: jest.fn(), undoDone: jest.fn(), spendImmunity: jest.fn(), spendSwap: jest.fn() }));
+jest.mock('@/api/johns', () => ({
+  markDone: jest.fn(),
+  undoDone: jest.fn(),
+  spendImmunity: jest.fn(),
+  spendSwap: jest.fn(),
+  planJohn: jest.fn(),
+  askSwap: jest.fn(),
+  answerSwap: jest.fn(),
+}));
 jest.mock('@/api/photos', () => ({ pickPhoto: jest.fn(), uploadProof: jest.fn() }));
 jest.mock('@/api/wall', () => ({ loadWall: jest.fn(), setReaction: jest.fn() }));
 jest.mock('@/api/resets', () => ({ previewReset: jest.fn(), applyReset: jest.fn() }));
@@ -69,7 +79,7 @@ const read = loadHouse as jest.Mock;
 const HOUR = 3_600_000;
 const at = (hours: number) => new Date(Date.now() + hours * HOUR).toISOString();
 
-const MEGAN: Housemate = { userId: 'megan', name: 'Megan', photo: null, role: 'member', streak: 0, immunityTokens: 0, swapTokens: 0 };
+const MEGAN: Housemate = { userId: 'megan', name: 'Megan', photo: null, role: 'member', streak: 0, immunityTokens: 0, swapTokens: 0, prefs: { days: [], bestTime: null, rather: {} } };
 
 /** Priya, with what she holds changed. */
 function priyaWith(tokens: Partial<Housemate>): Housemate[] {
@@ -163,6 +173,26 @@ describe('Next up', () => {
     expect(screen.queryByTestId('skip-or-swap')).toBeNull();
     // Someone else's John is never yours to do.
     expect(screen.queryByText('Clean the bath')).toBeNull();
+  });
+
+  it('plans it in one tap, before it is due', async () => {
+    (planJohn as jest.Mock).mockResolvedValue(undefined);
+    await open();
+    await fireEvent.press(screen.getByRole('button', { name: STEADY_COPY.plan }));
+    const [id, when] = (planJohn as jest.Mock).mock.calls[0];
+    expect(id).toBe('a1');
+    expect((when as Date).getTime()).toBeGreaterThan(Date.now());
+    expect((when as Date).getTime()).toBeLessThan(Date.parse(snapshot().assignments[0].due_at));
+  });
+
+  it('says when it is planned for, with a reminder set', async () => {
+    const plannedAt = at(20);
+    read.mockResolvedValue(snapshot({ assignments: [assignment({ planned_at: plannedAt }), ...snapshot().assignments.slice(1)] }));
+    await open();
+    expect(screen.getByTestId('plan-it-when')).toHaveTextContent(
+      STEADY_COPY.planned(planLabel(new Date(plannedAt), new Date(), 'Europe/London')),
+    );
+    expect(screen.queryByRole('button', { name: STEADY_COPY.plan })).toBeNull();
   });
 
   it('ticks it, reads the house again, and moves on to the next', async () => {
@@ -392,6 +422,57 @@ describe('what takes Next up’s place', () => {
     const card = await open();
     expect(within(card).getByText(NOT_DEALT_COPY.nothingThisWeek)).toBeOnTheScreen();
     expect(screen.queryByTestId('standing-line')).toBeNull();
+  });
+});
+
+describe('swapping a John you’d rather not', () => {
+  const prefs = (rather: Record<string, 1 | -1>) => ({ days: [], bestTime: null, rather });
+  // Priya would rather not put the bins out; Sam would rather.
+  const house = (offers: HouseSnapshot['offers'] = []) => {
+    const base = snapshot();
+    return snapshot({
+      members: base.members.map((m) => ({ ...m, prefs: prefs(m.userId === 'priya' ? { bins: -1 } : { bins: 1 }) })),
+      assignments: base.assignments.map((a) => (a.id === 'a1' ? { ...a, john_id: 'bins' } : a)),
+      offers,
+    });
+  };
+
+  it('says who would rather do it, and asks them', async () => {
+    (askSwap as jest.Mock).mockResolvedValue('o1');
+    read.mockResolvedValue(house());
+    await open();
+    const offer = within(screen.getByTestId('swap-suggestion'));
+    expect(offer.getByText(STEADY_COPY.ratherDoIt('Sam'))).toBeOnTheScreen();
+    expect(offer.getByText(STEADY_COPY.swapFor('Sam', 'Clean the bath', '2 pts'))).toBeOnTheScreen();
+    expect(offer.getByText(STEADY_COPY.askNote('Sam', 'Bins out'))).toBeOnTheScreen();
+    await fireEvent.press(offer.getByRole('button', { name: STEADY_COPY.ask('Sam') }));
+    expect(askSwap).toHaveBeenCalledWith('a1', 'a4');
+  });
+
+  it('says once it has asked', async () => {
+    read.mockResolvedValue(house([{ id: 'o1', mine: 'a1', theirs: 'a4', asked_by: 'priya', asked_to: 'sam', expires_at: at(6) }]));
+    await open();
+    expect(screen.getByTestId('swap-asked')).toHaveTextContent(STEADY_COPY.asked('Sam'));
+    expect(screen.queryByTestId('swap-suggestion')).toBeNull();
+  });
+
+  it('shows an ask made to you, with Swap and No thanks', async () => {
+    (answerSwap as jest.Mock).mockResolvedValue(undefined);
+    const base = snapshot();
+    read.mockResolvedValue(
+      snapshot({
+        assignments: base.assignments,
+        offers: [{ id: 'o2', mine: 'a4', theirs: 'a2', asked_by: 'sam', asked_to: 'priya', expires_at: at(6) }],
+      }),
+    );
+    await open();
+    const card = within(screen.getByTestId('swap-offer'));
+    expect(card.getByText(STEADY_COPY.offerTitle('Sam'))).toBeOnTheScreen();
+    expect(card.getByText(STEADY_COPY.offerBody('Clean the bath', 'Hoover the stairs', '2 pts'))).toBeOnTheScreen();
+    await fireEvent.press(card.getByRole('button', { name: STEADY_COPY.accept }));
+    expect(answerSwap).toHaveBeenCalledWith('o2', true);
+    await fireEvent.press(card.getByRole('button', { name: STEADY_COPY.decline }));
+    expect(answerSwap).toHaveBeenLastCalledWith('o2', false);
   });
 });
 

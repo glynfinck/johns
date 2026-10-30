@@ -1,5 +1,5 @@
-import { HOUSE_COPY, HOUSE_LOWER_COPY, LOOK_LABEL, LOOKS, ME_COPY } from '@app/core';
-import { BellIcon, LogOutIcon, SunMoonIcon } from 'lucide-react-native';
+import { HOUSE_COPY, HOUSE_LOWER_COPY, LOOK_LABEL, LOOKS, ME_COPY, prefsLine, STEADY_COPY } from '@app/core';
+import { BellIcon, LogOutIcon, SlidersHorizontalIcon, SunMoonIcon } from 'lucide-react-native';
 import { useCallback, useEffect, useState } from 'react';
 import { View } from 'react-native';
 
@@ -11,6 +11,7 @@ import { Avatar } from '@/components/avatar';
 import { Button } from '@/components/button';
 import { Field } from '@/components/field';
 import { Reminders } from '@/components/house/reminders';
+import { useHouseWorkspace } from '@/components/house/workspace';
 import { PendingMeta } from '@/components/house-page/setup-section';
 import { Row, RowIcon } from '@/components/row';
 import { Section } from '@/components/section';
@@ -24,8 +25,10 @@ const LOOK_OPTIONS = LOOKS.map((value) => ({ value, label: LOOK_LABEL[value] }))
 
 /**
  * You: your name (a sheet to change it), reminders on this device (a sheet
- * holding their switch, where there are any to offer), the look in the row
- * itself, and signing out. Reminders and the look are this device's own.
+ * holding their switch, where there are any to offer), your preferences in
+ * this house (their own page; on a laptop it's in the list beside House
+ * instead), the look in the row itself, and signing out. Reminders and the
+ * look are this device's own.
  */
 export function YouSection({ houseId, userId, view }: { houseId: string; userId: string; view: HouseView }) {
   const [look, setLook] = useLook();
@@ -34,6 +37,7 @@ export function YouSection({ houseId, userId, view }: { houseId: string; userId:
   const [opened, setOpened] = useState(0);
   const reminders = useReminderState();
   const [signingOut, setSigningOut] = useState(false);
+  const { listed } = useHouseWorkspace();
 
   if (!view.me) return null;
   const name = view.me.name;
@@ -71,6 +75,16 @@ export function YouSection({ houseId, userId, view }: { houseId: string; userId:
             onPress={() => setSheet('reminders')}
             chevron
             testID="to-reminders"
+          />
+        )}
+        {listed ? null : (
+          <Row
+            leading={<RowIcon icon={SlidersHorizontalIcon} />}
+            title={STEADY_COPY.prefs}
+            meta={prefsLine(view.me.prefs)}
+            href="/house/prefs"
+            chevron
+            testID="to-prefs"
           />
         )}
         <Row

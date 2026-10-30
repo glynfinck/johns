@@ -39,7 +39,7 @@ export function JohnWhy({ item, context }: { item: BoardItem; context: JohnSheet
               />
             ))}
             <GroupItem>
-              <Meta>{WHY_COPY.key}</Meta>
+              <Meta>{why.key}</Meta>
             </GroupItem>
           </Fold>
         ) : null}
