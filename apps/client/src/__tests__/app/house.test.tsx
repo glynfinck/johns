@@ -219,7 +219,7 @@ describe('the month card', () => {
   it('in a Splitwise house, copies the amount across and marks it added there', async () => {
     const base = await (loadHouse as jest.Mock)();
     (loadHouse as jest.Mock).mockResolvedValue({ ...base, house: { ...base.house, settleIn: 'splitwise' } });
-    const openURL = jest.spyOn(Linking, 'openURL').mockResolvedValue(true);
+    const openURL = jest.spyOn(Linking, 'openURL').mockResolvedValue(undefined);
     await open();
     const transfer = screen.getByTestId('transfer');
     expect(transfer).toHaveTextContent(new RegExp(HOUSE_PAGE_COPY.splitwiseHow('Sam')));
