@@ -941,6 +941,11 @@ export type Database = {
           id: string
           left_at: string
           moved_at: string | null
+          pass_placed_at: string | null
+          pass_plan: string | null
+          pass_state: string | null
+          pass_stopped_at: string | null
+          pass_until: string | null
           reminded_at: string | null
           to_house: string | null
           user_id: string
@@ -951,6 +956,11 @@ export type Database = {
           id?: string
           left_at?: string
           moved_at?: string | null
+          pass_placed_at?: string | null
+          pass_plan?: string | null
+          pass_state?: string | null
+          pass_stopped_at?: string | null
+          pass_until?: string | null
           reminded_at?: string | null
           to_house?: string | null
           user_id: string
@@ -961,6 +971,11 @@ export type Database = {
           id?: string
           left_at?: string
           moved_at?: string | null
+          pass_placed_at?: string | null
+          pass_plan?: string | null
+          pass_state?: string | null
+          pass_stopped_at?: string | null
+          pass_until?: string | null
           reminded_at?: string | null
           to_house?: string | null
           user_id?: string
@@ -985,6 +1000,32 @@ export type Database = {
             columns: ["user_id"]
             isOneToOne: false
             referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      moving_pass_billing: {
+        Row: {
+          move_id: string
+          stripe_customer: string
+          stripe_subscription: string | null
+        }
+        Insert: {
+          move_id: string
+          stripe_customer: string
+          stripe_subscription?: string | null
+        }
+        Update: {
+          move_id?: string
+          stripe_customer?: string
+          stripe_subscription?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "moving_pass_billing_move_id_fkey"
+            columns: ["move_id"]
+            isOneToOne: true
+            referencedRelation: "moved_on"
             referencedColumns: ["id"]
           },
         ]
@@ -1565,7 +1606,9 @@ export type Database = {
       identity_photo: { Args: { data: Json }; Returns: string }
       is_admin: { Args: { h: string }; Returns: boolean }
       is_member: { Args: { h: string }; Returns: boolean }
+      house_has_paid_pass: { Args: { p_house: string }; Returns: boolean }
       join_house: { Args: { p_code: string }; Returns: string }
+      leave_pass: { Args: never; Returns: undefined }
       mark_done: {
         Args: { p_assignment: string; p_photo_path?: string }
         Returns: undefined
@@ -1576,8 +1619,11 @@ export type Database = {
         Returns: {
           from_house: string
           house_name: string
+          house_pass_until: string | null
           johns: number
           left_at: string
+          pass_plan: string | null
+          pass_state: string | null
         }[]
       }
       my_open_assignment: {
@@ -1669,6 +1715,10 @@ export type Database = {
       resolve_dispute: {
         Args: { p_dispute: string; p_resolution: string }
         Returns: boolean
+      }
+      place_pass: {
+        Args: { p_house: string; p_move: string; p_state: string }
+        Returns: undefined
       }
       record_moved_on: {
         Args: { p_how: string; p_to: string; p_user: string }

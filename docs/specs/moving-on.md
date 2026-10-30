@@ -35,6 +35,11 @@ people who move out to start Jonz again in their new place.
   when, and later the house they went to and how (`copied`, `started` or
   `joined`). Houses that came from a move are the rows with `how` set.
 
+## The House Pass
+
+The buyer's Pass comes with them, and the Moving on screen offers leaving it
+with the old house instead: see `docs/specs/house-pass.md`, Moving out.
+
 ## Data
 
 - `members.moving_out_on` (date), set only by `set_moving_out(p_on)`, which

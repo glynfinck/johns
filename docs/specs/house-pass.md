@@ -69,6 +69,32 @@ Android apps never link out to the web price.
 - Back from Checkout (`/house/pass?bought=1`) the page says thanks and reads
   the house again every few seconds until the Pass shows.
 
+## Moving out: the Pass moves with the buyer
+
+The Pass belongs to whoever paid for it, and covers the house they live in
+(`supabase/migrations/20261108090000_pass_moves.sql`).
+
+- The buyer leaving themselves takes it (the default). It waits on their
+  `moved_on` row, its Stripe ids in `moving_pass_billing`, and the house they
+  left keeps the extras for 30 days as a free month (`trial`), so it can buy
+  its own. The Wall says "Ben moved out, and their House Pass went with
+  them. The house keeps the extras until Sun 29 Nov."
+- The next house they start or join gets it (`record_moved_on`), unless it
+  has a paid Pass or Founding of its own; then it keeps waiting. Re-joining
+  the old house brings it back there.
+- The Moving on screen says the Pass comes with them, and offers "Leave it
+  for Flat 3 instead" (`leave_pass`): it goes back on the old house to the
+  end of what was paid, then stops renewing.
+- A Pass moves at most once every 30 days; within that, leaving leaves it
+  with the house. Founding a house was given at launch (no buyer) stays.
+- An admin removing the buyer leaves the Pass with the house.
+- Stripe never hears of a move. The webhook finds a subscription's house by
+  `house_pass_billing.stripe_subscription`, then a move carrying it (whose
+  renewals it writes on the move), and only then `metadata.house_id`.
+- The clock (`lib/pass/moves.ts`, from `/api/cron/tick`) stops a Pass
+  renewing once it's left with the old house, or has waited 30 days for a
+  house ('lapsed'; it can still go on a house while what was paid lasts).
+
 ## What happens without the Pass (once `PASS_ENFORCED` is on)
 
 - The Stake: settled Johns forfeit nothing (the engine's `settleDue`).
@@ -95,7 +121,7 @@ Android apps never link out to the web price.
 
 ## Edge cases
 
-- The buyer leaves: the Pass runs to the end of what was paid.
+- The buyer leaves: the Pass goes with them (see Moving out).
 - An unknown plan, or a paid plan with no end, reads as ended.
 - Days left count a part day as a day; the renewal day is in the house's
   time zone.

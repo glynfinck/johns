@@ -207,7 +207,14 @@ export function describeEvent(e: WallEvent, nameOf: (userId: string | null) => s
     }
     case "moved_out": {
       const was = typeof e.data.who === "string" && e.data.who ? firstName(e.data.who) : who;
-      return { icon: "truck", parts: [b(was), t(" moved out.")] };
+      // The buyer took the House Pass with them: the day the house's extras last until.
+      const until = typeof e.data.pass_until === "string" ? e.data.pass_until : null;
+      return until
+        ? {
+            icon: "truck",
+            parts: [b(was), t(` moved out, and their House Pass went with them. The house keeps the extras until ${dateRange(until, until)}.`)],
+          }
+        : { icon: "truck", parts: [b(was), t(" moved out.")] };
     }
     case "month_closed":
       return { icon: "calendar-check", parts: [t(`${monthLabel(String(e.data.month))} is closed and the Stake is shared out.`)] };

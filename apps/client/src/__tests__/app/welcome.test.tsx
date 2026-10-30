@@ -3,11 +3,14 @@ import { fireEvent, renderRouter, screen } from 'expo-router/testing-library';
 import { Text } from 'react-native';
 
 import { signOut } from '@/api/auth';
+import { leavePass, type MovingOn } from '@/api/moving';
 import Welcome from '@/app/welcome';
 
 jest.mock('@/api/auth', () => ({ signOut: jest.fn() }));
-let mockMoving: { fromHouse: string; houseName: string; johns: number } | null = null;
-jest.mock('@/hooks/use-moving-on', () => ({ useMovingOn: () => ({ data: mockMoving }) }));
+jest.mock('@/api/moving', () => ({ leavePass: jest.fn() }));
+let mockMoving: MovingOn | null = null;
+const mockRefetch = jest.fn();
+jest.mock('@/hooks/use-moving-on', () => ({ useMovingOn: () => ({ data: mockMoving, refetch: mockRefetch }) }));
 
 async function open() {
   await renderRouter(
@@ -69,7 +72,7 @@ it('lets whoever signed in with the wrong account out', async () => {
 
 describe('just after leaving a house', () => {
   beforeEach(() => {
-    mockMoving = { fromHouse: 'h1', houseName: 'Flat 3', johns: 6 };
+    mockMoving = { fromHouse: 'h1', houseName: 'Flat 3', johns: 6, pass: null, houseKeepsUntil: null };
   });
 
   it('is the Moving on screen: starting the new place is the one amber button', async () => {
@@ -90,8 +93,25 @@ describe('just after leaving a house', () => {
   });
 
   it('says only the choice when the old list was empty', async () => {
-    mockMoving = { fromHouse: 'h1', houseName: 'Flat 3', johns: 0 };
+    mockMoving = { fromHouse: 'h1', houseName: 'Flat 3', johns: 0, pass: null, houseKeepsUntil: null };
     await open();
     expect(screen.getByText(MOVING_COPY.body('Flat 3', 0))).toBeOnTheScreen();
+  });
+
+  it('says the House Pass comes with you, and leaves it for the old house on a tap', async () => {
+    mockMoving = { fromHouse: 'h1', houseName: 'Flat 3', johns: 6, pass: 'waiting', houseKeepsUntil: '2026-11-29' };
+    (leavePass as jest.Mock).mockResolvedValue(undefined);
+    await open();
+    expect(screen.getByTestId('pass-comes')).toHaveTextContent(MOVING_COPY.passComes('Flat 3', 'Sun 29 Nov'));
+    await fireEvent.press(screen.getByRole('button', { name: MOVING_COPY.leavePass('Flat 3') }));
+    expect(leavePass).toHaveBeenCalled();
+    expect(mockRefetch).toHaveBeenCalled();
+  });
+
+  it('says what happens to a Pass left with the old house', async () => {
+    mockMoving = { fromHouse: 'h1', houseName: 'Flat 3', johns: 6, pass: 'left', houseKeepsUntil: null };
+    await open();
+    expect(screen.getByTestId('pass-left')).toHaveTextContent(MOVING_COPY.passLeft('Flat 3'));
+    expect(screen.queryByTestId('leave-pass')).toBeNull();
   });
 });
