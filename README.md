@@ -14,9 +14,7 @@ every week Jonz shares them out so the work evens out over the month. The
 house checks each tick, and the month's Stake settles who did their share.
 
 <p align="center">
-  <img alt="Johns, dealt fair: the Today screen" src="docs/brand/store/ios-1.png" width="260">
-  &nbsp;&nbsp;
-  <img alt="The bathroom moves around: the Week screen" src="docs/brand/store/ios-2.png" width="260">
+  <img alt="Johns, dealt fair: the Today screen. The bathroom moves around: the Week screen." src="docs/brand/readme-screens.png" width="540">
 </p>
 
 ## What it does

@@ -95,6 +95,7 @@ form is "Fair shares of the housework." The social handle is @jonz.app.
 | Email header | `email-header.png`, shown at 600×120 | 1200×240 |
 | Repo social preview | `social-preview.png` | 1280×640 |
 | README banner | `readme-banner.png`, the same in GitHub's light and dark | 1280×360 |
+| README's app pictures | `readme-screens.png`, the first two iPhone frames side by side, shown at 540 so a phone shrinks it whole | 1240×1300 |
 | Stripe, App Store and Play icon | `icon-512.png`, `icon-1024.png` | 512, 1024 |
 | Google sign-in screen | `logo-120.png` | 120 |
 | Profile picture (Instagram, TikTok, X) | `profile-400.png` | 400 |
@@ -104,7 +105,8 @@ form is "Fair shares of the housework." The social handle is @jonz.app.
 The store frames put a five-word headline over a phone screenshot. Make them
 from fresh screenshots of the app (the e2e run takes them) with
 `npm run brand -- --store today.png week.png …`; each screenshot gets the
-next headline in `STORE_HEADLINES`.
+next headline in `STORE_HEADLINES`, and the first two make
+`readme-screens.png`.
 
 ## Link previews
 

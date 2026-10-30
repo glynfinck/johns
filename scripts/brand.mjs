@@ -7,7 +7,8 @@
 // request instead (apps/api/app/api/og), from the same mark.
 //
 // `npm run brand -- --store today.png week.png …` also frames phone
-// screenshots for the App Store and Google Play, one headline each.
+// screenshots for the App Store and Google Play, one headline each, and puts
+// the first two iPhone frames side by side for the README.
 import { readFileSync, writeFileSync, mkdirSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { chromium } from "@playwright/test";
@@ -254,11 +255,27 @@ write(`${PUBLIC}/favicon.ico`, ico(icoPngs));
 
 for (const [path, width, height, html] of [...CARDS, ...LOCKUPS]) await draw(html, width, height, path);
 
+const framed = [];
 for (const [i, screen] of screens.entries()) {
   const headline = STORE_HEADLINES[i % STORE_HEADLINES.length];
   for (const [store, width, height] of STORES) {
-    await draw(storeFrame(width, height, screen, headline), width, height, join(BRAND, "store", `${store}-${i + 1}.png`));
+    const png = await draw(storeFrame(width, height, screen, headline), width, height, join(BRAND, "store", `${store}-${i + 1}.png`));
+    if (store === "ios") framed.push(png);
   }
+}
+
+// One picture, not two: two images side by side wrap onto separate lines on
+// a phone's narrow README, each pushed off centre by the gap. One shrinks to
+// fit whole. The gap is clear, so it is GitHub's own page in light and dark.
+if (framed.length >= 2) {
+  const [width, height, gap] = [600, 1300, 40];
+  const frame = (png) => `<img src="data:image/png;base64,${png.toString("base64")}" style="width:${width}px;height:${height}px;display:block">`;
+  await draw(
+    `<div style="display:flex;gap:${gap}px">${frame(framed[0])}${frame(framed[1])}</div>`,
+    width * 2 + gap,
+    height,
+    `${BRAND}/readme-screens.png`,
+  );
 }
 
 await browser.close();
