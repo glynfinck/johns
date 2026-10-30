@@ -15,12 +15,22 @@ before the Pass existed is a Founding house, with the Pass for life.
 
 | Plan | USD | GBP | EUR | CAD |
 | --- | --- | --- | --- | --- |
-| Yearly (the default) | 29.99 | 24.99 | 29.99 | 39.99 |
-| Monthly | 3.99 | 3.49 | 3.99 | 4.99 |
-| Founding house, once, for the first 3 months after the store release | 49 | 39.99 | 49 | 64.99 |
+| Yearly (the default) | 49.99 | 39.99 | 49.99 | 64.99 |
+| Monthly | 5.99 | 4.99 | 5.99 | 7.99 |
+| Founding house, once, for the first 3 months after the store release | 69 | 54.99 | 69 | 89.99 |
 
 `PASS_PRICES` in `@app/core` (`pass.ts`) holds these until the stores give
 their own local prices.
+
+Founding costs a little more than one year, so it reads as a lifetime for
+about the price of a year. Check on 1 May 2027: if fewer than 3% of houses
+pay after their free month, set the yearly price to $39.99 and £29.99 by
+moving the Stripe lookup keys.
+
+Fair by design: the free version runs a whole house on its own, and the
+Pass page says where the money goes. Once its free month or plan has ended, a
+house that can't pay can email for a free Pass (the "Ask for a free Pass"
+link); give it as a Founding plan by hand until there is an admin tool.
 
 ## Inputs and outputs
 

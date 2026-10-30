@@ -1,4 +1,4 @@
-import { FOCUS_SHELL_COPY, PAGE_TITLE, PASS_COPY, SECTION_LABEL } from '@app/core';
+import { FOCUS_SHELL_COPY, LEGAL, PAGE_TITLE, PASS_COPY, SECTION_LABEL } from '@app/core';
 import { fireEvent, screen, waitFor, within } from 'expo-router/testing-library';
 
 import { loadHouse } from '@/api/board';
@@ -66,6 +66,23 @@ it('thanks a Founding house, and offers it no plans', async () => {
   expect(screen.getByText(PASS_COPY.stake)).toBeOnTheScreen();
   expect(screen.queryByTestId('pass-plans')).toBeNull();
   expect(screen.queryByTestId('pass-soon')).toBeNull();
+  expect(screen.getByTestId('pass-money')).toHaveTextContent(PASS_COPY.money);
+  expect(screen.queryByTestId('pass-ask-free')).toBeNull();
+});
+
+it('says where the money goes, and offers a free Pass only once the free month has ended', async () => {
+  withPass({ plan: 'trial', until: new Date(Date.now() + 12 * DAY), buyerId: null });
+  await open();
+  expect(screen.getByTestId('pass-money')).toHaveTextContent(PASS_COPY.money);
+  expect(screen.queryByTestId('pass-ask-free')).toBeNull();
+});
+
+it('lets a house past its free month ask for the Pass free', async () => {
+  withPass({ plan: 'trial', until: new Date(Date.now() - DAY), buyerId: null });
+  await open();
+  expect(screen.getByTestId('pass-hardship')).toHaveTextContent(PASS_COPY.hardship);
+  expect(screen.getByRole('link', { name: PASS_COPY.askFree })).toBeOnTheScreen();
+  expect(LEGAL.email).toContain('@');
 });
 
 it('shows a house on its free month the plans in its own currency, Yearly first, not yet for sale', async () => {
@@ -74,7 +91,7 @@ it('shows a house on its free month the plans in its own currency, Yearly first,
   expect(screen.getByTestId('pass-lead')).toHaveTextContent(PASS_COPY.lead);
   expect(screen.getByTestId('pass-line')).toHaveTextContent(PASS_COPY.trialLeft(12));
   const plans = within(screen.getByTestId('pass-plans'));
-  for (const price of ['£24.99 a year', '£3.49 a month', '£39.99 once']) expect(plans.getByText(price)).toBeOnTheScreen();
+  for (const price of ['£39.99 a year', '£4.99 a month', '£54.99 once']) expect(plans.getByText(price)).toBeOnTheScreen();
   expect(within(screen.getByTestId('plan-yearly')).getByText(PASS_COPY.yearly)).toBeOnTheScreen();
   expect(screen.getByTestId('pass-soon')).toHaveTextContent(PASS_COPY.buyingSoon);
 });
