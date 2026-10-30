@@ -59,6 +59,7 @@ export type Database = {
           needs_photo: boolean
           outcome: string | null
           photo_path: string | null
+          planned_at: string | null
           points: number
           reminded: number
           settled_at: string | null
@@ -89,6 +90,7 @@ export type Database = {
           needs_photo?: boolean
           outcome?: string | null
           photo_path?: string | null
+          planned_at?: string | null
           points: number
           reminded?: number
           settled_at?: string | null
@@ -119,6 +121,7 @@ export type Database = {
           needs_photo?: boolean
           outcome?: string | null
           photo_path?: string | null
+          planned_at?: string | null
           points?: number
           reminded?: number
           settled_at?: string | null
@@ -640,6 +643,8 @@ export type Database = {
           created_at: string
           created_by: string | null
           currency: string
+          deal_budget: number
+          deal_mode: string
           dispute_hours: number
           first_dealt_at: string | null
           id: string
@@ -663,6 +668,8 @@ export type Database = {
           created_at?: string
           created_by?: string | null
           currency?: string
+          deal_budget?: number
+          deal_mode?: string
           dispute_hours?: number
           first_dealt_at?: string | null
           id?: string
@@ -686,6 +693,8 @@ export type Database = {
           created_at?: string
           created_by?: string | null
           currency?: string
+          deal_budget?: number
+          deal_mode?: string
           dispute_hours?: number
           first_dealt_at?: string | null
           id?: string
@@ -728,6 +737,7 @@ export type Database = {
           group_id: string | null
           house_id: string
           id: string
+          keep_day: boolean
           kind: string
           name: string
           needs_photo: boolean
@@ -750,6 +760,7 @@ export type Database = {
           group_id?: string | null
           house_id: string
           id?: string
+          keep_day?: boolean
           kind?: string
           name: string
           needs_photo?: boolean
@@ -772,6 +783,7 @@ export type Database = {
           group_id?: string | null
           house_id?: string
           id?: string
+          keep_day?: boolean
           kind?: string
           name?: string
           needs_photo?: boolean
@@ -867,29 +879,38 @@ export type Database = {
       }
       members: {
         Row: {
+          best_time: string | null
           house_id: string
           immunity_tokens: number
           joined_at: string
+          rather: Json
           role: string
           streak: number
+          suits_days: number[]
           swap_tokens: number
           user_id: string
         }
         Insert: {
+          best_time?: string | null
           house_id: string
           immunity_tokens?: number
           joined_at?: string
+          rather?: Json
           role?: string
           streak?: number
+          suits_days?: number[]
           swap_tokens?: number
           user_id: string
         }
         Update: {
+          best_time?: string | null
           house_id?: string
           immunity_tokens?: number
           joined_at?: string
+          rather?: Json
           role?: string
           streak?: number
+          suits_days?: number[]
           swap_tokens?: number
           user_id?: string
         }
@@ -1158,6 +1179,81 @@ export type Database = {
           },
         ]
       }
+      swap_offers: {
+        Row: {
+          answer: string | null
+          answered_at: string | null
+          asked_by: string
+          asked_to: string
+          created_at: string
+          expires_at: string
+          house_id: string
+          id: string
+          mine: string
+          theirs: string
+        }
+        Insert: {
+          answer?: string | null
+          answered_at?: string | null
+          asked_by: string
+          asked_to: string
+          created_at?: string
+          expires_at: string
+          house_id: string
+          id?: string
+          mine: string
+          theirs: string
+        }
+        Update: {
+          answer?: string | null
+          answered_at?: string | null
+          asked_by?: string
+          asked_to?: string
+          created_at?: string
+          expires_at?: string
+          house_id?: string
+          id?: string
+          mine?: string
+          theirs?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "swap_offers_asked_by_fkey"
+            columns: ["asked_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "swap_offers_asked_to_fkey"
+            columns: ["asked_to"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "swap_offers_house_id_fkey"
+            columns: ["house_id"]
+            isOneToOne: false
+            referencedRelation: "houses"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "swap_offers_mine_fkey"
+            columns: ["mine"]
+            isOneToOne: false
+            referencedRelation: "assignments"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "swap_offers_theirs_fkey"
+            columns: ["theirs"]
+            isOneToOne: false
+            referencedRelation: "assignments"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       week_shares: {
         Row: {
           house_id: string
@@ -1203,6 +1299,7 @@ export type Database = {
       }
       weeks: {
         Row: {
+          ahead: Json
           closed_at: string | null
           created_at: string
           ends_at: string
@@ -1212,8 +1309,11 @@ export type Database = {
           skipped_by: string | null
           starts_at: string
           starts_on: string
+          turns: Json | null
+          waiting: Json
         }
         Insert: {
+          ahead?: Json
           closed_at?: string | null
           created_at?: string
           ends_at: string
@@ -1223,8 +1323,11 @@ export type Database = {
           skipped_by?: string | null
           starts_at: string
           starts_on: string
+          turns?: Json | null
+          waiting?: Json
         }
         Update: {
+          ahead?: Json
           closed_at?: string | null
           created_at?: string
           ends_at?: string
@@ -1234,6 +1337,8 @@ export type Database = {
           skipped_by?: string | null
           starts_at?: string
           starts_on?: string
+          turns?: Json | null
+          waiting?: Json
         }
         Relationships: [
           {
@@ -1278,11 +1383,19 @@ export type Database = {
         }
         Returns: Json
       }
+      answer_swap: {
+        Args: { p_accept: boolean; p_offer: string }
+        Returns: undefined
+      }
       can_upload_proof: { Args: { object_name: string }; Returns: boolean }
       cancel_away: { Args: { p_away: string }; Returns: undefined }
       cast_vote: {
         Args: { p_dispute: string; p_uphold: boolean }
         Returns: undefined
+      }
+      checked_place: {
+        Args: { a: Database["public"]["Tables"]["assignments"]["Row"] }
+        Returns: string
       }
       claim_draft_turn: {
         Args: {
@@ -1352,6 +1465,7 @@ export type Database = {
           p_shares: Json
           p_starts_at: string
           p_starts_on: string
+          p_state?: Json
         }
         Returns: string
       }
@@ -1425,6 +1539,7 @@ export type Database = {
           needs_photo: boolean
           outcome: string | null
           photo_path: string | null
+          planned_at: string | null
           points: number
           reminded: number
           settled_at: string | null
@@ -1439,9 +1554,17 @@ export type Database = {
         }
       }
       new_join_code: { Args: never; Returns: string }
+      offer_swap: {
+        Args: { p_mine: string; p_theirs: string }
+        Returns: string
+      }
       open_flag: {
         Args: { p_at: string; p_by?: string; p_john: string }
         Returns: string
+      }
+      plan_john: {
+        Args: { p_assignment: string; p_at: string }
+        Returns: undefined
       }
       proof_house: { Args: { object_name: string }; Returns: string }
       push_action: {
@@ -1458,6 +1581,7 @@ export type Database = {
         Returns: string
       }
       raise_flag: { Args: { p_john: string }; Returns: string }
+      remove_flag: { Args: { p_assignment: string }; Returns: undefined }
       recording: { Args: never; Returns: boolean }
       recount_streaks: { Args: { p_house: string }; Returns: undefined }
       remove_member: {
@@ -1491,6 +1615,15 @@ export type Database = {
           p_name: string
         }
         Returns: string
+      }
+      save_prefs: {
+        Args: {
+          p_best_time: string
+          p_days: number[]
+          p_house: string
+          p_rather: Json
+        }
+        Returns: undefined
       }
       set_away: {
         Args: { p_ends: string; p_note?: string; p_starts: string }

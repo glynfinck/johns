@@ -23,6 +23,7 @@ jest.mock('./supabase', () => ({
         neq: record('neq'),
         not: record('not'),
         is: record('is'),
+        gt: record('gt'),
         order: record('order'),
         single: () => result(),
         maybeSingle: () => result(),
@@ -66,7 +67,7 @@ beforeEach(() => {
   mockRows.houses = { data: HOUSE, error: null };
   mockRows.members = {
     data: [
-      { user_id: 'u1', role: 'admin', streak: 3, immunity_tokens: 1, swap_tokens: 0, profiles: { display_name: 'Priya', avatar_url: 'https://lh3.googleusercontent.com/a/priya=s96-c' } },
+      { user_id: 'u1', role: 'admin', streak: 3, immunity_tokens: 1, swap_tokens: 0, suits_days: [6, 3], best_time: 'morning', rather: { j1: 1 }, profiles: { display_name: 'Priya', avatar_url: 'https://lh3.googleusercontent.com/a/priya=s96-c' } },
       { user_id: 'u2', role: 'member', streak: 0, immunity_tokens: 0, swap_tokens: 1, profiles: null },
     ],
     error: null,
@@ -75,6 +76,7 @@ beforeEach(() => {
   mockRows.assignments = { data: [{ id: 'a1' }], error: null };
   mockRows.disputes = { data: [{ id: 'd1' }], error: null };
   mockRows.on_call = { data: [{ john_id: 'j9', user_id: 'u2', johns: { name: 'Bins', category: 'bins' } }], error: null };
+  mockRows.swap_offers = { data: [{ id: 'o1' }], error: null };
 });
 
 it('reads the house, its people and this week in one go', async () => {
@@ -87,14 +89,25 @@ it('reads the house, its people and this week in one go', async () => {
   });
   expect(snapshot.rules).toMatchObject({ timezone: 'Europe/London', currency: 'GBP', weekStarts: 1, disputeHours: 24 });
   expect(snapshot.members).toEqual([
-    { userId: 'u1', name: 'Priya', photo: 'https://lh3.googleusercontent.com/a/priya=s96-c', role: 'admin', streak: 3, immunityTokens: 1, swapTokens: 0 },
-    { userId: 'u2', name: 'Housemate', photo: null, role: 'member', streak: 0, immunityTokens: 0, swapTokens: 1 },
+    { userId: 'u1', name: 'Priya', photo: 'https://lh3.googleusercontent.com/a/priya=s96-c', role: 'admin', streak: 3, immunityTokens: 1, swapTokens: 0,
+      prefs: { days: [3, 6], bestTime: 'morning', rather: { j1: 1 } } },
+    { userId: 'u2', name: 'Housemate', photo: null, role: 'member', streak: 0, immunityTokens: 0, swapTokens: 1, prefs: { days: [], bestTime: null, rather: {} } },
   ]);
   expect(snapshot.week).toEqual(WEEK);
   // This week's, then any flag from last week still open: the mock answers both reads alike.
   expect(snapshot.assignments).toEqual([{ id: 'a1' }, { id: 'a1' }]);
   expect(snapshot.disputes).toEqual([{ id: 'd1' }]);
   expect(snapshot.onCall).toEqual([{ john_id: 'j9', user_id: 'u2', johns: { name: 'Bins', category: 'bins' } }]);
+  expect(snapshot.offers).toEqual([{ id: 'o1' }]);
+});
+
+it('reads what the deal kept on the week: the Johns waiting their turn and the weeks ahead', async () => {
+  mockRows.weeks = { data: { ...WEEK, waiting: { j2: 1 }, ahead: [{ startsOn: '2026-10-26', johns: { j2: ['u1'] } }] }, error: null };
+  const snapshot = await loadHouse('h1', NOW);
+  expect(snapshot.week).toEqual(WEEK);
+  expect(snapshot.steady).toEqual({ waiting: { j2: 1 }, ahead: [{ startsOn: '2026-10-26', johns: { j2: ['u1'] } }] });
+  mockRows.weeks = { data: null, error: null };
+  expect((await loadHouse('h1', NOW)).steady).toEqual({ waiting: {}, ahead: [] });
 });
 
 it("asks for the week that holds now in the house's own zone, and only open disputes", async () => {
@@ -117,6 +130,9 @@ it("asks for the week that holds now in the house's own zone, and only open disp
   expect(calls('assignments', 'is')).toEqual([['outcome', null]]);
   expect(calls('on_call', 'eq')).toEqual([['week_id', 'w1']]);
   expect(calls('disputes', 'is')).toEqual([['resolution', null]]);
+  // Only asks still open, which RLS keeps to the two people in each.
+  expect(calls('swap_offers', 'is')).toEqual([['answer', null]]);
+  expect(calls('swap_offers', 'gt')).toEqual([['expires_at', NOW.toISOString()]]);
   expect(calls('members', 'order')).toEqual([['joined_at']]);
 });
 

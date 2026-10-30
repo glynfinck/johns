@@ -44,6 +44,8 @@ const RULES: HouseRules = {
   disputeHours: 24,
   coverGraceHours: 3,
   lateHours: 24,
+  dealMode: 'smart',
+  dealBudget: 4,
 };
 const row = (id: number, user_id: string, kind: string, amount_minor: number, month: string) => ({
   id,

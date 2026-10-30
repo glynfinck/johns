@@ -42,10 +42,12 @@ export function snapshot(overrides: Partial<HouseSnapshot> = {}): HouseSnapshot 
       disputeHours: 24,
       coverGraceHours: 3,
       lateHours: 24,
+      dealMode: 'smart',
+      dealBudget: 4,
     },
     members: [
-      { userId: 'priya', name: 'Priya', photo: null, role: 'admin', streak: 3, immunityTokens: 0, swapTokens: 0 },
-      { userId: 'sam', name: 'Sam', photo: null, role: 'member', streak: 0, immunityTokens: 0, swapTokens: 0 },
+      { userId: 'priya', name: 'Priya', photo: null, role: 'admin', streak: 3, immunityTokens: 0, swapTokens: 0, prefs: { days: [], bestTime: null, rather: {} } },
+      { userId: 'sam', name: 'Sam', photo: null, role: 'member', streak: 0, immunityTokens: 0, swapTokens: 0, prefs: { days: [], bestTime: null, rather: {} } },
     ],
     week: { id: 'w1', starts_on: '2026-10-19', starts_at: at(-48), ends_at: at(120) },
     assignments: [
@@ -56,6 +58,8 @@ export function snapshot(overrides: Partial<HouseSnapshot> = {}): HouseSnapshot 
     ],
     disputes: [],
     onCall: [],
+    steady: { waiting: {}, ahead: [] },
+    offers: [],
     ...overrides,
   };
 }

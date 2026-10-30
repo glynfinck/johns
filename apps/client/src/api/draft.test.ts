@@ -32,6 +32,8 @@ const RULES: HouseRules = {
   disputeHours: 24,
   coverGraceHours: 3,
   lateHours: 24,
+  dealMode: 'smart',
+  dealBudget: 4,
 };
 const NOW = new Date('2026-10-28T12:00:00Z');
 

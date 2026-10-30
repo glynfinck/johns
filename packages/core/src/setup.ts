@@ -1,9 +1,9 @@
 // House setup's pages: the rules as label and value, the Johns by category, a John's schedule line and the admins' names.
 import { isoDayOf, shiftMonth, type AwayPeriod } from "./away";
 import type { BoardItem, JohnDef } from "./board";
-import { CREW_COPY, FOCUS_SHELL_COPY, GROUPS_COPY, JOHN_LIST_COPY, RULES_COPY, SETUP_COPY } from "./copy";
+import { CREW_COPY, FOCUS_SHELL_COPY, GROUPS_COPY, JOHN_LIST_COPY, RULES_COPY, SETUP_COPY, STEADY_COPY } from "./copy";
 import { MAKEUP_LABEL } from "./deal";
-import { CATEGORIES, CATEGORY_LABEL, DOW_LABEL, type Category, type Currency, type HouseRules, type IsoDow, type SettleIn } from "./domain";
+import { CATEGORIES, CATEGORY_LABEL, DOW_LABEL, type Category, type Currency, type DealMode, type HouseRules, type IsoDow, type SettleIn } from "./domain";
 import { humanError } from "./errors";
 import { dateRange, firstName, joinRange, monthLabel, pointsLabel } from "./format";
 import { formatMoney, formatSigned, moneyInput, parseMoney } from "./money";
@@ -101,6 +101,8 @@ function forfeit(minor: number, currency: Currency): string {
 /** The house rules in plain words, one line each, as everyone reads them. */
 export function rulesRows(rules: HouseRules, awayMakeup: number, settleIn?: SettleIn): LabelValue[] {
   const rows: LabelValue[] = [
+    { label: STEADY_COPY.mode, value: STEADY_COPY.modeName[rules.dealMode] },
+    { label: STEADY_COPY.budget, value: STEADY_COPY.budgetEach(rules.dealBudget) },
     {
       label: SETUP_COPY.stake,
       value: rules.stakeMinor === 0 ? SETUP_COPY.noStake : SETUP_COPY.perMonth(formatMoney(rules.stakeMinor, rules.currency)),
@@ -114,7 +116,7 @@ export function rulesRows(rules: HouseRules, awayMakeup: number, settleIn?: Sett
     { label: SETUP_COPY.weekStarts, value: SETUP_COPY.weekStartsAt(DOW_LABEL[rules.weekStarts], zonePlace(rules.timezone)) },
   ];
   // After the money it's about, when it's known.
-  if (settleIn) rows.splice(3, 0, { label: SETUP_COPY.settleIn, value: SETUP_COPY.settleInValue[settleIn] });
+  if (settleIn) rows.splice(5, 0, { label: SETUP_COPY.settleIn, value: SETUP_COPY.settleInValue[settleIn] });
   return rows;
 }
 
@@ -250,6 +252,8 @@ export interface RulesDraft {
   lateHours: number;
   awayMakeup: number;
   settleIn: SettleIn;
+  dealMode: DealMode;
+  dealBudget: number;
   stake: string;
   late: string;
   missed: string;
@@ -270,6 +274,8 @@ export function rulesDraft(name: string, rules: HouseRules, awayMakeup: number, 
     lateHours: rules.lateHours,
     awayMakeup,
     settleIn,
+    dealMode: rules.dealMode,
+    dealBudget: rules.dealBudget,
     stake: moneyInput(rules.stakeMinor),
     late: moneyInput(rules.lateForfeitMinor),
     missed: moneyInput(rules.missedForfeitMinor),
@@ -294,6 +300,8 @@ export function rulesChanged(draft: RulesDraft, from: RulesDraft): boolean {
     draft.lateHours !== from.lateHours ||
     draft.awayMakeup !== from.awayMakeup ||
     draft.settleIn !== from.settleIn ||
+    draft.dealMode !== from.dealMode ||
+    draft.dealBudget !== from.dealBudget ||
     (["stake", "late", "missed"] as const).some((k) => amount(draft[k]) !== amount(from[k]))
   );
 }
@@ -323,6 +331,8 @@ export function checkRules(
     lateHours: draft.lateHours,
     awayMakeup: draft.awayMakeup,
     settleIn: draft.settleIn,
+    dealMode: draft.dealMode,
+    dealBudget: draft.dealBudget,
   });
   const field: Record<string, RulesField> = {
     name: "name",

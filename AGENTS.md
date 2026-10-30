@@ -180,6 +180,15 @@ already due a day's grace (`graceDue`).
   it up; never a window, which would forget debts mid-repayment); each John
   goes to whoever, of those home on its due day, would be furthest behind.
   Doing the same John twice running costs a small penalty.
+- **Steady weeks** (`steady.ts`, `docs/specs/steady-weeks.md`): the deal
+  that chooses who gets each John, in Smart (balances, who did it last,
+  preferences) or Classic (each John's order of turns), within the house's
+  points budget each (`houses.deal_mode`, `deal_budget`; 0 is no limit).
+  Everyone home is owed one John of their own; one a day; a John that keeps
+  its day (`johns.keep_day`) always goes out on it; a John that doesn't fit
+  waits its turn and is never skipped. Each week keeps what the next deal
+  needs (`weeks.turns`, `waiting`) and the next two weeks as it would hand
+  them out (`weeks.ahead`). Fair shares still split what is dealt.
 - **On call** (`johns.kind = 'on_call'`, `on_call`): a John that needs
   doing whenever it needs doing (the bins when they're full). Each deal puts
   one sharer on call for the week by fair shares, weighing it as points ×
@@ -271,7 +280,11 @@ kinds of push on or off, and quiet hours; no row is everything on). On-call John
 `per_week`, `on_call` (who holds each one each week), and
 `assignments.flagged_at` and `flagged_by`. Shared Jonz add `johns.crew`,
 `assignments.job_id` and `absent_at`, `crew` (who did a John and each share)
-and `ledger.doers`. Photos live in the private `proofs` bucket
+and `ledger.doers`. Steady weeks add `houses.deal_mode` and `deal_budget`,
+`johns.keep_day`, each member's `suits_days`, `best_time` and `rather`
+(`save_prefs`), `assignments.planned_at` (`plan_john`), `weeks.turns`,
+`waiting` and `ahead`, and `swap_offers` (`offer_swap`, `answer_swap`).
+Photos live in the private `proofs` bucket
 at `<house>/<assignment>/<file>`.
 
 - Schema changes only through migration files (`supabase migration new
@@ -307,6 +320,10 @@ at `<house>/<assignment>/<file>`.
 - Never use floating-point maths for money: integer minor units (pence,
   cents).
 - When a bug is fixed, add a test that would have caught it.
+- The deal's rules are checked by deliberate breaks too: `npm run breaks -w
+  @app/core` breaks one rule at a time and the tests must fail on each. Run
+  it after changing `steady.ts`, `steady-run.ts` or `repeat.ts`, and add a
+  break for any new rule.
 
 ## Hosting and deploys
 

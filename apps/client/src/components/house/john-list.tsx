@@ -12,6 +12,7 @@ import {
   pointsLabel,
   scheduleLine,
   SETUP_COPY,
+  STEADY_COPY,
   weeklyEffort,
   type Category,
   type GroupDef,
@@ -126,7 +127,9 @@ export function JohnList({
           <Section key={kind.category} label={kind.label} testID={`kind-${kind.category}`}>
             {kind.johns.map((j) => {
               const schedule = scheduleLine(j, groupName(j.groupId));
-              const line = j.crew === 1 ? schedule : `${schedule}, ${CREW_COPY.choice(j.crew)}`;
+              const line = [schedule, j.crew === 1 ? null : CREW_COPY.choice(j.crew), j.keepDay ? STEADY_COPY.keepsDay : null]
+                .filter(Boolean)
+                .join(', ');
               return (
                 <Row
                   key={j.id}
@@ -195,8 +198,9 @@ function JohnFacts({ john, group }: { john: JohnDef; group: string | null }) {
  * schedule and on call ("Every 3 months from November on the first Saturday
  * by 21:00"), each of whose words opens its choices in place of the form;
  * then how much effort, how many do it (a John on a set day: one, 2 to 6, or
- * everyone home, with what that adds up to under it), and whether the tick
- * needs a photo. Save is the sheet's one amber button.
+ * everyone home, with what that adds up to under it), whether it keeps its
+ * day (always dealt on it, whatever the budget), and whether the tick needs a
+ * photo. Save is the sheet's one amber button.
  */
 function JohnForm({
   houseId,
@@ -272,6 +276,18 @@ function JohnForm({
           {/* On call stays one person: whoever is on call. */}
           {v.when === 'day' ? (
             <PickRow label={CREW_COPY.doneBy} options={CREW} value={v.crew} onChange={(crew) => set({ crew })} testID="john-crew" />
+          ) : null}
+          {/* On call has no day to keep. */}
+          {v.when === 'day' ? (
+            <ChoiceRow
+              role="checkbox"
+              label={STEADY_COPY.keepDay}
+              meta={STEADY_COPY.keepDayMeta}
+              metaLines={2}
+              checked={v.keepDay}
+              onPress={() => set({ keepDay: !v.keepDay })}
+              testID="john-keep-day"
+            />
           ) : null}
           <ChoiceRow
             role="checkbox"

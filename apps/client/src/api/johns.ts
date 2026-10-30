@@ -1,4 +1,4 @@
-import { humanError, RollCallRequest, RollCallResponse } from '@app/core';
+import { humanError, RollCallRequest, RollCallResponse, SwapAskRequest, SwapAskResponse } from '@app/core';
 
 import { apiPost } from './http';
 import { supabase } from './supabase';
@@ -30,6 +30,25 @@ export async function rollCall(assignmentId: string, crew: readonly string[], ph
   return people;
 }
 
+/** Plan when you'll do one of your Johns: it reminds you then instead. Null clears the plan. */
+export function planJohn(assignmentId: string, at: Date | null): Promise<void> {
+  return call(supabase.rpc('plan_john', { p_assignment: assignmentId, p_at: (at?.toISOString() ?? null) as string }));
+}
+
+/**
+ * Ask a housemate who'd rather do one of your Johns to swap it for one of
+ * theirs, through apps/api, which tells them. Answers the ask's id.
+ */
+export async function askSwap(mine: string, theirs: string): Promise<string> {
+  const { offerId } = await apiPost('/api/swaps', SwapAskRequest.parse({ mine, theirs }), SwapAskResponse);
+  return offerId;
+}
+
+/** Answer an ask made to you: yes swaps the two Johns, no leaves them be. */
+export function answerSwap(offerId: string, accept: boolean): Promise<void> {
+  return call(supabase.rpc('answer_swap', { p_offer: offerId, p_accept: accept }));
+}
+
 /** Take a tick back while it's still being checked. */
 export function undoDone(assignmentId: string): Promise<void> {
   return call(supabase.rpc('undo_done', { p_assignment: assignmentId }));
@@ -56,4 +75,9 @@ export function spendImmunity(assignmentId: string): Promise<void> {
 /** Spend a swap token: one of your open Johns for a housemate's, this week. */
 export function spendSwap(mine: string, theirs: string): Promise<void> {
   return call(supabase.rpc('use_swap', { p_mine: mine, p_theirs: theirs }));
+}
+
+/** Take an open flag down: whoever raised it, or an admin (remove_flag decides). */
+export function removeFlag(assignmentId: string): Promise<void> {
+  return call(supabase.rpc('remove_flag', { p_assignment: assignmentId }));
 }

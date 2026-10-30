@@ -1,5 +1,5 @@
 import { isOpen, type BoardItem } from "./board";
-import { CREW_COPY, FOCUS_SHELL_COPY, JOHN_SHEET_COPY, NEXT_UP_COPY, ON_CALL_COPY, WEEK_SUMMARY_COPY } from "./copy";
+import { CREW_COPY, FOCUS_SHELL_COPY, JOHN_SHEET_COPY, NEXT_UP_COPY, ON_CALL_COPY, STEADY_COPY, WEEK_SUMMARY_COPY } from "./copy";
 import { andNames } from "./crew";
 import { CATEGORY_SHORT } from "./domain";
 import { dueInLine, firstName, relative, sinceLabel, STATUS_LABEL } from "./format";
@@ -94,7 +94,7 @@ export function johnRow(
     BoardItem,
     "userId" | "name" | "category" | "points" | "needsPhoto" | "status" | "dueAt" | "movedFrom" | "doneAt" | "standsAt" | "dispute"
   > &
-    Partial<Pick<BoardItem, "flaggedAt" | "flaggedBy" | "coveredBy" | "outcome" | "together" | "crew" | "absentAt">>,
+    Partial<Pick<BoardItem, "flaggedAt" | "flaggedBy" | "coveredBy" | "outcome" | "together" | "crew" | "absentAt" | "dealt">>,
   viewerId: string,
   now: Date,
   zone: string,
@@ -162,7 +162,7 @@ export function johnRow(
 /** The row's meta line, and whether its lid dot leads it. */
 function metaLine(
   item: Pick<BoardItem, "userId" | "category" | "status" | "dueAt" | "movedFrom" | "doneAt" | "standsAt" | "dispute"> &
-    Partial<Pick<BoardItem, "flaggedAt" | "flaggedBy" | "together" | "crew">> & {
+    Partial<Pick<BoardItem, "flaggedAt" | "flaggedBy" | "together" | "crew" | "dealt">> & {
     coveredBy?: string | null;
   },
   viewerId: string,
@@ -224,6 +224,11 @@ function metaLine(
       if (item.movedFrom) {
         const before = mine ? NEXT_UP_COPY.beforeYouGo : WEEK_SUMMARY_COPY.beforeTheyGo(called(nameOf(item.userId)));
         return line(`${due}, ${before}`);
+      }
+      // Smart: who had it last time, when that was someone else ("after Ada").
+      if (item.dealt?.mode === "smart" && !item.together?.length) {
+        const before = item.dealt.weighed.find((w) => w.last && w.userId !== item.userId);
+        if (before) return line(due, STEADY_COPY.after(before.userId === viewerId ? WEEK_SUMMARY_COPY.byYou : called(nameOf(before.userId))));
       }
       return line(due);
   }

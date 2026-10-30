@@ -10,6 +10,7 @@ import {
   RULES_COPY,
   weekIndex,
   weekWindow,
+  type DealMode,
   type GroupDef,
   type HouseRules,
   type JohnDef,
@@ -37,7 +38,7 @@ export async function loadJohnList(houseId: string): Promise<JohnList> {
     supabase
       .from('johns')
       .select(
-        'id, name, category, points, every_weeks, every_months, week_of_month, anchor_month, anchor_week, due_dow, due_time, needs_photo, group_id, kind, respond_hours, per_week, crew',
+        'id, name, category, points, every_weeks, every_months, week_of_month, anchor_month, anchor_week, due_dow, due_time, needs_photo, group_id, kind, respond_hours, per_week, crew, keep_day',
       )
       .eq('house_id', houseId)
       .is('archived_at', null)
@@ -79,8 +80,9 @@ export async function saveJohn(houseId: string, rules: HouseRules, draft: JohnDr
     kind: j.when,
     respond_hours: j.respondHours,
     per_week: j.perWeek,
-    // On call is always one person (johns_crew_on_call).
+    // On call is always one person (johns_crew_on_call), and has no day to keep (johns_keep_day_on_call).
     crew: j.when === 'on_call' ? 1 : j.crew,
+    keep_day: j.when !== 'on_call' && j.keepDay,
   };
   wrote(
     j.id
@@ -128,6 +130,7 @@ export async function addJohns(
       respond_hours: j.respondHours,
       per_week: j.perWeek,
       crew: j.when === 'on_call' ? 1 : j.crew,
+      keep_day: j.when !== 'on_call' && j.keepDay,
     };
   });
   wrote(await supabase.from('johns').insert(rows).select('id'));
@@ -166,10 +169,17 @@ export async function updateHouse(houseId: string, settings: HouseSettings) {
         ...(s.lateHours === undefined ? {} : { late_hours: s.lateHours }),
         away_makeup: s.awayMakeup,
         ...(s.settleIn === undefined ? {} : { settle_in: s.settleIn }),
+        ...(s.dealMode === undefined ? {} : { deal_mode: s.dealMode }),
+        ...(s.dealBudget === undefined ? {} : { deal_budget: s.dealBudget }),
       })
       .eq('id', houseId)
       .select('id'),
   );
+}
+
+/** How the house shares Johns, on its own: Describe your house asks it once a new house has its list (admins only, as RLS says). */
+export async function saveDealMode(houseId: string, mode: DealMode) {
+  wrote(await supabase.from('houses').update({ deal_mode: mode }).eq('id', houseId).select('id'));
 }
 
 /** Make a housemate an admin, or an admin a housemate. A house always keeps one admin. */

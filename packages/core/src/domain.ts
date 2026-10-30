@@ -77,6 +77,23 @@ export const DOW_LABEL: Record<IsoDow, string> = {
   7: "Sunday",
 };
 
+/**
+ * How the deal chooses who does each John (steady.ts): Smart weighs who's
+ * ahead or behind, who did it recently and everyone's preferences; Classic
+ * takes turns in a fixed order.
+ */
+export const DEAL_MODES = ["smart", "classic"] as const;
+export type DealMode = (typeof DEAL_MODES)[number];
+
+/** The budget sizes an admin picks from, in points a week each: Light, Usual, Busy, and 0 for no limit. */
+export const BUDGETS = [2, 4, 6, 0] as const;
+export type Budget = (typeof BUDGETS)[number];
+
+/** Someone's best time of day, for the time Plan it suggests, and the hour it stands for. */
+export const BEST_TIMES = ["morning", "afternoon", "evening"] as const;
+export type BestTime = (typeof BEST_TIMES)[number];
+export const BEST_TIME_HOUR: Record<BestTime, number> = { morning: 9, afternoon: 14, evening: 19 };
+
 /** The knobs a house turns. Money is always in minor units (pence, cents). */
 /** Where a house settles up at month end (houses.settle_in): here, by marking what arrives, or in Splitwise. */
 export const SETTLE_IN = ["jonz", "splitwise"] as const;
@@ -95,6 +112,10 @@ export interface HouseRules {
   coverGraceHours: number;
   /** How long past its due time a John can still be done late, before it counts as missed. */
   lateHours: number;
+  /** How the deal chooses who. */
+  dealMode: DealMode;
+  /** Points a week each (BUDGETS), or 0 for no limit. */
+  dealBudget: number;
 }
 
 export const DEFAULT_RULES: Omit<HouseRules, "timezone" | "currency"> = {
@@ -105,4 +126,6 @@ export const DEFAULT_RULES: Omit<HouseRules, "timezone" | "currency"> = {
   disputeHours: 24,
   coverGraceHours: 3,
   lateHours: 24,
+  dealMode: "smart",
+  dealBudget: 4,
 };

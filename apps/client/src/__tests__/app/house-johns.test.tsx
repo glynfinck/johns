@@ -10,8 +10,7 @@ import {
   PAGE_TITLE,
   REPEAT_COPY,
   SECTION_LABEL,
-  SETUP_COPY,
-} from '@app/core';
+  SETUP_COPY, STEADY_COPY } from '@app/core';
 import { router, Slot } from 'expo-router';
 import { act, fireEvent, screen, waitFor, within } from 'expo-router/testing-library';
 import { useContext } from 'react';
@@ -291,6 +290,23 @@ describe('an admin', () => {
       { ...NEW_JOHN, name: 'Garden tidy', points: 4, crew: 0 },
       expect.any(Date),
     );
+  });
+
+  it('keeps a John to its own day, like bins night, and says so on the list', async () => {
+    await open();
+    await fireEvent.press(screen.getByRole('button', { name: JOHN_LIST_COPY.add }));
+    const form = within(screen.getByTestId('john-form'));
+    await fireEvent.changeText(form.getByTestId('john-name'), 'Bins');
+    const keep = form.getByRole('checkbox', { name: `${STEADY_COPY.keepDay}, ${STEADY_COPY.keepDayMeta}` });
+    expect(keep).not.toBeChecked();
+    await fireEvent.press(keep);
+    expect(keep).toBeChecked();
+    await fireEvent.press(form.getByTestId('save-john'));
+    expect(saveJohn).toHaveBeenCalledWith('h1', snapshot().rules, { ...NEW_JOHN, name: 'Bins', keepDay: true }, expect.any(Date));
+    // On call has no day to keep.
+    await fireEvent.press(screen.getByRole('button', { name: JOHN_LIST_COPY.add }));
+    await fireEvent.press(within(screen.getByTestId('john-timing')).getByRole('radio', { name: JOHN_LIST_COPY.onCall }));
+    expect(screen.queryByTestId('john-keep-day')).toBeNull();
   });
 
   it('switches a John to on call, with how often it comes up and how long whoever has it gets', async () => {

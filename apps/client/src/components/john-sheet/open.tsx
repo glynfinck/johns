@@ -8,6 +8,7 @@ import {
   JOHN_COPY,
   JOHN_SHEET_COPY,
   NEXT_UP_COPY,
+  plannable,
   SWAP_COPY,
   swapChoice,
   type BoardItem,
@@ -22,6 +23,7 @@ import { Alert } from '@/components/alert';
 import { Avatar } from '@/components/avatar';
 import { Button } from '@/components/button';
 import { GroupItem } from '@/components/group';
+import { PlanIt } from '@/components/plan-it';
 import { Row, RowIcon } from '@/components/row';
 import { Section } from '@/components/section';
 import { SheetAnchor } from '@/components/sheet';
@@ -39,7 +41,7 @@ import { SheetLines, SheetSection } from './parts';
  * Your open John: amber "Mark done" and a photo with it (a photo John
  * leads with the camera, then the library), then "Done with help", which
  * opens the roll call; a John done together is ticked by its roll call, so
- * its one button opens that. While you hold a token, "If you can't": skip
+ * its one button opens that. Then Plan it, or when it's planned for. While you hold a token, "If you can't": skip
  * it with immunity, or swap it for a housemate's. The swap takes over the
  * sheet's content until it's done or cancelled. Opened at "If you can't"
  * with only one of the two to offer, it starts on that one: the skip's
@@ -106,6 +108,17 @@ export function YoursOpen({ item, context, onRollCall }: { item: BoardItem; cont
           <Button variant="ghost" icon={UsersIcon} label={CREW_COPY.withHelp} disabled={tick.busy} onPress={onRollCall} testID="done-with-help" />
         )}
         {tick.problem ? <Alert message={tick.problem} /> : null}
+        {plannable(item, context.userId) ? (
+          <PlanIt
+            houseId={context.houseId}
+            item={item}
+            zone={context.zone}
+            now={context.now}
+            bestTime={context.me?.prefs.bestTime ?? null}
+            inline
+            testID="sheet-plan-it"
+          />
+        ) : null}
       </SheetLines>
       {cant ? (
         <IfYouCant

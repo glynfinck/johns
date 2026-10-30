@@ -477,6 +477,9 @@ describe('on a laptop', () => {
     expect(screen.getByTestId('house-nav')).toBeOnTheScreen();
     expect(screen.getAllByTestId('lower').map((node) => node.props.children)).toEqual(['the Wall', 'You', 'Leaving']);
     expect(screen.queryByTestId('pass-section')).toBeNull();
+    // Preferences too: the list has them, so You doesn't again.
+    expect(screen.getByTestId('nav-prefs')).toBeOnTheScreen();
+    expect(screen.queryByTestId('to-prefs')).toBeNull();
   });
 
   it('stays in one column at the narrowest laptop', async () => {

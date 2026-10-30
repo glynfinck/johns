@@ -12,6 +12,7 @@ import { OnCall } from '@/components/today/on-call';
 import { PageLine, PageLines } from '@/components/today/page-line';
 import { RestOfWeek } from '@/components/today/rest-of-week';
 import { SetupCard } from '@/components/today/setup-card';
+import { SwapOfferCard, SwapSuggestion } from '@/components/today/swap-ask';
 import { WeekGlance } from '@/components/today/week-glance';
 import { useAway } from '@/hooks/use-away';
 import { useHouse, type HouseView } from '@/hooks/use-house';
@@ -79,7 +80,7 @@ function TodayView({
   const { snapshot, board, today, me, now } = view;
   const { house, rules, members } = snapshot;
   const userId = me?.userId ?? '';
-  const page = todayPage({ board, mine: today.mine, userId, me, members, rules, away, stake });
+  const page = todayPage({ board, mine: today.mine, userId, me, members, rules, away, stake, offers: snapshot.offers, now });
   const nameOf = (id: string) => members.find((m) => m.userId === id)?.name ?? null;
   const two = useColumns();
   const day = <TopLine>{dayLabel(now, rules.timezone)}</TopLine>;
@@ -102,8 +103,18 @@ function TodayView({
         cant={page.cant}
         room={page.room}
         awayMakeup={house.awayMakeup}
+        bestTime={me?.prefs.bestTime ?? null}
       />
     );
+  // A John you'd rather not, and asks to swap made to you.
+  const swap = (
+    <>
+      {page.offers.map((offer) => (
+        <SwapOfferCard key={offer.id} houseId={house.id} offer={offer} nameOf={(id) => nameOf(id) ?? ''} />
+      ))}
+      {page.swap ? <SwapSuggestion houseId={house.id} ask={page.swap} nameOf={(id) => nameOf(id) ?? ''} /> : null}
+    </>
+  );
   const needsYou = (
     <NeedsYou
       items={today.toVote}
@@ -157,6 +168,7 @@ function TodayView({
           <>
             {day}
             {next}
+            {swap}
             {rest}
             {lines}
           </>
@@ -175,6 +187,7 @@ function TodayView({
     <>
       {day}
       {next}
+      {swap}
       {needsYou}
       {onCall}
       {rest}

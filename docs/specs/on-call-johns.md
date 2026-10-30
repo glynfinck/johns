@@ -27,6 +27,18 @@ separate feature.
   by housemates, late and forfeited like any other John, and shows on the
   Wall ("Cal flagged Bins for Ben.").
 - Flagging a John that's already flagged hands back the open flag.
+- **A Done it counts once.** For 10 minutes after one, the row shows a green
+  Done mark instead of the button, and the database refuses another Done it
+  on the same John from the same person (`just_done`). Housemates can still
+  say it needs doing.
+- **Taking back a Done it leaves nothing to do.** Undoing its tick, from the
+  toast, the John's sheet or History, takes the flag with it, its points
+  and Wall post included. A flag a housemate raised stays open when its tick
+  is taken back.
+- **Remove flag**, on an open flag's sheet, for whoever raised it and for
+  admins. Whoever is on call can't take down a flag someone else raised
+  (the sheet says who can). A flag opened again after a miss can only be
+  taken down by an admin. Added 30 October 2026.
 - A flag never swaps and never hands over. It is **missed** at twice its
   window, or at the week's end if it's already overdue then. A missed flag is
   its holder's miss, and a fresh flag opens for whoever is on call now, with
@@ -40,14 +52,15 @@ separate feature.
 - `POST /api/flags` with `RaiseFlag {johnId}` answers `FlagResponse {ok,
   assignmentId}`. A bad body is 400 "Say which John needs doing."; refusals
   are 409 in words.
-- SQL: `raise_flag(p_john)` for housemates; `open_flag`, `closes_at` and
+- SQL: `raise_flag(p_john)` for housemates; `remove_flag(p_assignment)`; `open_flag`, `closes_at` and
   `deal_week(…, p_on_call)` for the engine. New columns `johns.kind`,
   `respond_hours`, `per_week`; `assignments.flagged_at`, `flagged_by`; table
   `on_call`; event kind `flagged`.
 - Refusals: `not_on_call` (the John is due on a day), `not_dealt` (the week
   hasn't been handed out), `nobody_home` (everyone who shares it is away),
-  `not_swappable` (a flag offered in a swap). A week with a flag in it can't
-  be re-dealt.
+  `not_swappable` (a flag offered in a swap), `just_done` (a second Done it
+  within 10 minutes), `not_your_flag` and `flag_settled` (removing a flag).
+  A week with a flag in it can't be re-dealt.
 
 ## Edge cases
 

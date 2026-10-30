@@ -50,6 +50,8 @@ export const HISTORY_COPY = {
   ticked: "Marked done.",
   covered: "Covered.",
   flagged: "Flagged. Whoever’s on call has been told.",
+  /** After Done it: Undo takes back the tick and its flag. */
+  doneIt: "Done it. Counted once.",
   immunity: "Immunity used.",
   swapped: "Swapped.",
   disputed: "Dispute raised.",

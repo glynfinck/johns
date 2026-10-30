@@ -49,6 +49,7 @@ function RulesFor({ houseId, userId }: { houseId: string; userId: string }) {
       rules: snapshot.rules,
       awayMakeup: snapshot.house.awayMakeup,
       settleIn: snapshot.house.settleIn,
+      memberIds: snapshot.members.map((m) => m.userId),
     };
     return (
       <RulesEditing

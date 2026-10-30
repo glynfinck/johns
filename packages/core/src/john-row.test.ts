@@ -214,6 +214,33 @@ describe("johnRow's meta line", () => {
   });
 });
 
+describe("johnRow's meta line in Smart", () => {
+  const dealt = (last: string, mode: "smart" | "classic" = "smart") => ({
+    to: "sam",
+    by: "mostRoom" as const,
+    mode,
+    budget: 4,
+    away: [],
+    weighed: [
+      { userId: "sam", standing: -1 },
+      { userId: last, standing: 1, last: true as const },
+    ],
+  });
+  const meta = (overrides: Partial<BoardItem>, viewer = "sam") => johnRow(item("a", overrides), viewer, now, ZONE, nameOf).meta;
+  const dueAt = new Date("2026-10-23T06:30:00Z");
+
+  it("says who had it before, while it's still to do", () => {
+    expect(meta({ dueAt, dealt: dealt("megan") })).toBe("Kitchen, tomorrow 07:30, after Megan");
+    expect(meta({ dueAt, userId: "megan", dealt: { ...dealt("sam"), to: "megan" } })).toBe("Kitchen, tomorrow 07:30, after you");
+  });
+
+  it("says nothing of it in Classic, for the same person again, or once it's done", () => {
+    expect(meta({ dueAt, dealt: dealt("megan", "classic") })).toBe("Kitchen, tomorrow 07:30");
+    expect(meta({ dueAt, dealt: dealt("sam") })).toBe("Kitchen, tomorrow 07:30");
+    expect(meta({ status: "done", doneAt: new Date("2026-10-21T13:10:00Z"), dealt: dealt("megan") })).toBe("Kitchen, done yesterday 14:10");
+  });
+});
+
 describe("doneFold", () => {
   it("says how many are folded, and how many of those were late", () => {
     expect(doneFold([{ status: "late" }, { status: "done" }, { status: "late" }])).toEqual({ label: "Done (3)", late: "2 late" });

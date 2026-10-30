@@ -34,6 +34,8 @@ export interface WhyView {
   answer: string;
   /** How it added up: each sharer home that day, furthest behind first. Empty when there was nobody to weigh against. */
   rows: WhyRow[];
+  /** Under the rows: what their figures are. */
+  key: string;
   /** What slipping would cost while it's open; whose work it counts as once it's done. */
   stakes: string | null;
 }
@@ -64,8 +66,11 @@ export function johnWhy(
   const whose = (id: string) => (id === viewerId ? WHY_COPY.your : `${name(id)}’s`);
 
   const together = places.length > 1 ? togetherPart(places, viewerId, { Who, who }) : null;
+  const dealt = item.dealt;
+  const key = dealt?.mode === "classic" ? WHY_COPY.keyTurns : dealt?.budget ? WHY_COPY.keyBudget : WHY_COPY.key;
   return {
-    ...(together ?? dealtPart(item, viewerId, { Who, who })),
+    ...(together ?? dealtPart(item, viewerId, { Who, who, whose })),
+    key,
     stakes: stakesLine(item, viewerId, rules, now, { Who, who, whose }),
   };
 }
@@ -112,7 +117,7 @@ function togetherPart(
 function dealtPart(
   item: BoardItem,
   viewerId: string,
-  say: { Who: (id: string) => string; who: (id: string) => string },
+  say: { Who: (id: string) => string; who: (id: string) => string; whose: (id: string) => string },
 ): Pick<WhyView, "answer" | "rows"> {
   if (item.flaggedAt) return { answer: WHY_COPY.flag, rows: [] };
   const why = item.dealt;
@@ -129,6 +134,11 @@ function dealtPart(
 
   const lines: string[] = [];
   if (why.by === "only") lines.push(WHY_COPY.only(say.Who(to), you));
+  else if (why.by === "back") lines.push(WHY_COPY.back(say.Who(to), you));
+  else if (why.by === "oneEach") lines.push(WHY_COPY.oneEach(you ? WHY_COPY.yours : say.whose(to)));
+  else if (why.by === "mostRoom") lines.push(WHY_COPY.mostRoom(say.who(to)));
+  else if (why.by === "turn") lines.push(WHY_COPY.turn(say.whose(to)));
+  else if (why.by === "nextInLine") lines.push(WHY_COPY.nextInLine(say.who(to)));
   else if (why.by === "behind") lines.push(nudged.length ? WHY_COPY.nudged(say.who(to)) : WHY_COPY.behind(say.who(to)));
   else if (why.by === "fewer") lines.push(WHY_COPY.fewer(say.who(to)));
   else lines.push(WHY_COPY.draw(say.who(to)));
@@ -137,15 +147,23 @@ function dealtPart(
   const names = (ids: readonly string[]) => andList(ids.map((id, i) => (i === 0 ? say.Who(id) : say.who(id))));
   /** One of them, and not you: "was", "is". */
   const one = (ids: readonly string[]) => ids.length === 1 && ids[0] !== viewerId;
+  if (why.waited) lines.push(WHY_COPY.waited(why.waited));
+  if (why.stretched) lines.push(WHY_COPY.stretched(say.whose(to)));
+  if (why.again) lines.push(WHY_COPY.againWaited);
   if (full.length) lines.push(WHY_COPY.full(names(full.map((w) => w.userId)), one(full.map((w) => w.userId))));
-  if (nudged.length) {
+  if (nudged.length && why.by === "behind") {
     const level = nudged.every((w) => w.standing === chosen!.standing);
     lines.push(WHY_COPY.movedOn(names(nudged.map((w) => w.userId)), one(nudged.map((w) => w.userId)), level));
   }
   if (chosen?.last && why.by === "behind" && others.length > 0) lines.push(WHY_COPY.again(say.Who(to), you));
   if (why.away.length) lines.push(WHY_COPY.away(names(why.away), one(why.away)));
+  if (why.moved === "taken") lines.push(WHY_COPY.movedTaken(say.who(to), you));
+  else if (why.moved === "suits") lines.push(WHY_COPY.movedSuits(say.who(to)));
+  else if (why.moved === "away") lines.push(WHY_COPY.movedAway(say.who(to), you));
+  else if (why.moved === "gone") lines.push(WHY_COPY.movedGone);
   if (item.userId !== to) lines.push(WHY_COPY.moved(say.who(to), say.who(item.userId)));
 
+  const classic = why.mode === "classic";
   const rows: WhyRow[] =
     why.weighed.length > 1
       ? why.weighed.map((w) => {
@@ -153,11 +171,12 @@ function dealtPart(
             w.userId === to ? WHY_COPY.dealtIt : null,
             w.last ? WHY_COPY.hadItLast : null,
             w.full ? WHY_COPY.handedMost : null,
+            !classic && w.room !== undefined ? WHY_COPY.left(w.room) : null,
           ].filter((m) => m !== null);
           return {
             userId: w.userId,
             name: say.Who(w.userId),
-            value: formatBalance(w.standing),
+            value: classic && w.place !== undefined ? WHY_COPY.inLine(w.place) : formatBalance(w.standing),
             meta: meta.length ? meta.join(", ") : null,
             chosen: w.userId === to,
           };
