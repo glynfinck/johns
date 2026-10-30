@@ -1,4 +1,5 @@
 import {
+  hasPass,
   LEGAL,
   PAGE_TITLE,
   PASS_COPY,
@@ -135,6 +136,8 @@ function PassReadOut({
   const offers = passOffers(rules.currency).filter((o) => !selling || passPurchaseRefusal(pass, o.plan, now) === null);
   const canManage = selling && pass.buyerId === userId && (pass.plan === 'monthly' || pass.plan === 'yearly');
   const firstCharge = selling ? passFirstChargeNote(pass, now, rules.timezone) : null;
+  // Only once the free month or a plan has ended, so a new house isn't steered away from paying.
+  const askFree = !hasPass(pass, now);
   return (
     <>
       <View style={styles.words}>
@@ -189,12 +192,12 @@ function PassReadOut({
         {selling ? <Meta testID="pass-renewal">{PASS_COPY.renewal}</Meta> : null}
         <Meta>{PASS_COPY.free}</Meta>
         <Meta testID="pass-money">{PASS_COPY.money}</Meta>
-        {founding ? null : (
+        {askFree ? (
           <>
             <Meta testID="pass-hardship">{PASS_COPY.hardship}</Meta>
             <TextLink href={ASK_FREE} label={PASS_COPY.askFree} muted testID="pass-ask-free" />
           </>
-        )}
+        ) : null}
         <TextLink href="/terms" label={PASS_COPY.terms} muted testID="pass-terms" />
       </View>
     </>

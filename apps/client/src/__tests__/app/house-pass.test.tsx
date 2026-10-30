@@ -70,10 +70,16 @@ it('thanks a Founding house, and offers it no plans', async () => {
   expect(screen.queryByTestId('pass-ask-free')).toBeNull();
 });
 
-it('says where the money goes, and lets a house that can’t pay ask for the Pass free', async () => {
+it('says where the money goes, and offers a free Pass only once the free month has ended', async () => {
   withPass({ plan: 'trial', until: new Date(Date.now() + 12 * DAY), buyerId: null });
   await open();
   expect(screen.getByTestId('pass-money')).toHaveTextContent(PASS_COPY.money);
+  expect(screen.queryByTestId('pass-ask-free')).toBeNull();
+});
+
+it('lets a house past its free month ask for the Pass free', async () => {
+  withPass({ plan: 'trial', until: new Date(Date.now() - DAY), buyerId: null });
+  await open();
   expect(screen.getByTestId('pass-hardship')).toHaveTextContent(PASS_COPY.hardship);
   expect(screen.getByRole('link', { name: PASS_COPY.askFree })).toBeOnTheScreen();
   expect(LEGAL.email).toContain('@');

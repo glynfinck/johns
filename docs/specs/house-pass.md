@@ -28,9 +28,9 @@ pay after their free month, set the yearly price to $39.99 and £29.99 by
 moving the Stripe lookup keys.
 
 Fair by design: the free version runs a whole house on its own, and the
-Pass page says where the money goes. A house that can't pay emails for a
-free Pass (the "Ask for a free Pass" link) and gets one, no questions asked;
-give it as a Founding plan by hand until there is an admin tool.
+Pass page says where the money goes. Once its free month or plan has ended, a
+house that can't pay can email for a free Pass (the "Ask for a free Pass"
+link); give it as a Founding plan by hand until there is an admin tool.
 
 ## Inputs and outputs
 

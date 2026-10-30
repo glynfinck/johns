@@ -1655,8 +1655,8 @@ export const PASS_COPY = {
   free: "Free for every house, always: the deal, the housemate check, reminders, covering and time away. No ads.",
   /** Under the plans: what the Pass pays for, said plainly. */
   money: `Where the money goes: the servers, the AI, card and app store fees, and the time it takes one person to keep ${APP_NAME} going. No investors, no ads.`,
-  /** For a house that can't pay: the Pass for free, by email, no questions. */
-  hardship: "Money tight? Ask and your house gets the Pass free, no questions asked.",
+  /** For a house whose free month or plan has ended and can't pay: the Pass for free, by email. */
+  hardship: "Money tight? Ask and we’ll give your house the Pass for free.",
   askFree: "Ask for a free Pass",
   /** The email that link starts. */
   askFreeSubject: "Free House Pass",
