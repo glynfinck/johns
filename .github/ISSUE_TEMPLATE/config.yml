@@ -1,7 +1,7 @@
 blank_issues_enabled: false
 contact_links:
   - name: Report a security problem
-    url: https://github.com/glynfinck/jonz/security/advisories/new
+    url: https://github.com/jonzapp/jonz/security/advisories/new
     about: Privately, please. Don't open a public issue.
   - name: Ask about your house or the House Pass
     url: mailto:hello@jonz.app

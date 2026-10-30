@@ -58,7 +58,7 @@ const DEPLOY = !CHECK_ONLY && !args.has("--no-deploy");
 // Run from the "Provision production" workflow, the tokens are repository
 // secrets and the summary is written to the run's page for a phone to read.
 const IN_ACTIONS = Boolean(process.env.GITHUB_ACTIONS);
-const SECRETS_PAGE = `https://github.com/${process.env.GITHUB_REPOSITORY ?? "glynfinck/jonz"}/settings/secrets/actions`;
+const SECRETS_PAGE = `https://github.com/${process.env.GITHUB_REPOSITORY ?? "jonzapp/jonz"}/settings/secrets/actions`;
 
 const env = { ...(existsSync(LOCAL_FILE) ? parseEnvFile(readFileSync(LOCAL_FILE, "utf8")) : {}), ...process.env };
 const results = [];
@@ -224,7 +224,7 @@ if (missing.length > 0 && !CHECK_ONLY) {
     missing = missingMigrations(localVersions, await remoteVersions());
   } else {
     todo.push({
-      title: "Apply the migrations: connect the Supabase GitHub integration (glynfinck/jonz, branch main), then run this again",
+      title: "Apply the migrations: connect the Supabase GitHub integration (jonzapp/jonz, branch main), then run this again",
       url: `https://supabase.com/dashboard/project/${ref}/settings/integrations`,
     });
   }
@@ -233,7 +233,7 @@ if (missing.length === 0) pass(`all ${localVersions.length} migrations applied`)
 else fail(`not applied yet: ${missing.join(", ")}`);
 if (missing.length === 0) {
   todo.push({
-    title: "If you haven't yet, connect the Supabase GitHub integration (glynfinck/jonz, branch main) so later migrations deploy on merge",
+    title: "If you haven't yet, connect the Supabase GitHub integration (jonzapp/jonz, branch main) so later migrations deploy on merge",
     url: `https://supabase.com/dashboard/project/${ref}/settings/integrations`,
   });
 }
@@ -377,7 +377,7 @@ const webProject = await vercel("GET", `/v9/projects/${C.web.project}`).catch((e
 if (!webProject) {
   fail(`there's no ${C.web.project} project`);
   todo.push({
-    title: `Create the Vercel project ${C.web.project} from glynfinck/jonz with Root Directory ${C.web.rootDirectory} (DEPLOYMENT.md, the cutover), then run this again`,
+    title: `Create the Vercel project ${C.web.project} from jonzapp/jonz with Root Directory ${C.web.rootDirectory} (DEPLOYMENT.md, the cutover), then run this again`,
     url: `https://vercel.com/new`,
   });
 } else {

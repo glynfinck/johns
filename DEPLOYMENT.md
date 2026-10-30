@@ -37,7 +37,7 @@ It is safe to run again and again: each step looks before it writes.
 workflow (`.github/workflows/provision.yml`) runs the same command on a
 runner, with the tokens as repository secrets (`SUPABASE_ACCESS_TOKEN`,
 `VERCEL_TOKEN`, later `GOOGLE_CLIENT_ID` and `GOOGLE_CLIENT_SECRET`). Start it
-from the Actions tab: <https://github.com/glynfinck/jonz/actions/workflows/provision.yml>
+from the Actions tab: <https://github.com/jonzapp/jonz/actions/workflows/provision.yml>
 → Run workflow. Its summary page lists every check and what's left, each step
 a link and each value to paste on its own line. A database password made by a
 workflow run lives only for that run, which is enough: everything after
@@ -144,7 +144,7 @@ is exactly what local development needs and production must not have.
   the privacy link it checks for.
 
 Already done (October 2026): the Vercel project `johns` exists, deploys
-`glynfinck/jonz`, runs its functions in London next to the database, and
+`jonzapp/jonz`, runs its functions in London next to the database, and
 has `johns.glyn.dev` attached. glyn.dev's DNS is on Vercel, so the domain
 needed no record.
 
@@ -194,7 +194,7 @@ The steps, each asked for and checked before the next:
    (glyn.dev's DNS is on Vercel, so no record). Check that
    `https://api.johns.glyn.dev/api/cron/tick` refuses a request without the
    secret (401): it's the same deployment as johns.glyn.dev.
-2. **Make `johns-web`**: import `glynfinck/jonz`, Root Directory
+2. **Make `johns-web`**: import `jonzapp/jonz`, Root Directory
    `apps/client`, framework Other, Node 24, the same team. Its production
    environment is the three `EXPO_PUBLIC_` values above; previews get
    nothing, as for `johns`. Deploy `main`.

@@ -7,7 +7,7 @@ so a security report goes to the front of the queue.
 
 Please don't open a public issue. Report it privately instead, either way:
 
-- **GitHub:** the repo's [Security tab](https://github.com/glynfinck/jonz/security/advisories/new),
+- **GitHub:** the repo's [Security tab](https://github.com/jonzapp/jonz/security/advisories/new),
   then **Report a vulnerability**.
 - **Email:** hello@jonz.app, with "Security" in the subject.
 
