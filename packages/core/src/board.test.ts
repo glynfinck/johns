@@ -11,6 +11,8 @@ import {
   monthStandings,
   rulesOf,
   onCallItems,
+  heldDoneIt,
+  DONE_IT_HOLD_MS,
   TODAY_ORDER,
   todayView,
   toCover,
@@ -232,6 +234,19 @@ describe("onCallItems", () => {
     const [bins] = onCallItems(rows, b);
     expect(bins.openFlag?.id).toBe("newest");
     expect(bins.times).toBe(3);
+  });
+
+  it("finds the latest Done it, and holds it for ten minutes", () => {
+    const b = board([
+      flag("asked", { done_at: at(-1) }),
+      flag("mine-old", { flagged_by: ME, flagged_at: at(-20), done_at: at(-20) }),
+      flag("mine", { flagged_by: ME, flagged_at: at(-3), done_at: at(-3) }),
+    ]);
+    const [bins] = onCallItems(rows, b);
+    expect(bins.lastDoneIt?.id).toBe("mine");
+    const doneAt = bins.lastDoneIt!.doneAt!.getTime();
+    expect(heldDoneIt(bins, new Date(doneAt + DONE_IT_HOLD_MS - 1))?.id).toBe("mine");
+    expect(heldDoneIt(bins, new Date(doneAt + DONE_IT_HOLD_MS))).toBeNull();
   });
 
   it("has no open flag once it's ticked", () => {

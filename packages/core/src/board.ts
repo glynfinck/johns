@@ -408,6 +408,21 @@ export interface OnCallItem {
   openFlag: BoardItem | null;
   /** Flags raised this week. */
   times: number;
+  /**
+   * The latest Done it: a flag its holder raised and ticked themselves. For
+   * a while after it, Done it shows as done and can't be said again
+   * (DONE_IT_HOLD_MS).
+   */
+  lastDoneIt: BoardItem | null;
+}
+
+/** How long a Done it holds: a second within it is a repeat tap, and the database refuses it too (raise_flag's just_done). */
+export const DONE_IT_HOLD_MS = 10 * 60_000;
+
+/** The Done it still holding at `now`, if there is one: Today shows it as done instead of offering Done it again. */
+export function heldDoneIt(item: OnCallItem, now: Date): BoardItem | null {
+  const done = item.lastDoneIt;
+  return done?.doneAt && now.getTime() - done.doneAt.getTime() < DONE_IT_HOLD_MS ? done : null;
 }
 
 /** The week's on-call Johns, in the list's order, with each one's open flag from the board. */
@@ -427,6 +442,10 @@ export function onCallItems(rows: readonly OnCallRow[], board: WeekBoard): OnCal
         holderId: r.user_id,
         openFlag: open[0] ?? null,
         times: flags.filter((i) => !i.carried).length,
+        lastDoneIt:
+          flags
+            .filter((i) => i.doneAt !== null && i.flaggedBy === i.userId && i.coveredBy === null)
+            .sort((a, b) => b.doneAt!.getTime() - a.doneAt!.getTime())[0] ?? null,
       };
     });
 }

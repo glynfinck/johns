@@ -80,13 +80,14 @@ async function clientSession(context: BrowserContext, name: string): Promise<{ i
  * through the engine, as "Hand out this week’s Johns" does. Alone, every John
  * lands on them; with housemates, the deal shares them out. Every John falls
  * due on Sunday at 21:00 unless it names another time (`dueTime`), so a test
- * can say which comes first.
+ * can say which comes first. An `onCall` John is dealt as someone on call
+ * instead, with the 12-hour window.
  */
 export async function dealtHouseInClient(
   context: BrowserContext,
   name: string,
   houseName: string,
-  johns: { name: string; category?: string; needsPhoto?: boolean; dueTime?: string }[],
+  johns: { name: string; category?: string; needsPhoto?: boolean; dueTime?: string; onCall?: boolean }[],
   housemates: { context: BrowserContext; name: string }[] = [],
 ): Promise<{ userId: string; houseId: string; housemateIds: string[] }> {
   const { id, client } = await clientSession(context, name);
@@ -124,6 +125,7 @@ export async function dealtHouseInClient(
       every_weeks: 1,
       anchor_week: weekIndex(week.startsOn),
       needs_photo: j.needsPhoto ?? false,
+      kind: j.onCall ? "on_call" : "day",
     })),
   );
   if (johnsError) throw johnsError;
