@@ -651,6 +651,7 @@ export type Database = {
           pass_buyer: string | null
           pass_plan: string
           pass_until: string | null
+          settle_in: string
           stake_minor: number
           ticked_at: string | null
           timezone: string
@@ -673,6 +674,7 @@ export type Database = {
           pass_buyer?: string | null
           pass_plan?: string
           pass_until?: string | null
+          settle_in?: string
           stake_minor?: number
           ticked_at?: string | null
           timezone?: string
@@ -695,6 +697,7 @@ export type Database = {
           pass_buyer?: string | null
           pass_plan?: string
           pass_until?: string | null
+          settle_in?: string
           stake_minor?: number
           ticked_at?: string | null
           timezone?: string
@@ -1306,7 +1309,12 @@ export type Database = {
         Returns: string
       }
       confirm_payment: {
-        Args: { p_amount: number; p_from: string; p_house: string }
+        Args: {
+          p_amount: number
+          p_from: string
+          p_house: string
+          p_via?: string
+        }
         Returns: undefined
       }
       cover_john: {

@@ -3,7 +3,7 @@ import { isoDayOf, shiftMonth, type AwayPeriod } from "./away";
 import type { BoardItem, JohnDef } from "./board";
 import { CREW_COPY, FOCUS_SHELL_COPY, GROUPS_COPY, JOHN_LIST_COPY, RULES_COPY, SETUP_COPY } from "./copy";
 import { MAKEUP_LABEL } from "./deal";
-import { CATEGORIES, CATEGORY_LABEL, DOW_LABEL, type Category, type Currency, type HouseRules, type IsoDow } from "./domain";
+import { CATEGORIES, CATEGORY_LABEL, DOW_LABEL, type Category, type Currency, type HouseRules, type IsoDow, type SettleIn } from "./domain";
 import { humanError } from "./errors";
 import { dateRange, firstName, joinRange, monthLabel, pointsLabel } from "./format";
 import { formatMoney, formatSigned, moneyInput, parseMoney } from "./money";
@@ -99,8 +99,8 @@ function forfeit(minor: number, currency: Currency): string {
 }
 
 /** The house rules in plain words, one line each, as everyone reads them. */
-export function rulesRows(rules: HouseRules, awayMakeup: number): LabelValue[] {
-  return [
+export function rulesRows(rules: HouseRules, awayMakeup: number, settleIn?: SettleIn): LabelValue[] {
+  const rows: LabelValue[] = [
     {
       label: SETUP_COPY.stake,
       value: rules.stakeMinor === 0 ? SETUP_COPY.noStake : SETUP_COPY.perMonth(formatMoney(rules.stakeMinor, rules.currency)),
@@ -113,6 +113,9 @@ export function rulesRows(rules: HouseRules, awayMakeup: number): LabelValue[] {
     { label: SETUP_COPY.away, value: SETUP_COPY.makeup[awayMakeup] ?? MAKEUP_LABEL[awayMakeup] ?? SETUP_COPY.makeupPercent(awayMakeup) },
     { label: SETUP_COPY.weekStarts, value: SETUP_COPY.weekStartsAt(DOW_LABEL[rules.weekStarts], zonePlace(rules.timezone)) },
   ];
+  // After the money it's about, when it's known.
+  if (settleIn) rows.splice(3, 0, { label: SETUP_COPY.settleIn, value: SETUP_COPY.settleInValue[settleIn] });
+  return rows;
 }
 
 /** "Sam and Priya", "Sam, Priya and Tom". */
@@ -246,6 +249,7 @@ export interface RulesDraft {
   coverGraceHours: number;
   lateHours: number;
   awayMakeup: number;
+  settleIn: SettleIn;
   stake: string;
   late: string;
   missed: string;
@@ -254,8 +258,8 @@ export interface RulesDraft {
 /** Where a problem with the form sits: under one of its fields, or (`form`) by Save. */
 export type RulesField = "name" | "timezone" | "stake" | "late" | "missed" | "form";
 
-/** The form as it starts, from the house's name, its rules and its make-up rate. */
-export function rulesDraft(name: string, rules: HouseRules, awayMakeup: number): RulesDraft {
+/** The form as it starts, from the house's name, its rules, its make-up rate and where it settles up. */
+export function rulesDraft(name: string, rules: HouseRules, awayMakeup: number, settleIn: SettleIn = "jonz"): RulesDraft {
   return {
     name,
     timezone: rules.timezone,
@@ -265,6 +269,7 @@ export function rulesDraft(name: string, rules: HouseRules, awayMakeup: number):
     coverGraceHours: rules.coverGraceHours,
     lateHours: rules.lateHours,
     awayMakeup,
+    settleIn,
     stake: moneyInput(rules.stakeMinor),
     late: moneyInput(rules.lateForfeitMinor),
     missed: moneyInput(rules.missedForfeitMinor),
@@ -288,6 +293,7 @@ export function rulesChanged(draft: RulesDraft, from: RulesDraft): boolean {
     draft.coverGraceHours !== from.coverGraceHours ||
     draft.lateHours !== from.lateHours ||
     draft.awayMakeup !== from.awayMakeup ||
+    draft.settleIn !== from.settleIn ||
     (["stake", "late", "missed"] as const).some((k) => amount(draft[k]) !== amount(from[k]))
   );
 }
@@ -316,6 +322,7 @@ export function checkRules(
     coverGraceHours: draft.coverGraceHours,
     lateHours: draft.lateHours,
     awayMakeup: draft.awayMakeup,
+    settleIn: draft.settleIn,
   });
   const field: Record<string, RulesField> = {
     name: "name",

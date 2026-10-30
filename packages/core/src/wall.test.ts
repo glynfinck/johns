@@ -165,6 +165,8 @@ describe("describeEvent", () => {
     expect(line("joined")).toBe("Ben moved in.");
     expect(line("month_closed", { month: "2026-10" }, null)).toBe("October 2026 is closed and the Stake is shared out.");
     expect(line("paid", { to: "ava", amount: 250 })).toBe("You got £2.50 from Ben.");
+    // Moved into Splitwise rather than paid (houses.settle_in).
+    expect(line("paid", { to: "ava", amount: 250, via: "splitwise" })).toBe("You put Ben’s £2.50 into Splitwise.");
   });
 
   it("says the kind of anything it doesn’t know", () => {

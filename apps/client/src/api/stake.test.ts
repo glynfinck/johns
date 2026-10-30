@@ -144,6 +144,9 @@ describe('confirmPayment', () => {
     rpc.mockResolvedValue({ data: null, error: null });
     await confirmPayment('h1', 'ava', 400);
     expect(rpc).toHaveBeenCalledWith('confirm_payment', { p_house: 'h1', p_from: 'ava', p_amount: 400 });
+    // Added in Splitwise instead: the same payment, saying so.
+    await confirmPayment('h1', 'ava', 400, 'splitwise');
+    expect(rpc).toHaveBeenLastCalledWith('confirm_payment', { p_house: 'h1', p_from: 'ava', p_amount: 400, p_via: 'splitwise' });
 
     rpc.mockResolvedValue({ data: null, error: { message: 'more_than_owed', code: 'P0001' } });
     await expect(confirmPayment('h1', 'ava', 9999)).rejects.toThrow("That’s more than is owed.");

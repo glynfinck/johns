@@ -44,7 +44,12 @@ function RulesFor({ houseId, userId }: { houseId: string; userId: string }) {
 
   if (view && view.me?.role === 'admin' && editing) {
     const { snapshot } = view;
-    const values = { name: snapshot.house.name, rules: snapshot.rules, awayMakeup: snapshot.house.awayMakeup };
+    const values = {
+      name: snapshot.house.name,
+      rules: snapshot.rules,
+      awayMakeup: snapshot.house.awayMakeup,
+      settleIn: snapshot.house.settleIn,
+    };
     return (
       <RulesEditing
         // A fresh form whenever the house's rules change underneath it.
@@ -79,7 +84,7 @@ function RulesReadOut({ userId, view, onEdit }: { userId: string; view: HouseVie
         right={isAdmin ? <TextButton label={SETUP_COPY.edit} align="end" onPress={onEdit} testID="edit-rules" /> : undefined}
         testID="rules-panel"
       >
-        {rulesRows(snapshot.rules, snapshot.house.awayMakeup).map((rule) => (
+        {rulesRows(snapshot.rules, snapshot.house.awayMakeup, snapshot.house.settleIn).map((rule) => (
           <Row key={rule.label} title={rule.label} trailing={rule.value} testID="rule" />
         ))}
       </Section>

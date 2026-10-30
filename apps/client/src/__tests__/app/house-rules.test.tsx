@@ -71,6 +71,7 @@ it('reads the rules out in plain words, with who can change them under', async (
     [SETUP_COPY.stake, '£20 a month'],
     [SETUP_COPY.late, '−£1'],
     [SETUP_COPY.missed, '−£3'],
+    [SETUP_COPY.settleIn, 'In Jonz'],
     [SETUP_COPY.disputes, 'within 24 hours'],
     [SETUP_COPY.lateWindow, 'up to 24 hours after it’s due'],
     [SETUP_COPY.cover, '3 hours after it’s due'],
@@ -155,11 +156,12 @@ describe('an admin', () => {
       coverGraceHours: 3,
       lateHours: 24,
       awayMakeup: 100,
+      settleIn: 'jonz',
     });
     expect(await screen.findByTestId('rules-panel')).toBeOnTheScreen();
     expect(within(screen.getByTestId('toast')).getByText(SETUP_COPY.saved)).toBeOnTheScreen();
     await waitFor(() => expect(screen.getAllByTestId('rule')[0]).toHaveTextContent(/€25\.50 a month/));
-    expect(screen.getAllByTestId('rule')[3]).toHaveTextContent(/within 48 hours/);
+    expect(screen.getAllByTestId('rule')[4]).toHaveTextContent(/within 48 hours/);
   });
 
   it('puts the form away unsaved with Cancel', async () => {

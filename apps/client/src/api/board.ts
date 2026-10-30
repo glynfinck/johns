@@ -7,6 +7,7 @@ import {
   type HousePass,
   type HouseRules,
   type OnCallRow,
+  type SettleIn,
   type WeekRow,
 } from '@app/core';
 
@@ -35,6 +36,8 @@ export interface HouseSnapshot {
     joinCode: string;
     everDealt: boolean;
     awayMakeup: number;
+    /** Where the house settles up at month end (houses.settle_in). */
+    settleIn: SettleIn;
     /** The House Pass: who has the extras, and until when. */
     pass: HousePass;
   };
@@ -108,6 +111,7 @@ export async function loadHouse(houseId: string, now: Date): Promise<HouseSnapsh
       joinCode: house.join_code,
       everDealt: house.first_dealt_at !== null,
       awayMakeup: house.away_makeup,
+      settleIn: house.settle_in === 'splitwise' ? 'splitwise' : 'jonz',
       pass: passOf(house),
     },
     rules,

@@ -12,12 +12,14 @@ import {
   rulesChanged,
   rulesDraft,
   rulesRefusalField,
+  SETTLE_IN,
   SETUP_COPY,
   type Currency,
   type HouseRules,
   type IsoDow,
   type RulesDraft,
   type RulesField,
+  type SettleIn,
 } from '@app/core';
 import { useState } from 'react';
 import { StyleSheet, useWindowDimensions, View } from 'react-native';
@@ -42,12 +44,14 @@ const DISPUTE_OPTIONS = DISPUTE_HOURS.map((h) => ({ value: h as number, label: R
 const LATE_OPTIONS = LATE_HOURS.map((h) => ({ value: h as number, label: RULES_COPY.lateHours(h), short: SETUP_COPY.lateShort(h) }));
 const COVER_OPTIONS = COVER_GRACE_HOURS.map((h) => ({ value: h as number, label: RULES_COPY.coverGrace(h), short: SETUP_COPY.coverShort(h) }));
 const MAKEUP_OPTIONS = AWAY_MAKEUP.map((n) => ({ value: n as number, label: MAKEUP_LABEL[n] }));
+const SETTLE_OPTIONS = SETTLE_IN.map((s) => ({ value: s, label: RULES_COPY.settleInOption[s], short: SETUP_COPY.settleInValue[s] }));
 
-/** What the form starts from: the house's name, its rules and its make-up rate. */
+/** What the form starts from: the house's name, its rules, its make-up rate and where it settles up. */
 export interface RulesValues {
   name: string;
   rules: HouseRules;
   awayMakeup: number;
+  settleIn: SettleIn;
 }
 
 /**
@@ -60,7 +64,7 @@ export interface RulesValues {
  */
 export function useRulesForm(houseId: string, values: RulesValues, onSaved: () => void) {
   const move = useMove(houseId);
-  const [start] = useState(() => rulesDraft(values.name, values.rules, values.awayMakeup));
+  const [start] = useState(() => rulesDraft(values.name, values.rules, values.awayMakeup, values.settleIn));
   const [draft, setDraft] = useState<RulesDraft>(start);
   const [problems, setProblems] = useState<Partial<Record<RulesField, string>>>({});
 
@@ -137,6 +141,13 @@ export function RulesForm({ form }: { form: RulesFormState }) {
             />
           </GroupItem>
         ))}
+        <PickRow
+          label={RULES_COPY.settleIn}
+          options={SETTLE_OPTIONS}
+          value={v.settleIn}
+          onChange={(settleIn: SettleIn) => set({ settleIn })}
+          disabled={pending}
+        />
       </Section>
       <View style={styles.noted}>
         <Section label={SETUP_COPY.fairness} testID="rules-fairness">

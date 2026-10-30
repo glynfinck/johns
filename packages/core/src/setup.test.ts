@@ -421,6 +421,7 @@ describe("the rules form", () => {
       coverGraceHours: 3,
       lateHours: 24,
       awayMakeup: 100,
+      settleIn: "jonz",
       stake: "20",
       late: "1",
       missed: "3",
@@ -437,6 +438,7 @@ describe("the rules form", () => {
     expect(rulesChanged({ ...start, coverGraceHours: 0 }, start)).toBe(true);
     expect(rulesChanged({ ...start, lateHours: 48 }, start)).toBe(true);
     expect(rulesChanged({ ...start, currency: "EUR" }, start)).toBe(true);
+    expect(rulesChanged({ ...start, settleIn: "splitwise" }, start)).toBe(true);
     expect(rulesChanged({ ...start, late: "a quid" }, start)).toBe(true);
   });
 
@@ -455,6 +457,7 @@ describe("the rules form", () => {
         coverGraceHours: 3,
         lateHours: 24,
         awayMakeup: 100,
+        settleIn: "jonz",
       },
     });
   });
