@@ -130,8 +130,8 @@ permanent once a store has seen them.
   "•••"), `PageTitle` (the browser tab's title on the web from core's
   `pageTitle`, nothing on a phone), `Section`, `Group`, `Row` (the one row,
   everywhere), `Fold`, `Card` (at most one stand-alone card a screen),
-  `TickCircle`, `StatusMark` and `Chip` (core's `STATUS_MARK`, drawn),
-  `LidDot`, `Avatar`, `CountBadge`, `Button`, `TextButton`, `TextLink`,
+  `TickBox`, `StatusMark` and `Chip` (core's `STATUS_MARK`, drawn),
+  `LidBar`, `Avatar`, `CountBadge`, `Button`, `TextButton`, `TextLink`,
   `Field`, `Alert`, `Segmented`, `EmptyState`, `Reading` and `ReadFailed`
   (a first read on its way, or "Try again"), toasts, and the brand pieces
   (`Wordmark`, `HazardTape`, `SignInPanel`). `john-row.tsx` is a John as a
@@ -308,7 +308,7 @@ permanent once a store has seen them.
 - **Signage:** `Wordmark` (the road sign) and the full `HazardTape` belong to
   the brand pages and the invite sheet (`Sheet`'s `tape`, with the code in
   big caps). Inside the house, tape is otherwise only a row's 4pt edge on an
-  overdue or missed John, a lid colour only a `LidDot` before a John's
+  overdue or missed John, a lid colour only a `LidBar` before a John's
   category, and where a John has got to a `StatusMark`. Decoration is
   `aria-hidden`.
 - **Controls** are at least `TAP` (48) tall; links get the same target
@@ -378,7 +378,7 @@ Prefer those package docs over stale assumptions, and follow deprecation notices
 
 - RNTL 14: `render`, `rerender`, `fireEvent` and `act` are async. Await them.
 - Queries skip `aria-hidden` elements; pass `{ includeHiddenElements: true }`
-  to find decoration such as a `LidDot`.
+  to find decoration such as a `LidBar`.
 - `jest.config.js` maps `lucide-react-native` to its CommonJS build, because
   its React Native entry is an ES module Jest can't load.
 - TypeScript 6 no longer loads every `@types` package, so `tsconfig.json`

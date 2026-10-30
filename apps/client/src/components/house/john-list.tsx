@@ -48,7 +48,7 @@ const CREW = CREW_CHOICES.map((n) => ({ value: n, label: CREW_COPY.choice(n) }))
 
 /**
  * The house's list of Johns, a section per kind ("Kitchen · 3"), each John a
- * row: its lid dot, how often and when, and its points. Admins add and edit
+ * row: its lid bar, how often and when, and its points. Admins add and edit
  * in a sheet; everyone else reads a John's details there. Changes land in the
  * next deal. Several page children, so it goes straight in a Screen.
  */

@@ -463,7 +463,7 @@ describe('Needs you', () => {
 });
 
 describe('the rest of your week', () => {
-  it('lists your other Johns, ticked from their circle, with the finished ones folded', async () => {
+  it('lists your other Johns, ticked from their tick box, with the finished ones folded', async () => {
     await open();
     const section = screen.getByTestId('rest-of-week');
     expect(within(section).getByText(NEXT_UP_COPY.rest)).toBeOnTheScreen();
@@ -478,7 +478,7 @@ describe('the rest of your week', () => {
     const fold = screen.getByTestId('done-fold');
     expect(fold).toHaveTextContent(FOCUS_SHELL_COPY.done(1));
     await fireEvent.press(fold);
-    // Done once: the green circle, then the points it earned, not a second mark.
+    // Done once: the green box, then the points it earned, not a second mark.
     const hob = within(section).getAllByTestId('my-john')[1];
     expect(hob).toHaveTextContent(/^Wipe the hobKitchen · done .+2 pts$/);
     expect(within(hob).getByLabelText(NEXT_UP_COPY.stateLabel.done)).toBeOnTheScreen();

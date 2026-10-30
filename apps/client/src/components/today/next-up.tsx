@@ -17,7 +17,7 @@ import { Alert } from '@/components/alert';
 import { Button } from '@/components/button';
 import { Card } from '@/components/card';
 import { useJohnSheet } from '@/components/john-sheet';
-import { LidDot } from '@/components/lid';
+import { LidBar } from '@/components/lid';
 import { StreetPlate } from '@/components/street-plate';
 import { Lead, Meta, SectionLabel } from '@/components/text';
 import { TextButton } from '@/components/text-button';
@@ -150,7 +150,7 @@ function NextJohn({
       {/* Not a row: the meta may wrap to a second line on a narrow phone rather than lose the cost. */}
       <View style={[styles.meta, styles.underPlate]}>
         <View style={styles.mark}>
-          <LidDot category={item.category} />
+          <LidBar category={item.category} />
         </View>
         <Meta numberOfLines={2} style={styles.shrink} testID="next-up-meta">
           {meta.due ? `${meta.kind} · ${meta.due}` : meta.kind}

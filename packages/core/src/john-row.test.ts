@@ -76,10 +76,10 @@ describe("johnKind", () => {
 });
 
 describe("johnRow", () => {
-  it("ticks your own open John from its circle, overdue included, and names the move", () => {
+  it("ticks your own open John from its tick box, overdue included, and names the move", () => {
     expect(row({ status: "due-soon" })).toEqual({
-      circle: "open",
-      circleLabel: "Mark a done",
+      tick: "open",
+      tickLabel: "Mark a done",
       ticks: true,
       meta: "Kitchen · tomorrow 21:00",
       lid: true,
@@ -91,25 +91,25 @@ describe("johnRow", () => {
     expect(row({ status: "upcoming" })).toMatchObject({ ticks: true, trailing: "points" });
     expect(row({ status: "overdue", needsPhoto: true })).toMatchObject({
       ticks: true,
-      circleLabel: "Take a photo of a and mark it done",
+      tickLabel: "Take a photo of a and mark it done",
       trailing: "status",
       hazardEdge: true,
     });
   });
 
   it("never ticks a housemate's John, a finished one or a missed one", () => {
-    expect(row({ userId: "tom", status: "overdue" })).toMatchObject({ ticks: false, circleLabel: "Not done", hazardEdge: true });
+    expect(row({ userId: "tom", status: "overdue" })).toMatchObject({ ticks: false, tickLabel: "Not done", hazardEdge: true });
     for (const status of ["checking", "disputed", "done", "late", "missed", "excused"] as const) {
       expect(row({ status }).ticks).toBe(false);
     }
-    expect(row({ status: "missed" })).toMatchObject({ circle: "open", circleLabel: "Missed", hazardEdge: true, trailing: "status" });
+    expect(row({ status: "missed" })).toMatchObject({ tick: "open", tickLabel: "Missed", hazardEdge: true, trailing: "status" });
   });
 
   it("offers Undo on your tick being checked, and a housemate's tick shows its mark and opens on Dispute", () => {
-    expect(row({ status: "checking" })).toMatchObject({ circle: "checking", trailing: "undo", focus: null });
+    expect(row({ status: "checking" })).toMatchObject({ tick: "checking", trailing: "undo", focus: null });
     expect(row({ userId: "megan", status: "checking" })).toMatchObject({
-      circle: "checking",
-      circleLabel: "Ticked, being checked",
+      tick: "checking",
+      tickLabel: "Ticked, being checked",
       trailing: "status",
       focus: "dispute",
     });
@@ -117,7 +117,7 @@ describe("johnRow", () => {
 
   it("asks for your vote on a dispute until you've given it; otherwise its flag says it, and the points trail", () => {
     const waiting = item("a", { userId: "priya", status: "disputed", dispute: dispute() });
-    expect(johnRow(waiting, "sam", now, ZONE, nameOf)).toMatchObject({ circle: "disputed", trailing: "vote", focus: "vote" });
+    expect(johnRow(waiting, "sam", now, ZONE, nameOf)).toMatchObject({ tick: "disputed", trailing: "vote", focus: "vote" });
     expect(row({ userId: "priya", status: "disputed", dispute: dispute({ myVote: false }) })).toMatchObject({
       trailing: "points",
       focus: "vote",
@@ -126,13 +126,13 @@ describe("johnRow", () => {
     expect(row({ status: "disputed", dispute: dispute() })).toMatchObject({ trailing: "points", focus: null });
   });
 
-  it("ends a finished John with what it earned, as the green circle says done; late keeps its mark, excused has nothing", () => {
-    expect(row({ status: "done", points: 3 })).toMatchObject({ circle: "done", circleLabel: "Done", trailing: "points", points: 3 });
+  it("ends a finished John with what it earned, as the green box says done; late keeps its mark, excused has nothing", () => {
+    expect(row({ status: "done", points: 3 })).toMatchObject({ tick: "done", tickLabel: "Done", trailing: "points", points: 3 });
     // Half, rounded down, for a late one.
-    expect(row({ status: "late", points: 3 })).toMatchObject({ circle: "done", circleLabel: "Done late", trailing: "status", points: 1 });
+    expect(row({ status: "late", points: 3 })).toMatchObject({ tick: "done", tickLabel: "Done late", trailing: "status", points: 1 });
     expect(row({ status: "excused", points: 3 })).toMatchObject({
-      circle: "excused",
-      circleLabel: "Skipped with immunity",
+      tick: "excused",
+      tickLabel: "Skipped with immunity",
       trailing: null,
       points: 0,
     });
@@ -151,8 +151,8 @@ describe("johnRow", () => {
       const john = item("a", { userId: "tom", status, dispute: status === "disputed" ? dispute({ myVote: false }) : null, standsAt: at(5) });
       const mine = johnRow(john, "tom", now, ZONE, nameOf);
       const theirs = johnRow(john, "sam", now, ZONE, nameOf);
-      expect([theirs.circle, theirs.meta, theirs.lid, theirs.points, theirs.hazardEdge]).toEqual([
-        mine.circle,
+      expect([theirs.tick, theirs.meta, theirs.lid, theirs.points, theirs.hazardEdge]).toEqual([
+        mine.tick,
         mine.meta,
         mine.lid,
         mine.points,

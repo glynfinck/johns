@@ -20,7 +20,7 @@ const STATUS = 120;
 /**
  * The laptop's Week: one row per John, the whole house in one group, within
  * the tab's 680, under the columns' names. Each row is the phone's Row with two columns of its own:
- * the circle (yours ticks from it), the John and its meta line (the column
+ * the tick box (yours ticks from it), the John and its meta line (the column
  * that flexes), whose it is, its points (earned, once it's finished), and
  * one cell for where it has got to or what to do about it (Undo, Vote).
  * Tapping a row opens the John sheet. Finished Johns fold away at the end.

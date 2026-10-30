@@ -7,7 +7,7 @@ import type { LiveStatus } from "./outcome";
 import { pointsEarned } from "./points";
 
 // A John as a row, the same wherever it's drawn: Today's rest of your week,
-// Week's groups and its laptop table. The circle and what it says, the meta
+// Week's groups and its laptop table. The tick box and what it says, the meta
 // line, and the one trailing item, from the kit's row map, for anyone's
 // John and whoever is looking; and the fold the finished ones go into.
 // Pure: `now` comes in, and times are in the house's zone.
@@ -23,11 +23,11 @@ export function johnKind(category: string): string {
 
 /** What a John's row shows and does. */
 export interface JohnRowPlan {
-  /** The leading circle (excused shows a shield instead). */
-  circle: "open" | "checking" | "done" | "disputed" | "excused";
-  /** What the circle says: the move when it ticks ("Mark Bins out done"), otherwise where the John has got to. */
-  circleLabel: string;
-  /** The circle ticks it: yours, and still to do (overdue too; a missed one never). */
+  /** The leading tick box (excused shows a shield instead). */
+  tick: "open" | "checking" | "done" | "disputed" | "excused";
+  /** What the tick box says: the move when it ticks ("Mark Bins out done"), otherwise where the John has got to. */
+  tickLabel: string;
+  /** The tick box ticks it: yours, and still to do (overdue too; a missed one never). */
   ticks: boolean;
   /** The meta line: the kind, then where it has got to; a dispute says who raised it instead. */
   meta: string;
@@ -35,7 +35,7 @@ export interface JohnRowPlan {
   lid: boolean;
   /**
    * The one trailing item. The points while it's upcoming (it has no mark),
-   * once it's done (the green circle says done) and while it's disputed
+   * once it's done (the green box says done) and while it's disputed
    * (the flag says that); its mark when due soon, being checked by the
    * house, late, overdue or missed; Undo on your own tick being checked;
    * Vote on a dispute waiting for yours; nothing once immunity excused it.
@@ -62,8 +62,8 @@ function waitsForYourVote(
   return tickerOf(item) !== viewerId && item.status === "disputed" && item.dispute !== null && item.dispute.myVote === null;
 }
 
-/** What a circle that doesn't tick says: where the John has got to, or just that it isn't done. */
-function circleSays(status: LiveStatus): string {
+/** What a tick box that doesn't tick says: where the John has got to, or just that it isn't done. */
+function tickSays(status: LiveStatus): string {
   switch (status) {
     case "checking":
     case "done":
@@ -85,7 +85,7 @@ function called(name: string | null): string {
 
 /**
  * One John's row, for whoever is looking (`viewerId`). Its meta line never
- * repeats what the circle or the trailing item already says: "Kitchen ·
+ * repeats what the tick box or the trailing item already says: "Kitchen ·
  * today 21:00", "Kitchen · was due Tue", "Bins · stands in 21h", "Floors ·
  * done Wed 21:00", "Disputed by Megan · 17h left".
  */
@@ -108,7 +108,7 @@ export function johnRow(
   // A cover still being checked: the coverer can take it back, anyone else can dispute it.
   const coverChecking = status === "covered" && !item.outcome;
   const myTick = tickerOf(item) === viewerId;
-  const circle: JohnRowPlan["circle"] =
+  const tick: JohnRowPlan["tick"] =
     status === "checking" || status === "disputed"
       ? status
       : status === "done" || status === "late"
@@ -124,12 +124,12 @@ export function johnRow(
     ? pointsEarned(status, item.crew.total) / item.crew.people.length
     : null;
   return {
-    circle,
-    circleLabel: ticks
+    tick,
+    tickLabel: ticks
       ? item.needsPhoto
         ? NEXT_UP_COPY.tickWithPhoto(item.name)
         : NEXT_UP_COPY.tick(item.name)
-      : circleSays(status),
+      : tickSays(status),
     ticks,
     meta,
     lid,

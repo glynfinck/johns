@@ -253,7 +253,7 @@ describe('on a phone', () => {
     expect(together.getByText(/with Sam/)).toBeOnTheScreen();
     expect(within(screen.getByTestId('person-priya')).getByText('0 of 1 done · 0 pts')).toBeOnTheScreen();
     expect(within(screen.getByTestId('person-priya')).queryByText('Garden tidy')).toBeNull();
-    // Ticked from its sheet, with who did it: no circle to tick it from.
+    // Ticked from its sheet, with who did it: no tick box to tick it from.
     await fireEvent.press(together.getByText('Garden tidy'));
     expect(mockOpen).toHaveBeenCalledWith('g1', undefined);
   });
@@ -278,7 +278,7 @@ describe('on a phone', () => {
     expect(within(row('Wipe the hob')).getByTestId('status-late')).toBeOnTheScreen();
   });
 
-  it('ticks your open John from its circle, and a photo John goes to the camera first', async () => {
+  it('ticks your open John from its tick box, and a photo John goes to the camera first', async () => {
     read.mockResolvedValue(
       busyWeek({
         assignments: [
@@ -304,7 +304,7 @@ describe('on a phone', () => {
     expect(await within(screen.getByTestId('person-priya')).findByText('This week has closed.')).toBeOnTheScreen();
   });
 
-  it("never ticks a housemate's John: its circle is only a picture, saying what Today's would", async () => {
+  it("never ticks a housemate's John: its tick box is only a picture, saying what Today's would", async () => {
     await open();
     const sam = screen.getByTestId('person-sam');
     expect(within(sam).queryByRole('checkbox')).toBeNull();
@@ -492,7 +492,7 @@ describe('on a phone', () => {
     );
     await open();
     const mop = row('Mop the floor');
-    // The flag on its circle and the meta line say it's disputed; its points trail, as on Today.
+    // The flag on its tick box and the meta line say it's disputed; its points trail, as on Today.
     expect(within(mop).getByText('Disputed by a former housemate · 5h left')).toBeOnTheScreen();
     expect(within(mop).queryByTestId('status-disputed')).toBeNull();
     expect(within(mop).getByText('2 pts')).toBeOnTheScreen();
@@ -746,7 +746,7 @@ describe('on a laptop', () => {
     expect(mockOpen).toHaveBeenLastCalledWith('a5', 'vote');
   });
 
-  it('ticks your John from its circle and opens the sheet from the row', async () => {
+  it('ticks your John from its tick box and opens the sheet from the row', async () => {
     await open();
     await fireEvent.press(within(row('Bins out')).getByRole('checkbox'));
     expect(markDone).toHaveBeenCalledWith('a1');

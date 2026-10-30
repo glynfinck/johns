@@ -8,13 +8,13 @@ import { DealButton } from '@/components/house/deal-button';
 import { InviteSheet } from '@/components/house-page/invite-sheet';
 import { Row, RowIcon } from '@/components/row';
 import { Lead, SectionLabel } from '@/components/text';
-import { TickCircle } from '@/components/tick-circle';
+import { TickBox } from '@/components/tick-box';
 import { useAskJonz } from '@/hooks/use-ask-jonz';
 import { SPACE } from '@/theme';
 
-/** A checklist step's circle: ticked once it's done. A picture, not a control: the row is the way in. */
+/** A checklist step's tick box: ticked once it's done. A picture, not a control: the row is the way in. */
 function Step({ done }: { done: boolean }) {
-  return <TickCircle state={done ? 'done' : 'open'} label={done ? NEXT_UP_COPY.stateLabel.done : NEXT_UP_COPY.stateLabel.open} />;
+  return <TickBox state={done ? 'done' : 'open'} label={done ? NEXT_UP_COPY.stateLabel.done : NEXT_UP_COPY.stateLabel.open} />;
 }
 
 /**

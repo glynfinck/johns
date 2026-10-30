@@ -17,6 +17,12 @@ const ICON: Record<Place, LucideIcon> = {
   house: HouseIcon,
 };
 
+/**
+ * The icons in the J's own line: heavier than lucide's, with square ends and
+ * round corners, as the mark's J is stroked (packages/core/src/mark.ts).
+ */
+const STROKE = { strokeWidth: 2.5, strokeLinecap: 'butt', strokeLinejoin: 'round' } as const;
+
 /** What the rail says about the house; null until the house has been read. */
 export interface ShellHouse {
   name: string;
@@ -63,7 +69,7 @@ export function HouseTabBar({
     return wide ? (
       <Pressable key={route.key} {...common} style={styles.railItem}>
         {focused ? <View aria-hidden style={[styles.railMarker, { backgroundColor: colors.hivis }]} /> : null}
-        <Icon size={24} color={ink} aria-hidden />
+        <Icon size={24} color={ink} {...STROKE} aria-hidden />
         <Text style={[type.body, styles.railLabel, { color: ink }]}>{label}</Text>
         <CountBadge count={badge} />
       </Pressable>
@@ -71,7 +77,7 @@ export function HouseTabBar({
       <Pressable key={route.key} {...common} style={styles.tab}>
         {focused ? <View aria-hidden style={[styles.marker, { backgroundColor: colors.hivis }]} /> : null}
         <View>
-          <Icon size={24} color={ink} aria-hidden />
+          <Icon size={24} color={ink} {...STROKE} aria-hidden />
           {badge > 0 ? (
             <View style={styles.badge}>
               <CountBadge count={badge} ring />

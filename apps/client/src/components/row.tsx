@@ -6,7 +6,7 @@ import { Pressable, StyleSheet, View } from 'react-native';
 
 import { Hairline, useRowInset } from '@/components/group';
 import { HazardTape } from '@/components/hazard-tape';
-import { LidDot } from '@/components/lid';
+import { LidBar } from '@/components/lid';
 import { Body, Meta, RowTitle } from '@/components/text';
 import { LEADING, ROW_GAP, ROW_MIN, SPACE, TABULAR, TAP, useTheme } from '@/theme';
 
@@ -22,7 +22,7 @@ export function useOnTint(): boolean {
 }
 
 /**
- * Whether a slot holds its own control (a TickCircle, a TextButton, a
+ * Whether a slot holds its own control (a TickBox, a TextButton, a
  * toggle), which keeps it out of the row's press target. A guess from the
  * element's own props; a wrapper that takes none of these says so with
  * Row's `leadingControl` or `trailingControl`.
@@ -34,7 +34,7 @@ function looksLikeControl(node: ReactNode): boolean {
 }
 
 /**
- * The one row, everywhere: a 32pt leading slot (a tick circle, an avatar or
+ * The one row, everywhere: a 32pt leading slot (a tick box, an avatar or
  * an icon), a one-line title (two where a name or a sentence must show whole,
  * as a John's or on the Wall: `titleLines`), one meta line (two where what
  * it ends with matters, a John's due time: `metaLines`), and one trailing item (a value, a chip
@@ -84,7 +84,7 @@ export function Row({
   sentence?: ReactNode;
   /** One line under the title, truncated: a string, or Meta text with spans of its own. */
   meta?: ReactNode;
-  /** A John's category: its lid dot leads the meta line. */
+  /** A John's category: its lid bar leads the meta line. */
   lid?: string;
   leading?: ReactNode;
   /** One thing: a value (a string is set as Body), a StatusMark, or a TextButton. */
@@ -151,7 +151,7 @@ export function Row({
             {/* The dot stays on the meta's first line. */}
             {lid != null ? (
               <View style={styles.lid}>
-                <LidDot category={lid} />
+                <LidBar category={lid} />
               </View>
             ) : null}
             <View style={styles.metaText}>

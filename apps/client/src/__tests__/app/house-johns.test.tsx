@@ -385,7 +385,7 @@ describe('an admin', () => {
     await fireEvent.press(form.getByRole('button', { name: new RegExp(`^${JOHN_LIST_COPY.kind}, `) }));
     const kinds = form.getAllByRole('radio').filter((r) => Object.values(CATEGORY_LABEL).includes(r.props.accessibilityLabel));
     expect(kinds).toHaveLength(6);
-    expect(form.queryAllByTestId('lid-dot', { includeHiddenElements: true })).toHaveLength(0);
+    expect(form.queryAllByTestId('lid-bar', { includeHiddenElements: true })).toHaveLength(0);
   });
 });
 

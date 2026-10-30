@@ -29,7 +29,7 @@ import { Row, RowIcon } from '@/components/row';
 import { StatusMark } from '@/components/status-mark';
 import { Body } from '@/components/text';
 import { TextButton } from '@/components/text-button';
-import { TickCircle } from '@/components/tick-circle';
+import { TickBox } from '@/components/tick-box';
 import { stakeKey } from '@/hooks/keys';
 import { useMove } from '@/hooks/use-move';
 import { useTick } from '@/hooks/use-tick';
@@ -49,9 +49,9 @@ export interface JohnRowContext {
 
 /**
  * One John as a row, wherever it's drawn (Today, Week's groups and its
- * table): its plan from core's johnRow (what the circle shows and whether
+ * table): its plan from core's johnRow (what the tick box shows and whether
  * it ticks, the meta line, the one trailing item, what the sheet opens on),
- * the circle, the trailing item, and opening its John sheet. `problem` is
+ * the tick box, the trailing item, and opening its John sheet. `problem` is
  * the refusal of a tick or an undo made here. An undo that would make the
  * John late (after its due time) asks first: `confirm` is that sheet, to
  * draw beside the row.
@@ -78,17 +78,17 @@ export function useJohnRow(item: BoardItem, context: JohnRowContext) {
     if (await undo.run(() => (item.coveredBy ? undoCover(item.id) : undoDone(item.id)))) setAsking(false);
   };
 
-  // A photo John's circle goes to the camera (the file chooser, on the web) first.
+  // A photo John's tick box goes to the camera (the file chooser, on the web) first.
   const leading = plan.ticks ? (
-    <TickCircle
+    <TickBox
       state={tick.busy ? 'busy' : 'open'}
-      label={plan.circleLabel}
+      label={plan.tickLabel}
       onPress={() => void (item.needsPhoto ? tick.tickWithPhoto('camera') : tick.tick())}
     />
-  ) : plan.circle === 'excused' ? (
+  ) : plan.tick === 'excused' ? (
     <RowIcon icon={ShieldIcon} />
   ) : (
-    <TickCircle state={plan.circle} label={plan.circleLabel} />
+    <TickBox state={plan.tick} label={plan.tickLabel} />
   );
 
   return {
@@ -156,7 +156,7 @@ function trailingFor(
 }
 
 /**
- * A John as a row: the circle (yours ticks from it), the name, the meta
+ * A John as a row: the tick box (yours ticks from it), the name, the meta
  * line, and one trailing item; the 4pt hazard edge when it's overdue or
  * missed. Tapping it opens the John sheet. A refusal shows under it, where
  * the move was made.

@@ -60,7 +60,7 @@ export const INSET = 16;
 export const TITLE_BAR = 52;
 /** The shortest row: one line. A row with a meta line comes out at about 64. */
 export const ROW_MIN = 56;
-/** A row's leading slot: a tick circle, an avatar or an icon. */
+/** A row's leading slot: a tick box, an avatar or an icon. */
 export const LEADING = 32;
 /** From the leading slot to the row's words, and between a row's other parts. */
 export const ROW_GAP = 12;

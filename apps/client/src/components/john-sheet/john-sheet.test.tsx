@@ -140,7 +140,7 @@ describe('the header', () => {
     await openOn('Open a1');
     expect(screen.getByRole('header', { name: 'Bins out' })).toBeOnTheScreen();
     expect(screen.getByText('Bins · 2 pts')).toBeOnTheScreen();
-    expect(screen.getByTestId('lid-dot', { includeHiddenElements: true })).toBeOnTheScreen();
+    expect(screen.getByTestId('lid-bar', { includeHiddenElements: true })).toBeOnTheScreen();
     expect(screen.getByTestId('john-sheet-when')).toHaveTextContent(/^Due .+ · late costs £1, missed £3$/);
   });
 
