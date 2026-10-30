@@ -132,3 +132,10 @@ the store accounts exist.
 
 Bounties, swapping Johns by agreement, pay links to settle up, a calendar
 feed, more than one house per person, and posts in the house group chat.
+
+## Contributing, security and licence
+
+Bug reports and ideas go in [issues](https://github.com/glynfinck/jonz/issues/new/choose);
+[CONTRIBUTING.md](CONTRIBUTING.md) says how to work on the code. Report
+security problems privately, as [SECURITY.md](SECURITY.md) says. The code is
+public to read, not to reuse: see [LICENSE](LICENSE).
