@@ -9,6 +9,7 @@ import { useEffect } from 'react';
 import { StyleSheet, View } from 'react-native';
 
 import { Button } from '@/components/button';
+import { NoticeBand } from '@/components/notice-banner';
 import { StagingRibbon } from '@/components/staging-ribbon';
 import { Body, Heading } from '@/components/text';
 import { LookProvider } from '@/hooks/look';
@@ -66,33 +67,35 @@ function Routes() {
   return (
     <>
       <StatusBar style={scheme === 'dark' ? 'light' : 'dark'} />
-      <StagingRibbon />
-      <Stack screenOptions={{ headerShown: false, contentStyle: { backgroundColor: colors.background } }}>
-        {/* Signed out: the front door and sign-in. */}
-        <Stack.Protected guard={!signedIn} redirectTo={home}>
-          <Stack.Screen name="index" />
-          <Stack.Screen name="signin" />
-        </Stack.Protected>
-        {/* Signed in, in no house: start one, or join by code. */}
-        <Stack.Protected guard={signedIn && !housed} redirectTo={home}>
-          <Stack.Screen name="welcome" />
-          <Stack.Screen name="house/new" />
-        </Stack.Protected>
-        {/* In a house: its screens, as tabs. */}
-        <Stack.Protected guard={signedIn && housed} redirectTo={home}>
-          <Stack.Screen name="(house)" />
-        </Stack.Protected>
-        {/* The old /wall, /stake and /table links are the router's redirects
-            (app.json), on to their places under House, whose guard then
-            applies. A link followed inside the app goes straight there, into
-            the house already open, never stacking a second one. */}
-        {/* A join link opens for anyone, and signs you in in place. */}
-        <Stack.Screen name="join/[joinCode]" />
-        {/* So do the Privacy Policy, the Terms, and a link to nowhere. */}
-        <Stack.Screen name="privacy" />
-        <Stack.Screen name="terms" />
-        <Stack.Screen name="+not-found" />
-      </Stack>
+      <NoticeBand>
+        <StagingRibbon />
+        <Stack screenOptions={{ headerShown: false, contentStyle: { backgroundColor: colors.background } }}>
+          {/* Signed out: the front door and sign-in. */}
+          <Stack.Protected guard={!signedIn} redirectTo={home}>
+            <Stack.Screen name="index" />
+            <Stack.Screen name="signin" />
+          </Stack.Protected>
+          {/* Signed in, in no house: start one, or join by code. */}
+          <Stack.Protected guard={signedIn && !housed} redirectTo={home}>
+            <Stack.Screen name="welcome" />
+            <Stack.Screen name="house/new" />
+          </Stack.Protected>
+          {/* In a house: its screens, as tabs. */}
+          <Stack.Protected guard={signedIn && housed} redirectTo={home}>
+            <Stack.Screen name="(house)" />
+          </Stack.Protected>
+          {/* The old /wall, /stake and /table links are the router's redirects
+              (app.json), on to their places under House, whose guard then
+              applies. A link followed inside the app goes straight there, into
+              the house already open, never stacking a second one. */}
+          {/* A join link opens for anyone, and signs you in in place. */}
+          <Stack.Screen name="join/[joinCode]" />
+          {/* So do the Privacy Policy, the Terms, and a link to nowhere. */}
+          <Stack.Screen name="privacy" />
+          <Stack.Screen name="terms" />
+          <Stack.Screen name="+not-found" />
+        </Stack>
+      </NoticeBand>
     </>
   );
 }

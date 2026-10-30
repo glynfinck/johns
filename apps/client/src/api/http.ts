@@ -1,7 +1,9 @@
 import { ApiError } from '@app/core';
-import { Platform } from 'react-native';
 
 import { getAccessToken } from './auth';
+import { apiBase } from './base';
+
+export { apiBase };
 
 // Calls to apps/api, for the few moves that need a server (AGENTS.md lists
 // them). Everything else goes straight to Supabase through RLS.
@@ -15,18 +17,6 @@ export class ApiRequestError extends Error {
     super(message);
     this.name = 'ApiRequestError';
   }
-}
-
-/**
- * Where apps/api answers. Unset on the web, it's the page's own origin:
- * jonz.app passes /api/* on to apps/api (apps/client/vercel.json), so
- * the browser needs no CORS. A phone has no origin, so there it must be set.
- */
-export function apiBase(): string {
-  const base = process.env.EXPO_PUBLIC_API_URL?.replace(/\/+$/, '');
-  if (base) return base;
-  if (Platform.OS === 'web') return '';
-  throw new Error('Missing EXPO_PUBLIC_API_URL. Copy .env.example to .env.local and fill it in.');
 }
 
 /**
