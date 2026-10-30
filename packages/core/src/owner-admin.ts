@@ -32,7 +32,13 @@ export const ADMIN_COPY = {
     [showing === 0 ? "Nothing showing" : `${showing} showing`, later > 0 ? `${later} starting later` : null]
       .filter(Boolean)
       .join(", "),
-  newNotice: "New notice",
+  tellEveryone: "Tell everyone",
+  /** The ways in to a new notice, named by what's happening, outages first. */
+  start: {
+    status: { title: "Something’s wrong", meta: "an outage" },
+    offer: { title: "An offer", meta: "a price or a deal" },
+    news: { title: "News", meta: "something new" },
+  } satisfies Record<NoticeKind, { title: string; meta: string }>,
   editNotice: "Edit notice",
   whatPeopleSee: "What people see now",
   nothingShowing: "Nothing is showing. People see the app as usual.",
@@ -67,6 +73,7 @@ export const ADMIN_COPY = {
   noAudit: "Nothing yet",
   noAuditBody: "Everything you do here is written down, and can’t be changed or removed.",
   loadOlder: "Load older",
+  loadingOlder: "Loading older entries",
   whatChanged: "What changed",
   appendOnly: "Entries can’t be changed or removed, not even by you.",
   you: "You",

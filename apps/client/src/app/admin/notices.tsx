@@ -1,12 +1,12 @@
 import { ADMIN_COPY, noticeState, noticeToShow, noticeWindow, type Notice, type NoticeKind } from '@app/core';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { MegaphoneIcon, PlusIcon } from 'lucide-react-native';
+import { MegaphoneIcon } from 'lucide-react-native';
 import { useState } from 'react';
 import { StyleSheet, View } from 'react-native';
 
 import { endNotice, ownerNotices, saveNotice, type SavedNotice } from '@/api/owner';
 import { NoticeEditor } from '@/components/admin/notice-editor';
-import { Button } from '@/components/button';
+import { StartTiles } from '@/components/admin/start-tiles';
 import { EmptyState } from '@/components/empty-state';
 import { Fold } from '@/components/fold';
 import { Group } from '@/components/group';
@@ -24,8 +24,9 @@ import { SPACE } from '@/theme';
 
 const KIND_LABEL: Record<NoticeKind, string> = { status: 'Status', offer: 'Offer', news: 'News' };
 
-/** What's being edited: a notice, a new one, or nothing. */
-type Chosen = Notice | 'new' | null;
+/** What's being edited: a notice, a new one of a kind, or nothing. */
+type Chosen = Notice | { start: NoticeKind } | null;
+const isNew = (chosen: Chosen): chosen is { start: NoticeKind } => chosen !== null && 'start' in chosen;
 
 /**
  * The owner's notices: what people see now, exactly as they see it, then
@@ -37,12 +38,7 @@ export default function NoticesPage() {
   return (
     <Screen
       spreads
-      bar={
-        <TitleBar
-          title="Notices"
-          right={<Button label={ADMIN_COPY.newNotice} variant="outline" icon={PlusIcon} onPress={() => setChosen('new')} testID="new-notice" />}
-        />
-      }
+      bar={<TitleBar title="Notices" />}
       testID="admin-notices"
     >
       <Notices chosen={chosen} choose={setChosen} />
@@ -75,12 +71,14 @@ function Notices({ chosen, choose }: { chosen: Chosen; choose: (next: Chosen) =>
   if (notices.isPending) return <Reading />;
   if (notices.isError) return <ReadFailed onRetry={() => void notices.refetch()} />;
 
-  const editing = chosen === 'new' ? null : chosen;
+  const editing = chosen === null || isNew(chosen) ? null : chosen;
+  const kind = isNew(chosen) ? chosen.start : 'status';
   const editor = (
     <NoticeEditor
       // A fresh form for each notice chosen.
-      key={chosen === 'new' ? 'new' : (chosen?.id ?? 'new')}
+      key={editing?.id ?? `new-${kind}`}
       notice={editing}
+      kind={kind}
       saving={save.isPending || end.isPending}
       onSave={(notice) => save.mutate(notice)}
       onEnd={editing && noticeState(editing, new Date()) !== 'ended' ? () => end.mutate(editing.id) : undefined}
@@ -94,7 +92,7 @@ function Notices({ chosen, choose }: { chosen: Chosen; choose: (next: Chosen) =>
         main={list}
         side={
           <View style={styles.side} testID="notice-side">
-            <Lead header>{editing ? ADMIN_COPY.editNotice : ADMIN_COPY.newNotice}</Lead>
+            <Lead header>{editing ? ADMIN_COPY.editNotice : ADMIN_COPY.start[kind].title}</Lead>
             {editor}
           </View>
         }
@@ -106,7 +104,7 @@ function Notices({ chosen, choose }: { chosen: Chosen; choose: (next: Chosen) =>
       {list}
       <Sheet
         visible={chosen !== null}
-        title={editing ? ADMIN_COPY.editNotice : ADMIN_COPY.newNotice}
+        title={editing ? ADMIN_COPY.editNotice : ADMIN_COPY.start[kind].title}
         onClose={() => choose(null)}
         testID="notice-sheet"
       >
@@ -128,7 +126,7 @@ function NoticeList({ notices, chosen, choose }: { notices: Notice[]; chosen: Ch
       title={notice.title}
       meta={noticeWindow(notice, now)}
       leading={<Chip label={KIND_LABEL[notice.kind]} tone={notice.kind === 'status' ? 'hazard' : 'quiet'} />}
-      tint={chosen !== null && chosen !== 'new' && chosen.id === notice.id}
+      tint={chosen !== null && !isNew(chosen) && chosen.id === notice.id}
       chevron
       onPress={() => choose(notice)}
       testID={`notice-row-${notice.id}`}
@@ -139,6 +137,10 @@ function NoticeList({ notices, chosen, choose }: { notices: Notice[]; chosen: Ch
       <Section label={ADMIN_COPY.whatPeopleSee} testID="what-people-see">
         {showing ? <NoticePreview notice={showing} /> : <Meta>{ADMIN_COPY.nothingShowing}</Meta>}
         <Meta>{ADMIN_COPY.onePerScreen}</Meta>
+      </Section>
+      {/* A new notice starts from what's happening, under what people see, not from a button up in the title bar. */}
+      <Section label={ADMIN_COPY.tellEveryone}>
+        <StartTiles chosen={isNew(chosen) ? chosen.start : null} onStart={(start) => choose({ start })} />
       </Section>
       {notices.length === 0 ? (
         <EmptyState icon={MegaphoneIcon} title={ADMIN_COPY.noNotices} body={ADMIN_COPY.noNoticesBody} />

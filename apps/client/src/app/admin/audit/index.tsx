@@ -1,5 +1,5 @@
 import { ADMIN_COPY, auditByDay, type AuditEntry } from '@app/core';
-import { useInfiniteQuery } from '@tanstack/react-query';
+import { useInfiniteQuery, type InfiniteData, type UseInfiniteQueryResult } from '@tanstack/react-query';
 import { router } from 'expo-router';
 import { ScrollTextIcon } from 'lucide-react-native';
 import { useState } from 'react';
@@ -17,27 +17,34 @@ import { useMembership } from '@/hooks/use-membership';
 
 /**
  * The audit log: everything done on the admin pages, newest first, by day.
- * On a laptop the entry chosen sits in the side panel; on a phone it opens
- * as its own page.
+ * It's a timeline, so older entries load as you scroll, 50 at a time, each
+ * read starting from the last entry shown; Load older does the same for a
+ * keyboard, or when the page is too short to scroll. On a laptop the entry
+ * chosen sits in the side panel; on a phone it opens as its own page.
  */
 export default function AuditPage() {
-  return (
-    <Screen spreads bar={<TitleBar title="Audit log" />} testID="admin-audit">
-      <AuditLog />
-    </Screen>
-  );
-}
-
-function AuditLog() {
-  const two = useColumns();
-  const ownerId = useMembership().session?.user.id ?? null;
-  const [chosen, setChosen] = useState<number | null>(null);
   const log = useInfiniteQuery({
     queryKey: ['owner-audit'],
     queryFn: ({ pageParam }) => auditPage(pageParam),
     initialPageParam: null as number | null,
     getNextPageParam: (last) => (last.more ? (last.entries[last.entries.length - 1]?.id ?? null) : null),
   });
+  const older = () => {
+    if (log.hasNextPage && !log.isFetchingNextPage) void log.fetchNextPage();
+  };
+  return (
+    <Screen spreads bar={<TitleBar title="Audit log" />} onNearEnd={older} testID="admin-audit">
+      <AuditLog log={log} older={older} />
+    </Screen>
+  );
+}
+
+type Log = UseInfiniteQueryResult<InfiniteData<Awaited<ReturnType<typeof auditPage>>>>;
+
+function AuditLog({ log, older }: { log: Log; older: () => void }) {
+  const two = useColumns();
+  const ownerId = useMembership().session?.user.id ?? null;
+  const [chosen, setChosen] = useState<number | null>(null);
   if (log.isPending) return <Reading />;
   if (log.isError) return <ReadFailed onRetry={() => void log.refetch()} />;
 
@@ -59,14 +66,10 @@ function AuditLog() {
           </Group>
         </Section>
       ))}
-      {log.hasNextPage ? (
-        <Button
-          label={ADMIN_COPY.loadOlder}
-          variant="outline"
-          disabled={log.isFetchingNextPage}
-          onPress={() => void log.fetchNextPage()}
-          testID="audit-older"
-        />
+      {log.isFetchingNextPage ? (
+        <Reading label={ADMIN_COPY.loadingOlder} />
+      ) : log.hasNextPage ? (
+        <Button label={ADMIN_COPY.loadOlder} variant="outline" onPress={older} testID="audit-older" />
       ) : null}
     </>
   );

@@ -38,9 +38,9 @@ interface Form {
   endsAt: string;
 }
 
-function formFor(notice: Notice | null, now: Date): Form {
+function formFor(notice: Notice | null, kind: NoticeKind, now: Date): Form {
   if (!notice) {
-    return { kind: 'status', title: '', body: '', linkLabel: '', linkUrl: '', starts: 'now', startsAt: '', ends: 'never', endsAt: '' };
+    return { kind, title: '', body: '', linkLabel: '', linkUrl: '', starts: 'now', startsAt: '', ends: 'never', endsAt: '' };
   }
   const later = Date.parse(notice.startsAt) > now.getTime();
   return {
@@ -64,17 +64,20 @@ function formFor(notice: Notice | null, now: Date): Form {
  */
 export function NoticeEditor({
   notice,
+  kind = 'status',
   saving,
   onSave,
   onEnd,
 }: {
   notice: Notice | null;
+  /** A new notice's kind to start with: the tile it was started from. */
+  kind?: NoticeKind;
   saving: boolean;
   onSave: (saved: SavedNotice) => void;
   onEnd?: () => void;
 }) {
   const [now] = useState(() => new Date());
-  const [form, setForm] = useState<Form>(() => formFor(notice, now));
+  const [form, setForm] = useState<Form>(() => formFor(notice, kind, now));
   const [tried, setTried] = useState(false);
   const set = (patch: Partial<Form>) => setForm((current) => ({ ...current, ...patch }));
 
@@ -105,13 +108,15 @@ export function NoticeEditor({
     });
   };
 
+  const presets = NOTICE_PRESETS.filter((preset) => preset.kind === form.kind);
+
   return (
     <View style={styles.form} testID="notice-editor">
-      {notice === null ? (
+      {notice === null && presets.length > 0 ? (
         <View style={styles.group}>
           <FieldLabel>{ADMIN_COPY.startFrom}</FieldLabel>
           <View style={styles.presets}>
-            {NOTICE_PRESETS.filter((preset) => preset.kind === 'status').map((preset) => (
+            {presets.map((preset) => (
               <Button
                 key={preset.label}
                 label={preset.label}

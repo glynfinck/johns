@@ -127,12 +127,29 @@ describe('notices on a phone', () => {
     jest.mocked(saveNotice).mockResolvedValue({ id: 'n9', copied: false });
     await renderPages(ROUTES, '/admin/notices');
     await untilRead();
-    await fireEvent.press(screen.getByTestId('new-notice'));
+    await fireEvent.press(screen.getByTestId('start-status'));
     const sheet = await screen.findByTestId('notice-sheet');
     await fireEvent.changeText(within(sheet).getByTestId('notice-title'), 'Ticks may be slow');
     await fireEvent.press(within(sheet).getByTestId('notice-save'));
     await waitFor(() => expect(saveNotice).toHaveBeenCalledWith(expect.objectContaining({ id: null, kind: 'status', title: 'Ticks may be slow' })));
     expect(await screen.findByText(ADMIN_COPY.copyFailed)).toBeVisible();
+  });
+});
+
+describe('starting a notice', () => {
+  it('starts from what is happening: Something is wrong offers the outage words, News starts as news', async () => {
+    await renderPages(ROUTES, '/admin/notices');
+    await untilRead();
+    await fireEvent.press(screen.getByTestId('start-status'));
+    let sheet = await screen.findByTestId('notice-sheet');
+    expect(within(sheet).getByText(ADMIN_COPY.start.status.title)).toBeVisible();
+    expect(within(sheet).getByText(ADMIN_COPY.startFrom)).toBeVisible();
+    await fireEvent.press(within(sheet).getByLabelText('Close'));
+    await fireEvent.press(screen.getByTestId('start-news'));
+    sheet = await screen.findByTestId('notice-sheet');
+    expect(within(sheet).getByRole('header', { name: ADMIN_COPY.start.news.title })).toBeVisible();
+    expect(within(sheet).getByRole('radio', { name: 'News' })).toBeChecked();
+    expect(within(sheet).queryByText(ADMIN_COPY.startFrom)).toBeNull();
   });
 });
 
@@ -145,7 +162,7 @@ describe('notices on a laptop', () => {
     expect(screen.getByTestId('admin-rail')).toBeVisible();
     expect(screen.queryByTestId('admin-tabs')).toBeNull();
     const side = screen.getByTestId('notice-side');
-    expect(within(side).getByText(ADMIN_COPY.newNotice)).toBeVisible();
+    expect(within(side).getByText(ADMIN_COPY.start.status.title)).toBeVisible();
     await fireEvent.press(screen.getByTestId('notice-row-n2'));
     expect(await within(screen.getByTestId('notice-side')).findByDisplayValue('Jonz is on iPhone and Android')).toBeVisible();
   });
@@ -171,5 +188,20 @@ describe('the audit log', () => {
     expect(screen.getByTestId('audit-detail-2')).toBeVisible();
     await fireEvent.press(screen.getByTestId('audit-row-1'));
     expect(await screen.findByTestId('audit-detail-1')).toBeVisible();
+  });
+
+  it('reads older entries as you scroll near the end, from the last one shown', async () => {
+    jest.mocked(auditPage).mockImplementation(async (before) =>
+      before === null ? { entries: [entry(80), entry(79)], more: true } : { entries: [entry(12)], more: false },
+    );
+    await renderPages(ROUTES, '/admin/audit');
+    await untilRead();
+    expect(screen.getByTestId('audit-older')).toBeVisible();
+    await fireEvent.scroll(screen.getByTestId('page-scroll'), {
+      nativeEvent: { contentOffset: { y: 300 }, contentSize: { height: 1200 }, layoutMeasurement: { height: 800 } },
+    });
+    await waitFor(() => expect(auditPage).toHaveBeenLastCalledWith(79));
+    expect(await screen.findByTestId('audit-row-12')).toBeVisible();
+    expect(screen.queryByTestId('audit-older')).toBeNull();
   });
 });
