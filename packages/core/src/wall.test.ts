@@ -167,6 +167,10 @@ describe("describeEvent", () => {
     expect(line("moving_out", { on: "2026-11-11" }, "ava")).toBe("You move out on Wed 11 Nov.");
     expect(line("moving_out", { on: null })).toBe("Ben is staying after all.");
     expect(line("moved_out", { who: "Ben Okafor" })).toBe("Ben moved out.");
+    // The buyer took the House Pass with them.
+    expect(line("moved_out", { who: "Ben Okafor", pass_until: "2026-11-29" })).toBe(
+      "Ben moved out, and their House Pass went with them. The house keeps the extras until Sun 29 Nov.",
+    );
     expect(line("month_closed", { month: "2026-10" }, null)).toBe("October 2026 is closed and the Stake is shared out.");
     expect(line("paid", { to: "ava", amount: 250 })).toBe("You got £2.50 from Ben.");
     // Moved into Splitwise rather than paid (houses.settle_in).

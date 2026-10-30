@@ -1970,6 +1970,13 @@ export const MOVING_COPY = {
   newHeading: "Your new place",
   newIntro: (house: string, johns: number) =>
     `${johns} ${johns === 1 ? "John" : "Johns"} from ${house} come with you. Tidy the list in Describe your house before you share the invite.`,
+  // The House Pass, when its buyer leaves (it moves with them).
+  passComes: (house: string, until: string | null) =>
+    until
+      ? `Your House Pass comes with you, onto the next house you start or join. ${house} keeps the extras until ${until}.`
+      : "Your House Pass comes with you, onto the next house you start or join.",
+  leavePass: (house: string) => `Leave it for ${house} instead`,
+  passLeft: (house: string) => `You left your House Pass with ${house}. It runs to the end of what you paid, then stops renewing.`,
   // The one reminder, two weeks after leaving.
   reminderTitle: "Settled into your new place?",
   reminderBody: `Bring ${APP_NAME} with you.`,

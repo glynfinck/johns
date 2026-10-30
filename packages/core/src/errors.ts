@@ -39,6 +39,7 @@ const MESSAGES: Record<string, string> = {
   away_over: "That time away has already finished.",
   moving_in_past: "Your moving-out day can be today at the earliest.",
   moving_too_far: "Pick a moving-out day within the next year.",
+  no_pass_to_leave: "There’s no House Pass with you to leave.",
   not_yours: "That isn’t yours to change.",
   cannot_undo: "That can’t be undone any more.",
   disputed: "Someone’s disputing this tick. Settle the dispute first.",

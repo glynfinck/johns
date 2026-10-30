@@ -3,6 +3,8 @@ import { timingSafeEqual } from "node:crypto";
 import { NextResponse } from "next/server";
 
 import { tickAll } from "@/lib/engine/tick";
+import { stopCarriedPasses } from "@/lib/pass/moves";
+import { passStripe } from "@/lib/pass/stripe";
 import { pushNotifier } from "@/lib/push";
 import { createAdminClient } from "@/lib/supabase/admin";
 
@@ -25,7 +27,17 @@ function authorised(request: Request): boolean {
 async function tick(request: Request) {
   if (!authorised(request)) return NextResponse.json({ error: "unauthorised" }, { status: 401 });
   const db = createAdminClient();
-  const results = await tickAll(db, new Date(), pushNotifier(db));
+  const now = new Date();
+  const results = await tickAll(db, now, pushNotifier(db));
+  // A House Pass its buyer left behind or carried too long stops renewing (lib/pass/moves.ts).
+  const stripe = passStripe();
+  if (stripe) {
+    try {
+      await stopCarriedPasses(db, stripe, now);
+    } catch (e) {
+      results.push({ houseId: "moving_pass", error: e instanceof Error ? e.message : String(e) });
+    }
+  }
   const failed = results.filter((r) => r.error);
   return NextResponse.json(
     { houses: results.length, failed: failed.length, errors: failed.slice(0, 5) },

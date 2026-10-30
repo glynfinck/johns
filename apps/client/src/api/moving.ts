@@ -17,6 +17,14 @@ export interface MovingOn {
   fromHouse: string;
   houseName: string;
   johns: number;
+  /**
+   * The House Pass you bought, if you did: 'waiting' while it comes with
+   * you, 'moved' once it's on your next house, 'left' when you left it with
+   * the old one, 'lapsed' when it waited too long. Null without one.
+   */
+  pass: 'waiting' | 'moved' | 'left' | 'lapsed' | null;
+  /** The day (the old house's own) its extras last until, once your Pass has gone with you. */
+  houseKeepsUntil: string | null;
 }
 
 /** What the Moving on screen offers, or null when you haven't just left a house. */
@@ -24,7 +32,21 @@ export async function movingOn(): Promise<MovingOn | null> {
   const { data, error } = await supabase.rpc('moving_on');
   if (error) throw error;
   const row = data?.[0];
-  return row ? { fromHouse: row.from_house, houseName: row.house_name, johns: Number(row.johns) } : null;
+  return row
+    ? {
+        fromHouse: row.from_house,
+        houseName: row.house_name,
+        johns: Number(row.johns),
+        pass: (row.pass_state as MovingOn['pass']) ?? null,
+        houseKeepsUntil: row.house_pass_until,
+      }
+    : null;
+}
+
+/** Leave the House Pass you're carrying with the house you left: it runs to the end of what was paid. */
+export async function leavePass() {
+  const { error } = await supabase.rpc('leave_pass');
+  if (error) throw new Error(humanError(error));
 }
 
 /** A new house with the John list of the one you left, with you as its admin. */

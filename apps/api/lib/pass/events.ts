@@ -6,7 +6,7 @@ import type Stripe from "stripe";
 import type { Stage } from "@/lib/env";
 import type { AdminClient } from "@/lib/supabase/admin";
 
-import type { PassStripe } from "./stripe";
+import type { PassStripe, SubscriptionView } from "./stripe";
 
 /**
  * Stripe's word on a House Pass purchase, carried to the house: the webhook
@@ -28,7 +28,7 @@ export async function applyPassEvent(
   event: Stripe.Event,
   now: Date,
   stage: Stage,
-): Promise<"founding" | "subscription" | "ignored"> {
+): Promise<"founding" | "subscription" | "carried" | "ignored"> {
   const ours = (metadata: Record<string, string> | null | undefined) => !metadata?.stage || metadata.stage === stage;
   switch (event.type) {
     case "checkout.session.completed":
@@ -106,9 +106,22 @@ async function syncSubscription(
 ) {
   const sub = await stripe.subscription(subscriptionId);
   if (!ours(sub.metadata)) return "ignored";
-  const houseId = sub.metadata.house_id;
   const plan = purchaseOfLookupKey(sub.lookupKey);
-  if (!houseId || !plan || plan === "founding") return "ignored";
+  if (!plan || plan === "founding") return "ignored";
+  // Whose it is now: the house paying with it; else its buyer, carrying it
+  // between houses (moved_on); else the house it was bought for. A Pass
+  // moves without Stripe hearing, so metadata.house_id is only the first.
+  const { data: paying } = await db
+    .from("house_pass_billing")
+    .select("house_id")
+    .eq("stripe_subscription", sub.id)
+    .maybeSingle();
+  if (!paying) {
+    const carried = await syncCarried(db, sub, plan);
+    if (carried) return carried;
+  }
+  const houseId = paying?.house_id ?? sub.metadata.house_id;
+  if (!houseId) return "ignored";
 
   const [{ data: house }, { data: billing }] = await Promise.all([
     db.from("houses").select("created_at, pass_plan, pass_until, pass_buyer").eq("id", houseId).maybeSingle(),
@@ -136,4 +149,29 @@ async function syncSubscription(
   await writeBilling(db, houseId, sub.customer, live ? sub.id : null);
   await writePass(db, houseId, next);
   return "subscription";
+}
+
+/**
+ * A subscription its buyer is carrying to their next house (the Pass moves
+ * with the buyer): renewals and endings are written on the move, for the
+ * house it goes on. "ignored" for one that was carried once and now belongs
+ * to nobody (left with a house that has bought its own since); null when it
+ * was never carried.
+ */
+async function syncCarried(db: AdminClient, sub: SubscriptionView, plan: "monthly" | "yearly") {
+  const { data: rows, error } = await db
+    .from("moving_pass_billing")
+    .select("move_id, moved_on(pass_state)")
+    .eq("stripe_subscription", sub.id);
+  if (error) throw new Error(`Couldn't read the moving House Pass: ${error.message}`);
+  if (!rows?.length) return null;
+  const carrying = rows.find((r) => r.moved_on?.pass_state === "waiting" || r.moved_on?.pass_state === "lapsed");
+  if (!carrying) return "ignored";
+  const until = subscriptionLive(sub.status) ? sub.periodEnd : (sub.endedAt ?? sub.periodEnd);
+  const { error: written } = await db
+    .from("moved_on")
+    .update({ pass_plan: plan, pass_until: new Date(until * 1000).toISOString() })
+    .eq("id", carrying.move_id);
+  if (written) throw new Error(`Couldn't write the moving House Pass: ${written.message}`);
+  return "carried";
 }
