@@ -119,8 +119,9 @@ export async function dealtHouseInClient(
       points: 2,
       // Sunday night: anything already due when the week is dealt gets a day's grace. Each keeps its day, so
       // the deal's one a day doesn't move any of them off Sunday, and the order a test names them in holds.
+      // An on-call John has no day to keep (johns_keep_day_on_call).
       due_dow: 7,
-      keep_day: true,
+      keep_day: !j.onCall,
       due_time: j.dueTime ?? "21:00",
       every_weeks: 1,
       anchor_week: weekIndex(week.startsOn),
