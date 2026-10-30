@@ -17,13 +17,14 @@ before the Pass existed is a Founding house, with the Pass for life.
 | --- | --- | --- | --- | --- |
 | Yearly (the default) | 49.99 | 39.99 | 49.99 | 64.99 |
 | Monthly | 5.99 | 4.99 | 5.99 | 7.99 |
-| Founding house, once, for the first 3 months after the store release | 49 | 39.99 | 49 | 64.99 |
+| Founding house, once, for the first 3 months after the store release | 69 | 54.99 | 69 | 89.99 |
 
 `PASS_PRICES` in `@app/core` (`pass.ts`) holds these until the stores give
 their own local prices.
 
-The yearly and monthly prices went up from $29.99 and $3.99 on 30 Oct 2026,
-before launch, so Founding is now a lifetime for the price of one year.
+All three went up on 30 Oct 2026, before launch: yearly from $29.99,
+monthly from $3.99 and Founding from $49, so Founding stays a little
+more than one year.
 Check on 1 May 2027: if fewer than 3% of houses pay after their free month,
 go down to $39.99 and £29.99 a year by moving the Stripe lookup keys.
 

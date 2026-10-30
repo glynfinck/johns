@@ -218,7 +218,7 @@ export const TERMS: LegalPage = {
     {
       heading: "The House Pass",
       body: [
-        "One person buys the House Pass for their whole house. It comes yearly or monthly, or, for houses that start at launch, as a one-off Founding Pass that lasts for the life of the house. The price, in your currency and with any tax, is shown before you pay; in the US it’s $49.99 a year, $5.99 a month, or $49 once.",
+        "One person buys the House Pass for their whole house. It comes yearly or monthly, or, for houses that start at launch, as a one-off Founding Pass that lasts for the life of the house. The price, in your currency and with any tax, is shown before you pay; in the US it’s $49.99 a year, $5.99 a month, or $69 once.",
         "A new house gets its first 30 days free. If you buy during them, the first charge waits until the free month ends.",
         "Yearly and monthly plans renew automatically at the same price until you cancel. Cancel any time from Manage plan on the House Pass page, or at link.com; the house keeps the Pass until the end of the period already paid for. If we ever change the price, we’ll tell you before your next renewal, and you can cancel before it applies.",
         "On the web, the Pass is sold through Link, Stripe’s checkout, which acts as the seller of record: it takes the payment, charges any sales tax or VAT, and sends the receipts. Your card statement shows the charge starting “LINK.COM*”. Link’s terms cover the payment itself.",

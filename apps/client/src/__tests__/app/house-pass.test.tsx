@@ -74,7 +74,7 @@ it('shows a house on its free month the plans in its own currency, Yearly first,
   expect(screen.getByTestId('pass-lead')).toHaveTextContent(PASS_COPY.lead);
   expect(screen.getByTestId('pass-line')).toHaveTextContent(PASS_COPY.trialLeft(12));
   const plans = within(screen.getByTestId('pass-plans'));
-  for (const price of ['£39.99 a year', '£4.99 a month', '£39.99 once']) expect(plans.getByText(price)).toBeOnTheScreen();
+  for (const price of ['£39.99 a year', '£4.99 a month', '£54.99 once']) expect(plans.getByText(price)).toBeOnTheScreen();
   expect(within(screen.getByTestId('plan-yearly')).getByText(PASS_COPY.yearly)).toBeOnTheScreen();
   expect(screen.getByTestId('pass-soon')).toHaveTextContent(PASS_COPY.buyingSoon);
 });

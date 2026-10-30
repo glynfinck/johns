@@ -119,16 +119,15 @@ describe("passOffers", () => {
     expect(offers[0].price).toBe("$49.99 a year");
     expect(offers[0].meta).toBe("About $4.17 a month");
     expect(offers[1].price).toBe("$5.99 a month");
-    expect(offers[2].price).toBe("$49 once");
+    expect(offers[2].price).toBe("$69 once");
   });
 
-  it("has a whole-minor-unit price in every house currency, Yearly cheaper than twelve months, Founding no dearer than a year", () => {
+  it("has a whole-minor-unit price in every house currency, Yearly cheaper than twelve months, Founding dearer than a year", () => {
     for (const currency of CURRENCIES) {
       const p = PASS_PRICES[currency];
       for (const minor of [p.yearly, p.monthly, p.founding]) expect(Number.isInteger(minor) && minor > 0).toBe(true);
       expect(p.yearly).toBeLessThan(p.monthly * 12);
-      // Founding is a lifetime for the price of about one year: the launch offer.
-      expect(p.founding).toBeLessThanOrEqual(p.yearly);
+      expect(p.founding).toBeGreaterThan(p.yearly);
       expect(passOffers(currency)).toHaveLength(3);
     }
   });
