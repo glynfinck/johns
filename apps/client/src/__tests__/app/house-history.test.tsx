@@ -81,11 +81,11 @@ it('tells every move a day at a time, with Undo only where it still reaches', as
   expect(within(mine).getByRole('button', { name: 'Undo: You ticked Bins out' })).toBeOnTheScreen();
   expect(flag).toHaveTextContent(/Sam flagged Recycling.*19:30/);
   expect(within(flag).getByTestId('history-undo')).toBeOnTheScreen();
-  expect(settled).toHaveTextContent(/Sam ticked Clean the bath.*09:12 · Can’t be undone now/);
+  expect(settled).toHaveTextContent(/Sam ticked Clean the bath.*09:12, Can’t be undone now/);
   expect(within(settled).queryByTestId('history-undo')).toBeNull();
 
   const [role] = within(yesterday).getAllByTestId('history-row');
-  expect(role).toHaveTextContent(/You made Sam an admin.*18:00 · Undone/);
+  expect(role).toHaveTextContent(/You made Sam an admin.*18:00, Undone/);
 });
 
 it('undoes one and reads History again', async () => {

@@ -85,9 +85,9 @@ function called(name: string | null): string {
 
 /**
  * One John's row, for whoever is looking (`viewerId`). Its meta line never
- * repeats what the tick box or the trailing item already says: "Kitchen ·
- * today 21:00", "Kitchen · was due Tue", "Bins · stands in 21h", "Floors ·
- * done Wed 21:00", "Disputed by Megan · 17h left".
+ * repeats what the tick box or the trailing item already says: "Kitchen,
+ * today 21:00", "Kitchen, was due Tue", "Bins, stands in 21h", "Floors,
+ * done Wed 21:00", "Disputed by Megan, 17h left".
  */
 export function johnRow(
   item: Pick<
@@ -184,7 +184,7 @@ function metaLine(
     ? CREW_COPY.with(andNames(others.map((id) => (id === viewerId ? WEEK_SUMMARY_COPY.byYou : called(nameOf(id))))))
     : null;
   const line = (...parts: string[]) => ({
-    meta: [johnKind(item.category), ...(flagged ? [flagged] : []), ...parts, ...(together ? [together] : [])].join(" · "),
+    meta: [johnKind(item.category), ...(flagged ? [flagged] : []), ...parts, ...(together ? [together] : [])].join(", "),
     lid: true,
   });
   const due = dueInLine(item.dueAt, now, zone);
@@ -201,7 +201,7 @@ function metaLine(
             : called(nameOf(dispute.raisedBy));
       const left =
         dispute.closesAt > now ? NEXT_UP_COPY.left(relative(dispute.closesAt, now).replace(/^in /, "")) : NEXT_UP_COPY.closingNow;
-      return { meta: `${JOHN_SHEET_COPY.disputedBy(by)} · ${left}`, lid: false };
+      return { meta: `${JOHN_SHEET_COPY.disputedBy(by)}, ${left}`, lid: false };
     }
     case "checking":
       if (!item.standsAt) return line();

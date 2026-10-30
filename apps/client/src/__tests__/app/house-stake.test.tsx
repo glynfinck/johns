@@ -87,7 +87,7 @@ it('starts on yours: your entries by month, each said in words', async () => {
     'September 2026',
   ]);
   const [missed, payment, share] = screen.getAllByTestId('ledger-entry');
-  expect(missed).toHaveTextContent(new RegExp(`Wipe the hob${STAKE_HISTORY_COPY.missed} · Sun 18 Oct−£3`));
+  expect(missed).toHaveTextContent(new RegExp(`Wipe the hob${STAKE_HISTORY_COPY.missed}, Sun 18 Oct−£3`));
   // A payment's amount unsigned: the ledger's sign would read being paid as a loss.
   expect(payment).toHaveTextContent(
     new RegExp(`${STAKE_HISTORY_COPY.paid('Sam', STAKE_HISTORY_COPY.yourself)}${STAKE_HISTORY_COPY.received('Mon 12 Oct')}£4$`),
@@ -99,8 +99,8 @@ it("shows the whole house's, each entry naming whose it is and a payment once", 
   await open();
   await fireEvent.press(screen.getByRole('radio', { name: STAKE_HISTORY_COPY.whole }));
   const entries = screen.getAllByTestId('ledger-entry');
-  expect(entries[0]).toHaveTextContent(new RegExp(`Bins outSam · ${STAKE_HISTORY_COPY.late.toLowerCase()} · Tue 20 Oct−£1`));
-  expect(entries[1]).toHaveTextContent(/Wipe the hobYou · missed · Sun 18 Oct−£3/);
+  expect(entries[0]).toHaveTextContent(new RegExp(`Bins outSam, ${STAKE_HISTORY_COPY.late.toLowerCase()}, Tue 20 Oct−£1`));
+  expect(entries[1]).toHaveTextContent(/Wipe the hobYou, missed, Sun 18 Oct−£3/);
   // A payment you're in, from your side.
   expect(entries[2]).toHaveTextContent(new RegExp(`${STAKE_HISTORY_COPY.paid('Sam', STAKE_HISTORY_COPY.yourself)}${STAKE_HISTORY_COPY.received('Mon 12 Oct')}£4$`));
   // The payment's other side isn't a second entry.

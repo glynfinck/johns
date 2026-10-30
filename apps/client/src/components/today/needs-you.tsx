@@ -9,7 +9,7 @@ import { Section } from '@/components/section';
 /**
  * Needs you: one row per dispute waiting for your vote ("Vote on Priya's
  * Clean the bathroom"), then one per housemate's John overdue past the
- * grace that you could cover ("Cover Sam's Bins", "Bins · was due Tue"),
+ * grace that you could cover ("Cover Sam's Bins", "Bins, was due Tue"),
  * the John's owner in the leading slot, opening the John sheet at the vote
  * or at "I did this". Nothing when nothing waits (always, in a house of
  * one).

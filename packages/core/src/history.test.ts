@@ -98,11 +98,11 @@ describe("historyMeta", () => {
     const [open] = historyItems([row()]);
     expect(historyMeta(open, "21:04", nameOf)).toBe("21:04");
     const [locked] = historyItems([row({ reach: null })]);
-    expect(historyMeta(locked, "21:04", nameOf)).toBe("21:04 · Can’t be undone now");
+    expect(historyMeta(locked, "21:04", nameOf)).toBe("21:04, Can’t be undone now");
     const [own] = historyItems([row({ undone_at: "2026-10-29T21:00:00Z", undone_by: "ben" })]);
-    expect(historyMeta(own, "21:04", nameOf)).toBe("21:04 · Undone");
+    expect(historyMeta(own, "21:04", nameOf)).toBe("21:04, Undone");
     const [admin] = historyItems([row({ undone_at: "2026-10-29T21:00:00Z", undone_by: "ava", reach: null })]);
-    expect(historyMeta(admin, "21:04", nameOf)).toBe("21:04 · Undone by You");
+    expect(historyMeta(admin, "21:04", nameOf)).toBe("21:04, Undone by You");
   });
 });
 

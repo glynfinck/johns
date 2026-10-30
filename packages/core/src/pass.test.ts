@@ -96,19 +96,19 @@ describe("passDaysLeft", () => {
 describe("passLine", () => {
   it("says each state in a few words", () => {
     expect(passLine(pass("founding", null), now, "Europe/London")).toBe("Founding house");
-    expect(passLine(pass("trial", "2026-11-22T12:00:00Z"), now, "Europe/London")).toBe("Free month · 12 days left");
-    expect(passLine(pass("trial", "2026-11-11T00:00:00Z"), now, "Europe/London")).toBe("Free month · 1 day left");
+    expect(passLine(pass("trial", "2026-11-22T12:00:00Z"), now, "Europe/London")).toBe("Free month, 12 days left");
+    expect(passLine(pass("trial", "2026-11-11T00:00:00Z"), now, "Europe/London")).toBe("Free month, 1 day left");
     expect(passLine(pass("trial", "2026-11-01T00:00:00Z"), now, "Europe/London")).toBe("Free month ended");
-    expect(passLine(pass("yearly", "2027-11-12T12:00:00Z"), now, "Europe/London")).toBe("Yearly · renews 12 Nov");
-    expect(passLine(pass("monthly", "2026-12-12T12:00:00Z"), now, "Europe/London")).toBe("Monthly · renews 12 Dec");
+    expect(passLine(pass("yearly", "2027-11-12T12:00:00Z"), now, "Europe/London")).toBe("Yearly, renews 12 Nov");
+    expect(passLine(pass("monthly", "2026-12-12T12:00:00Z"), now, "Europe/London")).toBe("Monthly, renews 12 Dec");
     expect(passLine(pass("monthly", "2026-11-02T12:00:00Z"), now, "Europe/London")).toBe("Ended 2 Nov");
   });
 
   it("names the day in the house's zone", () => {
     // 04:00 on the 13th in London is still the 12th in Vancouver.
     const late = pass("yearly", "2027-11-13T04:00:00Z");
-    expect(passLine(late, now, "Europe/London")).toBe("Yearly · renews 13 Nov");
-    expect(passLine(late, now, "America/Vancouver")).toBe("Yearly · renews 12 Nov");
+    expect(passLine(late, now, "Europe/London")).toBe("Yearly, renews 13 Nov");
+    expect(passLine(late, now, "America/Vancouver")).toBe("Yearly, renews 12 Nov");
   });
 });
 

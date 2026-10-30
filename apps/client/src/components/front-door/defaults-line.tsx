@@ -31,7 +31,7 @@ export function DefaultsLine({ parts, open, onToggle }: { parts: readonly string
     >
       {/* Each sits in the middle of a thumb-tall line, so a one-line summary and Change share a centre. */}
       <Meta numberOfLines={2} style={[styles.words, { paddingVertical: (TAP - (type.meta.lineHeight ?? 0)) / 2 }]} testID="house-defaults">
-        {parts.join(' · ')}
+        {parts.join(', ')}
       </Meta>
       <Text style={[type.body, styles.action, { color: colors.foreground, paddingVertical: (TAP - (type.body.lineHeight ?? 0)) / 2 }]}>
         {action}

@@ -38,7 +38,7 @@ export function TitleBar({
   ask = false,
 }: {
   title: string;
-  /** A pushed page's line under the Title ("Sam · admin"). */
+  /** A pushed page's line under the Title ("Sam, admin"). */
   sub?: string;
   /** The screen's own button, just inside the sparkles. */
   right?: ReactNode;
@@ -79,7 +79,7 @@ export function TitleBar({
 
 /**
  * What a tab says about itself, first on its page under the bar: Today's
- * date, House's "4 housemates · £20 a month each". Meta on the card's
+ * date, House's "4 housemates, £20 a month each". Meta on the card's
  * leading edge, 24 tall like Week's range line, with the page's first card
  * 8 under it rather than a section gap.
  */

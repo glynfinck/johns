@@ -217,8 +217,8 @@ describe("comingUp", () => {
     ];
     // This week starts Mon 26 Oct; the four after it run to Sun 29 Nov.
     expect(comingUp(johns, "2026-10-26", 1)).toEqual([
-      { johnId: "fridge", name: "Fridge deep clean", category: "kitchen", points: 8, date: "2026-11-07", meta: "Sat 7 Nov · every 3 months" },
-      { johnId: "gutters", name: "Clear the gutters", category: "kitchen", points: 15, date: "2026-11-21", meta: "Sat 21 Nov · every year" },
+      { johnId: "fridge", name: "Fridge deep clean", category: "kitchen", points: 8, date: "2026-11-07", meta: "Sat 7 Nov, every 3 months" },
+      { johnId: "gutters", name: "Clear the gutters", category: "kitchen", points: 15, date: "2026-11-21", meta: "Sat 21 Nov, every year" },
     ]);
   });
 

@@ -436,7 +436,7 @@ function DraftCard({
   const groups = draft.groups.filter((g) => changes.some((c) => c.kind !== 'remove' && c.john.group === g.name));
   const waiting = groups.filter((g) => g.memberIds.length === 0);
   const after = afterApplying(base, changes, keep);
-  const line = (j: DraftedJohn) => [scheduleLine({ ...j, dueDow: j.dueDow as IsoDow }, j.group), pointsLabel(j.points)].join(' · ');
+  const line = (j: DraftedJohn) => [scheduleLine({ ...j, dueDow: j.dueDow as IsoDow }, j.group), pointsLabel(j.points)].join(', ');
   return (
     <View style={styles.card} testID="draft-card">
       <Section
@@ -451,10 +451,10 @@ function DraftCard({
           const j = c.kind === 'remove' ? c.before : c.john;
           const meta =
             c.kind === 'remove'
-              ? `${HOUSE_DRAFT_COPY.removing} · ${line(j)}`
+              ? `${HOUSE_DRAFT_COPY.removing}, ${line(j)}`
               : c.kind === 'change'
-                ? `${line(j)} · ${changedLine(c.before, c.john)}`
-                : [editing ? HOUSE_DRAFT_COPY.adding : null, line(j), j.why || null].filter(Boolean).join(' · ');
+                ? `${line(j)}, ${changedLine(c.before, c.john)}`
+                : [editing ? HOUSE_DRAFT_COPY.adding : null, line(j), j.why || null].filter(Boolean).join(', ');
           return (
             <ChoiceRow
               key={c.key}
@@ -488,7 +488,7 @@ function DraftCard({
                 g.waitingFor.length > 0 ? HOUSE_DRAFT_COPY.waiting(namesList(g.waitingFor)) : null,
               ]
                 .filter(Boolean)
-                .join(' · ')}
+                .join(', ')}
               testID="draft-group"
             />
           ))}

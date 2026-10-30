@@ -39,11 +39,11 @@ export function WeekSummaryBar({
   tag,
   note,
 }: {
-  /** "19–25 Oct · ends tonight", from core's weekRangeLine. */
+  /** "19–25 Oct, ends tonight", from core's weekRangeLine. */
   range: string;
   summary: WeekSummary;
   filter: WeekPart | null;
-  /** Pressing a legend part. Without it the legend is one Meta line ("3 done · 5 to go"): Today's glance. */
+  /** Pressing a legend part. Without it the legend is one Meta line ("3 done, 5 to go"): Today's glance. */
   onFilter?: (part: WeekPart) => void;
   tag?: ReactNode;
   note?: string | null;
@@ -82,7 +82,7 @@ export function WeekSummaryBar({
           {summary.parts
             .filter((p) => p.count > 0)
             .map((p) => `${p.count} ${p.label}`)
-            .join(' · ')}
+            .join(', ')}
         </Meta>
       ) : (
         <View style={styles.legend}>

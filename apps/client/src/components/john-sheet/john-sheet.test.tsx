@@ -139,15 +139,15 @@ describe('the header', () => {
     expect(screen.queryByTestId('john-sheet-body')).toBeNull();
     await openOn('Open a1');
     expect(screen.getByRole('header', { name: 'Bins out' })).toBeOnTheScreen();
-    expect(screen.getByText('Bins · 2 pts')).toBeOnTheScreen();
+    expect(screen.getByText('Bins, 2 pts')).toBeOnTheScreen();
     expect(screen.getByTestId('lid-bar', { includeHiddenElements: true })).toBeOnTheScreen();
-    expect(screen.getByTestId('john-sheet-when')).toHaveTextContent(/^Due .+ · late costs £1, missed £3$/);
+    expect(screen.getByTestId('john-sheet-when')).toHaveTextContent(/^Due .+, late costs £1, missed £3$/);
   });
 
   it('says how often it comes round, from the John on the list it was dealt from', async () => {
     await show(house([binsOut({ john_id: 'j1', johns: { every_weeks: 2 } })]));
     await openOn('Open a1');
-    expect(screen.getByText('Bins · 2 pts · every 2 weeks')).toBeOnTheScreen();
+    expect(screen.getByText('Bins, 2 pts, every 2 weeks')).toBeOnTheScreen();
   });
 
   it("says no more than lateness can still cost the John's owner this month, once a screen has read the Stake", async () => {
@@ -167,7 +167,7 @@ describe('the header', () => {
       ),
     );
     await openOn('Open a1');
-    expect(screen.getByTestId('john-sheet-when')).toHaveTextContent(/^Due .+ · late costs £1, missed £2$/);
+    expect(screen.getByTestId('john-sheet-when')).toHaveTextContent(/^Due .+, late costs £1, missed £2$/);
   });
 });
 
@@ -343,7 +343,7 @@ describe('your open John', () => {
       expect(within(body).getByText(JOHN_SHEET_COPY.swapBody('Bins out'))).toBeOnTheScreen();
       // One choice of n, to a screen reader.
       expect(within(body).getByLabelText(JOHN_SHEET_COPY.swapFor)).toBeOnTheScreen();
-      const choice = within(body).getByRole('radio', { name: /^Clean the bath, Sam · / });
+      const choice = within(body).getByRole('radio', { name: /^Clean the bath, Sam, / });
       expect(choice).not.toBeChecked();
       expect(within(body).queryByTestId('swap-chosen')).toBeNull();
       expect(within(body).getByTestId('swap-them')).toBeDisabled();
@@ -367,14 +367,14 @@ describe('your open John', () => {
       await show(house([binsOut(), samsBath({ due_at: at(-5) })], priyaWith({ swapTokens: 1 })));
       const body = await openOn('Open a1 at swap');
       // Its status is said too, not just drawn.
-      const choice = within(body).getByRole('radio', { name: /^Clean the bath, Overdue, Sam · was due / });
+      const choice = within(body).getByRole('radio', { name: /^Clean the bath, Overdue, Sam, was due / });
       expect(within(choice).getByTestId('status-overdue')).toBeOnTheScreen();
       expect(within(within(body).getByTestId('swap-choice')).getByTestId('hazard-tape', { includeHiddenElements: true })).toBeOnTheScreen();
       await fireEvent.press(choice);
       // Picked, the tick takes the mark's place, and the word leads the meta line instead.
       expect(within(choice).queryByTestId('status-overdue')).toBeNull();
       expect(within(choice).getByTestId('swap-chosen')).toBeOnTheScreen();
-      expect(within(choice).getByText(/^Overdue · Sam · was due /)).toBeOnTheScreen();
+      expect(within(choice).getByText(/^Overdue, Sam, was due /)).toBeOnTheScreen();
     });
 
     it('goes back to the tick on Cancel', async () => {
@@ -426,19 +426,19 @@ describe('a John done together, and help', () => {
     expect(within(body).getByTestId('roll-call-sub')).toHaveTextContent('8 pts, shared by whoever did it');
     expect(within(call).getByRole('checkbox', { name: `You, ${CREW_COPY.youDidIt}` })).toBeDisabled();
     expect(within(call).getByRole('checkbox', { name: 'Sam' })).toBeChecked();
-    expect(within(call).getByTestId('roll-call-split')).toHaveTextContent('8 pts ÷ 2 · 4 pts each');
+    expect(within(call).getByTestId('roll-call-split')).toHaveTextContent('8 pts ÷ 2, 4 pts each');
     expect(within(body).queryByTestId('crew-part')).toBeNull();
 
     // Sam wasn't there: a miss for Sam, and Sam's part comes to whoever did it.
     await fireEvent.press(within(call).getByRole('checkbox', { name: 'Sam' }));
     expect(within(call).getByRole('checkbox', { name: `Sam, ${CREW_COPY.leftOff('Sam')}` })).not.toBeChecked();
-    expect(within(call).getByTestId('roll-call-split')).toHaveTextContent('8 pts ÷ 1 · 8 pts each');
+    expect(within(call).getByTestId('roll-call-split')).toHaveTextContent('8 pts ÷ 1, 8 pts each');
 
     // Megan helped.
     await fireEvent.press(within(call).getByRole('button', { name: CREW_COPY.addHelper }));
     await fireEvent.press(within(call).getByRole('button', { name: 'Megan' }));
     expect(within(call).getByRole('checkbox', { name: `Megan, ${CREW_COPY.helped}` })).toBeChecked();
-    expect(within(call).getByTestId('roll-call-split')).toHaveTextContent('8 pts ÷ 2 · 4 pts each');
+    expect(within(call).getByTestId('roll-call-split')).toHaveTextContent('8 pts ÷ 2, 4 pts each');
 
     await fireEvent.press(within(body).getByRole('button', { name: CREW_COPY.markDone }));
     expect(rollCall).toHaveBeenCalledWith('a1', ['priya', 'megan'], undefined);
@@ -459,10 +459,10 @@ describe('a John done together, and help', () => {
     const body = await openOn('Open a1');
     await fireEvent.press(within(body).getByRole('button', { name: CREW_COPY.withHelp }));
     const call = within(body).getByTestId('roll-call');
-    expect(within(call).getByTestId('roll-call-split')).toHaveTextContent('2 pts ÷ 1 · 2 pts each');
+    expect(within(call).getByTestId('roll-call-split')).toHaveTextContent('2 pts ÷ 1, 2 pts each');
     await fireEvent.press(within(call).getByRole('button', { name: CREW_COPY.addHelper }));
     await fireEvent.press(within(call).getByRole('button', { name: 'Sam' }));
-    expect(within(call).getByTestId('roll-call-split')).toHaveTextContent('2 pts ÷ 2 · 1 pt each');
+    expect(within(call).getByTestId('roll-call-split')).toHaveTextContent('2 pts ÷ 2, 1 pt each');
     await fireEvent.press(within(call).getByRole('button', { name: CREW_COPY.addHelper }));
     expect(within(call).getByText(CREW_COPY.noMoreHelpers)).toBeOnTheScreen();
     await fireEvent.press(within(body).getByRole('button', { name: CREW_COPY.markDone }));
@@ -490,7 +490,7 @@ describe('your tick, being checked', () => {
   it('says when it stands, and undoes it', async () => {
     await show(house([binsOut({ done_at: at(-1) })]));
     const body = await openOn('Open a1');
-    expect(within(body).getByTestId('ticked-line')).toHaveTextContent(/^You ticked this .+ · stands in 2[23]h$/);
+    expect(within(body).getByTestId('ticked-line')).toHaveTextContent(/^You ticked this .+, stands in 2[23]h$/);
     expect(within(body).queryByRole('button', { name: JOHN_COPY.markDone })).toBeNull();
     await fireEvent.press(within(body).getByRole('button', { name: JOHN_COPY.undo }));
     expect(undoDone).toHaveBeenCalledWith('a1');
@@ -543,7 +543,7 @@ describe("a housemate's John", () => {
   it('says who ticked it and when it stands, and disputes it in place', async () => {
     await show();
     const body = await openOn('Open a4');
-    expect(within(body).getByTestId('ticked-line')).toHaveTextContent(/^Sam ticked this .+ · stands in 2[23]h$/);
+    expect(within(body).getByTestId('ticked-line')).toHaveTextContent(/^Sam ticked this .+, stands in 2[23]h$/);
     await fireEvent.press(within(body).getByRole('button', { name: DISPUTE_COPY.open }));
     expect(within(body).getByTestId('dispute-reason')).toBeOnTheScreen();
     expect(within(body).getByTestId('send-dispute')).toBeOnTheScreen();
@@ -577,7 +577,7 @@ describe("covering a housemate's John", () => {
   it("says who covered it, and lets the coverer take it back", async () => {
     await show(house([binsOut(), samsBath({ due_at: at(-5), done_at: at(-1), covered_by: 'priya' })]));
     const body = await openOn('Open a4');
-    expect(within(body).getByTestId('ticked-line')).toHaveTextContent(/^You covered this .+ · stands in 2[23]h$/);
+    expect(within(body).getByTestId('ticked-line')).toHaveTextContent(/^You covered this .+, stands in 2[23]h$/);
     await fireEvent.press(within(body).getByRole('button', { name: JOHN_COPY.undo }));
     expect(undoCover).toHaveBeenCalledWith('a4');
     expect(undoDone).not.toHaveBeenCalled();
@@ -601,7 +601,7 @@ describe('a disputed John', () => {
     const body = await openOn('Open a4');
     expect(within(body).getByTestId('john-sheet-when')).toHaveTextContent('Disputed by Megan');
     expect(within(body).getByText('“Ring round the bath”')).toBeOnTheScreen();
-    expect(within(body).getByTestId('tally')).toHaveTextContent(/^0 fine · 1 not done · closes in 1[78]h$/);
+    expect(within(body).getByTestId('tally')).toHaveTextContent(/^0 fine, 1 not done, closes in 1[78]h$/);
     expect(within(body).getByRole('button', { name: DISPUTE_COPY.fine })).not.toBeSelected();
     expect(within(body).getByRole('button', { name: DISPUTE_COPY.notDone })).not.toBeSelected();
   });
@@ -623,7 +623,7 @@ describe('a disputed John', () => {
       ]),
     );
     const body = await openOn('Open a4');
-    expect(within(body).getByTestId('tally')).toHaveTextContent(/^1 fine · 1 not done/);
+    expect(within(body).getByTestId('tally')).toHaveTextContent(/^1 fine, 1 not done/);
     expect(within(body).getByRole('button', { name: DISPUTE_COPY.fine })).toBeSelected();
     expect(within(body).getByRole('button', { name: DISPUTE_COPY.notDone })).not.toBeSelected();
   });

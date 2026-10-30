@@ -444,7 +444,7 @@ export function draftChanges(base: HouseDraft | null, next: HouseDraft): DraftCh
   return changes;
 }
 
-/** What changed on a John, in words, for under its name: "was every week · was 3 pts". */
+/** What changed on a John, in words, for under its name: "was every week, was 3 pts". */
 export function changedLine(before: DraftedJohn, after: DraftedJohn): string {
   const parts: string[] = [];
   if (before.name !== after.name) parts.push(`was “${before.name}”`);
@@ -457,7 +457,7 @@ export function changedLine(before: DraftedJohn, after: DraftedJohn): string {
   if (before.crew !== after.crew) parts.push(`was ${CREW_COPY.choice(before.crew).toLocaleLowerCase()}`);
   if (before.group !== after.group) parts.push(`was ${before.group ?? "everyone’s"}`);
   if (before.category !== after.category) parts.push(`was ${CATEGORY_LABEL[before.category]}`);
-  return parts.join(" · ");
+  return parts.join(", ");
 }
 
 // --- Starter lists ------------------------------------------------------------

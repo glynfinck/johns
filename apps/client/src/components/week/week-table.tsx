@@ -55,7 +55,7 @@ export function WeekTable({ rows, folded, context }: { rows: BoardItem[]; folded
 function HeadRow() {
   const { type } = useTheme();
   const head = (label: string, style: StyleProp<TextStyle>) => (
-    <Text numberOfLines={1} style={[type.sectionLabel, styles.caps, style]}>
+    <Text numberOfLines={1} style={[type.caps, styles.caps, style]}>
       {label}
     </Text>
   );

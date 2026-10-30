@@ -203,7 +203,7 @@ export function resetSheet(preview: ResetPreview, w: ResetWords): ResetSheet {
     lines.push({
       key: "ticks",
       label: RESET_COPY.ticks(total),
-      value: ticks.map(([id, t]) => `${short(id)} ${t.ticks}`).join(" · "),
+      value: ticks.map(([id, t]) => `${short(id)} ${t.ticks}`).join(", "),
     });
   }
   if (w.kind !== "letoff") {
@@ -216,7 +216,7 @@ export function resetSheet(preview: ResetPreview, w: ResetWords): ResetSheet {
           ? "From the new deal"
           : moved.length === 0
             ? RESET_COPY.noChange
-            : `${moved.map(([id, t]) => `${short(id)} ${signedPoints(t.points ?? 0)}`).join(" · ")} ${RESET_COPY.pts}`,
+            : `${moved.map(([id, t]) => `${short(id)} ${signedPoints(t.points ?? 0)}`).join(", ")} ${RESET_COPY.pts}`,
     });
   }
   const back = people.reduce((n, [, t]) => n + Math.max(t.forfeit ?? 0, 0), 0);
@@ -333,7 +333,7 @@ export function resetItemLine(
     .map((l) => (l.key === "ticks" ? l.label : l.key === "cleared" ? `${l.value} cleared` : l.value));
   return {
     title: sheet.confirm,
-    meta: parts.length > 0 ? parts.join(" · ") : RESET_COPY.noChange,
+    meta: parts.length > 0 ? parts.join(", ") : RESET_COPY.noChange,
     told: item.preview.told.filter((id) => id !== w.viewerId),
   };
 }

@@ -86,7 +86,7 @@ function Admins({ houseId, userId, view }: { houseId: string; userId: string; vi
           <Row
             key={m.userId}
             leading={<Avatar name={m.name} me={m.userId === userId} />}
-            title={m.userId === userId ? `${m.name} · ${ADMINS_COPY.started}` : m.name}
+            title={m.userId === userId ? ADMINS_COPY.you(m.name) : m.name}
             trailing={
               amAdmin && admins.length > 1 && m.userId !== userId ? (
                 <TextButton

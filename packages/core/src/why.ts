@@ -102,7 +102,7 @@ function togetherPart(
           userId: w.userId,
           name: say.Who(w.userId),
           value: formatBalance(w.standing),
-          meta: [tos.includes(w.userId) ? WHY_COPY.dealtIt : null, w.last ? WHY_COPY.hadItLast : null].filter((m) => m !== null).join(" · ") || null,
+          meta: [tos.includes(w.userId) ? WHY_COPY.dealtIt : null, w.last ? WHY_COPY.hadItLast : null].filter((m) => m !== null).join(", ") || null,
           chosen: tos.includes(w.userId),
         }))
       : [];
@@ -158,7 +158,7 @@ function dealtPart(
             userId: w.userId,
             name: say.Who(w.userId),
             value: formatBalance(w.standing),
-            meta: meta.length ? meta.join(" · ") : null,
+            meta: meta.length ? meta.join(", ") : null,
             chosen: w.userId === to,
           };
         })

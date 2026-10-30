@@ -469,7 +469,7 @@ describe("houseSetupValues", () => {
   it("waits for each read", () => {
     expect(houseSetupValues(base)).toEqual({
       johns: null,
-      rules: "£20 stake · £1 late · £3 missed",
+      rules: "£20 stake, £1 late, £3 missed",
       away: null,
       groups: null,
       showGroups: false,
@@ -478,19 +478,19 @@ describe("houseSetupValues", () => {
 
   it("counts the Johns and their effort in an average week", () => {
     const weekly = Array.from({ length: 13 }, () => ({ points: 2, everyWeeks: 1 }));
-    expect(houseSetupValues({ ...base, johns: weekly }).johns).toBe("13 · about 26 pts a week");
-    expect(houseSetupValues({ ...base, johns: [{ points: 3, everyWeeks: 2 }] }).johns).toBe("1 · about 2 pts a week");
-    expect(houseSetupValues({ ...base, johns: [{ points: 1, everyWeeks: 1 }] }).johns).toBe("1 · about 1 pt a week");
-    expect(houseSetupValues({ ...base, johns: [{ points: 1, everyWeeks: 4 }] }).johns).toBe("1 · less than 1 pt a week");
+    expect(houseSetupValues({ ...base, johns: weekly }).johns).toBe("13 Johns, about 26 pts a week");
+    expect(houseSetupValues({ ...base, johns: [{ points: 3, everyWeeks: 2 }] }).johns).toBe("1 John, about 2 pts a week");
+    expect(houseSetupValues({ ...base, johns: [{ points: 1, everyWeeks: 1 }] }).johns).toBe("1 John, about 1 pt a week");
+    expect(houseSetupValues({ ...base, johns: [{ points: 1, everyWeeks: 4 }] }).johns).toBe("1 John, less than 1 pt a week");
     expect(houseSetupValues({ ...base, johns: [] }).johns).toBe(HOUSE_LOWER_COPY.noJohns);
   });
 
   it("states the money rules, pence included, and a house with no stake", () => {
     expect(houseSetupValues({ ...base, rules: { ...RULES, lateForfeitMinor: 50, missedForfeitMinor: 0 } }).rules).toBe(
-      "£20 stake · £0.50 late · £0 missed",
+      "£20 stake, £0.50 late, £0 missed",
     );
     expect(houseSetupValues({ ...base, rules: { ...RULES, stakeMinor: 0, currency: "EUR" } }).rules).toBe(
-      "No stake · €1 late · €3 missed",
+      "No stake, €1 late, €3 missed",
     );
   });
 

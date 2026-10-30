@@ -81,7 +81,7 @@ describe("johnRow", () => {
       tick: "open",
       tickLabel: "Mark a done",
       ticks: true,
-      meta: "Kitchen · tomorrow 21:00",
+      meta: "Kitchen, tomorrow 21:00",
       lid: true,
       trailing: "status",
       points: 2,
@@ -166,51 +166,51 @@ describe("johnRow's meta line", () => {
   const meta = (overrides: Partial<BoardItem>, viewer = "sam") => row(overrides, viewer).meta;
 
   it("leads with the kind, then when it's due, mid-sentence", () => {
-    expect(meta({ category: "bathroom", status: "due-soon", dueAt: new Date("2026-10-22T20:00:00Z") })).toBe("Bathroom · today 21:00");
-    expect(meta({ category: "floors", dueAt: new Date("2026-10-23T06:30:00Z") })).toBe("Floors · tomorrow 07:30");
+    expect(meta({ category: "bathroom", status: "due-soon", dueAt: new Date("2026-10-22T20:00:00Z") })).toBe("Bathroom, today 21:00");
+    expect(meta({ category: "floors", dueAt: new Date("2026-10-23T06:30:00Z") })).toBe("Floors, tomorrow 07:30");
   });
 
   it("says when an overdue or missed John was due, short enough to sit beside its mark", () => {
-    expect(meta({ category: "other", status: "overdue", dueAt: new Date("2026-10-20T20:00:00Z") })).toBe("Other · was due Tue");
-    expect(meta({ status: "missed", dueAt: new Date("2026-10-21T22:30:00Z") })).toBe("Kitchen · was due Wed");
-    expect(meta({ status: "overdue", dueAt: new Date("2026-10-22T08:00:00Z") })).toBe("Kitchen · was due 09:00");
+    expect(meta({ category: "other", status: "overdue", dueAt: new Date("2026-10-20T20:00:00Z") })).toBe("Other, was due Tue");
+    expect(meta({ status: "missed", dueAt: new Date("2026-10-21T22:30:00Z") })).toBe("Kitchen, was due Wed");
+    expect(meta({ status: "overdue", dueAt: new Date("2026-10-22T08:00:00Z") })).toBe("Kitchen, was due 09:00");
     // A week or more back, the date too.
-    expect(meta({ status: "missed", dueAt: new Date("2026-10-15T08:00:00Z") })).toBe("Kitchen · was due Thu 15 Oct");
+    expect(meta({ status: "missed", dueAt: new Date("2026-10-15T08:00:00Z") })).toBe("Kitchen, was due Thu 15 Oct");
   });
 
   it("says when a tick stands, yours or a housemate's", () => {
-    expect(meta({ userId: "megan", category: "bins", status: "checking", standsAt: at(21) })).toBe("Bins · stands in 21h");
-    expect(meta({ status: "checking", standsAt: at(0.5) })).toBe("Kitchen · stands in 30 min");
-    expect(meta({ status: "checking", standsAt: at(-1) })).toBe("Kitchen · stands any minute");
+    expect(meta({ userId: "megan", category: "bins", status: "checking", standsAt: at(21) })).toBe("Bins, stands in 21h");
+    expect(meta({ status: "checking", standsAt: at(0.5) })).toBe("Kitchen, stands in 30 min");
+    expect(meta({ status: "checking", standsAt: at(-1) })).toBe("Kitchen, stands any minute");
     expect(meta({ status: "checking", standsAt: null })).toBe("Kitchen");
   });
 
   it("says who disputed it and how long is left, with no lid dot", () => {
     expect(row({ userId: "priya", status: "disputed", dispute: dispute() })).toMatchObject({
-      meta: "Disputed by Megan · 17h left",
+      meta: "Disputed by Megan, 17h left",
       lid: false,
     });
     expect(meta({ userId: "priya", status: "disputed", dispute: dispute({ raisedBy: "sam", myVote: true }) })).toBe(
-      "Disputed by you · 17h left",
+      "Disputed by you, 17h left",
     );
     expect(meta({ status: "disputed", dispute: dispute({ raisedBy: null, closesAt: at(-1) }) })).toBe(
-      "Disputed by a former housemate · closing now",
+      "Disputed by a former housemate, closing now",
     );
     expect(row({ status: "disputed", dispute: null })).toMatchObject({ meta: "Disputed", lid: false });
   });
 
   it("says when a finished one was done, and that immunity excused one", () => {
-    expect(meta({ status: "done", doneAt: new Date("2026-10-21T13:10:00Z") })).toBe("Kitchen · done yesterday 14:10");
-    expect(meta({ status: "late", doneAt: new Date("2026-10-12T13:10:00Z") })).toBe("Kitchen · done Mon 12 Oct");
-    expect(meta({ status: "late", doneAt: null, dueAt: new Date("2026-10-22T08:00:00Z") })).toBe("Kitchen · today 09:00");
-    expect(meta({ status: "excused" })).toBe("Kitchen · skipped with immunity");
+    expect(meta({ status: "done", doneAt: new Date("2026-10-21T13:10:00Z") })).toBe("Kitchen, done yesterday 14:10");
+    expect(meta({ status: "late", doneAt: new Date("2026-10-12T13:10:00Z") })).toBe("Kitchen, done Mon 12 Oct");
+    expect(meta({ status: "late", doneAt: null, dueAt: new Date("2026-10-22T08:00:00Z") })).toBe("Kitchen, today 09:00");
+    expect(meta({ status: "excused" })).toBe("Kitchen, skipped with immunity");
   });
 
   it("says a John pulled forward by time away is due before they go", () => {
     const moved = { status: "due-soon" as const, dueAt: new Date("2026-10-22T22:59:00Z"), movedFrom: at(48) };
-    expect(meta(moved)).toBe("Kitchen · today 23:59, before you go");
-    expect(meta({ ...moved, userId: "megan" })).toBe("Kitchen · today 23:59, before Megan goes");
-    expect(meta({ ...moved, userId: "cal" })).toBe("Kitchen · today 23:59, before a former housemate goes");
+    expect(meta(moved)).toBe("Kitchen, today 23:59, before you go");
+    expect(meta({ ...moved, userId: "megan" })).toBe("Kitchen, today 23:59, before Megan goes");
+    expect(meta({ ...moved, userId: "cal" })).toBe("Kitchen, today 23:59, before a former housemate goes");
   });
 });
 

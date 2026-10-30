@@ -96,7 +96,7 @@ function PersonRecord({ houseId, userId, personId, span }: { houseId: string; us
           </Section>
           {next ? (
             <Section label={RECORD_COPY.next} testID="record-next">
-              <Row title={next.title} meta={next.meta.map((m) => m.text).join(' · ')} titleLines={2} metaLines={2} />
+              <Row title={next.title} meta={next.meta.map((m) => m.text).join(', ')} titleLines={2} metaLines={2} />
             </Section>
           ) : null}
         </>
@@ -117,9 +117,9 @@ function LineRows({ line, you, weeks }: { line: BreakdownLine; you: boolean; wee
     line.key === 'share'
       ? RECORD_COPY.shareMeta(weeks)
       : line.key === 'missed'
-        ? `${RECORD_COPY.lineMeta(line.johns.length)} · ${RECORD_COPY.missedMeta}`
+        ? `${RECORD_COPY.lineMeta(line.johns.length)}, ${RECORD_COPY.missedMeta}`
         : line.key === 'open'
-          ? `${RECORD_COPY.lineMeta(line.johns.length)} · ${RECORD_COPY.openMeta}`
+          ? `${RECORD_COPY.lineMeta(line.johns.length)}, ${RECORD_COPY.openMeta}`
           : RECORD_COPY.lineMeta(line.johns.length);
   return (
     <>
@@ -135,7 +135,7 @@ function LineRows({ line, you, weeks }: { line: BreakdownLine; you: boolean; wee
             <Row
               key={j.id}
               title={j.name}
-              meta={[j.day, j.note].filter(Boolean).join(' · ')}
+              meta={[j.day, j.note].filter(Boolean).join(', ')}
               trailing={<Meta>{String(j.points)}</Meta>}
               testID="record-john"
             />

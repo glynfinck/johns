@@ -48,7 +48,7 @@ export function Lead({ children, numberOfLines, style, testID, header = false }:
 }
 
 /**
- * A section's name, 12 ExtraBold caps in muted ink: a heading, three words at
+ * A section's name, 15 ExtraBold in sentence case: a heading, three words at
  * most. `accessibilityLabel` when the heading should say more than it shows
  * (Section's count).
  */
@@ -94,7 +94,7 @@ export function Body({ children, muted, numberOfLines, style, testID }: TextProp
   );
 }
 
-/** A subtitle or secondary line, 14 Regular in muted ink. Segments go between " · ". */
+/** A subtitle or secondary line, 14 Regular in muted ink. Segments go between commas, never dots. */
 export function Meta({ children, numberOfLines, style, testID }: TextProps) {
   const { type } = useTheme();
   return (

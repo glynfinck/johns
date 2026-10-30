@@ -52,7 +52,7 @@ export function OnCall({
               key={item.johnId}
               title={item.name}
               lid={item.category}
-              meta={`${withMe ? ON_CALL_COPY.flaggedYou : ON_CALL_COPY.flagged(nameOf(flag.userId))} · due ${dueInLine(flag.dueAt, now, rules.timezone)}`}
+              meta={`${withMe ? ON_CALL_COPY.flaggedYou : ON_CALL_COPY.flagged(nameOf(flag.userId))}, due ${dueInLine(flag.dueAt, now, rules.timezone)}`}
               chevron
               onPress={() => sheet.open(flag.id)}
               testID="on-call-flagged"
@@ -60,7 +60,7 @@ export function OnCall({
           );
         }
         const mine = item.holderId === userId;
-        const meta = `${mine ? ON_CALL_COPY.youreOnCall : ON_CALL_COPY.holder(nameOf(item.holderId))} · ${ON_CALL_COPY.times(item.times)}`;
+        const meta = `${mine ? ON_CALL_COPY.youreOnCall : ON_CALL_COPY.holder(nameOf(item.holderId))}, ${ON_CALL_COPY.times(item.times)}`;
         // The flag's id, once raised: what the toast's Undo takes back.
         const raised = { id: '' };
         const flagIt = async () => {

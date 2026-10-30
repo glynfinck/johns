@@ -119,15 +119,15 @@ it('groups the Johns by kind, each with how often, when, the photo and its point
   expect(within(screen.getByTestId('kind-bathroom')).getByText(SETUP_COPY.kind('Bathroom', 1))).toBeOnTheScreen();
   expect(within(screen.getByTestId('kind-bins')).getByText(SETUP_COPY.kind('Bins & recycling', 1))).toBeOnTheScreen();
   const [bath, bins] = screen.getAllByTestId('john-def');
-  expect(bath).toHaveTextContent(/Bathroom.*Every 2 weeks · Sun 21:00 · photo.*4 pts/);
-  expect(bins).toHaveTextContent(/Bins.*Every week · Thu 07:00.*1 pt/);
+  expect(bath).toHaveTextContent(/Bathroom.*Every 2 weeks, Sun 21:00, photo.*4 pts/);
+  expect(bins).toHaveTextContent(/Bins.*Every week, Thu 07:00.*1 pt/);
   expect(screen.getByText(JOHN_LIST_COPY.perWeek(3))).toBeOnTheScreen();
 });
 
 it('says which group shares a John', async () => {
   (loadJohnList as jest.Mock).mockResolvedValue({ johns: [{ ...BATH, groupId: 'g1' }], groups: [UPSTAIRS] });
   await open();
-  expect(screen.getByTestId('john-def')).toHaveTextContent(/photo · Upstairs bathroom/);
+  expect(screen.getByTestId('john-def')).toHaveTextContent(/photo, Upstairs bathroom/);
 });
 
 it('starts an empty house off with the Johns that cause arguments', async () => {
@@ -345,7 +345,7 @@ describe('an admin', () => {
 
   it('opens a John to edit it, or to take it off the list', async () => {
     await open();
-    await fireEvent.press(screen.getByRole('button', { name: /^Edit Bins, Every week · Thu 07:00, 1 pt$/ }));
+    await fireEvent.press(screen.getByRole('button', { name: /^Edit Bins, Every week, Thu 07:00, 1 pt$/ }));
     const form = within(screen.getByTestId('john-form'));
     expect(form.getByTestId('john-name')).toHaveDisplayValue('Bins');
     expect(form.getByRole('button', { name: `${JOHN_LIST_COPY.kind}, Bins & recycling` })).toBeOnTheScreen();

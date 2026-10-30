@@ -258,7 +258,7 @@ export interface ComingUp {
   points: number;
   /** The local date it lands on. */
   date: string;
-  /** Its row's meta line: "Sat 7 Nov · every 3 months". */
+  /** Its row's meta line: "Sat 7 Nov, every 3 months". */
   meta: string;
 }
 

@@ -214,7 +214,7 @@ export interface NextUpMeta {
 }
 
 /**
- * "Bathroom" and "due today 21:00 · £1 if late"; overdue, "Kitchen" and
+ * "Bathroom" and "due today 21:00, £1 if late"; overdue, "Kitchen" and
  * "Overdue since Tue" with "£1 now, £3 if missed". `room` caps the costs
  * at what's left of your stake (forfeitRoom).
  */
@@ -231,7 +231,7 @@ export function nextUpMeta(item: BoardItem, rules: HouseRules, now: Date, room: 
   const due = NEXT_UP_COPY.due(dueInLine(item.dueAt, now, zone)) + (item.movedFrom ? `, ${NEXT_UP_COPY.beforeYouGo}` : "");
   const { late, missed } = forfeits(rules, room);
   const cost = late ? NEXT_UP_COPY.ifLate(late) : missed ? NEXT_UP_COPY.ifMissed(missed) : null;
-  return { kind, due: [due, cost].filter(Boolean).join(" · "), overdue: null };
+  return { kind, due: [due, cost].filter(Boolean).join(", "), overdue: null };
 }
 
 /** "1st", "2nd", "3rd", "4th", "11th", "22nd". */
@@ -253,7 +253,7 @@ function monthName(month: string): string {
 }
 
 /**
- * Today's one standing line: "Joint 2nd this week · up £4.01 in October".
+ * Today's one standing line: "Joint 2nd this week, up £4.01 in October".
  * The place is from this week's Table (joint on a tie), left out while
  * nobody has scored or there's nobody to beat; the money is your net this
  * month from the Stake's projection, left out until it's read or while
@@ -283,7 +283,7 @@ export function standingLine(input: {
         : net < 0
           ? NEXT_UP_COPY.down(formatMoney(-net, currency), month)
           : NEXT_UP_COPY.square(month);
-  const line = [place, money].filter(Boolean).join(" · ");
+  const line = [place, money].filter(Boolean).join(", ");
   return line ? line[0].toUpperCase() + line.slice(1) : null;
 }
 
@@ -316,12 +316,12 @@ export function voteTitle(item: Pick<BoardItem, "userId" | "name">, people: read
   return NEXT_UP_COPY.voteOn(owner ? firstName(owner.name) : null, item.name);
 }
 
-/** Needs you's meta line for a dispute: "Megan says it's not done · closes in 17h". */
+/** Needs you's meta line for a dispute: "Megan says it's not done, closes in 17h". */
 export function voteMeta(dispute: DisputeView, people: readonly Person[], now: Date): string {
-  return `${NEXT_UP_COPY.saysNotDone(firstNameIn(people, dispute.raisedBy))} · ${voteCloses(dispute.closesAt, now)}`;
+  return `${NEXT_UP_COPY.saysNotDone(firstNameIn(people, dispute.raisedBy))}, ${voteCloses(dispute.closesAt, now)}`;
 }
 
-/** The tally, in the vote buttons' order: "1 fine · 1 not done · closes in 17h". */
+/** The tally, in the vote buttons' order: "1 fine, 1 not done, closes in 17h". */
 export function voteTally(dispute: DisputeView, now: Date): string {
   return JOHN_SHEET_COPY.tally(dispute.reject, dispute.uphold, voteCloses(dispute.closesAt, now));
 }
@@ -358,7 +358,7 @@ export function johnSheetMode(
 }
 
 /**
- * The sheet's first line: "Bathroom · Upstairs bathroom · 1 pt · every
+ * The sheet's first line: "Bathroom, Upstairs bathroom, 1 pt, every
  * week" (the group when it has one; how often while its John is still on
  * the list).
  */
@@ -376,7 +376,7 @@ export function sheetKind(
   const points = (item.together?.length ?? 1) > 1 ? CREW_COPY.each(pointsLabel(item.points)) : pointsLabel(item.points);
   return [johnKind(item.category), item.groupName, points, often]
     .filter(Boolean)
-    .join(" · ");
+    .join(", ");
 }
 
 /** What lateness costs, for the sheet: "late costs £1, missed £3". Null when both are free. */
@@ -390,8 +390,8 @@ function lateCosts(rules: HouseRules, room: number | null): string | null {
 
 /**
  * The sheet's when line. While it's to do, when it's due and what lateness
- * costs: "Due today 21:00 · late costs £1, missed £3"; once overdue, "Overdue
- * since Tue · £1 now, £3 if missed". While the house checks a tick, just
+ * costs: "Due today 21:00, late costs £1, missed £3"; once overdue, "Overdue
+ * since Tue, £1 now, £3 if missed". While the house checks a tick, just
  * when it was due; while it votes, "Disputed by Megan". Once settled, what
  * happened (settledLine) in place of any cost. Overdue, disputed, late and
  * missed are said in ink after a hazard sign (`sign`, the status they
@@ -416,7 +416,7 @@ export function sheetWhen(
     return { sign, text: settledLine(item, people, viewerId, rules, now) };
   }
   if (item.status === "overdue") {
-    const text = [NEXT_UP_COPY.overdueSince(sinceLabel(item.dueAt, now, zone)), overdueCost(rules, room)].filter(Boolean).join(" · ");
+    const text = [NEXT_UP_COPY.overdueSince(sinceLabel(item.dueAt, now, zone)), overdueCost(rules, room)].filter(Boolean).join(", ");
     return { sign: "overdue", text };
   }
   if (item.status === "disputed" && item.dispute) {
@@ -427,7 +427,7 @@ export function sheetWhen(
   if (!isOpen(item.status)) return { sign: null, text: due };
   return {
     sign: null,
-    text: [item.movedFrom ? `${due}, ${NEXT_UP_COPY.beforeYouGo}` : due, lateCosts(rules, room)].filter(Boolean).join(" · "),
+    text: [item.movedFrom ? `${due}, ${NEXT_UP_COPY.beforeYouGo}` : due, lateCosts(rules, room)].filter(Boolean).join(", "),
   };
 }
 
@@ -442,8 +442,8 @@ function tickedAt(at: Date, now: Date, zone: string): string {
 }
 
 /**
- * A tick being checked: "Megan ticked this at 14:10 · stands in 21h" ("You
- * ticked…" for yours); a cover, "Glyn covered this at 23:04 · …".
+ * A tick being checked: "Megan ticked this at 14:10, stands in 21h" ("You
+ * ticked…" for yours); a cover, "Glyn covered this at 23:04, …".
  */
 export function tickedLine(item: BoardItem, people: readonly Person[], viewerId: string, rules: HouseRules, now: Date): string {
   const ticker = tickerOf(item);
@@ -461,7 +461,7 @@ export function tickedLine(item: BoardItem, people: readonly Person[], viewerId:
       : item.standsAt.getTime() > now.getTime()
         ? JOHN_SHEET_COPY.standsIn(relative(item.standsAt, now))
         : JOHN_SHEET_COPY.standsSoon;
-  return [ticked, stands].filter(Boolean).join(" · ");
+  return [ticked, stands].filter(Boolean).join(", ");
 }
 
 /**
@@ -574,13 +574,13 @@ export function canSwap(board: WeekBoard, me: { userId: string; swapTokens: numb
   return board.items.some((item) => (cantOptions(item, board, swapOnly)?.swapFor.length ?? 0) > 0);
 }
 
-/** A housemate's open John as the swap lists it: "Tom · today 21:00 · 3 pts", or "Tom · was due Sun · 1 pt" overdue. */
+/** A housemate's open John as the swap lists it: "Tom, today 21:00, 3 pts", or "Tom, was due Sun, 1 pt" overdue. */
 export function swapMeta(item: BoardItem, people: readonly Person[], rules: HouseRules, now: Date): string {
   const due =
     item.status === "overdue"
       ? NEXT_UP_COPY.wasDue(sinceLabel(item.dueAt, now, rules.timezone))
       : dueInLine(item.dueAt, now, rules.timezone);
-  return [firstNameIn(people, item.userId), due, pointsLabel(item.points)].join(" · ");
+  return [firstNameIn(people, item.userId), due, pointsLabel(item.points)].join(", ");
 }
 
 /**
@@ -598,7 +598,7 @@ export function swapChoice(
   const meta = swapMeta(item, people, rules, now);
   const word = STATUS_MARK[item.status].tone === "none" ? null : STATUS_LABEL[item.status];
   return {
-    meta: chosen && word ? `${word} · ${meta}` : meta,
+    meta: chosen && word ? `${word}, ${meta}` : meta,
     label: [item.name, word, meta].filter(Boolean).join(", "),
   };
 }

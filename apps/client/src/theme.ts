@@ -106,7 +106,7 @@ export interface Theme {
     title: TextStyle;
     /** 22/28 Bold, sentence case: at most once per screen (the next John, "You're up £4.01"). */
     lead: TextStyle;
-    /** 12 ExtraBold caps, tracked, muted: a section's name, three words at most. Chips use it in ink or hazard. */
+    /** 15/20 ExtraBold, sentence case: a section's name, three words at most, said as a heading rather than a tag. */
     sectionLabel: TextStyle;
     /** 17 Bold: a row's title, a button's label. */
     rowTitle: TextStyle;
@@ -118,6 +118,12 @@ export interface Theme {
     tabLabel: TextStyle;
     /** 12/16 ExtraBold caps, a little tracked: an avatar's initials and a count badge's figure. The plate colours it. */
     initials: TextStyle;
+    /**
+     * 12/16 ExtraBold caps, tracked, muted: the small print of a grid, a
+     * calendar's weekdays and a table's column heads. Chips use it in ink or
+     * hazard. Never a section's name.
+     */
+    caps: TextStyle;
     /**
      * 24/26 Black caps: the words on a street-name plate (StreetPlate), the
      * link cards' sign brought indoors. Today's next John, and nothing else.
@@ -155,15 +161,7 @@ export function themeFor(scheme: string | null | undefined): Theme {
         ...TABULAR,
       },
       lead: { fontFamily: FONT.bold, fontSize: 22, lineHeight: 28, color: colors.foreground, ...TABULAR },
-      sectionLabel: {
-        fontFamily: FONT.extrabold,
-        fontSize: 12,
-        lineHeight: 16,
-        letterSpacing: 1,
-        textTransform: 'uppercase',
-        color: colors.mutedForeground,
-        ...TABULAR,
-      },
+      sectionLabel: { fontFamily: FONT.extrabold, fontSize: 15, lineHeight: 20, color: colors.foreground, ...TABULAR },
       rowTitle: { fontFamily: FONT.bold, fontSize: 17, lineHeight: 22, color: colors.foreground, ...TABULAR },
       body: { fontFamily: FONT.regular, fontSize: 16, lineHeight: 24, color: colors.foreground, ...TABULAR },
       meta: { fontFamily: FONT.regular, fontSize: 14, lineHeight: 20, color: colors.mutedForeground, ...TABULAR },
@@ -174,6 +172,15 @@ export function themeFor(scheme: string | null | undefined): Theme {
         lineHeight: 16,
         letterSpacing: 0.5,
         textTransform: 'uppercase',
+        ...TABULAR,
+      },
+      caps: {
+        fontFamily: FONT.extrabold,
+        fontSize: 12,
+        lineHeight: 16,
+        letterSpacing: 1,
+        textTransform: 'uppercase',
+        color: colors.mutedForeground,
         ...TABULAR,
       },
       plate: {

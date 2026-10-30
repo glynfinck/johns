@@ -53,7 +53,7 @@ describe('the type roles', () => {
 describe('Row', () => {
   it('is one button a thumb tall, its title on one line', async () => {
     const onPress = jest.fn();
-    await render(<Row title="Bins out" meta="Thu 07:00 · 2 pts" onPress={onPress} testID="row" />);
+    await render(<Row title="Bins out" meta="Thu 07:00, 2 pts" onPress={onPress} testID="row" />);
     const button = screen.getByRole('button', { name: /Bins out/ });
     expect(button).toHaveStyle({ minHeight: TAP });
     // Two lines make the row 64; one line, ROW_MIN.
@@ -283,13 +283,13 @@ describe('Section', () => {
 
   it('keeps the label whole: words on the right move under it when the line is full, a line each', async () => {
     await render(
-      <Section label="Megan" leading={<Avatar name="Megan" size={24} />} right={['1 of 3 done · 2 pts', 'away 28–31 Oct']}>
+      <Section label="Megan" leading={<Avatar name="Megan" size={24} />} right={['1 of 3 done, 2 pts', 'away 28–31 Oct']}>
         <Row title="Bins out" />
       </Section>,
     );
     // The header wraps, rather than shrinking the label to fit the words beside it.
     expect(header('Megan')).toHaveStyle({ flexWrap: 'wrap', marginBottom: LABEL_GAP });
-    const counts = screen.getByText('1 of 3 done · 2 pts');
+    const counts = screen.getByText('1 of 3 done, 2 pts');
     const away = screen.getByText('away 28–31 Oct');
     for (const line of [counts, away]) {
       expect(line).toHaveProp('numberOfLines', 1);

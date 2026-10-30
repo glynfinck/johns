@@ -153,7 +153,7 @@ function NextJohn({
           <LidBar category={item.category} />
         </View>
         <Meta numberOfLines={2} style={styles.shrink} testID="next-up-meta">
-          {meta.due ? `${meta.kind} · ${meta.due}` : meta.kind}
+          {meta.due ? `${meta.kind}, ${meta.due}` : meta.kind}
         </Meta>
       </View>
       {meta.overdue ? (
@@ -163,7 +163,7 @@ function NextJohn({
           </View>
           <Text numberOfLines={2} style={[type.meta, styles.shrink]}>
             <Text style={{ color: colors.hazard }}>{meta.overdue.since}</Text>
-            {meta.overdue.cost ? ` · ${meta.overdue.cost}` : ''}
+            {meta.overdue.cost ? `, ${meta.overdue.cost}` : ''}
           </Text>
         </View>
       ) : null}

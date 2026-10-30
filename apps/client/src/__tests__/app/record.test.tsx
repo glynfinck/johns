@@ -84,8 +84,8 @@ it('shows everyone a square a week, best on time first, with the way back to Wee
 
   const records = await screen.findAllByTestId('record-row');
   expect(records.map((r) => r.props.accessibilityLabel)).toEqual([
-    `${RECORD_COPY.you('Priya')}, 100% on time, 1 on time · covered 1`,
-    'Sam, 0% on time, 0 on time · 1 late · 1 missed',
+    `${RECORD_COPY.you('Priya')}, 100% on time, 1 on time, covered 1`,
+    'Sam, 0% on time, 0 on time, 1 late, 1 missed',
   ]);
   expect(within(records[0]).getAllByTestId(/^square-/, { includeHiddenElements: true }).map((s) => s.props.testID)).toEqual([
     'square-covered',

@@ -182,7 +182,7 @@ describe('the month card', () => {
     const lead = screen.getByTestId('month-lead');
     expect(lead).toHaveTextContent(`${HOUSE_PAGE_COPY.up} £3`);
     expect(within(lead).getByText('£3')).toHaveStyle({ color: BIN_NIGHT.light.good });
-    expect(screen.getByText(`${HOUSE_PAGE_COPY.nothingForfeited} · ${HOUSE_PAGE_COPY.sharedOut('1 Nov')}`)).toBeOnTheScreen();
+    expect(screen.getByText(`${HOUSE_PAGE_COPY.nothingForfeited}, ${HOUSE_PAGE_COPY.sharedOut('1 Nov')}`)).toBeOnTheScreen();
   });
 
   it('says what you are down in plain ink, with what it cost you', async () => {
@@ -192,7 +192,7 @@ describe('the month card', () => {
     expect(lead).toHaveTextContent(`${HOUSE_PAGE_COPY.down} £3`);
     // Green is for what you're up only: money lost is said in words, not in colour.
     expect(within(lead).getByText('£3')).not.toHaveStyle({ color: BIN_NIGHT.light.good });
-    expect(screen.getByText(`${HOUSE_PAGE_COPY.forfeited('£3')} · ${HOUSE_PAGE_COPY.sharedOut('1 Nov')}`)).toBeOnTheScreen();
+    expect(screen.getByText(`${HOUSE_PAGE_COPY.forfeited('£3')}, ${HOUSE_PAGE_COPY.sharedOut('1 Nov')}`)).toBeOnTheScreen();
   });
 
   it('says when nothing has been forfeited at all', async () => {
@@ -277,9 +277,9 @@ describe('the Table', () => {
     await open();
     const standings = screen.getAllByTestId('standing');
     expect(standings).toHaveLength(2);
-    expect(standings[0]).toHaveTextContent(new RegExp(`${HOUSE_PAGE_COPY.you}3 pts · ${HOUSE_PAGE_COPY.streak(3)}\\+£3`));
+    expect(standings[0]).toHaveTextContent(new RegExp(`${HOUSE_PAGE_COPY.you}3 pts, ${HOUSE_PAGE_COPY.streak(3)}\\+£3`));
     // Sam's late John in the month comes before his streak, and leaves no room for it.
-    expect(standings[1]).toHaveTextContent(new RegExp(`Sam0 pts ·${HOUSE_PAGE_COPY.lateMissed(1, 0)} in Oct−£3`));
+    expect(standings[1]).toHaveTextContent(new RegExp(`Sam0 pts,${HOUSE_PAGE_COPY.lateMissed(1, 0)} in Oct−£3`));
     expect(within(standings[1]).getByText(HOUSE_PAGE_COPY.lateMissed(1, 0))).toHaveStyle({ color: BIN_NIGHT.light.hazard });
   });
 
@@ -306,7 +306,7 @@ describe('the Table', () => {
     (useWindowDimensions as jest.Mock).mockReturnValue({ width: 1440, height: 900, scale: 1, fontScale: 1 });
     await open();
     expect(screen.getAllByTestId('standing')[1]).toHaveTextContent(
-      new RegExp(`Sam0 pts ·${HOUSE_PAGE_COPY.lateMissed(1, 0)} in Oct · ${HOUSE_PAGE_COPY.streak(5)}−£3`),
+      new RegExp(`Sam0 pts,${HOUSE_PAGE_COPY.lateMissed(1, 0)} in Oct, ${HOUSE_PAGE_COPY.streak(5)}−£3`),
     );
   });
 
@@ -316,7 +316,7 @@ describe('the Table', () => {
     await showSpan('October');
     expect(screen.getByTestId('table-span')).toHaveTextContent('October');
     const month = screen.getAllByTestId('standing');
-    expect(month[0]).toHaveTextContent(new RegExp(`Sam12 pts ·${HOUSE_PAGE_COPY.lateMissed(1, 0)} in Oct−£3`));
+    expect(month[0]).toHaveTextContent(new RegExp(`Sam12 pts,${HOUSE_PAGE_COPY.lateMissed(1, 0)} in Oct−£3`));
     expect(month[1]).toHaveTextContent(new RegExp(`${HOUSE_PAGE_COPY.you}9 pts`));
     await showSpan(HOUSE_PAGE_COPY.week);
     expect(screen.getAllByTestId('standing')[0]).toHaveTextContent(/3 pts/);
