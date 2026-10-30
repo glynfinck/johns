@@ -116,18 +116,19 @@ describe("passOffers", () => {
   it("puts Yearly first, with what it works out at a month", () => {
     const offers = passOffers("USD");
     expect(offers.map((o) => o.plan)).toEqual(["yearly", "monthly", "founding"]);
-    expect(offers[0].price).toBe("$29.99 a year");
-    expect(offers[0].meta).toBe("About $2.50 a month");
-    expect(offers[1].price).toBe("$3.99 a month");
+    expect(offers[0].price).toBe("$49.99 a year");
+    expect(offers[0].meta).toBe("About $4.17 a month");
+    expect(offers[1].price).toBe("$5.99 a month");
     expect(offers[2].price).toBe("$49 once");
   });
 
-  it("has a whole-minor-unit price in every house currency, Yearly cheaper than twelve months", () => {
+  it("has a whole-minor-unit price in every house currency, Yearly cheaper than twelve months, Founding no dearer than a year", () => {
     for (const currency of CURRENCIES) {
       const p = PASS_PRICES[currency];
       for (const minor of [p.yearly, p.monthly, p.founding]) expect(Number.isInteger(minor) && minor > 0).toBe(true);
       expect(p.yearly).toBeLessThan(p.monthly * 12);
-      expect(p.founding).toBeGreaterThan(p.yearly);
+      // Founding is a lifetime for the price of about one year: the launch offer.
+      expect(p.founding).toBeLessThanOrEqual(p.yearly);
       expect(passOffers(currency)).toHaveLength(3);
     }
   });

@@ -78,10 +78,10 @@ export function passLine(pass: HousePass, now: Date, zone: string): string {
  * opens; they're set to land on the same tiers.
  */
 export const PASS_PRICES: Record<Currency, { yearly: number; monthly: number; founding: number }> = {
-  USD: { yearly: 2999, monthly: 399, founding: 4900 },
-  CAD: { yearly: 3999, monthly: 499, founding: 6499 },
-  GBP: { yearly: 2499, monthly: 349, founding: 3999 },
-  EUR: { yearly: 2999, monthly: 399, founding: 4900 },
+  USD: { yearly: 4999, monthly: 599, founding: 4900 },
+  CAD: { yearly: 6499, monthly: 799, founding: 6499 },
+  GBP: { yearly: 3999, monthly: 499, founding: 3999 },
+  EUR: { yearly: 4999, monthly: 599, founding: 4900 },
 };
 
 export interface PassOffer {
