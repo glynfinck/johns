@@ -3,7 +3,7 @@ import { format } from "date-fns";
 
 import type { AwayPeriod } from "./away";
 import { weeklyEffort, type JohnDef } from "./board";
-import { FOCUS_SHELL_COPY, HOUSE_LOWER_COPY, WALL_FEED_COPY } from "./copy";
+import { FOCUS_SHELL_COPY, HOUSE_LOWER_COPY, MOVING_COPY, WALL_FEED_COPY } from "./copy";
 import type { Currency, HouseRules } from "./domain";
 import { dateRange, dayLabel, firstName, STATUS_MARK, type StatusIcon } from "./format";
 import { undoneWhat } from "./history";
@@ -216,6 +216,8 @@ const ICON: Record<string, WallIcon> = {
   swap_used: "repeat",
   away: "plane",
   joined: "user-plus",
+  moving_out: "truck",
+  moved_out: "truck",
   month_closed: "calendar-check",
   paid: "banknote",
   undone: "undo",
@@ -407,6 +409,21 @@ export function wallFeedRow(event: WallEvent, scene: WallScene): WallFeedRow {
       title = WALL_FEED_COPY.joined(who.subject);
       detail = WALL_FEED_COPY.newHousemate;
       break;
+    case "moving_out": {
+      const on = text("on");
+      title = on ? MOVING_COPY.movesOut(who.subject, dateRange(on, on)) : MOVING_COPY.stayingAfterAll(who.subject);
+      detail = MOVING_COPY.movingDetail;
+      break;
+    }
+    case "moved_out": {
+      // They've gone, so the house can't name them: the post kept their name.
+      const was = text("who");
+      const subject = event.userId === me || !was ? who.subject : firstName(was);
+      title = MOVING_COPY.movedOut(subject);
+      bold = [subject];
+      detail = MOVING_COPY.movingDetail;
+      break;
+    }
     case "month_closed":
       title = WALL_FEED_COPY.monthClosed(monthName(text("month")));
       detail = WALL_FEED_COPY.sharedOut;

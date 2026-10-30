@@ -883,6 +883,7 @@ export type Database = {
           house_id: string
           immunity_tokens: number
           joined_at: string
+          moving_out_on: string | null
           rather: Json
           role: string
           streak: number
@@ -895,6 +896,7 @@ export type Database = {
           house_id: string
           immunity_tokens?: number
           joined_at?: string
+          moving_out_on?: string | null
           rather?: Json
           role?: string
           streak?: number
@@ -907,6 +909,7 @@ export type Database = {
           house_id?: string
           immunity_tokens?: number
           joined_at?: string
+          moving_out_on?: string | null
           rather?: Json
           role?: string
           streak?: number
@@ -924,6 +927,61 @@ export type Database = {
           },
           {
             foreignKeyName: "members_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      moved_on: {
+        Row: {
+          from_house: string
+          how: string | null
+          id: string
+          left_at: string
+          moved_at: string | null
+          reminded_at: string | null
+          to_house: string | null
+          user_id: string
+        }
+        Insert: {
+          from_house: string
+          how?: string | null
+          id?: string
+          left_at?: string
+          moved_at?: string | null
+          reminded_at?: string | null
+          to_house?: string | null
+          user_id: string
+        }
+        Update: {
+          from_house?: string
+          how?: string | null
+          id?: string
+          left_at?: string
+          moved_at?: string | null
+          reminded_at?: string | null
+          to_house?: string | null
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "moved_on_from_house_fkey"
+            columns: ["from_house"]
+            isOneToOne: false
+            referencedRelation: "houses"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "moved_on_to_house_fkey"
+            columns: ["to_house"]
+            isOneToOne: false
+            referencedRelation: "houses"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "moved_on_user_id_fkey"
             columns: ["user_id"]
             isOneToOne: false
             referencedRelation: "profiles"
@@ -1513,6 +1571,15 @@ export type Database = {
         Returns: undefined
       }
       month_open: { Args: { p_at: string; p_house: string }; Returns: boolean }
+      moving_on: {
+        Args: never
+        Returns: {
+          from_house: string
+          house_name: string
+          johns: number
+          left_at: string
+        }[]
+      }
       my_open_assignment: {
         Args: { p_assignment: string }
         Returns: {
@@ -1603,6 +1670,10 @@ export type Database = {
         Args: { p_dispute: string; p_resolution: string }
         Returns: boolean
       }
+      record_moved_on: {
+        Args: { p_how: string; p_to: string; p_user: string }
+        Returns: undefined
+      }
       roll_call: {
         Args: { p_assignment: string; p_crew: string[]; p_photo_path?: string }
         Returns: number
@@ -1633,9 +1704,20 @@ export type Database = {
         Args: { p_house: string; p_role: string; p_user: string }
         Returns: undefined
       }
+      set_moving_out: { Args: { p_on: string | null }; Returns: undefined }
       set_my_photo: { Args: { photo: string }; Returns: undefined }
       settle_assignments: { Args: { p_items: Json }; Returns: number }
       shares_house: { Args: { other: string }; Returns: boolean }
+      start_house_from: {
+        Args: {
+          p_currency: string
+          p_from: string
+          p_name: string
+          p_timezone: string
+          p_week_starts: number
+        }
+        Returns: string
+      }
       undo_action: { Args: { p_action: string }; Returns: undefined }
       undo_cover: { Args: { p_assignment: string }; Returns: undefined }
       undo_done: { Args: { p_assignment: string }; Returns: undefined }

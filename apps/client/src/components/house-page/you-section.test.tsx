@@ -1,4 +1,4 @@
-import { HOUSE_COPY, HOUSE_LOWER_COPY, ME_COPY, STEADY_COPY } from '@app/core';
+import { HOUSE_COPY, HOUSE_LOWER_COPY, ME_COPY, MOVING_COPY, STEADY_COPY } from '@app/core';
 import { fireEvent, screen, waitFor, within } from 'expo-router/testing-library';
 
 import { signOut } from '@/api/auth';
@@ -41,6 +41,17 @@ beforeEach(() => {
   (reminderSupport as jest.Mock).mockReturnValue('none');
   (remindersOn as jest.Mock).mockResolvedValue(false);
   for (const move of [renameMe, signOut]) (move as jest.Mock).mockResolvedValue(undefined);
+});
+
+it('says your moving-out day, or that none is planned, and pushes its page', async () => {
+  await open();
+  expect(screen.getByTestId('to-moving')).toHaveTextContent(new RegExp(`${MOVING_COPY.row}.*${MOVING_COPY.notPlanned}`));
+  const base = snapshot();
+  (loadHouse as jest.Mock).mockResolvedValue(
+    snapshot({ members: base.members.map((m) => (m.userId === 'priya' ? { ...m, movingOutOn: '2026-11-11' } : m)) }),
+  );
+  await open();
+  expect(screen.getByTestId('to-moving')).toHaveTextContent(/Wed 11 Nov/);
 });
 
 it('says your preferences in a line, and pushes their page', async () => {

@@ -4,6 +4,7 @@ import {
   formatMoney,
   FRONT_DOOR_COPY,
   JOHN_LIST_COPY,
+  MOVING_COPY,
   NEXT_UP_COPY,
   PERSON_COPY,
   pointsLabel,
@@ -171,6 +172,21 @@ test("run a house from nothing on the phone", async ({ browser }) => {
   await expect(benPage).toHaveURL(/\/welcome$/);
   const { data: left } = await db.from("members").select("user_id").eq("house_id", houseRow!.id);
   expect(left).toEqual([{ user_id: ava }]);
+
+  // It's the Moving on screen: Ben starts his new place, and the John list comes too.
+  await expect(benPage.getByRole("heading", { name: MOVING_COPY.heading })).toBeVisible();
+  await benPage.getByTestId("start-from").click();
+  await expect(benPage.getByRole("heading", { name: MOVING_COPY.newHeading })).toBeVisible();
+  await benPage.getByTestId("house-name").fill("Ben's new place");
+  await benPage.getByTestId("create-house").click();
+  await expect(benPage).toHaveURL(/\/today$/);
+  const { data: next } = await db.from("members").select("house_id").eq("user_id", ben).single();
+  const [{ data: oldList }, { data: newList }] = await Promise.all([
+    db.from("johns").select("name").eq("house_id", houseRow!.id).is("archived_at", null).order("name"),
+    db.from("johns").select("name").eq("house_id", next!.house_id).order("name"),
+  ]);
+  expect(newList).toEqual(oldList);
+  expect(newList!.length).toBeGreaterThan(0);
 
   // Ava signs out from House.
   await house.getByTestId("sign-out").click();

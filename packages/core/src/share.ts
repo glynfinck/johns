@@ -87,6 +87,7 @@ const PAGES: [RegExp, string][] = [
   [/^\/house\/johns$/, PAGE_TITLE.johnList],
   [/^\/house\/rules$/, PAGE_TITLE.rules],
   [/^\/house\/away$/, PAGE_TITLE.away],
+  [/^\/house\/moving$/, PAGE_TITLE.moving],
   [/^\/house\/groups$/, PAGE_TITLE.groups],
   [/^\/house\/describe$/, PAGE_TITLE.describe],
   [/^\/house\/pass$/, PAGE_TITLE.pass],

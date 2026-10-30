@@ -10,6 +10,8 @@ import {
   localDate,
   monthOf,
   monthWindow,
+  movingOutAway,
+  MOVING_COPY,
   NOTIFY_COPY,
   ON_CALL_COPY,
   ON_CALL_WEEKS,
@@ -19,12 +21,16 @@ import {
   prefsOf,
   recentBalances,
   reminderFor,
+  remindMoverNow,
+  REMIND_AFTER_DAYS,
+  REMIND_UNTIL_DAYS,
   rulesOf,
   settleMonth,
   settleOutcome,
   standings,
   steadyAhead,
   steadyDeal,
+  stillHere,
   tableInputs,
   USUAL_WEEKS,
   verdict,
@@ -60,7 +66,7 @@ export type Db = SupabaseClient<Database>;
 type HouseRow = Database["public"]["Tables"]["houses"]["Row"];
 type MemberRow = Pick<
   Database["public"]["Tables"]["members"]["Row"],
-  "user_id" | "role" | "joined_at" | "streak" | "immunity_tokens" | "swap_tokens" | "suits_days" | "rather"
+  "user_id" | "role" | "joined_at" | "streak" | "immunity_tokens" | "swap_tokens" | "suits_days" | "rather" | "moving_out_on"
 >;
 
 export interface PushMessage {
@@ -108,7 +114,7 @@ export async function loadHouse(db: Db, houseId: string) {
   const members = must(
     await db
       .from("members")
-      .select("user_id, role, joined_at, streak, immunity_tokens, swap_tokens, suits_days, rather")
+      .select("user_id, role, joined_at, streak, immunity_tokens, swap_tokens, suits_days, rather, moving_out_on")
       .eq("house_id", houseId)
       .order("joined_at")
       .order("user_id"),
@@ -146,7 +152,11 @@ export async function tickHouse(
   return summary;
 }
 
-/** Every house the clock has work in, one after another. One bad house never stops the rest. */
+/**
+ * Every house the clock has work in, one after another. One bad house never
+ * stops the rest. Then the one reminder to anyone who moved out and hasn't
+ * started or joined a house since (it belongs to no house).
+ */
 export async function tickAll(db: Db, now: Date, notify?: Notify) {
   const houses = must(await db.from("houses").select("id"), "houses");
   const results: { houseId: string; summary?: TickSummary; error?: string }[] = [];
@@ -155,6 +165,13 @@ export async function tickAll(db: Db, now: Date, notify?: Notify) {
       results.push({ houseId: h.id, summary: await tickHouse(db, h.id, now, notify) });
     } catch (e) {
       results.push({ houseId: h.id, error: e instanceof Error ? e.message : String(e) });
+    }
+  }
+  if (notify) {
+    try {
+      await remindMovers(db, now, notify);
+    } catch (e) {
+      results.push({ houseId: "moved_on", error: e instanceof Error ? e.message : String(e) });
     }
   }
   return results;
@@ -203,7 +220,8 @@ export async function loadBalances(
  * A John with a group goes only to that group's members (or to everyone, if
  * nobody in the group lives here any more); nobody is handed a John on a day
  * they are away; a John nobody who shares it is home for waits. Someone who
- * moved in after the week was first dealt starts the next Monday.
+ * moved in after the week was first dealt starts the next Monday, and
+ * someone moving out is dealt nothing from their moving-out day (moving.ts).
  */
 export async function dealWeek(
   db: Db,
@@ -228,7 +246,10 @@ export async function dealWeek(
       .maybeSingle(),
   ]).then(([l, e, p]) => [must(l, "johns"), must(e, "this week"), must(p, "last week")] as const);
   const dealt = dealtMembers(
-    members.map((m) => ({ ...m, joinedAt: new Date(m.joined_at) })),
+    stillHere(
+      members.map((m) => ({ ...m, userId: m.user_id, joinedAt: new Date(m.joined_at), movingOutOn: m.moving_out_on })),
+      week.startsOn,
+    ),
     existing ? new Date(existing.created_at) : null,
     now,
   );
@@ -310,13 +331,17 @@ export async function dealWeek(
     }
   }
 
-  const away: AwayPeriod[] = awayRows.map((a) => ({
-    id: a.id,
-    userId: a.user_id,
-    startsOn: a.starts_on,
-    endsOn: a.ends_on,
-    note: a.note,
-  }));
+  const away: AwayPeriod[] = [
+    ...awayRows.map((a) => ({
+      id: a.id,
+      userId: a.user_id,
+      startsOn: a.starts_on,
+      endsOn: a.ends_on,
+      note: a.note,
+    })),
+    // From the day someone moves out, as if away for good.
+    ...movingOutAway(dealt, week.startsOn, lastAhead),
+  ];
   const sharersOf = (j: (typeof list)[number]) => {
     const group = j.group_id ? groups.find((g) => g.id === j.group_id) : undefined;
     const inGroup = (group?.group_members ?? []).map((m) => m.user_id).filter((id) => memberIds.includes(id));
@@ -777,6 +802,68 @@ async function sendReminders(db: Db, house: HouseRow, now: Date, notify: Notify)
       // A John done together is ticked with who did it, in the app.
       ...(a.needs_photo || a.job_id ? {} : { act: { assignmentId: a.id } }),
       tag: `john:${a.id}`,
+    });
+    sent += 1;
+  }
+  return sent;
+}
+
+// --- Moving on -------------------------------------------------------------------------------
+
+/**
+ * Two weeks after someone leaves a house, if they haven't started or joined
+ * another, one push: "Settled into your new place? Bring Jonz with you."
+ * Only one, ever, per move (`moved_on.reminded_at`); it answers to the
+ * reminders switch and waits out quiet hours, in the zone of the house they
+ * left when their settings don't name one. Past 30 days it's no longer sent.
+ */
+export async function remindMovers(db: Db, now: Date, notify: Notify) {
+  const day = 86_400_000;
+  const moves = must(
+    await db
+      .from("moved_on")
+      .select("id, user_id, left_at, houses!moved_on_from_house_fkey(timezone)")
+      .is("how", null)
+      .is("reminded_at", null)
+      .lte("left_at", new Date(now.getTime() - REMIND_AFTER_DAYS * day).toISOString())
+      .gt("left_at", new Date(now.getTime() - REMIND_UNTIL_DAYS * day).toISOString()),
+    "moves to remind",
+  );
+  const due = moves.filter((m) => remindMoverNow(new Date(m.left_at), now));
+  if (due.length === 0) return 0;
+  const userIds = [...new Set(due.map((m) => m.user_id))];
+  const [housed, prefs] = await Promise.all([
+    db.from("members").select("user_id").in("user_id", userIds),
+    db
+      .from("notification_prefs")
+      .select("user_id, reminders, checks, flags, deal, quiet_from, quiet_until, timezone")
+      .in("user_id", userIds),
+  ]).then(([h, p]) => [must(h, "members"), must(p, "notification settings")] as const);
+  let sent = 0;
+  for (const m of due) {
+    // In a house again some other way (an old house's undo, say): nothing to remind them of.
+    if (housed.some((h) => h.user_id === m.user_id)) continue;
+    const zone = m.houses?.timezone ?? "UTC";
+    const when = reminderFor(prefsOf(prefs.find((p) => p.user_id === m.user_id)), now, zone);
+    if (when === "wait") continue;
+    // Claim it before sending, so two ticks never both send.
+    const claimed = must(
+      await db
+        .from("moved_on")
+        .update({ reminded_at: now.toISOString() })
+        .eq("id", m.id)
+        .is("reminded_at", null)
+        .select("id"),
+      "claim move reminder",
+    );
+    if (claimed.length === 0 || when === "skip") continue;
+    await notify([m.user_id], {
+      title: MOVING_COPY.reminderTitle,
+      body: MOVING_COPY.reminderBody,
+      url: "/welcome",
+      kind: "reminders",
+      zone,
+      tag: `moved-on:${m.id}`,
     });
     sent += 1;
   }

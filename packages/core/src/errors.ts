@@ -37,6 +37,8 @@ const MESSAGES: Record<string, string> = {
   away_too_long: "Time away can be up to three months at once.",
   away_overlaps: "You’re already away for some of those days.",
   away_over: "That time away has already finished.",
+  moving_in_past: "Your moving-out day can be today at the earliest.",
+  moving_too_far: "Pick a moving-out day within the next year.",
   not_yours: "That isn’t yours to change.",
   cannot_undo: "That can’t be undone any more.",
   disputed: "Someone’s disputing this tick. Settle the dispute first.",

@@ -1,0 +1,129 @@
+import { dateRange, localDate, MOVING_COPY, PAGE_TITLE, type IsoDow } from '@app/core';
+import { CalendarXIcon } from 'lucide-react-native';
+import { useState } from 'react';
+import { StyleSheet, View } from 'react-native';
+
+import { setMovingOut } from '@/api/moving';
+import { Alert } from '@/components/alert';
+import { Button } from '@/components/button';
+import { GroupItem } from '@/components/group';
+import { HousePage } from '@/components/house/house-page';
+import { Section } from '@/components/section';
+import { AwayDates, type DateRange } from '@/components/setup/away-dates';
+import { Body, Meta } from '@/components/text';
+import { TextButton } from '@/components/text-button';
+import { useHouse } from '@/hooks/use-house';
+import { useMembership } from '@/hooks/use-membership';
+import { useMove } from '@/hooks/use-move';
+import { usePull } from '@/hooks/use-refresh';
+import { INSET, SECTION_GAP, SPACE } from '@/theme';
+
+/**
+ * Moving out, pushed from House, You: the day you move out, picked from the
+ * booking calendar time away uses, and "I'm staying after all" once it's
+ * set. From that day the deal gives you nothing, and the house sees the
+ * date on the Wall. Leaving itself stays at the foot of House.
+ */
+export default function MovingScreen() {
+  const { session, house } = useMembership();
+  // The layout's guard only shows the house's screens with a house and a session.
+  return <MovingFor houseId={house!.id} userId={session!.user.id} />;
+}
+
+function MovingFor({ houseId, userId }: { houseId: string; userId: string }) {
+  const { query, view } = useHouse(houseId, userId);
+  const { refreshing, pull } = usePull(houseId, () => query.refetch());
+  const me = view?.snapshot.members.find((m) => m.userId === userId);
+  const today = view ? localDate(view.now, view.snapshot.rules.timezone) : null;
+  return (
+    <HousePage
+      title={PAGE_TITLE.moving}
+      testID="moving-screen"
+      ready={me !== undefined && today !== null}
+      failed={query.isError}
+      onRetry={() => void query.refetch()}
+      refreshing={refreshing}
+      onRefresh={pull}
+    >
+      {/* Whole values only: the React Compiler can hoist a field read out of this callback, before it's ready. */}
+      {() => (
+        <MovingForm
+          houseId={houseId}
+          saved={me!.movingOutOn ?? null}
+          today={today!}
+          weekStarts={view!.snapshot.rules.weekStarts}
+        />
+      )}
+    </HousePage>
+  );
+}
+
+function MovingForm({
+  houseId,
+  saved,
+  today,
+  weekStarts,
+}: {
+  houseId: string;
+  saved: string | null;
+  today: string;
+  weekStarts: IsoDow;
+}) {
+  const move = useMove(houseId);
+  const [picked, setPicked] = useState<string | null>(saved);
+  // One day, not a run of them: whichever day was tapped last.
+  const range: DateRange = { from: picked, to: picked };
+  const changed = picked !== saved;
+
+  return (
+    <View style={styles.page}>
+      <Body style={styles.intro}>{MOVING_COPY.intro}</Body>
+      {saved ? (
+        <Section label={MOVING_COPY.title}>
+          <GroupItem>
+            <Body testID="moving-saved">{MOVING_COPY.saved(dateRange(saved, saved))}</Body>
+            <TextButton
+              label={MOVING_COPY.staying}
+              icon={CalendarXIcon}
+              align="start"
+              disabled={move.pending}
+              onPress={() => {
+                setPicked(null);
+                void move.run(() => setMovingOut(null));
+              }}
+              testID="moving-clear"
+            />
+          </GroupItem>
+        </Section>
+      ) : null}
+      <Section label={saved ? MOVING_COPY.change : MOVING_COPY.pick}>
+        <GroupItem>
+          <AwayDates
+            today={today}
+            weekStarts={weekStarts}
+            value={range}
+            onChange={(next) => setPicked(next.to ?? next.from)}
+          />
+          {move.problem ? <Alert message={move.problem} /> : null}
+          <View style={styles.start}>
+            <Button
+              label={picked ? MOVING_COPY.save(dateRange(picked, picked)) : MOVING_COPY.pick}
+              disabled={!picked || !changed || move.pending}
+              onPress={() => void move.run(() => setMovingOut(picked))}
+              testID="moving-save"
+            />
+          </View>
+        </GroupItem>
+      </Section>
+      <Meta style={styles.note}>{MOVING_COPY.afterward}</Meta>
+    </View>
+  );
+}
+
+const styles = StyleSheet.create({
+  page: { gap: SECTION_GAP },
+  intro: { paddingHorizontal: INSET },
+  start: { alignItems: 'flex-start', marginTop: SPACE.sm },
+  // A line under a group, on the leading edge.
+  note: { paddingHorizontal: INSET },
+});

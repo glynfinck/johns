@@ -34,6 +34,8 @@ export const PAGE_TITLE = {
   ask: `Ask ${APP_NAME}`,
   pass: "House Pass",
   prefs: "Preferences",
+  moving: "Moving out",
+  movingOn: "Moving on",
 } as const;
 
 /** A page that isn't there, and a page that broke. */
@@ -1925,4 +1927,50 @@ export const STEADY_COPY = {
   declined: "It stays theirs",
   pushTitle: (name: string) => `${name} asks to swap`,
   pushBody: (theirs: string, yours: string) => `Their ${theirs} for your ${yours}. Answer in Jonz by tonight.`,
+} as const;
+
+/**
+ * Bring Jonz to your next house (moving.ts, docs/specs/moving-on.md): your
+ * moving-out date, the Moving on screen once you've left, the one reminder,
+ * and the prompt for the people who stay. Dates arrive formatted.
+ */
+export const MOVING_COPY = {
+  // House, You, and its page.
+  row: "Moving out",
+  notPlanned: "Not planned",
+  title: "Moving out",
+  intro: "Say the day you move out. From then the deal stops giving you Johns, so your last week stays fair, and the house sees the date on the Wall.",
+  pick: "The day you move out",
+  save: (day: string) => `Moving out ${day}`,
+  saved: (day: string) => `You move out on ${day}.`,
+  change: "Change the date",
+  staying: "I’m staying after all",
+  afterward: "When the day comes, leave the house from the foot of House. You can start Jonz in your new place from there.",
+  // Today.
+  youMoveOut: (day: string) => `You move out on ${day}`,
+  movingDay: (house: string) => `Moving day. Leave ${house} from House when you’re ready`,
+  // The Wall.
+  movesOut: (who: string, day: string) => `${who} ${who === "You" ? "move" : "moves"} out on ${day}`,
+  stayingAfterAll: (who: string) => `${who} ${who === "You" ? "are" : "is"} staying after all`,
+  movedOut: (who: string) => `${who} moved out`,
+  movingDetail: "Moving out",
+  // For the people who stay, with the join card.
+  askTitle: "Someone moving in?",
+  askBody: (house: string) => `Send them the invite, so ${house} keeps going.`,
+  askButton: "Send the invite",
+  // The Moving on screen: where leaving lands.
+  heading: "Moving on",
+  body: (house: string, johns: number) =>
+    johns > 0
+      ? `Start Jonz in your new place with ${house}’s ${johns} ${johns === 1 ? "John" : "Johns"} already on the list, or join a house that’s invited you.`
+      : "Start Jonz in your new place, or join a house that’s invited you.",
+  start: "Start Jonz in my new place",
+  invite: "I have an invite",
+  // Starting from the old list.
+  newHeading: "Your new place",
+  newIntro: (house: string, johns: number) =>
+    `${johns} ${johns === 1 ? "John" : "Johns"} from ${house} come with you. Tidy the list in Describe your house before you share the invite.`,
+  // The one reminder, two weeks after leaving.
+  reminderTitle: "Settled into your new place?",
+  reminderBody: `Bring ${APP_NAME} with you.`,
 } as const;
