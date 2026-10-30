@@ -32,10 +32,10 @@ revoke all on public.app_owners from public, anon, authenticated;
 -- The API never writes it; the database tests make a stand-in owner with it.
 grant select, insert, delete on public.app_owners to service_role;
 
--- Glyn, by the address he signs in with. A second owner, or a change of
+-- Glyn, by both addresses he signs in with. Another owner, or a change of
 -- account, is another migration.
 insert into public.app_owners (user_id)
-select id from auth.users where email = 'glynfinck@gmail.com'
+select id from auth.users where lower(email) in ('glynfinck@gmail.com', 'glynfinck97@gmail.com')
 on conflict do nothing;
 
 -- Is the caller the owner, with a second factor this session?
