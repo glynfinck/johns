@@ -33,6 +33,8 @@ export interface Housemate {
   swapTokens: number;
   /** Days that suit them, their best time and the Johns they'd rather do or not (House, You, Preferences). */
   prefs: MyPrefs;
+  /** The day they move out (the house's local date), once they've said. */
+  movingOutOn?: string | null;
 }
 
 export interface HouseSnapshot {
@@ -57,17 +59,23 @@ export interface HouseSnapshot {
   steady: { waiting: Record<string, number>; ahead: SteadyAheadWeek[] };
   /** Asks to swap still open that you made or were asked (only the two of them can read one). */
   offers: SwapOfferRow[];
+  /** When someone last moved out and last moved in, from the Wall: whether to ask who's moving in. */
+  moves?: { lastMovedOut: string | null; lastJoined: string | null };
 }
 
 /** One read of a house: its rules and people, and this week's Johns and disputes. */
 export async function loadHouse(houseId: string, now: Date): Promise<HouseSnapshot> {
-  const [{ data: house, error: houseError }, { data: members, error: membersError }] = await Promise.all([
+  const [{ data: house, error: houseError }, { data: members, error: membersError }, movedOut, joined] = await Promise.all([
     supabase.from('houses').select('*').eq('id', houseId).single(),
     supabase
       .from('members')
-      .select('user_id, role, streak, immunity_tokens, swap_tokens, suits_days, best_time, rather, profiles(display_name, avatar_url)')
+      .select(
+        'user_id, role, streak, immunity_tokens, swap_tokens, suits_days, best_time, rather, moving_out_on, profiles(display_name, avatar_url)',
+      )
       .eq('house_id', houseId)
       .order('joined_at'),
+    lastEvent(houseId, 'moved_out'),
+    lastEvent(houseId, 'joined'),
   ]);
   if (houseError) throw houseError;
   if (membersError) throw membersError;
@@ -139,6 +147,7 @@ export async function loadHouse(houseId: string, now: Date): Promise<HouseSnapsh
       immunityTokens: m.immunity_tokens,
       swapTokens: m.swap_tokens,
       prefs: myPrefsOf(m),
+      movingOutOn: m.moving_out_on,
     })),
     week: week ? { id: week.id, starts_on: week.starts_on, starts_at: week.starts_at, ends_at: week.ends_at } : null,
     assignments: [...(assignments.data ?? []), ...(carried.data ?? [])],
@@ -146,5 +155,20 @@ export async function loadHouse(houseId: string, now: Date): Promise<HouseSnapsh
     onCall: onCall.data ?? [],
     steady: (({ waiting, ahead }) => ({ waiting, ahead }))(weekStateOf(week ?? {})),
     offers: offers.data ?? [],
+    moves: { lastMovedOut: movedOut, lastJoined: joined },
   };
+}
+
+/** When the Wall last said this kind of thing, or null. */
+async function lastEvent(houseId: string, kind: 'moved_out' | 'joined'): Promise<string | null> {
+  const { data, error } = await supabase
+    .from('events')
+    .select('created_at')
+    .eq('house_id', houseId)
+    .eq('kind', kind)
+    .order('created_at', { ascending: false })
+    .limit(1)
+    .maybeSingle();
+  if (error) throw error;
+  return data?.created_at ?? null;
 }

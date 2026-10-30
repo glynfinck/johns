@@ -143,7 +143,8 @@ each app's AGENTS.md.
   through named functions (`mark_done`, `undo_done`, `cover_john`,
   `undo_cover`, `raise_dispute`,
   `cast_vote`, `use_immunity`, `use_swap`, `confirm_payment`,
-  `create_house`, `join_house`, `set_member_role`, `remove_member`,
+  `create_house`, `join_house`, `start_house_from`, `set_member_role`,
+  `remove_member`, `set_moving_out`,
   `save_group`, `delete_group`, `set_away`, `cancel_away`, `raise_flag`,
   `hand_over`, and `undo_action` / `undo_latest` for Undo
   (`docs/specs/undo-history.md`); an admin's resets go through
@@ -280,6 +281,8 @@ and `ledger.doers`. Steady weeks add `houses.deal_mode` and `deal_budget`,
 `johns.keep_day`, each member's `suits_days`, `best_time` and `rather`
 (`save_prefs`), `assignments.planned_at` (`plan_john`), `weeks.turns`,
 `waiting` and `ahead`, and `swap_offers` (`offer_swap`, `answer_swap`).
+Moving on adds `members.moving_out_on` and `moved_on` (each move out, and
+where to next: `docs/specs/moving-on.md`).
 Photos live in the private `proofs` bucket
 at `<house>/<assignment>/<file>`.
 

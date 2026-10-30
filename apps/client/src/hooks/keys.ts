@@ -26,3 +26,6 @@ export const recordKey = (houseId: string) => [...houseKey(houseId), 'record'] a
 
 /** History, under the house: any move reads it again. */
 export const historyKey = (houseId: string) => [...houseKey(houseId), 'history'] as const;
+
+/** The house you just left, while it can come with you (the Moving on screen). Yours, not a house's. */
+export const movingOnKey = (userId: string) => ['moving-on', userId] as const;

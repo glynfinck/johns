@@ -1,5 +1,5 @@
-import { HOUSE_COPY, HOUSE_LOWER_COPY, LOOK_LABEL, LOOKS, ME_COPY, prefsLine, STEADY_COPY } from '@app/core';
-import { BellIcon, LogOutIcon, SlidersHorizontalIcon, SunMoonIcon } from 'lucide-react-native';
+import { dateRange, HOUSE_COPY, HOUSE_LOWER_COPY, LOOK_LABEL, LOOKS, ME_COPY, MOVING_COPY, prefsLine, STEADY_COPY } from '@app/core';
+import { BellIcon, LogOutIcon, SlidersHorizontalIcon, SunMoonIcon, TruckIcon } from 'lucide-react-native';
 import { useCallback, useEffect, useState } from 'react';
 import { View } from 'react-native';
 
@@ -27,7 +27,8 @@ const LOOK_OPTIONS = LOOKS.map((value) => ({ value, label: LOOK_LABEL[value] }))
  * You: your name (a sheet to change it), reminders on this device (a sheet
  * holding their switch, where there are any to offer), your preferences in
  * this house (their own page; on a laptop it's in the list beside House
- * instead), the look in the row itself, and signing out. Reminders and the
+ * instead), your moving-out date (its own page), the look in the row
+ * itself, and signing out. Reminders and the
  * look are this device's own.
  */
 export function YouSection({ houseId, userId, view }: { houseId: string; userId: string; view: HouseView }) {
@@ -41,6 +42,7 @@ export function YouSection({ houseId, userId, view }: { houseId: string; userId:
 
   if (!view.me) return null;
   const name = view.me.name;
+  const movingOutOn = view.snapshot.members.find((m) => m.userId === userId)?.movingOutOn ?? null;
 
   async function out() {
     setSigningOut(true);
@@ -87,6 +89,14 @@ export function YouSection({ houseId, userId, view }: { houseId: string; userId:
             testID="to-prefs"
           />
         )}
+        <Row
+          leading={<RowIcon icon={TruckIcon} />}
+          title={MOVING_COPY.row}
+          meta={movingOutOn ? dateRange(movingOutOn, movingOutOn) : MOVING_COPY.notPlanned}
+          href="/house/moving"
+          chevron
+          testID="to-moving"
+        />
         <Row
           leading={<RowIcon icon={SunMoonIcon} />}
           title={HOUSE_LOWER_COPY.look}

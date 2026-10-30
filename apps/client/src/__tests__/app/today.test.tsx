@@ -6,7 +6,9 @@ import {
   HOUSE_PAGE_COPY,
   JOHN_COPY,
   JOHN_SHEET_COPY,
+  localDate,
   monthOf,
+  MOVING_COPY,
   NEXT_UP_COPY,
   NOT_DEALT_COPY,
   ON_CALL_COPY,
@@ -107,6 +109,7 @@ async function show() {
       today: Today,
       'house/index': () => <Landed name="House" />,
       'house/away': () => <Landed name="Away" />,
+      'house/moving': () => <Landed name="Moving" />,
       'house/johns': () => <Landed name="Johns" />,
     },
     { initialUrl: '/today' },
@@ -755,6 +758,53 @@ describe('On call', () => {
   it('shows nothing in a house with no on-call Johns', async () => {
     await open();
     expect(screen.queryByTestId('on-call')).toBeNull();
+  });
+});
+
+describe('moving out', () => {
+  const today = localDate(new Date(), 'Europe/London');
+  const later = '2099-06-30';
+
+  it('says your moving-out day, onward to change it', async () => {
+    read.mockResolvedValue(snapshot({ members: priyaWith({ movingOutOn: later }) }));
+    await open();
+    expect(screen.getByTestId('moving-line')).toHaveTextContent(MOVING_COPY.youMoveOut('Tue 30 Jun'));
+    await fireEvent.press(screen.getByTestId('moving-line'));
+    expect(await screen.findByText('Landed on Moving')).toBeOnTheScreen();
+  });
+
+  it('on the day, says it is time to leave, onward to House', async () => {
+    read.mockResolvedValue(snapshot({ members: priyaWith({ movingOutOn: today }) }));
+    await open();
+    expect(screen.getByTestId('moving-line')).toHaveTextContent(MOVING_COPY.movingDay('Flat 3'));
+    await fireEvent.press(screen.getByTestId('moving-line'));
+    expect(await screen.findByText('Landed on House')).toBeOnTheScreen();
+    // Never asked who's moving in: it's them moving out.
+    expect(screen.queryByTestId('move-in-ask')).toBeNull();
+  });
+
+  it('asks the people who stay who is moving in, with the join card a tap away', async () => {
+    const [priya, sam] = snapshot().members;
+    read.mockResolvedValue(snapshot({ members: [priya, { ...sam, movingOutOn: later }] }));
+    await open();
+    expect(screen.queryByTestId('moving-line')).toBeNull();
+    const ask = screen.getByTestId('move-in-ask');
+    expect(within(ask).getByText(MOVING_COPY.askTitle)).toBeOnTheScreen();
+    await fireEvent.press(within(ask).getByRole('button', { name: MOVING_COPY.askButton }));
+    expect(await screen.findByTestId('invite-code')).toBeOnTheScreen();
+  });
+
+  it('keeps asking for a while after someone has gone, until someone moves in', async () => {
+    const left = new Date(Date.now() - 3 * 86_400_000).toISOString();
+    read.mockResolvedValue(snapshot({ moves: { lastMovedOut: left, lastJoined: null } }));
+    await open();
+    expect(screen.getByTestId('move-in-ask')).toBeOnTheScreen();
+  });
+
+  it('asks nothing of a house nobody is leaving', async () => {
+    await open();
+    expect(screen.queryByTestId('move-in-ask')).toBeNull();
+    expect(screen.queryByTestId('moving-line')).toBeNull();
   });
 });
 

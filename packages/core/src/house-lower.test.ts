@@ -196,6 +196,12 @@ describe("wallFeedRow", () => {
       "Megan swapped Bins for your Hoover",
     );
     expect(row({ kind: "joined", data: {} }).title).toBe("Megan moved in");
+    expect(row({ kind: "moving_out", data: { on: "2026-11-11" } }).title).toBe("Megan moves out on Wed 11 Nov");
+    expect(row({ kind: "moving_out", data: { on: "2026-11-11" } }).detail).toBe("Moving out");
+    expect(row({ kind: "moving_out", data: { on: null } }).title).toBe("Megan is staying after all");
+    // Gone from the house, so named from the post itself.
+    expect(row({ kind: "moved_out", user_id: "gone", data: { who: "Sam Hill" } }).title).toBe("Sam moved out");
+    expect(row({ kind: "moved_out", user_id: "gone", data: {} }).title).toMatch(/moved out$/);
     expect(row({ kind: "something_new", data: {} }).title).toBe("something_new");
   });
 

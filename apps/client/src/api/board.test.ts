@@ -24,6 +24,7 @@ jest.mock('./supabase', () => ({
         not: record('not'),
         is: record('is'),
         gt: record('gt'),
+        limit: record('limit'),
         order: record('order'),
         single: () => result(),
         maybeSingle: () => result(),

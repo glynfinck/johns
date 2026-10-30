@@ -1,11 +1,17 @@
-import { BIN_NIGHT, FRONT_DOOR_COPY, NEW_HOUSE_COPY } from '@app/core';
+import { BIN_NIGHT, FRONT_DOOR_COPY, MOVING_COPY, NEW_HOUSE_COPY } from '@app/core';
 import { fireEvent, render, screen } from '@testing-library/react-native';
 
 import { createHouse } from '@/api/house';
+import { startHouseFrom } from '@/api/moving';
 import NewHouse from '@/app/house/new';
 
 const mockRefresh = jest.fn();
 jest.mock('@/api/house', () => ({ createHouse: jest.fn() }));
+jest.mock('@/api/moving', () => ({ startHouseFrom: jest.fn() }));
+let mockMoving: { fromHouse: string; houseName: string; johns: number } | null = null;
+let mockFrom: string | undefined;
+jest.mock('@/hooks/use-moving-on', () => ({ useMovingOn: () => ({ data: mockMoving }) }));
+jest.mock('expo-router', () => ({ ...jest.requireActual('expo-router'), useLocalSearchParams: () => ({ from: mockFrom }) }));
 jest.mock('@/hooks/use-membership', () => ({ useMembership: () => ({ refresh: mockRefresh }) }));
 jest.mock('@/locale', () => ({ deviceTimeZone: () => 'America/St_Johns', deviceCurrency: () => 'CAD' }));
 
@@ -13,7 +19,11 @@ const create = createHouse as jest.Mock;
 /** The defaults line as it's drawn: its parts between middle dots, as every Meta line's are. */
 const line = (...parts: string[]) => parts.join(', ');
 
-beforeEach(() => jest.clearAllMocks());
+beforeEach(() => {
+  jest.clearAllMocks();
+  mockMoving = null;
+  mockFrom = undefined;
+});
 
 it('asks for one thing, the name, with the defaults in a line', async () => {
   await render(<NewHouse />);
@@ -87,4 +97,33 @@ it('says what the database refused, and lets you try again', async () => {
 it('offers the way in for someone with an invite', async () => {
   await render(<NewHouse />);
   expect(screen.getByRole('link', { name: FRONT_DOOR_COPY.invite })).toHaveProp('href', '/welcome');
+});
+
+describe('from the Moving on screen', () => {
+  beforeEach(() => {
+    mockMoving = { fromHouse: 'h0', houseName: 'Flat 3', johns: 6 };
+    mockFrom = 'h0';
+  });
+
+  it('is your new place, with the old list coming too', async () => {
+    (startHouseFrom as jest.Mock).mockResolvedValue('h2');
+    await render(<NewHouse />);
+    expect(screen.getByRole('header', { name: MOVING_COPY.newHeading })).toBeOnTheScreen();
+    expect(screen.getByText(MOVING_COPY.newIntro('Flat 3', 6))).toBeOnTheScreen();
+    await fireEvent.changeText(screen.getByLabelText(FRONT_DOOR_COPY.name), 'New flat');
+    await fireEvent.press(screen.getByRole('button', { name: FRONT_DOOR_COPY.submit }));
+    expect(startHouseFrom).toHaveBeenCalledWith('h0', { name: 'New flat', timezone: 'America/St_Johns', currency: 'CAD', weekStarts: 1 });
+    expect(create).not.toHaveBeenCalled();
+    expect(mockRefresh).toHaveBeenCalled();
+  });
+
+  it('is a plain new house for any other link, or an empty old list', async () => {
+    mockFrom = 'someone-else';
+    await render(<NewHouse />);
+    expect(screen.getByRole('header', { name: NEW_HOUSE_COPY.heading })).toBeOnTheScreen();
+    mockFrom = 'h0';
+    mockMoving = { fromHouse: 'h0', houseName: 'Flat 3', johns: 0 };
+    await render(<NewHouse />);
+    expect(screen.getByRole('header', { name: NEW_HOUSE_COPY.heading })).toBeOnTheScreen();
+  });
 });

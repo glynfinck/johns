@@ -1,4 +1,4 @@
-import { BIN_NIGHT, FRONT_DOOR_COPY, NO_HOUSE_COPY, SIGN_IN_COPY } from '@app/core';
+import { BIN_NIGHT, FRONT_DOOR_COPY, MOVING_COPY, NO_HOUSE_COPY, SIGN_IN_COPY } from '@app/core';
 import { fireEvent, renderRouter, screen } from 'expo-router/testing-library';
 import { Text } from 'react-native';
 
@@ -6,6 +6,8 @@ import { signOut } from '@/api/auth';
 import Welcome from '@/app/welcome';
 
 jest.mock('@/api/auth', () => ({ signOut: jest.fn() }));
+let mockMoving: { fromHouse: string; houseName: string; johns: number } | null = null;
+jest.mock('@/hooks/use-moving-on', () => ({ useMovingOn: () => ({ data: mockMoving }) }));
 
 async function open() {
   await renderRouter(
@@ -19,7 +21,10 @@ async function paste(text: string) {
   await fireEvent.press(screen.getByRole('button', { name: FRONT_DOOR_COPY.open }));
 }
 
-beforeEach(() => jest.clearAllMocks());
+beforeEach(() => {
+  jest.clearAllMocks();
+  mockMoving = null;
+});
 
 it('asks for the invite in one field, with one amber button', async () => {
   await open();
@@ -60,4 +65,33 @@ it('lets whoever signed in with the wrong account out', async () => {
   await open();
   await fireEvent.press(screen.getByRole('button', { name: SIGN_IN_COPY.signOut }));
   expect(signOut).toHaveBeenCalled();
+});
+
+describe('just after leaving a house', () => {
+  beforeEach(() => {
+    mockMoving = { fromHouse: 'h1', houseName: 'Flat 3', johns: 6 };
+  });
+
+  it('is the Moving on screen: starting the new place is the one amber button', async () => {
+    await open();
+    expect(screen.getByRole('header', { name: MOVING_COPY.heading })).toBeOnTheScreen();
+    expect(screen.getByText(MOVING_COPY.body('Flat 3', 6))).toBeOnTheScreen();
+    const start = screen.getByRole('link', { name: MOVING_COPY.start });
+    expect(start).toHaveProp('href', '/house/new?from=h1');
+    expect(start).toHaveStyle({ backgroundColor: BIN_NIGHT.light.hivis });
+    expect(screen.getByRole('button', { name: FRONT_DOOR_COPY.open })).not.toHaveStyle({ backgroundColor: BIN_NIGHT.light.hivis });
+  });
+
+  it('still takes an invite, under I have an invite', async () => {
+    await open();
+    expect(screen.getByText(MOVING_COPY.invite)).toBeOnTheScreen();
+    await paste('AB3DEF7H');
+    expect(screen).toHavePathname('/join/AB3DEF7H');
+  });
+
+  it('says only the choice when the old list was empty', async () => {
+    mockMoving = { fromHouse: 'h1', houseName: 'Flat 3', johns: 0 };
+    await open();
+    expect(screen.getByText(MOVING_COPY.body('Flat 3', 0))).toBeOnTheScreen();
+  });
 });

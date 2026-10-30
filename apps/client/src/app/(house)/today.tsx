@@ -1,4 +1,4 @@
-import { dayLabel, NEXT_UP_COPY, onCallItems, PAGE_TITLE, todayPage, type StakeView } from '@app/core';
+import { askWhosMovingIn, dayLabel, localDate, movingLine, NEXT_UP_COPY, onCallItems, PAGE_TITLE, todayPage, type StakeView } from '@app/core';
 
 import type { AwayView } from '@/api/away';
 import type { JohnList } from '@/api/settings';
@@ -6,6 +6,7 @@ import { PageTitle } from '@/components/page-title';
 import { Reading, ReadFailed } from '@/components/read-state';
 import { Columns, Screen, useColumns } from '@/components/screen';
 import { TitleBar, TopLine } from '@/components/title-bar';
+import { MoveInAsk } from '@/components/today/move-in-ask';
 import { NeedsYou } from '@/components/today/needs-you';
 import { NextUp } from '@/components/today/next-up';
 import { OnCall } from '@/components/today/on-call';
@@ -25,8 +26,9 @@ import { useStake } from '@/hooks/use-stake';
  * Today, for doing: your next John in the one card (or what takes its
  * place), the disputes that need your vote, the on-call Johns anyone can
  * flag, the rest of your week, and one
- * line on where you stand (with your time away, when a trip is coming).
- * Fits one phone screen.
+ * line on where you stand (with your time away, when a trip is coming, and
+ * your moving-out day, once you've said). When a housemate is moving out,
+ * the people who stay are asked who's moving in. Fits one phone screen.
  */
 export default function Today() {
   const { session, house } = useMembership();
@@ -142,8 +144,20 @@ function TodayView({
       context={{ houseId: house.id, userId, zone: rules.timezone, rules, now, nameOf }}
     />
   );
+  const mover = members.find((m) => m.userId === userId)?.movingOutOn ?? null;
+  const localToday = localDate(now, rules.timezone);
+  const moving = movingLine(mover, localToday, house.name);
+  const ask = askWhosMovingIn({
+    me: userId,
+    members: members.map((m) => ({ userId: m.userId, movingOutOn: m.movingOutOn ?? null })),
+    lastMovedOut: snapshot.moves?.lastMovedOut ? new Date(snapshot.moves.lastMovedOut) : null,
+    lastJoined: snapshot.moves?.lastJoined ? new Date(snapshot.moves.lastJoined) : null,
+    now,
+  }) ? (
+    <MoveInAsk houseName={house.name} joinCode={house.joinCode} />
+  ) : null;
   const lines =
-    page.standing || page.away ? (
+    page.standing || page.away || moving ? (
       // The page's quiet lines sit together, under the week.
       <PageLines>
         {page.standing ? <PageLine text={page.standing} href="/house" testID="standing-line" /> : null}
@@ -154,6 +168,10 @@ function TodayView({
             accessibilityLabel={`${page.away}. ${NEXT_UP_COPY.changeDates}`}
             testID="away-line"
           />
+        ) : null}
+        {moving ? (
+          // On the day it's time to leave, from the foot of House; before it, the date can change.
+          <PageLine text={moving} href={mover && mover <= localToday ? '/house' : '/house/moving'} testID="moving-line" />
         ) : null}
       </PageLines>
     ) : null;
@@ -176,6 +194,7 @@ function TodayView({
         side={
           <>
             {needsYou}
+            {ask}
             {onCall}
             <WeekGlance view={view} away={away} />
           </>
@@ -189,6 +208,7 @@ function TodayView({
       {next}
       {swap}
       {needsYou}
+      {ask}
       {onCall}
       {rest}
       {lines}

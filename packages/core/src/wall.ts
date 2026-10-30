@@ -1,5 +1,5 @@
 import type { Currency } from "./domain";
-import { dateRange, monthLabel } from "./format";
+import { dateRange, firstName, monthLabel } from "./format";
 import { undoneWhat } from "./history";
 import { resetWhat } from "./resets";
 import { formatMoney } from "./money";
@@ -108,6 +108,7 @@ export type WallIcon =
   | "repeat"
   | "plane"
   | "user-plus"
+  | "truck"
   | "calendar-check"
   | "banknote"
   | "bell-ring"
@@ -196,6 +197,18 @@ export function describeEvent(e: WallEvent, nameOf: (userId: string | null) => s
     }
     case "joined":
       return { icon: "user-plus", parts: [b(who), t(" moved in.")] };
+    case "moving_out": {
+      const on = typeof e.data.on === "string" ? e.data.on : null;
+      const you = who === "You";
+      return {
+        icon: "truck",
+        parts: [b(who), t(on ? ` ${you ? "move" : "moves"} out on ${dateRange(on, on)}.` : ` ${you ? "are" : "is"} staying after all.`)],
+      };
+    }
+    case "moved_out": {
+      const was = typeof e.data.who === "string" && e.data.who ? firstName(e.data.who) : who;
+      return { icon: "truck", parts: [b(was), t(" moved out.")] };
+    }
     case "month_closed":
       return { icon: "calendar-check", parts: [t(`${monthLabel(String(e.data.month))} is closed and the Stake is shared out.`)] };
     case "paid":
