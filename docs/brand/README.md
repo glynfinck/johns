@@ -141,7 +141,13 @@ For GitHub in Safari, tap **aA**, then **Request Desktop Website**.
 3. **Microsoft sign-in**. Open
    [App registrations](https://entra.microsoft.com/#view/Microsoft_AAD_RegisteredApps/ApplicationsListBlade),
    then Jonz, then **Branding & properties**: logo `icon-512.png`, home page
-   `https://jonz.app`, privacy `https://jonz.app/privacy`.
+   `https://jonz.app`, terms `https://jonz.app/terms`, privacy
+   `https://jonz.app/privacy`. Under **Publisher domain**, choose Update,
+   then Verify a new domain, and enter `jonz.app`: Microsoft reads
+   `/.well-known/microsoft-identity-association.json` (in
+   `apps/client/public`). The consent screen still says "unverified" until
+   the publisher is verified, which needs a business Microsoft AI Cloud
+   Partner Program account and an `@jonz.app` email.
 4. **GitHub**. Open the repo's
    [Settings](https://github.com/glynfinck/jonz/settings), then **Social
    preview**, then **Edit**, and upload `social-preview.png`.

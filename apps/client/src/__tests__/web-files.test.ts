@@ -60,6 +60,17 @@ describe('the manifest', () => {
   });
 });
 
+describe("Microsoft's proof that jonz.app is the sign-in app's domain", () => {
+  // Entra reads it to set the app's publisher domain (Branding & properties).
+  const association = JSON.parse(read('.well-known/microsoft-identity-association.json'));
+
+  it('names the Jonz app registration, and only it', () => {
+    expect(association).toEqual({
+      associatedApplications: [{ applicationId: 'f769a77b-82be-4828-aef1-6c6dbc6ca8c0' }],
+    });
+  });
+});
+
 describe('the service worker', () => {
   const worker = read('sw.js');
 
