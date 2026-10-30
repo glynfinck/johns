@@ -57,3 +57,8 @@ export function spendImmunity(assignmentId: string): Promise<void> {
 export function spendSwap(mine: string, theirs: string): Promise<void> {
   return call(supabase.rpc('use_swap', { p_mine: mine, p_theirs: theirs }));
 }
+
+/** Take an open flag down: whoever raised it, or an admin (remove_flag decides). */
+export function removeFlag(assignmentId: string): Promise<void> {
+  return call(supabase.rpc('remove_flag', { p_assignment: assignmentId }));
+}

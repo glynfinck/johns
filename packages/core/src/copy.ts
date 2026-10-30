@@ -508,6 +508,18 @@ export const ON_CALL_COPY = {
   flagging: "Flagging…",
   tookItOut: "Done it",
   youreOnCall: "You’re on call",
+  /** A Done it, for ten minutes after: "You did it at 00:42". The mark beside it says Done. */
+  didIt: (time: string) => `You did it at ${time}`,
+  done: "Done",
+  /** On an open flag's sheet, for whoever raised it or an admin. */
+  removeBody: (holder: string) => `Flagged by mistake? Take it down and ${holder} won’t be asked again.`,
+  removeBodyYours: "Flagged by mistake? Take it down and it won’t need doing.",
+  removeFlag: "Remove flag",
+  removing: "Removing…",
+  removed: "Flag removed.",
+  /** On a flag someone else raised, for whoever has it. */
+  onlyRaiser: (name: string) => `${name} raised this flag, so only ${name} or an admin can take it down.`,
+  onlyAdmin: "Jonz opened this again after a miss, so only an admin can take it down.",
   /** "Alex is on call". */
   holder: (name: string) => `${name} is on call`,
   /** "Flagged by Sam, due 9am": the John sheet's and Today's meta line. */

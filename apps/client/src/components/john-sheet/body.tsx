@@ -22,6 +22,7 @@ import { INSET, SPACE, useTheme } from '@/theme';
 import { ChangeResult } from './change-result';
 import { TheirsChecking, YoursChecking } from './checking';
 import { TheirsOpen, YoursOpen } from './open';
+import { FlagPart } from './flag';
 import { CrewPart, RollCall } from './roll-call';
 import { Settled } from './settled';
 import { Disputed } from './vote';
@@ -69,7 +70,8 @@ export interface JohnSheetContext {
  * johnSheetMode). Yours and open: the tick, and "If you can't" while you
  * hold a token. Being checked: when it stands, and Undo for yours or
  * Dispute for a housemate's. Disputed: the reason, the tally and the vote.
- * Settled: the photo, if it had one (the header says what happened). A John
+ * Settled: the photo, if it had one (the header says what happened). An
+ * open flag: Remove flag, for whoever raised it or an admin. A John
  * done together, or with help, says who's on it (crew.ts); ticking one is
  * its roll call, "Who did it?", in place of the rest. Then, whatever its
  * state, an admin's "Change result", and "Why?": why it's whose it is, and
@@ -88,6 +90,7 @@ export function JohnSheetBody({ item, context }: { item: BoardItem; context: Joh
       ) : (
         <>
           <ModeContent item={item} context={context} onRollCall={() => setRollCalling(true)} />
+          <FlagPart item={item} context={context} />
           <CrewPart item={item} context={context} />
           <ChangeResult item={item} context={context} />
         </>

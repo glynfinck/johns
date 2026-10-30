@@ -1450,6 +1450,7 @@ export type Database = {
         Returns: string
       }
       raise_flag: { Args: { p_john: string }; Returns: string }
+      remove_flag: { Args: { p_assignment: string }; Returns: undefined }
       recording: { Args: never; Returns: boolean }
       recount_streaks: { Args: { p_house: string }; Returns: undefined }
       remove_member: {

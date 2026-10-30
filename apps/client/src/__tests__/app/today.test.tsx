@@ -630,6 +630,28 @@ describe('On call', () => {
     expect(raiseFlag).toHaveBeenCalledWith('j-bins');
   });
 
+  it('shows a Done it as done for ten minutes, so another tap can’t count it twice', async () => {
+    const doneIt = assignment({
+      id: 'f1',
+      john_id: 'j-bins',
+      week_id: 'w1',
+      user_id: 'priya',
+      name: 'Empty the bins',
+      flagged_at: at(-0.05),
+      flagged_by: 'priya',
+      done_at: at(-0.05),
+      due_at: at(12),
+    });
+    read.mockResolvedValue(
+      snapshot({ onCall: [{ ...BINS_ON_CALL, user_id: 'priya' }], assignments: [...snapshot().assignments, doneIt] }),
+    );
+    await open();
+    const section = within(await screen.findByTestId('on-call'));
+    expect(section.getByTestId('on-call-done-it')).toBeOnTheScreen();
+    expect(section.getByText(ON_CALL_COPY.done)).toBeOnTheScreen();
+    expect(section.queryByTestId('on-call-done')).toBeNull();
+  });
+
   it('says who an open flag is with, and opens it rather than flagging it again', async () => {
     const flag = assignment({
       id: 'f1',

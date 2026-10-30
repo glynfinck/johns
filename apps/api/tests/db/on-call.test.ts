@@ -126,6 +126,112 @@ describe("raise_flag", () => {
   });
 });
 
+/** Bins with Ben on call and Cal to flag it; Ava is the admin. */
+async function benOnCall() {
+  const made = await onCallHouse();
+  const [ava, ben, cal] = made.house.everyone;
+  await db.from("on_call").update({ user_id: ben.userId }).eq("week_id", made.weekId).eq("john_id", made.bins.id);
+  return { ...made, ava, ben, cal };
+}
+
+describe("Done it taps", () => {
+  /** Done it, as Today says it: raise the flag you'd hold, and tick it. */
+  async function doneIt(actor: Actor, johnId: string) {
+    const raised = await actor.db.rpc("raise_flag", { p_john: johnId });
+    if (raised.error) return raised;
+    expectOk(await actor.db.rpc("mark_done", { p_assignment: raised.data! }));
+    return raised;
+  }
+
+  async function flagsOf(johnId: string) {
+    const { data } = await db.from("assignments").select("id, done_at").eq("john_id", johnId);
+    return data!;
+  }
+
+  it("counts a Done it once: another within ten minutes is refused, while a housemate can still flag it", async () => {
+    const { bins, ben, cal } = await benOnCall();
+    expectOk(await doneIt(ben, bins.id));
+    expectRule(await doneIt(ben, bins.id), "just_done");
+    expect(await flagsOf(bins.id)).toHaveLength(1);
+    expectOk(await cal.db.rpc("raise_flag", { p_john: bins.id }));
+    expect(await flagsOf(bins.id)).toHaveLength(2);
+  });
+
+  it("counts a Done it again once ten minutes have passed", async () => {
+    const { bins, ben } = await benOnCall();
+    const { data: first } = await doneIt(ben, bins.id);
+    const earlier = new Date(Date.now() - 11 * 60_000).toISOString();
+    await db.from("assignments").update({ flagged_at: earlier, done_at: earlier }).eq("id", first!);
+    expectOk(await doneIt(ben, bins.id));
+    expect(await flagsOf(bins.id)).toHaveLength(2);
+  });
+
+  it("takes the flag back with the tick, from the John's sheet or the toast, and its share with it", async () => {
+    const { bins, ben, weekId } = await benOnCall();
+    const before = await sharesOf(weekId);
+
+    const { data: one } = await doneIt(ben, bins.id);
+    expectOk(await ben.db.rpc("undo_done", { p_assignment: one! }));
+    expect(await flagsOf(bins.id)).toEqual([]);
+
+    const { data: two } = await doneIt(ben, bins.id);
+    expectOk(await ben.db.rpc("undo_latest", { p_kind: "tick", p_about: two! }));
+    expect(await flagsOf(bins.id)).toEqual([]);
+
+    const after = await sharesOf(weekId);
+    for (const [user, share] of before) expect(after.get(user)).toBeCloseTo(share, 2);
+  });
+
+  it("leaves a housemate's flag open when its tick is taken back", async () => {
+    const { bins, ben, cal } = await benOnCall();
+    const { data: flag } = await cal.db.rpc("raise_flag", { p_john: bins.id });
+    expectOk(await ben.db.rpc("mark_done", { p_assignment: flag! }));
+    expectOk(await ben.db.rpc("undo_done", { p_assignment: flag! }));
+    expect(await flagsOf(bins.id)).toEqual([{ id: flag, done_at: null }]);
+  });
+});
+
+describe("remove_flag", () => {
+  it("lets whoever raised it take it down, with its share and its Wall post", async () => {
+    const { bins, cal, weekId } = await benOnCall();
+    const before = await sharesOf(weekId);
+    const { data: flag } = await cal.db.rpc("raise_flag", { p_john: bins.id });
+    expectOk(await cal.db.rpc("remove_flag", { p_assignment: flag! }));
+    const { data: gone } = await db.from("assignments").select("id").eq("id", flag!);
+    expect(gone).toEqual([]);
+    const { data: posts } = await db.from("events").select("id").eq("assignment_id", flag!);
+    expect(posts).toEqual([]);
+    const after = await sharesOf(weekId);
+    for (const [user, share] of before) expect(after.get(user)).toBeCloseTo(share, 2);
+  });
+
+  it("won't let whoever is on call take down a housemate's flag, but an admin can, and says so", async () => {
+    const { bins, ava, ben, cal } = await benOnCall();
+    const { data: flag } = await cal.db.rpc("raise_flag", { p_john: bins.id });
+    expectRule(await ben.db.rpc("remove_flag", { p_assignment: flag! }), "not_your_flag");
+    expectOk(await ava.db.rpc("remove_flag", { p_assignment: flag! }));
+    const { data: told } = await db.from("events").select("user_id, data").eq("kind", "undone").eq("user_id", cal.userId);
+    expect(told).toEqual([{ user_id: cal.userId, data: expect.objectContaining({ by: ava.userId, what: "flag" }) }]);
+  });
+
+  it("lets whoever is on call take down a flag they raised themselves", async () => {
+    const { bins, ben } = await benOnCall();
+    await db.from("johns").update({ needs_photo: true }).eq("id", bins.id);
+    const { data: flag } = await ben.db.rpc("raise_flag", { p_john: bins.id });
+    expectOk(await ben.db.rpc("remove_flag", { p_assignment: flag! }));
+    expect(await db.from("assignments").select("id").eq("john_id", bins.id).then((r) => r.data)).toEqual([]);
+  });
+
+  it("refuses a flag that's been ticked, and someone outside the house", async () => {
+    const { bins, ben, cal } = await benOnCall();
+    const { data: flag } = await cal.db.rpc("raise_flag", { p_john: bins.id });
+    expectOk(await ben.db.rpc("mark_done", { p_assignment: flag! }));
+    expectRule(await cal.db.rpc("remove_flag", { p_assignment: flag! }), "flag_settled");
+    const outsider = await signedInUser("Zed");
+    expectDenied(await outsider.db.rpc("remove_flag", { p_assignment: flag! }));
+  });
+});
+
 describe("the clock and flags", () => {
   it("misses a flag at twice its window, on whoever had it, and opens it again", async () => {
     const { house, bins, holder, weekId } = await onCallHouse(["Ava", "Ben"], 1);
