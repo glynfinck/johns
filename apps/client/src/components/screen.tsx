@@ -43,6 +43,7 @@ export function Screen({
   spreads = false,
   refreshing,
   onRefresh,
+  onNearEnd,
   testID,
 }: {
   children: ReactNode;
@@ -51,6 +52,8 @@ export function Screen({
   spreads?: boolean;
   refreshing?: boolean;
   onRefresh?: () => void;
+  /** Scrolled to within a screen of the end: a timeline reads its next page. */
+  onNearEnd?: () => void;
   testID?: string;
 }) {
   const { colors } = useTheme();
@@ -69,6 +72,14 @@ export function Screen({
           <ScrollView
             testID="page-scroll"
             style={styles.scroll}
+            scrollEventThrottle={onNearEnd ? 200 : undefined}
+            onScroll={
+              onNearEnd
+                ? ({ nativeEvent: { contentOffset, contentSize, layoutMeasurement } }) => {
+                    if (contentOffset.y + 2 * layoutMeasurement.height >= contentSize.height) onNearEnd();
+                  }
+                : undefined
+            }
             contentContainerStyle={[styles.page, { maxWidth: max }, windowWidth >= WIDE && styles.leading, two && styles.filled]}
             refreshControl={
               onRefresh ? (

@@ -151,7 +151,10 @@ each app's AGENTS.md.
   `POST /api/resets` to the service-role-only `admin_reset`
   (`docs/specs/admin-resets.md`);
   a notification's buttons reach `mark_done` and `cast_vote` through the
-  service-role-only `push_action`) or a few column
+  service-role-only `push_action`; the owner's admin pages write through
+  `save_notice` / `end_notice`, which check `is_owner()` (a row in the
+  migration-only `app_owners` plus an `aal2` session) and append to the
+  append-only `admin_audit`, see `docs/specs/owner-admin.md`) or a few column
   grants (house settings and the John list, its group included, for admins;
   your own name, reactions, push subscriptions). Refusals raise `42501` (not
   yours) or `P0001` with a short code that `errors.ts` turns into a sentence.

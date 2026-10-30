@@ -73,6 +73,9 @@ const MESSAGES: Record<string, string> = {
   plan_time: "Pick a time from now until the end of this week.",
   already_asked: "You’ve already asked about that John today.",
   swap_gone: "That ask has run out, so the Johns stay as they were.",
+  owner_only: "Only the owner can do that, signed in with their code.",
+  notice_ends_first: "A notice has to end after it starts.",
+  audit_append_only: "The audit log can’t be changed.",
 };
 
 export function humanError(error: { message?: string; code?: string } | null | undefined): string {
