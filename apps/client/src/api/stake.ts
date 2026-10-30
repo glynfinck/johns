@@ -77,8 +77,16 @@ async function readLedger(houseId: string) {
   }
 }
 
-/** Say the money arrived: only the person paid can (confirm_payment checks). */
-export async function confirmPayment(houseId: string, fromUserId: string, amountMinor: number): Promise<void> {
-  const { error } = await supabase.rpc('confirm_payment', { p_house: houseId, p_from: fromUserId, p_amount: amountMinor });
+/**
+ * Say the money arrived, or (`splitwise`) that it's been added in Splitwise
+ * instead: only the person owed can (confirm_payment checks).
+ */
+export async function confirmPayment(houseId: string, fromUserId: string, amountMinor: number, via?: 'splitwise'): Promise<void> {
+  const { error } = await supabase.rpc('confirm_payment', {
+    p_house: houseId,
+    p_from: fromUserId,
+    p_amount: amountMinor,
+    ...(via ? { p_via: via } : {}),
+  });
   if (error) throw new Error(humanError(error));
 }

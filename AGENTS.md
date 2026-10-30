@@ -248,7 +248,11 @@ already due a day's grace (`graceDue`).
   covered it). Money is integer minor units in an
   append-only ledger, from each person's side; balances are sums, a month
   always sums to zero, and only the payee can confirm a payment. The app
-  never moves money.
+  never moves money. A house can settle up in Splitwise instead
+  (`houses.settle_in`, `docs/specs/splitwise-settle-up.md`): the payee
+  copies the amount across and marks it added, which is a payment with
+  `via: 'splitwise'`; Jonz never calls Splitwise's API (paid apps need a
+  licence).
 - **The Wall**: `events` rows written by the functions and the engine, with
   reactions and photo receipts.
 

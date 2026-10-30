@@ -3,9 +3,9 @@ import { format } from "date-fns";
 import { currentOrNext, shiftMonth, type AwayPeriod } from "./away";
 import { FOCUS_SHELL_COPY, HOUSE_PAGE_COPY, PERSON_COPY, STAKE_HISTORY_COPY } from "./copy";
 import type { BalanceRow } from "./deal";
-import type { Currency, HouseRules } from "./domain";
+import type { Currency, HouseRules, SettleIn } from "./domain";
 import { dateRange, dayLabel, firstName, formatBalance, monthLabel, pointsLabel, STATUS_MARK, type StatusIcon } from "./format";
-import { formatMoney, formatSigned } from "./money";
+import { formatMoney, formatSigned, moneyInput } from "./money";
 import type { TableRow } from "./points";
 import type { LedgerRow, StakeView, Transfer } from "./stake";
 import { IMMUNITY_CAP, IMMUNITY_EVERY } from "./streak";
@@ -195,6 +195,11 @@ export interface SettleRow {
   spoken: string | null;
   /** The first of those: the page's one amber button. Later ones are outlined. */
   primary: boolean;
+  /**
+   * In a house that settles up in Splitwise, what's owed to you as it goes
+   * in there: its description and the bare amount to copy ("4.01").
+   */
+  splitwise: { description: string; amount: string; copy: string; spoken: string } | null;
 }
 
 /**
@@ -223,8 +228,11 @@ export function settleRows(input: {
   currency: Currency;
   ledger: readonly LedgerMoney[];
   closedMonths: readonly string[];
+  /** Absent: settled here. */
+  settleIn?: SettleIn;
 }): SettleRow[] {
   const { transfers, me, members, currency, ledger, closedMonths } = input;
+  const splitwise = input.settleIn === "splitwise";
   const monthsOf = (userId: string) => monthsInWords(owedMonths(ledger, closedMonths, userId));
   const here = (userId: string) => members.some((m) => m.userId === userId);
   const owed = transfers
@@ -232,17 +240,32 @@ export function settleRows(input: {
     .map((t): SettleRow => {
       const amount = formatMoney(t.amount, currency);
       const who = firstNameIn(members, t.from);
+      const months = monthsOf(t.from);
+      const inSplitwise = splitwise && here(t.from);
+      const plain = moneyInput(t.amount);
       return {
         key: `${t.from}-${t.to}`,
         userId: t.from,
         name: nameIn(members, t.from),
         owedToYou: true,
         amount: t.amount,
-        title: HOUSE_PAGE_COPY.owesYou(who, amount, monthsOf(t.from)),
-        meta: settleMeta(t, me, members),
-        action: here(t.from) ? HOUSE_PAGE_COPY.markReceived(amount) : null,
-        spoken: here(t.from) ? HOUSE_PAGE_COPY.markReceivedFrom(who, amount) : null,
+        title: HOUSE_PAGE_COPY.owesYou(who, amount, months),
+        meta: inSplitwise ? HOUSE_PAGE_COPY.splitwiseHow(who) : settleMeta(t, me, members),
+        action: here(t.from) ? (inSplitwise ? HOUSE_PAGE_COPY.addedToSplitwise : HOUSE_PAGE_COPY.markReceived(amount)) : null,
+        spoken: here(t.from)
+          ? inSplitwise
+            ? HOUSE_PAGE_COPY.addedToSplitwiseFrom(who, amount)
+            : HOUSE_PAGE_COPY.markReceivedFrom(who, amount)
+          : null,
         primary: false,
+        splitwise: inSplitwise
+          ? {
+              description: HOUSE_PAGE_COPY.splitwiseDescription(months),
+              amount: plain,
+              copy: HOUSE_PAGE_COPY.copyAmount(plain),
+              spoken: HOUSE_PAGE_COPY.copyAmountFrom(who, amount),
+            }
+          : null,
       };
     });
   const first = owed.find((row) => row.action);
@@ -259,10 +282,11 @@ export function settleRows(input: {
         owedToYou: false,
         amount: t.amount,
         title: HOUSE_PAGE_COPY.youOwe(name, formatMoney(t.amount, currency), months),
-        meta: settleMeta(t, me, members),
+        meta: splitwise && here(t.to) ? HOUSE_PAGE_COPY.splitwiseWaiting(name) : settleMeta(t, me, members),
         action: null,
         spoken: null,
         primary: false,
+        splitwise: null,
       };
     });
   return [...owed, ...owing];

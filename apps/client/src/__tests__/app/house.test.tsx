@@ -11,13 +11,14 @@ import {
 import { router, Slot } from 'expo-router';
 import { Tabs } from 'expo-router/js-tabs';
 import { act, fireEvent, screen, waitFor, within } from 'expo-router/testing-library';
-import { Platform, Share, Text, useWindowDimensions } from 'react-native';
+import { Linking, Platform, Share, Text, useWindowDimensions } from 'react-native';
 
 import { loadAway } from '@/api/away';
 import { loadHouse } from '@/api/board';
 import { catchUp } from '@/api/house';
 import { resetJoinCode } from '@/api/settings';
 import { confirmPayment, loadStake, type StakeRead } from '@/api/stake';
+import * as Clipboard from 'expo-clipboard';
 import { loadTable } from '@/api/table';
 import HouseScreen from '@/app/(house)/house';
 import { HouseWorkspace } from '@/components/house/workspace';
@@ -31,6 +32,7 @@ jest.mock('@/api/stake', () => ({ loadStake: jest.fn(), confirmPayment: jest.fn(
 jest.mock('@/api/table', () => ({ loadTable: jest.fn() }));
 jest.mock('@/api/settings', () => ({ resetJoinCode: jest.fn() }));
 jest.mock('@/api/supabase', () => ({ supabase: {} }));
+jest.mock('expo-clipboard', () => ({ setStringAsync: jest.fn().mockResolvedValue(true) }));
 
 // The lower half of the page is the lower House track's, with its own tests:
 // here it only has to be mounted, in its order, under the money and the Table.
@@ -212,6 +214,25 @@ describe('the month card', () => {
     expect(within(transfer).getByText(HOUSE_PAGE_COPY.markReceived('£4'))).toBeOnTheScreen();
     await fireEvent.press(within(transfer).getByRole('button', { name: HOUSE_PAGE_COPY.markReceivedFrom('Sam', '£4') }));
     expect(confirmPayment).toHaveBeenCalledWith('h1', 'sam', 400);
+  });
+
+  it('in a Splitwise house, copies the amount across and marks it added there', async () => {
+    const base = await (loadHouse as jest.Mock)();
+    (loadHouse as jest.Mock).mockResolvedValue({ ...base, house: { ...base.house, settleIn: 'splitwise' } });
+    const openURL = jest.spyOn(Linking, 'openURL').mockResolvedValue(undefined);
+    await open();
+    const transfer = screen.getByTestId('transfer');
+    expect(transfer).toHaveTextContent(new RegExp(HOUSE_PAGE_COPY.splitwiseHow('Sam')));
+    expect(within(transfer).getByText(HOUSE_PAGE_COPY.splitwiseDescription('September'))).toBeOnTheScreen();
+    // The bare amount, which is what Splitwise's amount box takes.
+    await fireEvent.press(within(transfer).getByRole('button', { name: HOUSE_PAGE_COPY.copyAmountFrom('Sam', '£4') }));
+    expect(Clipboard.setStringAsync).toHaveBeenCalledWith('4');
+    await fireEvent.press(screen.getByRole('button', { name: HOUSE_PAGE_COPY.openSplitwise }));
+    expect(openURL).toHaveBeenCalledWith('https://secure.splitwise.com/');
+    expect(within(transfer).queryByText(HOUSE_PAGE_COPY.markReceived('£4'))).toBeNull();
+    await fireEvent.press(within(transfer).getByRole('button', { name: HOUSE_PAGE_COPY.addedToSplitwiseFrom('Sam', '£4') }));
+    expect(confirmPayment).toHaveBeenCalledWith('h1', 'sam', 400, 'splitwise');
+    openURL.mockRestore();
   });
 
   it('says why marking it received was refused', async () => {

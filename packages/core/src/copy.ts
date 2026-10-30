@@ -575,6 +575,9 @@ export const RULES_COPY = {
     hours === 0 ? "No grace: anyone can cover it once it’s due" : `${hours} ${hours === 1 ? "hour" : "hours"} after it’s due`,
   away: "Time away is made up",
   awayNote: "Nobody is handed a John due while they’re away.",
+  /** Where the house settles up at month end (houses.settle_in), as options. */
+  settleIn: "Settle up",
+  settleInOption: { jonz: "In Jonz: mark money received", splitwise: "In Splitwise: add what’s owed there" } as Record<string, string>,
   makeupHint: {
     100: "Their share still counts, so they do a little extra each week when they’re back until it evens out.",
     50: "Half their share still counts and is made up when they’re back; the rest falls to whoever is home.",
@@ -1145,6 +1148,24 @@ export const HOUSE_PAGE_COPY = {
   /** The same button, to a screen reader, which hears it away from its row: "Mark Tom’s £4.01 received". */
   markReceivedFrom: (name: string, amount: string) => `Mark ${name}’s ${amount} received`,
   marking: "Saving…",
+  /**
+   * A house that settles up in Splitwise (houses.settle_in): what's owed to
+   * you is added there by you, as an expense you paid that they owe all of,
+   * and marked here so Jonz stops asking for it.
+   */
+  splitwiseHow: (name: string) => `Add it in Splitwise: paid by you, ${name} owes all of it`,
+  /** What you owe, in a Splitwise house: it waits for them to add it. */
+  splitwiseWaiting: (name: string) => `${name} adds it to Splitwise`,
+  /** The expense's description in Splitwise, with the months it's from when they can be named: "Jonz Stake, October". */
+  splitwiseDescription: (months: string) => (months ? `Jonz Stake, ${months}` : "Jonz Stake"),
+  addedToSplitwise: "Added to Splitwise",
+  /** The same button, to a screen reader: "Mark Tom’s £4.01 added to Splitwise". */
+  addedToSplitwiseFrom: (name: string, amount: string) => `Mark ${name}’s ${amount} added to Splitwise`,
+  /** Copies the amount alone ("4.01"), which is what Splitwise's amount box takes. */
+  copyAmount: (plain: string) => `Copy ${plain}`,
+  copyAmountFrom: (name: string, amount: string) => `Copy ${name}’s ${amount}`,
+  copied: (plain: string) => `Copied ${plain}.`,
+  openSplitwise: "Open Splitwise",
   history: "Stake history",
   stakeUnreadable: "Couldn’t read the Stake. Check the connection.",
   readingStake: "Reading the Stake",
@@ -1516,6 +1537,9 @@ export const SETUP_COPY = {
   makeup: { 100: "made up in full", 50: "half made up", 0: "not made up" } as Record<number, string>,
   /** A make-up rate the house has no words for. */
   makeupPercent: (percent: number) => `${percent}% made up`,
+  /** Where the house settles up (houses.settle_in), on the rules page. */
+  settleIn: "Settle up",
+  settleInValue: { jonz: "In Jonz", splitwise: "In Splitwise" } as Record<string, string>,
   weekStarts: "Weeks start",
   weekStartsAt: (day: string, place: string) => `${day}, ${place} time`,
   you: "You",

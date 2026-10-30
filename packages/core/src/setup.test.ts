@@ -429,6 +429,7 @@ describe("the rules form", () => {
       coverGraceHours: 3,
       lateHours: 24,
       awayMakeup: 100,
+      settleIn: "jonz",
       dealMode: "smart",
       dealBudget: 4,
       stake: "20",
@@ -447,6 +448,7 @@ describe("the rules form", () => {
     expect(rulesChanged({ ...start, coverGraceHours: 0 }, start)).toBe(true);
     expect(rulesChanged({ ...start, lateHours: 48 }, start)).toBe(true);
     expect(rulesChanged({ ...start, currency: "EUR" }, start)).toBe(true);
+    expect(rulesChanged({ ...start, settleIn: "splitwise" }, start)).toBe(true);
     expect(rulesChanged({ ...start, late: "a quid" }, start)).toBe(true);
     expect(rulesChanged({ ...start, dealMode: "classic" }, start)).toBe(true);
     expect(rulesChanged({ ...start, dealBudget: 2 }, start)).toBe(true);
@@ -467,6 +469,7 @@ describe("the rules form", () => {
         coverGraceHours: 3,
         lateHours: 24,
         awayMakeup: 100,
+        settleIn: "jonz",
         dealMode: "smart",
         dealBudget: 4,
       },

@@ -204,7 +204,10 @@ export function describeEvent(e: WallEvent, nameOf: (userId: string | null) => s
         tone: "good",
         parts: [
           b(nameOf((e.data.to as string) ?? null)),
-          t(` got ${formatMoney(Number(e.data.amount), currency)} from ${who}.`),
+          // Moved to Splitwise (houses.settle_in), it's owed there now rather than paid.
+          e.data.via === "splitwise"
+            ? t(` put ${who}’s ${formatMoney(Number(e.data.amount), currency)} into Splitwise.`)
+            : t(` got ${formatMoney(Number(e.data.amount), currency)} from ${who}.`),
         ],
       };
     case "undone": {

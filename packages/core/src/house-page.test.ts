@@ -198,6 +198,7 @@ describe("settleRows", () => {
         // A screen reader hears the button away from its row, so it names who paid.
         spoken: "Mark Tom’s £5.34 received",
         primary: true,
+        splitwise: null,
       },
     ]);
   });
@@ -244,6 +245,27 @@ describe("settleRows", () => {
     ]);
     const owing = settleRows({ transfers: [{ from: "sam", to: "ben", amount: 50 }], me: "sam", members: MEMBERS, currency: "GBP", ledger: [], closedMonths: [] });
     expect(owing.map((r) => [r.title, r.meta])).toEqual([["You owe a former housemate £0.50", HOUSE_PAGE_COPY.gone]]);
+  });
+
+  it("in a Splitwise house, gives what's owed to you its line to copy there and Added to Splitwise", () => {
+    const owed = settleRows({ transfers: stake.transfers, me: "priya", members: MEMBERS, currency: "GBP", ledger, closedMonths: ["2026-09"], settleIn: "splitwise" });
+    expect(owed.map((r) => [r.title, r.meta, r.action, r.spoken, r.primary])).toEqual([
+      ["Tom owes you £5.34 for September", "Add it in Splitwise: paid by you, Tom owes all of it", "Added to Splitwise", "Mark Tom’s £5.34 added to Splitwise", true],
+    ]);
+    // Splitwise's amount box takes the bare number.
+    expect(owed[0].splitwise).toEqual({ description: "Jonz Stake, September", amount: "5.34", copy: "Copy 5.34", spoken: "Copy Tom’s £5.34" });
+    // What you owe waits for them to add it; nothing to copy.
+    const owing = settleRows({ transfers: stake.transfers, me: "tom", members: MEMBERS, currency: "GBP", ledger, closedMonths: ["2026-09"], settleIn: "splitwise" });
+    expect(owing.map((r) => [r.meta, r.splitwise])).toEqual([
+      ["Priya adds it to Splitwise", null],
+      ["Sam adds it to Splitwise", null],
+    ]);
+    // Whole amounts copy without pence, and someone who has left still can't be marked.
+    const left = settleRows({ transfers: [{ from: "ben", to: "sam", amount: 50 }, { from: "tom", to: "sam", amount: 300 }], me: "sam", members: MEMBERS, currency: "GBP", ledger: [], closedMonths: [], settleIn: "splitwise" });
+    expect(left.map((r) => [r.meta, r.action, r.splitwise?.amount ?? null, r.splitwise?.description ?? null])).toEqual([
+      [HOUSE_PAGE_COPY.gone, null, null, null],
+      ["Add it in Splitwise: paid by you, Tom owes all of it", "Added to Splitwise", "3", "Jonz Stake"],
+    ]);
   });
 });
 

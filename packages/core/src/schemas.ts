@@ -1,6 +1,6 @@
 import { z } from "zod";
 
-import { BUDGETS, CATEGORIES, CURRENCIES, DEAL_MODES, JOHN_WHEN } from "./domain";
+import { BUDGETS, CATEGORIES, CURRENCIES, DEAL_MODES, JOHN_WHEN, SETTLE_IN } from "./domain";
 import { PASS_PURCHASES } from "./pass";
 
 // Shapes the apps and the API agree on. The API validates requests with
@@ -80,6 +80,8 @@ export const HouseSettings = z.object({
   /** Absent from a form that doesn't show it, like coverGraceHours. */
   lateHours: z.coerce.number().int().min(1).max(72).optional(),
   awayMakeup: z.coerce.number().int().refine((n) => (AWAY_MAKEUP as readonly number[]).includes(n)),
+  /** Where the house settles up at month end (houses.settle_in). Absent from a form that doesn't show it, like coverGraceHours. */
+  settleIn: z.enum(SETTLE_IN).optional(),
   /** Steady weeks: absent from a form that doesn't show them, like coverGraceHours. */
   dealMode: z.enum(DEAL_MODES).optional(),
   dealBudget: z.coerce.number().int().refine((n) => (BUDGETS as readonly number[]).includes(n)).optional(),
