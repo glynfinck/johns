@@ -52,6 +52,10 @@ const MESSAGES: Record<string, string> = {
   not_on_call: "That John isn’t on call, so it can’t be flagged.",
   not_dealt: "This week hasn’t been handed out yet, so nobody is on call.",
   nobody_home: "Everyone who shares that John is away today.",
+  just_done: "You’ve just done that one. Undo it if that was a mistake.",
+  not_a_flag: "That John wasn’t flagged.",
+  flag_settled: "That flag has been ticked. Undo the tick instead.",
+  not_your_flag: "Only whoever raised a flag, or an admin, can take it down.",
   tick_it_yourself: "That’s your John. Tick it off instead.",
   too_soon_to_cover: "It’s still theirs to do. You can cover it once the grace period is up.",
   pass_needed: "Changing your list with Jonz comes with the House Pass.",
@@ -62,6 +66,10 @@ const MESSAGES: Record<string, string> = {
   left_off: "The roll call said you weren’t there. Dispute it on the John if you were.",
   not_your_tick: "Only whoever ticked it can take it back. Dispute it if it’s wrong.",
   same_job: "You’re both on that John already.",
+  bad_prefs: "Those didn’t save. Pick days of the week, and morning, afternoon or evening.",
+  plan_time: "Pick a time from now until the end of this week.",
+  already_asked: "You’ve already asked about that John today.",
+  swap_gone: "That ask has run out, so the Johns stay as they were.",
 };
 
 export function humanError(error: { message?: string; code?: string } | null | undefined): string {

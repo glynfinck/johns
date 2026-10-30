@@ -131,20 +131,36 @@ export type DealWhy = {
   /** Who it was dealt to. */
   to: string;
   /**
-   * What decided it: the only sharer home that day; furthest behind; level
-   * with someone, but with fewer Johns this week; or level in every way, so
-   * the seeded shuffle.
+   * What decided it. Fair shares (before Steady weeks): the only sharer home
+   * that day; furthest behind; level with someone, but with fewer Johns this
+   * week; or level in every way, so the seeded shuffle. Steady weeks
+   * (steady.ts SteadyBy): a miss coming back, their one John this week, the
+   * most budget left, furthest behind (no limit), Classic's turn, or next in
+   * line.
    */
-  by: "only" | "behind" | "fewer" | "draw";
+  by: "only" | "behind" | "fewer" | "draw" | "back" | "oneEach" | "mostRoom" | "turn" | "nextInLine";
   /**
    * Each sharer home that day, as the deal weighed them, furthest behind
    * first: their balance plus this week's Johns dealt before this one, minus
-   * their share of this week (to a tenth of a point). `last` did it last
-   * time; `full` had already been handed as much extra as a week catches up.
+   * their share of this week (to a tenth of a point); in Steady weeks with a
+   * budget, against the house's average balance. `last` did it last time;
+   * `full` had already been handed as much extra as a week catches up;
+   * `room` is budget left before this John; `place` is Classic's place in line.
    */
-  weighed: { userId: string; standing: number; last?: true; full?: true }[];
+  weighed: { userId: string; standing: number; last?: true; full?: true; room?: number; place?: number }[];
   /** The sharers away the day it's due. */
   away: string[];
+  /** Steady weeks: the mode and budget it was dealt under (0 for no limit). */
+  mode?: "smart" | "classic";
+  budget?: number;
+  /** Weeks it waited before this. */
+  waited?: number;
+  /** It went a little over their budget, having waited a week. */
+  stretched?: true;
+  /** It went back to whoever did it last time, having waited two weeks. */
+  again?: true;
+  /** It's on another day than its own, and why. */
+  moved?: "taken" | "suits" | "away" | "gone";
 };
 
 export function fairShares(

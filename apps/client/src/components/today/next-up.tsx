@@ -5,6 +5,8 @@ import {
   NEXT_UP_COPY,
   nextUpMeta,
   NOT_DEALT_COPY,
+  plannable,
+  type BestTime,
   type BoardItem,
   type HouseRules,
   type NextUpState,
@@ -18,6 +20,7 @@ import { Button } from '@/components/button';
 import { Card } from '@/components/card';
 import { useJohnSheet } from '@/components/john-sheet';
 import { LidBar } from '@/components/lid';
+import { PlanIt } from '@/components/plan-it';
 import { StreetPlate } from '@/components/street-plate';
 import { Lead, Meta, SectionLabel } from '@/components/text';
 import { TextButton } from '@/components/text-button';
@@ -44,6 +47,7 @@ export function NextUp({
   cant,
   room,
   awayMakeup,
+  bestTime = null,
 }: {
   houseId: string;
   state: Exclude<NextUpState, { kind: 'setup' }>;
@@ -55,12 +59,23 @@ export function NextUp({
   room: number | null;
   /** How much of your share time away still counts (houses.away_makeup). */
   awayMakeup: number;
+  /** Your best time (House, You, Preferences), which Plan it offers first. */
+  bestTime?: BestTime | null;
 }) {
   switch (state.kind) {
     case 'john':
       // Keyed by the John, so a tick under way never carries over to the next one.
       return (
-        <NextJohn key={state.item.id} houseId={houseId} item={state.item} rules={rules} now={now} cant={cant} room={room} />
+        <NextJohn
+          key={state.item.id}
+          houseId={houseId}
+          item={state.item}
+          rules={rules}
+          now={now}
+          cant={cant}
+          room={room}
+          bestTime={bestTime}
+        />
       );
     case 'clear':
       return (
@@ -103,7 +118,7 @@ export function NextUpCard({ lead, body, children }: { lead: string; body?: stri
 /**
  * Your next John, posted on the pavement rather than in a card: its name on
  * a street-name plate (which opens the John sheet), what it is, when it's
- * due and what being late costs, then amber "Mark done" with a photo beside
+ * due and what being late costs, Plan it (or when it's planned for), then amber "Mark done" with a photo beside
  * it (a photo John leads with the camera), and, while you hold a token, the
  * way to skip or swap it. The plate says it's next, so there's no "Next up"
  * over it to read, only to hear. Overdue, the plate's border turns hazard
@@ -116,6 +131,7 @@ function NextJohn({
   now,
   cant,
   room,
+  bestTime,
 }: {
   houseId: string;
   item: BoardItem;
@@ -123,6 +139,7 @@ function NextJohn({
   now: Date;
   cant: CantHeld;
   room: number | null;
+  bestTime: BestTime | null;
 }) {
   const { colors, type } = useTheme();
   const sheet = useJohnSheet();
@@ -165,6 +182,11 @@ function NextJohn({
             <Text style={{ color: colors.hazard }}>{meta.overdue.since}</Text>
             {meta.overdue.cost ? `, ${meta.overdue.cost}` : ''}
           </Text>
+        </View>
+      ) : null}
+      {plannable(item, item.userId) ? (
+        <View style={styles.words}>
+          <PlanIt houseId={houseId} item={item} zone={rules.timezone} now={now} bestTime={bestTime} />
         </View>
       ) : null}
 

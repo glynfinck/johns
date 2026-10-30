@@ -8,6 +8,7 @@ import {
   JOHN_SHEET_COPY,
   monthOf,
   NEXT_UP_COPY,
+  ON_CALL_COPY,
   SWAP_COPY,
   WHY_COPY,
   type DisputeRow,
@@ -20,7 +21,7 @@ import { Pressable, ScrollView, Text } from 'react-native';
 import type { Housemate, HouseSnapshot } from '@/api/board';
 import { loadHouse } from '@/api/board';
 import { castVote } from '@/api/disputes';
-import { coverJohn, markDone, rollCall, spendImmunity, spendSwap, undoCover, undoDone } from '@/api/johns';
+import { coverJohn, markDone, removeFlag, rollCall, spendImmunity, spendSwap, undoCover, undoDone } from '@/api/johns';
 import { pickPhoto } from '@/api/photos';
 import { applyReset, previewReset } from '@/api/resets';
 import { signPhoto } from '@/api/wall';
@@ -42,6 +43,7 @@ jest.mock('@/api/johns', () => ({
   undoCover: jest.fn(),
   spendImmunity: jest.fn(),
   spendSwap: jest.fn(),
+  removeFlag: jest.fn(),
 }));
 jest.mock('@/api/disputes', () => ({ castVote: jest.fn(), raiseDispute: jest.fn() }));
 jest.mock('@/api/photos', () => ({ pickPhoto: jest.fn(), uploadProof: jest.fn() }));
@@ -52,7 +54,7 @@ jest.mock('@/api/supabase', () => ({ supabase: {} }));
 const HOUR = 3_600_000;
 const at = (hours: number) => new Date(Date.now() + hours * HOUR).toISOString();
 
-const MEGAN: Housemate = { userId: 'megan', name: 'Megan', photo: null, role: 'member', streak: 0, immunityTokens: 0, swapTokens: 0 };
+const MEGAN: Housemate = { userId: 'megan', name: 'Megan', photo: null, role: 'member', streak: 0, immunityTokens: 0, swapTokens: 0, prefs: { days: [], bestTime: null, rather: {} } };
 
 /** Where the sheet is opened from, and what for. */
 const OPENERS: [string, JohnSheetFocus?][] = [['a1'], ['a3'], ['a4'], ['a5'], ['gone'], ['a1', 'swap'], ['a1', 'cant'], ['a4', 'dispute']];
@@ -674,6 +676,39 @@ describe('a settled John', () => {
     expect(within(body).getByTestId('john-sheet-when')).toHaveTextContent(words);
     expect(within(body).queryByTestId('sheet-photo')).toBeNull();
     expect(signPhoto).not.toHaveBeenCalled();
+  });
+});
+
+describe('an open flag', () => {
+  const flag = { john_id: 'j-bins', flagged_at: at(-1), due_at: at(11) };
+
+  it('lets whoever raised it take it down, and closes', async () => {
+    (removeFlag as jest.Mock).mockResolvedValue(undefined);
+    await show(house([binsOut(), samsBath({ ...flag, flagged_by: 'priya' })], priyaWith({ role: 'member' })));
+    const body = within(await openOn('Open a4'));
+    expect(body.getByText(ON_CALL_COPY.removeBody('Sam'))).toBeOnTheScreen();
+    await fireEvent.press(body.getByTestId('remove-flag'));
+    await waitFor(() => expect(removeFlag).toHaveBeenCalledWith('a4'));
+    await waitFor(() => expect(screen.queryByTestId('john-sheet-body')).toBeNull());
+  });
+
+  it('tells whoever has a housemate’s flag who can take it down, with no way to do it themselves', async () => {
+    await show(house([binsOut({ ...flag, flagged_by: 'sam' })], priyaWith({ role: 'member' })));
+    const body = within(await openOn('Open a1'));
+    expect(body.getByText(ON_CALL_COPY.onlyRaiser('Sam'))).toBeOnTheScreen();
+    expect(body.queryByTestId('remove-flag')).toBeNull();
+  });
+
+  it('lets an admin take down anyone’s flag', async () => {
+    await show(house([binsOut(), samsBath({ ...flag, flagged_by: 'sam' })]));
+    const body = within(await openOn('Open a4'));
+    expect(body.getByTestId('remove-flag')).toBeOnTheScreen();
+  });
+
+  it('offers nothing once the flag is ticked', async () => {
+    await show(house([binsOut(), samsBath({ ...flag, flagged_by: 'priya', done_at: at(-0.5) })], priyaWith({ role: 'member' })));
+    const body = within(await openOn('Open a4'));
+    expect(body.queryByTestId('remove-flag')).toBeNull();
   });
 });
 

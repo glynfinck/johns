@@ -11,6 +11,8 @@ import {
   monthStandings,
   rulesOf,
   onCallItems,
+  heldDoneIt,
+  DONE_IT_HOLD_MS,
   TODAY_ORDER,
   todayView,
   toCover,
@@ -90,7 +92,14 @@ describe("johnDef", () => {
       respondHours: 12,
       perWeek: 2,
       crew: 1,
+      keepDay: false,
     });
+  });
+
+  it("reads a John that keeps its day, and never an on-call John", () => {
+    const row = { id: "j", name: "Bins", category: "bins", points: 1, every_weeks: 1, due_dow: 4, due_time: "20:00", needs_photo: false, group_id: null };
+    expect(johnDef({ ...row, keep_day: true }).keepDay).toBe(true);
+    expect(johnDef({ ...row, keep_day: true, kind: "on_call" }).keepDay).toBe(false);
   });
 
   it("reads a John that repeats in months, with the month it counts from", () => {
@@ -227,6 +236,19 @@ describe("onCallItems", () => {
     expect(bins.times).toBe(3);
   });
 
+  it("finds the latest Done it, and holds it for ten minutes", () => {
+    const b = board([
+      flag("asked", { done_at: at(-1) }),
+      flag("mine-old", { flagged_by: ME, flagged_at: at(-20), done_at: at(-20) }),
+      flag("mine", { flagged_by: ME, flagged_at: at(-3), done_at: at(-3) }),
+    ]);
+    const [bins] = onCallItems(rows, b);
+    expect(bins.lastDoneIt?.id).toBe("mine");
+    const doneAt = bins.lastDoneIt!.doneAt!.getTime();
+    expect(heldDoneIt(bins, new Date(doneAt + DONE_IT_HOLD_MS - 1))?.id).toBe("mine");
+    expect(heldDoneIt(bins, new Date(doneAt + DONE_IT_HOLD_MS))).toBeNull();
+  });
+
   it("has no open flag once it's ticked", () => {
     const [bins] = onCallItems(rows, board([flag("f1", { done_at: at(-1) })]));
     expect(bins.openFlag).toBeNull();
@@ -247,6 +269,8 @@ describe("rulesOf", () => {
         dispute_hours: 24,
         cover_grace_hours: 3,
         late_hours: 48,
+        deal_mode: "classic",
+        deal_budget: 2,
       }),
     ).toEqual({
       timezone: "Europe/London",
@@ -258,6 +282,8 @@ describe("rulesOf", () => {
       disputeHours: 24,
       coverGraceHours: 3,
       lateHours: 48,
+      dealMode: "classic",
+      dealBudget: 2,
     });
   });
 });

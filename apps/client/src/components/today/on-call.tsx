@@ -1,4 +1,13 @@
-import { dueInLine, firstName, HISTORY_COPY, ON_CALL_COPY, type HouseRules, type OnCallItem } from '@app/core';
+import {
+  dueInLine,
+  firstName,
+  heldDoneIt,
+  HISTORY_COPY,
+  ON_CALL_COPY,
+  sinceLabel,
+  type HouseRules,
+  type OnCallItem,
+} from '@app/core';
 import { BellRingIcon, CheckIcon } from 'lucide-react-native';
 
 import type { Housemate } from '@/api/board';
@@ -8,6 +17,7 @@ import { Alert } from '@/components/alert';
 import { useJohnSheet } from '@/components/john-sheet';
 import { Row } from '@/components/row';
 import { Section } from '@/components/section';
+import { Chip } from '@/components/status-mark';
 import { TextButton } from '@/components/text-button';
 import { useMove } from '@/hooks/use-move';
 import { useUndoOffer } from '@/hooks/use-undo-offer';
@@ -16,7 +26,9 @@ import { useUndoOffer } from '@/hooks/use-undo-offer';
  * On call: the house's on-call Johns this week (the bins, whenever they're
  * full), each with who has it. Anyone taps "Needs doing" to flag one, and it
  * lands on that housemate's Today. Whoever is on call can say "Done it"
- * without waiting to be asked.
+ * without waiting to be asked. A Done it counts once: for ten minutes the
+ * row shows it as done (its sheet has Undo), and the toast's Undo takes back
+ * the flag with the tick.
  * Once flagged, the row says who has it and opens the flag's sheet. Nothing
  * when the house has none.
  */
@@ -60,6 +72,20 @@ export function OnCall({
           );
         }
         const mine = item.holderId === userId;
+        const held = mine ? heldDoneIt(item, now) : null;
+        if (held?.doneAt) {
+          return (
+            <Row
+              key={item.johnId}
+              title={item.name}
+              lid={item.category}
+              meta={ON_CALL_COPY.didIt(sinceLabel(held.doneAt, now, rules.timezone))}
+              trailing={<Chip label={ON_CALL_COPY.done} icon={CheckIcon} tone="good" />}
+              onPress={() => sheet.open(held.id)}
+              testID="on-call-done-it"
+            />
+          );
+        }
         const meta = `${mine ? ON_CALL_COPY.youreOnCall : ON_CALL_COPY.holder(nameOf(item.holderId))}, ${ON_CALL_COPY.times(item.times)}`;
         // The flag's id, once raised: what the toast's Undo takes back.
         const raised = { id: '' };
@@ -75,7 +101,7 @@ export function OnCall({
             raised.id = await raiseFlag(item.johnId);
             if (!item.needsPhoto) await markDone(raised.id);
           });
-          if (ok && !item.needsPhoto) offer(HISTORY_COPY.ticked, 'tick', raised.id);
+          if (ok && !item.needsPhoto) offer(HISTORY_COPY.doneIt, 'tick', raised.id);
           else if (ok) offer(HISTORY_COPY.flagged, 'flag', raised.id);
         };
         return (

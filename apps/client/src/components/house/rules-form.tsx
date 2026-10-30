@@ -13,6 +13,8 @@ import {
   rulesDraft,
   rulesRefusalField,
   SETUP_COPY,
+  STEADY_COPY,
+  DEAL_MODES,
   type Currency,
   type HouseRules,
   type IsoDow,
@@ -32,6 +34,7 @@ import { Section } from '@/components/section';
 import { PickRow } from '@/components/setup/pick-row';
 import { Meta } from '@/components/text';
 import { TextButton } from '@/components/text-button';
+import { useBudgetChoices } from '@/hooks/use-budget';
 import { useMove } from '@/hooks/use-move';
 import { deviceTimeZone } from '@/locale';
 import { GUTTER, INSET, LABEL_GAP, SPACE, useTheme, WIDE } from '@/theme';
@@ -42,12 +45,20 @@ const DISPUTE_OPTIONS = DISPUTE_HOURS.map((h) => ({ value: h as number, label: R
 const LATE_OPTIONS = LATE_HOURS.map((h) => ({ value: h as number, label: RULES_COPY.lateHours(h), short: SETUP_COPY.lateShort(h) }));
 const COVER_OPTIONS = COVER_GRACE_HOURS.map((h) => ({ value: h as number, label: RULES_COPY.coverGrace(h), short: SETUP_COPY.coverShort(h) }));
 const MAKEUP_OPTIONS = AWAY_MAKEUP.map((n) => ({ value: n as number, label: MAKEUP_LABEL[n] }));
+// Smart is the suggested one.
+const MODE_OPTIONS = DEAL_MODES.map((m) => ({
+  value: m,
+  label: STEADY_COPY.modeName[m],
+  meta: m === 'smart' ? `${STEADY_COPY.suggested} ${STEADY_COPY.modeMeta[m]}` : STEADY_COPY.modeMeta[m],
+}));
+const BUDGET_PLAIN = [2, 4, 6, 0].map((b) => ({ value: b, label: STEADY_COPY.budgetName(b) }));
 
-/** What the form starts from: the house's name, its rules and its make-up rate. */
+/** What the form starts from: the house's name, its rules, its make-up rate, and who lives there (for the budget's effects). */
 export interface RulesValues {
   name: string;
   rules: HouseRules;
   awayMakeup: number;
+  memberIds: readonly string[];
 }
 
 /**
@@ -90,23 +101,29 @@ export function useRulesForm(houseId: string, values: RulesValues, onSaved: () =
     else setProblems({ [rulesRefusalField(refusal)]: refusal });
   }
 
-  return { draft, set, problems, pending: move.pending, changed: rulesChanged(draft, start), save };
+  return { draft, set, problems, pending: move.pending, changed: rulesChanged(draft, start), save, houseId, memberIds: values.memberIds };
 }
 
 export type RulesFormState = ReturnType<typeof useRulesForm>;
 
 /**
- * The rules form's fields, in three sections: Money (the currency, the stake
- * and the forfeits), Fairness (disputes and time away) and House (its name,
- * its week and its time zone). Settings with a few values are rows that open
- * in place; amounts are typed as money and saved in minor units. Each
- * problem shows under its field. Several page children, so it goes straight
- * in a Screen, with RulesFoot pinned under that.
+ * The rules form's fields, in four sections: Workload (how the house shares
+ * Johns, and the budget, each choice saying what it does to this house's
+ * list), Money (the currency, the stake and the forfeits), Fairness
+ * (disputes and time away) and House (its name, its week and its time zone).
+ * Settings with a few values are rows that open in place; amounts are typed
+ * as money and saved in minor units. Each problem shows under its field.
+ * Several page children, so it goes straight in a Screen, with RulesFoot
+ * pinned under that.
  */
 export function RulesForm({ form }: { form: RulesFormState }) {
   const { draft: v, set, problems, pending } = form;
   const phoneZone = deviceTimeZone();
   const symbol = CURRENCY_SYMBOL[v.currency];
+  const budget = useBudgetChoices(form.houseId, form.memberIds, v.dealMode);
+  const budgetOptions = budget
+    ? budget.choices.map((c) => ({ value: c.budget, label: c.label, meta: c.suggested ? `${STEADY_COPY.suggested} ${c.effect}` : c.effect }))
+    : BUDGET_PLAIN;
 
   const money = [
     { key: 'stake', label: RULES_COPY.stake(symbol), testID: 'house-stake' },
@@ -116,6 +133,29 @@ export function RulesForm({ form }: { form: RulesFormState }) {
 
   return (
     <>
+      <View style={styles.noted}>
+        <Section label={STEADY_COPY.workload} testID="rules-workload">
+          <PickRow
+            label={STEADY_COPY.mode}
+            options={MODE_OPTIONS}
+            value={v.dealMode}
+            onChange={(dealMode) => set({ dealMode })}
+            disabled={pending}
+            testID="rules-mode"
+          />
+          <PickRow
+            label={STEADY_COPY.budget}
+            options={budgetOptions}
+            value={v.dealBudget}
+            onChange={(dealBudget) => set({ dealBudget })}
+            disabled={pending}
+            testID="rules-budget"
+          />
+        </Section>
+        <Meta style={styles.note} testID="rules-workload-note">
+          {[STEADY_COPY.modeFoot, STEADY_COPY.budgetFoot, budget?.tooLong ? STEADY_COPY.tooLong(budget.need) : null].filter(Boolean).join(' ')}
+        </Meta>
+      </View>
       <Section label={SETUP_COPY.money} testID="rules-money">
         <PickRow
           label={RULES_COPY.currency}

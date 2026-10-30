@@ -44,7 +44,12 @@ function RulesFor({ houseId, userId }: { houseId: string; userId: string }) {
 
   if (view && view.me?.role === 'admin' && editing) {
     const { snapshot } = view;
-    const values = { name: snapshot.house.name, rules: snapshot.rules, awayMakeup: snapshot.house.awayMakeup };
+    const values = {
+      name: snapshot.house.name,
+      rules: snapshot.rules,
+      awayMakeup: snapshot.house.awayMakeup,
+      memberIds: snapshot.members.map((m) => m.userId),
+    };
     return (
       <RulesEditing
         // A fresh form whenever the house's rules change underneath it.

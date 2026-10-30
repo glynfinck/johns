@@ -1,6 +1,6 @@
 import { z } from "zod";
 
-import { CATEGORIES, CURRENCIES, JOHN_WHEN } from "./domain";
+import { BUDGETS, CATEGORIES, CURRENCIES, DEAL_MODES, JOHN_WHEN } from "./domain";
 import { PASS_PURCHASES } from "./pass";
 
 // Shapes the apps and the API agree on. The API validates requests with
@@ -80,6 +80,9 @@ export const HouseSettings = z.object({
   /** Absent from a form that doesn't show it, like coverGraceHours. */
   lateHours: z.coerce.number().int().min(1).max(72).optional(),
   awayMakeup: z.coerce.number().int().refine((n) => (AWAY_MAKEUP as readonly number[]).includes(n)),
+  /** Steady weeks: absent from a form that doesn't show them, like coverGraceHours. */
+  dealMode: z.enum(DEAL_MODES).optional(),
+  dealBudget: z.coerce.number().int().refine((n) => (BUDGETS as readonly number[]).includes(n)).optional(),
 });
 export type HouseSettings = z.infer<typeof HouseSettings>;
 
@@ -110,6 +113,8 @@ export const JohnDraft = z.object({
   // Done by (johns.crew): how many do it together, 1 to 6, or 0 for everyone
   // home. Its points are per person. On call is always one.
   crew: z.coerce.number().int().min(0).max(6).default(1),
+  // Keep its day (johns.keep_day): always dealt, on its own day. Never on call.
+  keepDay: z.boolean().default(false),
 }).refine((j) => (j.everyMonths === null) === (j.weekOfMonth === null), "Say which week of the month it lands in.");
 export type JohnDraft = z.infer<typeof JohnDraft>;
 /** A JohnDraft before it is checked: the monthly fields may be left out (a weekly John). */
@@ -191,6 +196,14 @@ export type RollCallRequest = z.infer<typeof RollCallRequest>;
 /** How many did it. */
 export const RollCallResponse = z.object({ ok: z.literal(true), people: z.number().int() });
 export type RollCallResponse = z.infer<typeof RollCallResponse>;
+
+/** POST /api/swaps: ask a housemate who'd rather do your John to swap it for one of theirs. */
+export const SwapAskRequest = z.object({ mine: z.uuid(), theirs: z.uuid() });
+export type SwapAskRequest = z.infer<typeof SwapAskRequest>;
+
+/** The ask's id. */
+export const SwapAskResponse = z.object({ ok: z.literal(true), offerId: z.uuid() });
+export type SwapAskResponse = z.infer<typeof SwapAskResponse>;
 
 /** POST /api/pass/checkout: buy the House Pass for a house, on the web. */
 export const PassCheckoutRequest = z.object({ houseId: z.uuid(), plan: z.enum(PASS_PURCHASES) });

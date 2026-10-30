@@ -316,6 +316,7 @@ export function draftPlan(draft: HouseDraft, keep: readonly number[], existingGr
       respondHours: j.respondHours,
       perWeek: j.perWeek,
       crew: j.crew,
+      keepDay: false,
     };
     let groupName: string | null = null;
     if (j.group) {
