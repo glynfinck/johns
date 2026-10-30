@@ -84,6 +84,10 @@ function Routes() {
           <Stack.Protected guard={signedIn && housed} redirectTo={home}>
             <Stack.Screen name="(house)" />
           </Stack.Protected>
+          {/* The owner's pages, for whoever is signed in: they check the rest themselves. */}
+          <Stack.Protected guard={signedIn} redirectTo={home}>
+            <Stack.Screen name="admin" />
+          </Stack.Protected>
           {/* The old /wall, /stake and /table links are the router's redirects
               (app.json), on to their places under House, whose guard then
               applies. A link followed inside the app goes straight there, into

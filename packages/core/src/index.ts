@@ -19,6 +19,7 @@ export * from "./mark";
 export * from "./money";
 export * from "./moving";
 export * from "./notices";
+export * from "./owner-admin";
 export * from "./notify";
 export * from "./outcome";
 export * from "./points";

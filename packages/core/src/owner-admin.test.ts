@@ -1,0 +1,141 @@
+import { describe, expect, it } from "vitest";
+
+import {
+  auditByDay,
+  auditChanges,
+  auditLine,
+  formatLocalDateTime,
+  noticeEndsAt,
+  noticeProblems,
+  noticeWindow,
+  parseLocalDateTime,
+  type AuditEntry,
+  type NoticeDraft,
+} from "./owner-admin";
+
+const NOW = new Date("2026-11-02T12:00:00Z");
+const draft = (over: Partial<NoticeDraft> = {}): NoticeDraft => ({
+  kind: "status",
+  title: "Jonz is slow right now",
+  body: "",
+  linkLabel: "",
+  linkUrl: "",
+  startsAt: null,
+  endsAt: null,
+  ...over,
+});
+
+describe("checking a notice before it's saved", () => {
+  it("passes a plain status notice", () => {
+    expect(noticeProblems(draft(), NOW)).toEqual({});
+  });
+
+  it("needs a title of 80 letters at most", () => {
+    expect(noticeProblems(draft({ title: "  " }), NOW).title).toBe("Give it a title.");
+    expect(noticeProblems(draft({ title: "x".repeat(81) }), NOW).title).toMatch(/80/);
+  });
+
+  it("needs both halves of a button, and a link in the app or https", () => {
+    expect(noticeProblems(draft({ linkLabel: "See the Pass" }), NOW).linkUrl).toBe("Say where the button goes.");
+    expect(noticeProblems(draft({ linkUrl: "/house/pass" }), NOW).linkLabel).toBe("Give the button some words.");
+    expect(noticeProblems(draft({ linkLabel: "Go", linkUrl: "javascript:alert(1)" }), NOW).linkUrl).toMatch(/https/);
+    expect(noticeProblems(draft({ linkLabel: "Go", linkUrl: "//evil.example" }), NOW).linkUrl).toMatch(/https/);
+    expect(noticeProblems(draft({ linkLabel: "Status", linkUrl: "https://status.supabase.com" }), NOW)).toEqual({});
+  });
+
+  it("ends after it starts", () => {
+    expect(noticeProblems(draft({ endsAt: new Date("2026-11-02T11:00:00Z") }), NOW).endsAt).toBeDefined();
+    const startsAt = new Date("2026-11-10T09:00:00Z");
+    expect(noticeProblems(draft({ startsAt, endsAt: new Date("2026-11-03T09:00:00Z") }), NOW).endsAt).toBeDefined();
+    expect(noticeProblems(draft({ startsAt, endsAt: new Date("2026-11-11T09:00:00Z") }), NOW)).toEqual({});
+  });
+});
+
+describe("when a notice ends", () => {
+  it("follows the Ends choice from its start", () => {
+    expect(noticeEndsAt("never", NOW, null)).toBeNull();
+    expect(noticeEndsAt("2h", NOW, null)?.toISOString()).toBe("2026-11-02T14:00:00.000Z");
+    expect(noticeEndsAt("tomorrow", NOW, null)?.toISOString()).toBe("2026-11-03T12:00:00.000Z");
+    const typed = new Date("2026-11-30T23:59:00Z");
+    expect(noticeEndsAt("date", NOW, typed)).toBe(typed);
+  });
+
+  it("reads a typed date and time on this device, and refuses one that isn't", () => {
+    const date = parseLocalDateTime("2026-11-30 09:05")!;
+    expect([date.getFullYear(), date.getMonth(), date.getDate(), date.getHours(), date.getMinutes()]).toEqual([2026, 10, 30, 9, 5]);
+    expect(parseLocalDateTime("2026-11-30T09:05")).not.toBeNull();
+    expect(parseLocalDateTime("2026-02-30 09:00")).toBeNull();
+    expect(parseLocalDateTime("30/11/2026")).toBeNull();
+    expect(parseLocalDateTime("2026-11-30 24:00")).toBeNull();
+    expect(formatLocalDateTime(date)).toBe("2026-11-30 09:05");
+  });
+});
+
+describe("the audit log", () => {
+  const owner = "u-owner";
+  const entry = (over: Partial<AuditEntry>): AuditEntry => ({
+    id: 1,
+    at: "2026-10-30T16:41:00Z",
+    actor: owner,
+    action: "notice.save",
+    targetKind: "notice",
+    targetId: "n1",
+    reason: null,
+    before: null,
+    after: { kind: "status", title: "Jonz is slow right now", body: "", starts_at: "2026-10-30T16:41:00Z", ends_at: null },
+    ...over,
+  });
+
+  it("says who did what in plain words", () => {
+    expect(auditLine(entry({}), owner)).toEqual({ title: "You wrote a status notice", meta: "Jonz is slow right now" });
+    expect(auditLine(entry({ before: { title: "Ticks may be slow" } }), owner).title).toBe("You changed a status notice");
+    expect(auditLine(entry({ action: "notice.end", after: { kind: "offer", title: "Founding pass" } }), owner).title).toBe(
+      "You ended an offer",
+    );
+    expect(auditLine(entry({}), "someone-else").title).toBe("The owner wrote a status notice");
+  });
+
+  it("lists only what changed, old beside new", () => {
+    const changes = auditChanges(
+      entry({
+        before: { kind: "status", title: "Ticks may be slow", body: "", ends_at: "2026-10-30T18:41:00Z" },
+        after: { kind: "status", title: "Jonz is slow right now", body: "", ends_at: null },
+      }),
+      "UTC",
+    );
+    expect(changes).toEqual([
+      { field: "title", label: "Title", from: "Ticks may be slow", to: "Jonz is slow right now" },
+      { field: "ends_at", label: "Ends", from: "Fri 30 Oct, 18:41", to: null },
+    ]);
+  });
+
+  it("lists what a new notice was saved with", () => {
+    expect(auditChanges(entry({}), "UTC").map((c) => c.label)).toEqual(["Kind", "Title", "Starts"]);
+  });
+
+  it("groups entries by day, newest first as they come", () => {
+    const days = auditByDay(
+      [entry({ id: 3, at: "2026-10-30T16:41:00Z" }), entry({ id: 2, at: "2026-10-30T09:00:00Z" }), entry({ id: 1, at: "2026-10-29T22:00:00Z" })],
+      "UTC",
+    );
+    expect(days.map((d) => [d.day, d.entries.map((e) => e.id)])).toEqual([
+      ["Fri 30 Oct", [3, 2]],
+      ["Thu 29 Oct", [1]],
+    ]);
+  });
+});
+
+describe("a notice's window, as its row says it", () => {
+  const at = (iso: string) => iso;
+  it("says since when, and until when or until you end it", () => {
+    expect(noticeWindow({ startsAt: at("2026-11-02T09:05:00Z"), endsAt: null }, NOW, "UTC")).toBe("since Mon 2 Nov, 09:05, until you end it");
+    expect(noticeWindow({ startsAt: at("2026-11-02T09:05:00Z"), endsAt: at("2026-11-02T14:00:00Z") }, NOW, "UTC")).toBe(
+      "since Mon 2 Nov, 09:05, until Mon 2 Nov, 14:00",
+    );
+  });
+
+  it("says from when for one that starts later, and when it ended for one that's over", () => {
+    expect(noticeWindow({ startsAt: at("2026-11-09T08:00:00Z"), endsAt: null }, NOW, "UTC")).toBe("from Mon 9 Nov, 08:00, until you end it");
+    expect(noticeWindow({ startsAt: at("2026-11-01T08:00:00Z"), endsAt: at("2026-11-01T10:00:00Z") }, NOW, "UTC")).toBe("ended Sun 1 Nov, 10:00");
+  });
+});

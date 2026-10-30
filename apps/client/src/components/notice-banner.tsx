@@ -7,7 +7,7 @@ import { SafeAreaInsetsContext, useSafeAreaInsets } from 'react-native-safe-area
 
 import { HazardTape } from '@/components/hazard-tape';
 import { useNotices } from '@/hooks/use-notices';
-import { CONTENT_MAX, GUTTER, SPACE, TAP, useTheme } from '@/theme';
+import { CONTENT_MAX, GROUP_RADIUS, GUTTER, SPACE, TAP, useTheme } from '@/theme';
 
 // The band at the top of every screen that carries a notice from the owner
 // (an outage, an offer, news) or says Jonz can't be reached. One at a time;
@@ -65,6 +65,22 @@ function linkAction(notice: Notice): { label: string; onPress: () => void } | un
     label: notice.linkLabel,
     onPress: () => (url.startsWith('/') ? router.push(url as never) : void Linking.openURL(url)),
   };
+}
+
+/** A notice as people see it, without its close button: the owner's preview. */
+export function NoticePreview({ notice }: { notice: Notice }) {
+  return (
+    <View style={styles.preview}>
+      <NoticeView
+        tone={notice.kind}
+        icon={ICON[notice.kind]}
+        title={notice.title}
+        body={notice.body}
+        action={linkAction(notice)}
+        testID="notice-preview"
+      />
+    </View>
+  );
 }
 
 /** One band, drawn: kept apart from the data so it can be shown and tested on its own. */
@@ -154,6 +170,7 @@ export function NoticeView({
 
 const styles = StyleSheet.create({
   band: { width: '100%' },
+  preview: { borderRadius: GROUP_RADIUS, overflow: 'hidden' },
   inner: {
     flexDirection: 'row',
     alignItems: 'flex-start',
