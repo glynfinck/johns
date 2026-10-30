@@ -27,6 +27,11 @@ about the price of a year. Check on 1 May 2027: if fewer than 3% of houses
 pay after their free month, set the yearly price to $39.99 and £29.99 by
 moving the Stripe lookup keys.
 
+Fair by design: the free version runs a whole house on its own, and the
+Pass page says where the money goes. A house that can't pay emails for a
+free Pass (the "Ask for a free Pass" link) and gets one, no questions asked;
+give it as a Founding plan by hand until there is an admin tool.
+
 ## Inputs and outputs
 
 - `houses.pass_plan` (`trial`, `monthly`, `yearly`, `founding`),

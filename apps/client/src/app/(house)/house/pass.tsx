@@ -1,4 +1,5 @@
 import {
+  LEGAL,
   PAGE_TITLE,
   PASS_COPY,
   PASS_FREE_HISTORY_WEEKS,
@@ -187,11 +188,21 @@ function PassReadOut({
         {founding || selling ? null : <Meta testID="pass-soon">{PASS_COPY.buyingSoon}</Meta>}
         {selling ? <Meta testID="pass-renewal">{PASS_COPY.renewal}</Meta> : null}
         <Meta>{PASS_COPY.free}</Meta>
+        <Meta testID="pass-money">{PASS_COPY.money}</Meta>
+        {founding ? null : (
+          <>
+            <Meta testID="pass-hardship">{PASS_COPY.hardship}</Meta>
+            <TextLink href={ASK_FREE} label={PASS_COPY.askFree} muted testID="pass-ask-free" />
+          </>
+        )}
         <TextLink href="/terms" label={PASS_COPY.terms} muted testID="pass-terms" />
       </View>
     </>
   );
 }
+
+/** An email to whoever runs Jonz, for a house that can't pay. */
+const ASK_FREE = `mailto:${LEGAL.email}?subject=${encodeURIComponent(PASS_COPY.askFreeSubject)}` as const;
 
 const styles = StyleSheet.create({
   // On the leading edge, where the sections' labels start.

@@ -1,4 +1,4 @@
-import { FOCUS_SHELL_COPY, PAGE_TITLE, PASS_COPY, SECTION_LABEL } from '@app/core';
+import { FOCUS_SHELL_COPY, LEGAL, PAGE_TITLE, PASS_COPY, SECTION_LABEL } from '@app/core';
 import { fireEvent, screen, waitFor, within } from 'expo-router/testing-library';
 
 import { loadHouse } from '@/api/board';
@@ -66,6 +66,17 @@ it('thanks a Founding house, and offers it no plans', async () => {
   expect(screen.getByText(PASS_COPY.stake)).toBeOnTheScreen();
   expect(screen.queryByTestId('pass-plans')).toBeNull();
   expect(screen.queryByTestId('pass-soon')).toBeNull();
+  expect(screen.getByTestId('pass-money')).toHaveTextContent(PASS_COPY.money);
+  expect(screen.queryByTestId('pass-ask-free')).toBeNull();
+});
+
+it('says where the money goes, and lets a house that can’t pay ask for the Pass free', async () => {
+  withPass({ plan: 'trial', until: new Date(Date.now() + 12 * DAY), buyerId: null });
+  await open();
+  expect(screen.getByTestId('pass-money')).toHaveTextContent(PASS_COPY.money);
+  expect(screen.getByTestId('pass-hardship')).toHaveTextContent(PASS_COPY.hardship);
+  expect(screen.getByRole('link', { name: PASS_COPY.askFree })).toBeOnTheScreen();
+  expect(LEGAL.email).toContain('@');
 });
 
 it('shows a house on its free month the plans in its own currency, Yearly first, not yet for sale', async () => {
