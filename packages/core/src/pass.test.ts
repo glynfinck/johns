@@ -12,6 +12,7 @@ import {
   passFreeUntil,
   passPurchaseRefusal,
   purchaseOfLookupKey,
+  purchaseOfPrice,
   subscriptionLive,
   type PassSubscription,
   PASS_PRICES,
@@ -138,6 +139,15 @@ describe("purchaseOfLookupKey", () => {
     for (const plan of PASS_PURCHASES) expect(purchaseOfLookupKey(PASS_LOOKUP_KEYS[plan])).toBe(plan);
     expect(purchaseOfLookupKey("pass_trial")).toBeNull();
     expect(purchaseOfLookupKey(null)).toBeNull();
+  });
+});
+
+describe("purchaseOfPrice", () => {
+  it("goes by lookup key, then by the metadata plan of a price whose key moved on", () => {
+    expect(purchaseOfPrice({ lookup_key: "pass_yearly", metadata: {} })).toBe("yearly");
+    expect(purchaseOfPrice({ lookup_key: null, metadata: { plan: "monthly" } })).toBe("monthly");
+    expect(purchaseOfPrice({ lookup_key: null, metadata: { plan: "lifetime" } })).toBeNull();
+    expect(purchaseOfPrice({ lookup_key: null })).toBeNull();
   });
 });
 

@@ -121,6 +121,15 @@ export function purchaseOfLookupKey(key: string | null | undefined): PassPurchas
   return PASS_PURCHASES.find((plan) => PASS_LOOKUP_KEYS[plan] === key) ?? null;
 }
 
+/**
+ * The plan a Stripe price is for. A price set aside when its lookup key moved
+ * to a new price (a price change) has no key, but houses still subscribed to
+ * it renew on it, so its metadata plan names it.
+ */
+export function purchaseOfPrice(price: { lookup_key: string | null; metadata?: Record<string, string> | null }): PassPurchase | null {
+  return purchaseOfLookupKey(price.lookup_key) ?? PASS_PURCHASES.find((plan) => plan === price.metadata?.plan) ?? null;
+}
+
 /** When a house's free month ends: PASS_TRIAL_DAYS after it was made. */
 export function passFreeUntil(createdAt: Date): Date {
   return new Date(createdAt.getTime() + PASS_TRIAL_DAYS * 86_400_000);
