@@ -1,4 +1,4 @@
-import { afterSignIn, ERROR_COPY, SIGN_IN, signedOutTo } from '@app/core';
+import { afterSignIn, DELETE_PATH, ERROR_COPY, SIGN_IN, signedOutTo } from '@app/core';
 import { useFonts } from 'expo-font';
 import { Stack, useGlobalSearchParams, usePathname, type ErrorBoundaryProps } from 'expo-router';
 import * as SplashScreen from 'expo-splash-screen';
@@ -8,6 +8,7 @@ import { RefreshCwIcon } from 'lucide-react-native';
 import { useEffect } from 'react';
 import { StyleSheet, View } from 'react-native';
 
+import { BeingDeleted } from '@/components/account/being-deleted';
 import { Button } from '@/components/button';
 import { NoticeBand } from '@/components/notice-banner';
 import { StagingRibbon } from '@/components/staging-ribbon';
@@ -36,7 +37,7 @@ export default function RootLayout() {
 
 function Routes() {
   const [fontsLoaded, fontError] = useFonts(FONT_FILES);
-  const { session, signedOut, house, loading, failed, refresh } = useMembership();
+  const { session, signedOut, house, deletion, loading, failed, refresh } = useMembership();
   const { scheme, colors } = useTheme();
   const pathname = usePathname();
   const { next } = useGlobalSearchParams<{ next?: string | string[] }>();
@@ -63,7 +64,24 @@ function Routes() {
   // every platform, signing in with no house goes where sign-in's ?next was
   // carrying you (naming the house, or a join link), if it's one of those.
   const carried = pathname === SIGN_IN && typeof next === 'string' ? afterSignIn(next) : undefined;
-  const home = !signedIn ? (signedOut ? SIGN_IN : signedOutTo(pathname)) : housed ? '/today' : (carried ?? '/welcome');
+  const home = !signedIn
+    ? signedOut
+      ? SIGN_IN
+      : signedOutTo(pathname)
+    : carried === DELETE_PATH
+      ? DELETE_PATH
+      : housed
+        ? '/today'
+        : (carried ?? '/welcome');
+  // An account waiting to be deleted sees only that, and Keep my account.
+  if (signedIn && deletion) {
+    return (
+      <>
+        <StatusBar style={scheme === 'dark' ? 'light' : 'dark'} />
+        <BeingDeleted deletion={deletion} />
+      </>
+    );
+  }
   return (
     <>
       <StatusBar style={scheme === 'dark' ? 'light' : 'dark'} />
@@ -94,8 +112,9 @@ function Routes() {
               the house already open, never stacking a second one. */}
           {/* A join link opens for anyone, and signs you in in place. */}
           <Stack.Screen name="join/[joinCode]" />
-          {/* So do the Privacy Policy, the Terms, and a link to nowhere. */}
+          {/* So do the Privacy Policy, the Terms, deleting an account, and a link to nowhere. */}
           <Stack.Screen name="privacy" />
+          <Stack.Screen name="delete" />
           <Stack.Screen name="terms" />
           <Stack.Screen name="+not-found" />
         </Stack>

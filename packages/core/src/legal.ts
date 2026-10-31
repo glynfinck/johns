@@ -140,10 +140,13 @@ export const PRIVACY_POLICY: LegalPage = {
     {
       heading: "Deleting your account",
       body: [
-        `To delete your account, ${CONTACT} from the address you sign in with (or say which account it is) and ask. We’ll confirm, then delete your account, name, email, photos and notification addresses within 30 days. A house you were in keeps its shared records, such as past Johns and the Stake ledger, without your name or photo.`,
+        `Delete your account in the app (House, then Delete my account) or at jonz.app/delete. It goes 30 days later; until then, signing in again and pressing Keep my account stops it, and your house sees you as away. Then your account, name, email, photo, notification addresses and sign-ins are deleted. A house you were in keeps its shared records, such as past Johns and the Stake ledger, shown as “Someone who left”.`,
+        "If you pay for a House Pass, it stops renewing when you ask, and covers the house to the end of what was paid. It renews again if you keep your account.",
+        `If you can’t sign in any more, ${CONTACT} from the address on the account and we’ll start it for you.`,
         "You can also stop Jonz signing you in with your Google, Microsoft or Apple account from that account’s settings.",
       ],
       links: [
+        { label: "Delete your account", href: `${LEGAL.site}/delete` },
         { label: "Google: apps with access", href: "https://myaccount.google.com/connections" },
         { label: "Microsoft: your apps", href: "https://myapps.microsoft.com" },
         { label: "Apple: Sign in with Apple", href: "https://account.apple.com/account/manage" },

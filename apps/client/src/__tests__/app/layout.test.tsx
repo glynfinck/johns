@@ -1,3 +1,4 @@
+import { DELETE_COPY, type DeletionStatus } from '@app/core';
 import type { Session } from '@supabase/supabase-js';
 import { router, Slot } from 'expo-router';
 import { act, fireEvent, renderRouter, screen } from 'expo-router/testing-library';
@@ -14,6 +15,8 @@ jest.mock('@/hooks/use-membership', () => ({
   useMembership: jest.fn(),
 }));
 jest.mock('expo-font', () => ({ useFonts: () => [true, null] }));
+jest.mock('@/api/account', () => ({ keepAccount: jest.fn(), deletionStatus: jest.fn() }));
+jest.mock('@/api/auth', () => ({ signOut: jest.fn() }));
 // The router reads its options (the old links' redirects among them) from the
 // app's config, which the expo-router plugin fills from app.json in a build.
 // Jest's config has none, so hand it app.json's.
@@ -45,6 +48,7 @@ const routes = {
   'join/[joinCode]': () => <Text>Join</Text>,
   privacy: () => <Text>Privacy</Text>,
   terms: () => <Text>Terms</Text>,
+  delete: () => <Text>Delete</Text>,
   '+not-found': () => <Text>Nothing here</Text>,
 };
 
@@ -52,7 +56,11 @@ const SESSION = { user: { id: 'user-1' } } as Session;
 const FLAT = { id: 'h1', name: 'Flat 3' };
 const refresh = jest.fn();
 
-function as(session: Session | null, house: typeof FLAT | null = null, state: { loading?: boolean; failed?: boolean } = {}) {
+function as(
+  session: Session | null,
+  house: typeof FLAT | null = null,
+  state: { loading?: boolean; failed?: boolean; deletion?: DeletionStatus } = {},
+) {
   (useMembership as jest.Mock).mockReturnValue({ session, house, loading: false, failed: false, refresh, ...state });
 }
 
@@ -100,6 +108,34 @@ describe('signed out', () => {
   it('still opens a join link, which signs you in itself', async () => {
     await open('/join/AB3DEF7H');
     expect(screen.getByText('Join')).toBeOnTheScreen();
+  });
+
+  it('opens jonz.app/delete, which says to sign in', async () => {
+    await open('/delete');
+    expect(screen).toHavePathname('/delete');
+    expect(screen.getByText('Delete')).toBeOnTheScreen();
+  });
+});
+
+describe('deleting an account', () => {
+  it('comes back to jonz.app/delete from sign-in, house or not', async () => {
+    for (const house of [null, FLAT]) {
+      as(SESSION, house);
+      await open('/signin?next=%2Fdelete');
+      expect(screen).toHavePathname('/delete');
+      expect(screen.getByText('Delete')).toBeOnTheScreen();
+    }
+  });
+
+  it('shows an account waiting to be deleted only that, wherever it opens', async () => {
+    as(SESSION, FLAT, { deletion: { deleteAfter: '2026-11-29T09:00:00Z', requestedBy: 'self' } });
+    for (const url of ['/today', '/house', '/delete', '/join/AB3DEF7H']) {
+      await open(url);
+      expect(screen.getByTestId('being-deleted')).toBeOnTheScreen();
+      expect(screen.getByText(DELETE_COPY.beingDeleted)).toBeOnTheScreen();
+      expect(screen.getByText(/It goes for good on Sun 29 Nov\. Until then nothing is gone, and your house still sees you as away\./)).toBeOnTheScreen();
+      expect(screen.queryByText('Today')).toBeNull();
+    }
   });
 });
 

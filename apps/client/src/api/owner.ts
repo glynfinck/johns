@@ -1,4 +1,4 @@
-import { humanError, noticeFromRow, qrShape, type AuditEntry, type Notice, type QrShape } from '@app/core';
+import { humanError, noticeFromRow, qrShape, type AuditEntry, type Notice, type PendingDeletion, type QrShape } from '@app/core';
 
 import { apiPost } from './http';
 import { supabase } from './supabase';
@@ -158,4 +158,39 @@ function entryFromRow(row: {
     before: row.before,
     after: row.after,
   };
+}
+
+// --- Deletions -----------------------------------------------------------------------
+
+/** Everyone waiting to be deleted, soonest first. */
+export async function ownerDeletions(): Promise<PendingDeletion[]> {
+  const { data, error } = await supabase.rpc('owner_deletions');
+  if (error) throw new Error(humanError(error));
+  return (data ?? []).map((row) => ({
+    userId: row.user_id,
+    name: row.name,
+    email: row.email ?? null,
+    house: row.house_name ?? null,
+    requestedAt: row.requested_at,
+    deleteAfter: row.delete_after,
+    requestedBy: row.requested_by === 'owner' ? 'owner' : 'self',
+  }));
+}
+
+/** Delete now: the clock takes it within ten minutes. */
+export async function deleteNow(userId: string, reason: string): Promise<void> {
+  const { error } = await supabase.rpc('owner_delete_now', { p_user: userId, p_reason: reason.trim() || undefined });
+  if (error) throw new Error(humanError(error));
+}
+
+/** Stop: as if they'd pressed Keep my account. */
+export async function stopDeletion(userId: string, reason: string): Promise<void> {
+  const { error } = await supabase.rpc('owner_stop_deletion', { p_user: userId, p_reason: reason.trim() || undefined });
+  if (error) throw new Error(humanError(error));
+}
+
+/** Starts the 30 days for whoever has this email, who asked by email. */
+export async function deleteByEmail(email: string, reason: string): Promise<void> {
+  const { error } = await supabase.rpc('owner_request_deletion', { p_email: email.trim(), p_reason: reason.trim() || undefined });
+  if (error) throw new Error(humanError(error));
 }

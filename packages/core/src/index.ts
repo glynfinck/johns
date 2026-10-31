@@ -2,6 +2,7 @@
 // React Native or Next.js imports, so the web app, the API, the native app
 // and the tests all run the same code. Every function that depends on time
 // takes `now`.
+export * from "./account-deletion";
 export * from "./auth-paths";
 export * from "./away";
 export * from "./bin-night";

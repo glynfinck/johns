@@ -11,6 +11,8 @@ import { useMembership } from '@/hooks/use-membership';
 
 // The root layout's module brings sign-in with it; these pages don't need it.
 jest.mock('@/hooks/use-membership', () => ({ MembershipProvider: ({ children }: { children: unknown }) => children, useMembership: jest.fn() }));
+jest.mock('@/api/account', () => ({ keepAccount: jest.fn() }));
+jest.mock('@/api/auth', () => ({ signOut: jest.fn() }));
 
 it.each([
   ['the Privacy Policy', Privacy, PRIVACY_POLICY],

@@ -23,6 +23,9 @@ describe("afterSignIn", () => {
     expect(afterSignIn("/join/AB3DEF7H")).toBe("/join/AB3DEF7H");
     // A bad code is the join page's to say, so the link keeps it.
     expect(afterSignIn("/join/nope")).toBe("/join/nope");
+    // jonz.app/delete, for anyone, house or not.
+    expect(afterSignIn("/delete")).toBe("/delete");
+    expect(googleReturn("/delete")).toBe("/signin?next=%2Fdelete");
   });
 
   it("survives the trip through /signin?next=", () => {
@@ -33,7 +36,7 @@ describe("afterSignIn", () => {
   it("leaves everything else to the root layout, so nothing goes round in circles", () => {
     const nowhere = [null, undefined, "", "/", "/signin", "/signin?next=%2Fwelcome", "/today", "/house/stake"];
     const offSite = ["//evil.example", "/\\evil", "https://evil.example", "//evil.example/house/new"];
-    const near = ["/house/new/x", "/welcome?x=1", "/join/", "/join/AB3DEF7H/more", "/join/AB3DEF7H?x=1"];
+    const near = ["/house/new/x", "/welcome?x=1", "/join/", "/join/AB3DEF7H/more", "/join/AB3DEF7H?x=1", "/delete/x", "/delete?x=1"];
     for (const next of [...nowhere, ...offSite, ...near]) expect(afterSignIn(next)).toBeUndefined();
   });
 });

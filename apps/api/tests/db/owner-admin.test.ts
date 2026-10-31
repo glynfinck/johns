@@ -1,4 +1,3 @@
-import { createHmac } from "node:crypto";
 import { beforeEach, describe, expect, it } from "vitest";
 
 import { qrShape } from "@app/core";
@@ -6,6 +5,7 @@ import { qrShape } from "@app/core";
 import { GET as noticesRoute } from "@/app/api/notices/route";
 import { adminClient, signedInUser, visitor, type Actor } from "@/tests/support/clients";
 import { expectDenied, expectOk, expectRule } from "@/tests/support/expect";
+import { passSecondFactor, totp } from "@/tests/support/mfa";
 import { scanQr } from "@/tests/support/qr-scan";
 
 /**
@@ -22,31 +22,6 @@ import { scanQr } from "@/tests/support/qr-scan";
 
 const db = adminClient();
 const LATER = "2099-01-01T00:00:00Z";
-
-/** RFC 6238 code for a base32 secret, as an authenticator app would show it. */
-function totp(secret: string, now = Date.now()): string {
-  const alphabet = "ABCDEFGHIJKLMNOPQRSTUVWXYZ234567";
-  let bits = "";
-  for (const ch of secret.replace(/=+$/, "").toUpperCase()) bits += alphabet.indexOf(ch).toString(2).padStart(5, "0");
-  const key = Buffer.from(bits.match(/.{8}/g)!.map((b) => parseInt(b, 2)));
-  const counter = Buffer.alloc(8);
-  counter.writeBigUInt64BE(BigInt(Math.floor(now / 30_000)));
-  const mac = createHmac("sha1", key).update(counter).digest();
-  const offset = mac[mac.length - 1] & 0xf;
-  const code = (mac.readUInt32BE(offset) & 0x7fffffff) % 1_000_000;
-  return code.toString().padStart(6, "0");
-}
-
-/** Adds a TOTP factor and passes it, so the session's token says aal2. */
-async function passSecondFactor(actor: Actor) {
-  const { data: enrolled, error } = await actor.db.auth.mfa.enroll({ factorType: "totp" });
-  if (error) throw error;
-  const { error: verifyError } = await actor.db.auth.mfa.challengeAndVerify({
-    factorId: enrolled.id,
-    code: totp(enrolled.totp.secret),
-  });
-  if (verifyError) throw verifyError;
-}
 
 function notice(over: Partial<{ p_kind: string; p_title: string; p_starts_at: string | null; p_ends_at: string | null }> = {}) {
   return {

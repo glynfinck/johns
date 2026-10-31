@@ -1,11 +1,12 @@
-import { dateRange, HOUSE_COPY, HOUSE_LOWER_COPY, LOOK_LABEL, LOOKS, ME_COPY, MOVING_COPY, prefsLine, STEADY_COPY } from '@app/core';
-import { BellIcon, LogOutIcon, SlidersHorizontalIcon, SunMoonIcon, TruckIcon } from 'lucide-react-native';
+import { dateRange, DELETE_COPY, HOUSE_COPY, HOUSE_LOWER_COPY, LOOK_LABEL, LOOKS, ME_COPY, MOVING_COPY, prefsLine, STEADY_COPY } from '@app/core';
+import { BellIcon, LogOutIcon, SlidersHorizontalIcon, SunMoonIcon, Trash2Icon, TruckIcon } from 'lucide-react-native';
 import { useCallback, useEffect, useState } from 'react';
-import { View } from 'react-native';
+import { StyleSheet, View } from 'react-native';
 
 import { signOut } from '@/api/auth';
 import { renameMe } from '@/api/profile';
 import { reminderSupport, remindersOn } from '@/api/push';
+import { DeleteAccountForm } from '@/components/account/delete-account';
 import { Alert } from '@/components/alert';
 import { Avatar } from '@/components/avatar';
 import { Button } from '@/components/button';
@@ -17,9 +18,11 @@ import { Row, RowIcon } from '@/components/row';
 import { Section } from '@/components/section';
 import { Segmented } from '@/components/segmented';
 import { Sheet } from '@/components/sheet';
+import { Meta } from '@/components/text';
 import { useLook } from '@/hooks/look';
 import type { HouseView } from '@/hooks/use-house';
 import { useMove } from '@/hooks/use-move';
+import { INSET, SECTION_GAP, SPACE, useTheme } from '@/theme';
 
 const LOOK_OPTIONS = LOOKS.map((value) => ({ value, label: LOOK_LABEL[value] }));
 
@@ -27,13 +30,15 @@ const LOOK_OPTIONS = LOOKS.map((value) => ({ value, label: LOOK_LABEL[value] }))
  * You: your name (a sheet to change it), reminders on this device (a sheet
  * holding their switch, where there are any to offer), your preferences in
  * this house (their own page; on a laptop it's in the list beside House
- * instead), your moving-out date (its own page), the look in the row
- * itself, and signing out. Reminders and the
- * look are this device's own.
+ * instead), the look in the row itself, and signing out. Reminders and the
+ * look are this device's own. Then Leave: your moving-out date (its own
+ * page) and Delete my account, in hazard (a sheet), with a line saying it's
+ * on the web too.
  */
 export function YouSection({ houseId, userId, view }: { houseId: string; userId: string; view: HouseView }) {
   const [look, setLook] = useLook();
-  const [sheet, setSheet] = useState<'name' | 'reminders' | null>(null);
+  const { colors } = useTheme();
+  const [sheet, setSheet] = useState<'name' | 'reminders' | 'delete' | null>(null);
   // Each opening of the name sheet starts from the name as it is.
   const [opened, setOpened] = useState(0);
   const reminders = useReminderState();
@@ -56,7 +61,7 @@ export function YouSection({ houseId, userId, view }: { houseId: string; userId:
   }
 
   return (
-    <View testID="you-section">
+    <View testID="you-section" style={styles.sections}>
       <Section label={HOUSE_COPY.you}>
         <Row
           leading={<Avatar name={name} userId={userId} me />}
@@ -90,14 +95,6 @@ export function YouSection({ houseId, userId, view }: { houseId: string; userId:
           />
         )}
         <Row
-          leading={<RowIcon icon={TruckIcon} />}
-          title={MOVING_COPY.row}
-          meta={movingOutOn ? dateRange(movingOutOn, movingOutOn) : MOVING_COPY.notPlanned}
-          href="/house/moving"
-          chevron
-          testID="to-moving"
-        />
-        <Row
           leading={<RowIcon icon={SunMoonIcon} />}
           title={HOUSE_LOWER_COPY.look}
           trailing={<Segmented options={LOOK_OPTIONS} value={look} onChange={setLook} label={ME_COPY.look} testID="look" />}
@@ -110,6 +107,27 @@ export function YouSection({ houseId, userId, view }: { houseId: string; userId:
           testID="sign-out"
         />
       </Section>
+
+      <View style={styles.leave}>
+        <Section label={DELETE_COPY.leave}>
+          <Row
+            leading={<RowIcon icon={TruckIcon} />}
+            title={MOVING_COPY.row}
+            meta={movingOutOn ? dateRange(movingOutOn, movingOutOn) : MOVING_COPY.notPlanned}
+            href="/house/moving"
+            chevron
+            testID="to-moving"
+          />
+          <Row
+            leading={<Trash2Icon size={24} color={colors.hazard} aria-hidden />}
+            title={DELETE_COPY.row}
+            tone="hazard"
+            onPress={() => setSheet('delete')}
+            testID="to-delete-account"
+          />
+        </Section>
+        <Meta style={styles.elsewhere}>{DELETE_COPY.elsewhere}</Meta>
+      </View>
 
       <NameSheet
         key={opened}
@@ -128,6 +146,9 @@ export function YouSection({ houseId, userId, view }: { houseId: string; userId:
       >
         {/* The sheet's title says Reminders, so the control doesn't again. */}
         <Reminders userId={userId} labelled={false} />
+      </Sheet>
+      <Sheet visible={sheet === 'delete'} title={DELETE_COPY.title} onClose={() => setSheet(null)} testID="delete-sheet">
+        <DeleteAccountForm onKeep={() => setSheet(null)} />
       </Sheet>
     </View>
   );
@@ -192,3 +213,9 @@ function NameSheet({
     </Sheet>
   );
 }
+
+const styles = StyleSheet.create({
+  sections: { gap: SECTION_GAP },
+  leave: { gap: SPACE.sm },
+  elsewhere: { paddingLeft: INSET },
+});
