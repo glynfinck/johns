@@ -3,7 +3,8 @@ import { useQuery } from '@tanstack/react-query';
 import * as Clipboard from 'expo-clipboard';
 import { CheckIcon, CopyIcon } from 'lucide-react-native';
 import { useEffect, useState } from 'react';
-import { Linking, Platform, StyleSheet, Text, View } from 'react-native';
+import { Linking, Platform, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import Svg, { Path } from 'react-native-svg';
 
 import { checkCode, enrollFactor, verifiedFactor } from '@/api/owner';
@@ -29,10 +30,22 @@ export function CodeGate({ onPassed }: { onPassed: () => void }) {
   return factor.data ? <EnterCode factorId={factor.data} onPassed={onPassed} /> : <AddAuthenticator onPassed={onPassed} />;
 }
 
+/**
+ * The page the lock sits on. It scrolls: adding the authenticator (the code
+ * to scan, the key, Copy key, then the code field) is taller than a phone,
+ * and the keyboard takes half of what's left. Taps go through while the
+ * keyboard is up, so Check the code works first time.
+ */
 function Frame({ title, body, children }: { title: string; body: string; children: React.ReactNode }) {
   const { colors } = useTheme();
+  const insets = useSafeAreaInsets();
   return (
-    <View style={[styles.frame, { backgroundColor: colors.background }]} testID="code-gate">
+    <ScrollView
+      style={[styles.frame, { backgroundColor: colors.background }]}
+      contentContainerStyle={[styles.page, { paddingBottom: insets.bottom + SPACE.xxl }]}
+      keyboardShouldPersistTaps="handled"
+      testID="code-gate"
+    >
       <View style={styles.column}>
         <View style={styles.brand}>
           <Wordmark size={20} />
@@ -42,7 +55,7 @@ function Frame({ title, body, children }: { title: string; body: string; childre
         <Body muted>{body}</Body>
         {children}
       </View>
-    </View>
+    </ScrollView>
   );
 }
 
@@ -160,7 +173,8 @@ function QrCode({ qr }: { qr: QrShape }) {
 }
 
 const styles = StyleSheet.create({
-  frame: { flex: 1, alignItems: 'center', paddingHorizontal: GUTTER + INSET, paddingTop: SPACE.xxl * 2 },
+  frame: { flex: 1 },
+  page: { flexGrow: 1, alignItems: 'center', paddingHorizontal: GUTTER + INSET, paddingTop: SPACE.xxl * 2 },
   column: { width: '100%', maxWidth: CONTENT_MAX / 1.4, gap: SPACE.lg },
   brand: { flexDirection: 'row', alignItems: 'center', gap: SPACE.sm },
   qr: { alignSelf: 'center', borderRadius: 10, borderWidth: StyleSheet.hairlineWidth, overflow: 'hidden' },

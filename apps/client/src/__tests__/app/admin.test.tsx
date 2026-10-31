@@ -140,6 +140,20 @@ describe('who gets in', () => {
     expect(screen.getByTestId('admin-key')).toHaveTextContent('JBSW Y3DP EHPK 3PXP');
   });
 
+  it('scrolls, so Check the code is in reach under the code to scan, the key and the keyboard', async () => {
+    jest.mocked(ownerStatus).mockResolvedValue({ owner: true, mfa: false });
+    jest.mocked(verifiedFactor).mockResolvedValue(null);
+    supabaseEnrolls(SUPABASE_QR);
+    await renderPages(ROUTES, '/admin/notices');
+    await screen.findByTestId('admin-qr');
+    const page = screen.getByTestId('code-gate');
+    expect(page.type).toBe('RCTScrollView');
+    // A tap on the button goes through while the keyboard is up.
+    expect(page.props.keyboardShouldPersistTaps).toBe('handled');
+    expect(within(page).getByTestId('admin-qr')).toBeVisible();
+    expect(within(page).getByTestId('admin-code-submit')).toBeVisible();
+  });
+
   it('copies the key without its spaces, and says so', async () => {
     jest.mocked(ownerStatus).mockResolvedValue({ owner: true, mfa: false });
     jest.mocked(verifiedFactor).mockResolvedValue(null);
