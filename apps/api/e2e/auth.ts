@@ -58,10 +58,7 @@ async function clientSession(context: BrowserContext, name: string): Promise<{ i
       },
     },
   });
-  const { error } = await client.auth.signInWithPassword({
-    email,
-    password: PASSWORD,
-  });
+  const { error } = await client.auth.signInWithPassword({ email, password: PASSWORD });
   if (error) throw error;
 
   await context.addInitScript(
@@ -96,21 +93,10 @@ export async function dealtHouseInClient(
   context: BrowserContext,
   name: string,
   houseName: string,
-  johns: {
-    name: string;
-    category?: string;
-    needsPhoto?: boolean;
-    dueTime?: string;
-    onCall?: boolean;
-  }[],
+  johns: { name: string; category?: string; needsPhoto?: boolean; dueTime?: string; onCall?: boolean }[],
   housemates: { context: BrowserContext; name: string }[] = [],
   at: Date = new Date(),
-): Promise<{
-  userId: string;
-  houseId: string;
-  housemateIds: string[];
-  weekId: string;
-}> {
+): Promise<{ userId: string; houseId: string; housemateIds: string[]; weekId: string }> {
   const { id, client } = await clientSession(context, name);
   const { data: houseId, error } = await client.rpc("create_house", {
     p_name: houseName,
@@ -125,9 +111,7 @@ export async function dealtHouseInClient(
   const housemateIds: string[] = [];
   for (const mate of housemates) {
     const joiner = await clientSession(mate.context, mate.name);
-    const { error: joinError } = await joiner.client.rpc("join_house", {
-      p_code: codeRow!.join_code,
-    });
+    const { error: joinError } = await joiner.client.rpc("join_house", { p_code: codeRow!.join_code });
     if (joinError) throw joinError;
     housemateIds.push(joiner.id);
   }
@@ -204,13 +188,8 @@ async function keepNamedOrder(db: SupabaseClient, weekId: string, johns: { name:
  */
 export async function houseOf(owner: string, houseName: string): Promise<{ ownerId: string; code: string }> {
   const { email, id } = await createHousemate(owner);
-  const client = createClient(SUPABASE_URL!, ANON_KEY!, {
-    auth: { persistSession: false, autoRefreshToken: false },
-  });
-  const { error: signInError } = await client.auth.signInWithPassword({
-    email,
-    password: PASSWORD,
-  });
+  const client = createClient(SUPABASE_URL!, ANON_KEY!, { auth: { persistSession: false, autoRefreshToken: false } });
+  const { error: signInError } = await client.auth.signInWithPassword({ email, password: PASSWORD });
   if (signInError) throw signInError;
   const { data: houseId, error } = await client.rpc("create_house", {
     p_name: houseName,
