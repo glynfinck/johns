@@ -95,7 +95,7 @@ export async function dealtHouseInClient(
   houseName: string,
   johns: { name: string; category?: string; needsPhoto?: boolean; dueTime?: string; onCall?: boolean }[],
   housemates: { context: BrowserContext; name: string }[] = [],
-  at: Date = new Date(),
+  at?: Date,
 ): Promise<{ userId: string; houseId: string; housemateIds: string[]; weekId: string }> {
   const { id, client } = await clientSession(context, name);
   const { data: houseId, error } = await client.rpc("create_house", {
@@ -116,7 +116,8 @@ export async function dealtHouseInClient(
     housemateIds.push(joiner.id);
   }
 
-  const now = at;
+  // Taken after everyone has joined: the deal leaves out anyone who joins after its "now".
+  const now = at ?? new Date();
   const week = weekWindow(now, "Europe/London", 1);
   const { error: johnsError } = await db.from("johns").insert(
     johns.map((j) => ({
