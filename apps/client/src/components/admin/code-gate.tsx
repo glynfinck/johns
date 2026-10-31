@@ -1,6 +1,8 @@
 import { ADMIN_COPY, BIN_NIGHT, type QrShape } from '@app/core';
 import { useQuery } from '@tanstack/react-query';
-import { useState } from 'react';
+import * as Clipboard from 'expo-clipboard';
+import { CheckIcon, CopyIcon } from 'lucide-react-native';
+import { useEffect, useState } from 'react';
 import { Linking, Platform, StyleSheet, Text, View } from 'react-native';
 import Svg, { Path } from 'react-native-svg';
 
@@ -103,10 +105,39 @@ function AddAuthenticator({ onPassed }: { onPassed: () => void }) {
           <Text selectable style={[styles.key, { color: colors.foreground }]} testID="admin-key">
             {factor.data.secret.replace(/(.{4})/g, '$1 ').trim()}
           </Text>
+          <CopyKey secret={factor.data.secret} />
           <CodeForm factorId={factor.data.id} label={ADMIN_COPY.added} onPassed={onPassed} />
         </>
       ) : null}
     </Frame>
+  );
+}
+
+/**
+ * Copies the key as it is, without the spaces that make it readable, which
+ * every authenticator app accepts. The button says it's done for a few
+ * seconds, like Copy link on the invite sheet.
+ */
+function CopyKey({ secret }: { secret: string }) {
+  const [copied, setCopied] = useState(false);
+  useEffect(() => {
+    if (!copied) return;
+    const timer = setTimeout(() => setCopied(false), 3000);
+    return () => clearTimeout(timer);
+  }, [copied]);
+  return (
+    <Button
+      variant="outline"
+      icon={copied ? CheckIcon : CopyIcon}
+      label={copied ? ADMIN_COPY.keyCopied : ADMIN_COPY.copyKeyButton}
+      onPress={() =>
+        void Clipboard.setStringAsync(secret).then(
+          () => setCopied(true),
+          () => undefined, // Not allowed here: the key is on screen to select.
+        )
+      }
+      testID="admin-copy-key"
+    />
   );
 }
 
