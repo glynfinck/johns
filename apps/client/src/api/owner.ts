@@ -45,7 +45,9 @@ export function qrShape(svg: string): QrShape | null {
   const cells: { x: number; y: number; w: number; h: number }[] = [];
   for (const [, attributes] of markup.matchAll(/<rect\b([^>]*)>/g)) {
     const attr = Object.fromEntries([...attributes.matchAll(/([\w-]+)="([^"]*)"/g)].map(([, key, value]) => [key, value]));
-    const fill = (attr.fill ?? '').toLowerCase();
+    // Supabase puts the colour in a style ("fill:black;stroke:none"); other
+    // drawers use a fill attribute, or a class with no colour at all.
+    const fill = (/(?:^|;)\s*fill\s*:\s*([^;]+)/.exec(attr.style ?? '')?.[1] ?? attr.fill ?? '').trim().toLowerCase();
     const dark = fill === '#000000' || fill === '#000' || fill === 'black' || (!fill && attr.class === 'color');
     const [x, y, w, h] = [attr.x, attr.y, attr.width, attr.height].map(Number);
     if (dark && [x, y, w, h].every(Number.isFinite)) cells.push({ x, y, w, h });
