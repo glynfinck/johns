@@ -2,7 +2,7 @@ import { ADMIN_COPY, NOT_FOUND_COPY, type AuditEntry, type Notice } from '@app/c
 import { fireEvent, screen, waitFor, within } from 'expo-router/testing-library';
 import { useWindowDimensions } from 'react-native';
 
-import { auditEntry, auditPage, endNotice, ownerNotices, ownerStatus, saveNotice, verifiedFactor } from '@/api/owner';
+import { auditEntry, auditPage, endNotice, enrollFactor, ownerNotices, ownerStatus, saveNotice, verifiedFactor } from '@/api/owner';
 import AdminLayout from '@/app/admin/_layout';
 import AuditEntryPage from '@/app/admin/audit/[id]';
 import AuditPage from '@/app/admin/audit/index';
@@ -91,6 +91,21 @@ describe('who gets in', () => {
     expect(await screen.findByTestId('code-gate')).toBeVisible();
     expect(screen.getByText(ADMIN_COPY.codeTitle)).toBeVisible();
     expect(ownerNotices).not.toHaveBeenCalled();
+  });
+
+  it('adds the authenticator the first time: the QR code drawn to fit its square, and the key to type', async () => {
+    jest.mocked(ownerStatus).mockResolvedValue({ owner: true, mfa: false });
+    jest.mocked(verifiedFactor).mockResolvedValue(null);
+    jest.mocked(enrollFactor).mockResolvedValue({
+      id: 'f1',
+      qr: { size: 30, path: 'M12 12h6v3h-6z' },
+      secret: 'JBSWY3DPEHPK3PXP',
+      uri: 'otpauth://totp/Jonz:owner?secret=JBSWY3DPEHPK3PXP',
+    });
+    await renderPages(ROUTES, '/admin/notices');
+    expect(await screen.findByTestId('admin-qr')).toBeVisible();
+    expect(screen.getByText(ADMIN_COPY.lockTitle)).toBeVisible();
+    expect(screen.getByTestId('admin-key')).toHaveTextContent('JBSW Y3DP EHPK 3PXP');
   });
 
   it('opens /admin on the notices', async () => {

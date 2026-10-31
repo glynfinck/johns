@@ -2,9 +2,9 @@ import { ADMIN_COPY, BIN_NIGHT } from '@app/core';
 import { useQuery } from '@tanstack/react-query';
 import { useState } from 'react';
 import { Linking, Platform, StyleSheet, Text, View } from 'react-native';
-import { SvgXml } from 'react-native-svg';
+import Svg, { Path } from 'react-native-svg';
 
-import { checkCode, enrollFactor, verifiedFactor } from '@/api/owner';
+import { checkCode, enrollFactor, verifiedFactor, type QrShape } from '@/api/owner';
 import { Button } from '@/components/button';
 import { Field } from '@/components/field';
 import { ReadFailed, Reading } from '@/components/read-state';
@@ -94,10 +94,7 @@ function AddAuthenticator({ onPassed }: { onPassed: () => void }) {
       {factor.isError ? <ReadFailed onRetry={() => void factor.refetch()} /> : null}
       {factor.data ? (
         <>
-          {/* A QR code scans only dark on light, so it keeps daylight's card whatever the theme. */}
-          <View style={[styles.qr, { backgroundColor: BIN_NIGHT.light.card, borderColor: colors.border }]} testID="admin-qr">
-            <SvgXml xml={factor.data.qrSvg} width={176} height={176} />
-          </View>
+          {factor.data.qr ? <QrCode qr={factor.data.qr} /> : null}
           {Platform.OS !== 'web' ? (
             <TextButton label={ADMIN_COPY.addToPasswords} onPress={() => void Linking.openURL(factor.data.uri)} />
           ) : null}
@@ -112,10 +109,28 @@ function AddAuthenticator({ onPassed }: { onPassed: () => void }) {
   );
 }
 
+const QR_SIZE = 200;
+
+/**
+ * The code to scan, centred in its own square. A QR code scans only dark on
+ * light, so it keeps daylight's colours whatever the theme. Its quiet border
+ * is part of the drawing, so the card needs no padding of its own.
+ */
+function QrCode({ qr }: { qr: QrShape }) {
+  const { colors } = useTheme();
+  return (
+    <View style={[styles.qr, { backgroundColor: BIN_NIGHT.light.card, borderColor: colors.border }]} testID="admin-qr">
+      <Svg width={QR_SIZE} height={QR_SIZE} viewBox={`0 0 ${qr.size} ${qr.size}`}>
+        <Path d={qr.path} fill={BIN_NIGHT.light.cardForeground} />
+      </Svg>
+    </View>
+  );
+}
+
 const styles = StyleSheet.create({
   frame: { flex: 1, alignItems: 'center', paddingHorizontal: GUTTER + INSET, paddingTop: SPACE.xxl * 2 },
   column: { width: '100%', maxWidth: CONTENT_MAX / 1.4, gap: SPACE.lg },
   brand: { flexDirection: 'row', alignItems: 'center', gap: SPACE.sm },
-  qr: { alignSelf: 'center', padding: SPACE.md, borderRadius: 10, borderWidth: StyleSheet.hairlineWidth },
+  qr: { alignSelf: 'center', borderRadius: 10, borderWidth: StyleSheet.hairlineWidth, overflow: 'hidden' },
   key: { fontFamily: FONT.bold, fontSize: 17, letterSpacing: 2, ...TABULAR },
 });
