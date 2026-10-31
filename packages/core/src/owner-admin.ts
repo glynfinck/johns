@@ -21,6 +21,8 @@ export const ADMIN_COPY = {
     "The admin page can change what everyone sees, so it needs a code from an authenticator app as well as your sign-in. Use 1Password, Google Authenticator or the iPhone Passwords app.",
   addToPasswords: "Add to your passwords app",
   copyKey: "Or type this key into the app",
+  /** In place of copyKey when the code to scan can’t be drawn. */
+  noQr: "The code to scan didn’t load, so type this key into the app instead.",
   codeTitle: "Enter your code",
   codeBody: "The 6 numbers from your authenticator app.",
   codeLabel: "Code",

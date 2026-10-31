@@ -1,9 +1,12 @@
 import { createHmac } from "node:crypto";
 import { beforeEach, describe, expect, it } from "vitest";
 
+import { qrShape } from "@app/core";
+
 import { GET as noticesRoute } from "@/app/api/notices/route";
 import { adminClient, signedInUser, visitor, type Actor } from "@/tests/support/clients";
 import { expectDenied, expectOk, expectRule } from "@/tests/support/expect";
+import { scanQr } from "@/tests/support/qr-scan";
 
 /**
  * The owner's admin page (docs/specs/owner-admin.md): only someone in
@@ -100,6 +103,22 @@ describe("who the owner is", () => {
     expect(read.error?.code ?? "").toBe("42501");
     expectDenied(await housemate.db.from("app_owners").insert({ user_id: housemate.userId }));
     expectDenied(await visitor().rpc("is_owner"));
+  });
+});
+
+describe("adding the authenticator", () => {
+  // The QR code is drawn from Supabase's own markup, which has changed shape
+  // under us before (#74): whatever Supabase sends, the app's drawing of it
+  // has to scan back to the link the authenticator app needs.
+  it("draws Supabase's QR code so it scans, and its key's code opens the admin page", async () => {
+    const { data, error } = await ownerNoCode.db.auth.mfa.enroll({ factorType: "totp", friendlyName: "Jonz admin" });
+    if (error) throw error;
+    const qr = qrShape(data.totp.qr_code);
+    expect(qr).not.toBeNull();
+    expect(scanQr(qr!)).toBe(data.totp.uri);
+
+    expectOk(await ownerNoCode.db.auth.mfa.challengeAndVerify({ factorId: data.id, code: totp(data.totp.secret) }));
+    expect((await ownerNoCode.db.rpc("owner_status")).data).toEqual({ owner: true, mfa: true });
   });
 });
 

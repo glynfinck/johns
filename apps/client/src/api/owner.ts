@@ -1,4 +1,4 @@
-import { humanError, noticeFromRow, type AuditEntry, type Notice } from '@app/core';
+import { humanError, noticeFromRow, qrShape, type AuditEntry, type Notice, type QrShape } from '@app/core';
 
 import { apiPost } from './http';
 import { supabase } from './supabase';
@@ -27,47 +27,6 @@ export async function verifiedFactor(): Promise<string | null> {
   return data.totp.find((factor) => factor.status === 'verified')?.id ?? null;
 }
 
-/** A QR code as one path in a square of `size`, its quiet border included. */
-export interface QrShape {
-  size: number;
-  path: string;
-}
-
-/**
- * Supabase draws its QR code as a grid of 3-unit squares, dark and light, on
- * an SVG with a width and height but no viewBox, so it can't be scaled: drawn
- * in a bigger box it sits in the top corner, and in a smaller one it's cut
- * off. This keeps only the dark squares, joined into runs along each row, as
- * one path the app can draw at any size. Null when there's nothing to draw.
- */
-export function qrShape(svg: string): QrShape | null {
-  const markup = svg.includes('%3C') ? decodeURIComponent(svg) : svg;
-  const cells: { x: number; y: number; w: number; h: number }[] = [];
-  for (const [, attributes] of markup.matchAll(/<rect\b([^>]*)>/g)) {
-    const attr = Object.fromEntries([...attributes.matchAll(/([\w-]+)="([^"]*)"/g)].map(([, key, value]) => [key, value]));
-    // Supabase puts the colour in a style ("fill:black;stroke:none"); other
-    // drawers use a fill attribute, or a class with no colour at all.
-    const fill = (/(?:^|;)\s*fill\s*:\s*([^;]+)/.exec(attr.style ?? '')?.[1] ?? attr.fill ?? '').trim().toLowerCase();
-    const dark = fill === '#000000' || fill === '#000' || fill === 'black' || (!fill && attr.class === 'color');
-    const [x, y, w, h] = [attr.x, attr.y, attr.width, attr.height].map(Number);
-    if (dark && [x, y, w, h].every(Number.isFinite)) cells.push({ x, y, w, h });
-  }
-  if (cells.length === 0) return null;
-
-  const width = Number(/<svg\b[^>]*\bwidth="([\d.]+)"/.exec(markup)?.[1]);
-  const left = Math.min(...cells.map((cell) => cell.x));
-  const size = Number.isFinite(width) && width > 0 ? width : Math.max(...cells.map((cell) => cell.x + cell.w)) + left;
-
-  cells.sort((a, b) => a.y - b.y || a.x - b.x);
-  const runs: typeof cells = [];
-  for (const cell of cells) {
-    const last = runs[runs.length - 1];
-    if (last && last.y === cell.y && last.h === cell.h && last.x + last.w === cell.x) last.w += cell.w;
-    else runs.push({ ...cell });
-  }
-  return { size, path: runs.map(({ x, y, w, h }) => `M${x} ${y}h${w}v${h}h-${w}z`).join('') };
-}
-
 export interface NewFactor {
   id: string;
   /** The QR code for the app to scan, or null if Supabase's couldn't be read. */
@@ -87,9 +46,7 @@ export async function enrollFactor(): Promise<NewFactor> {
   }
   const { data, error } = await supabase.auth.mfa.enroll({ factorType: 'totp', friendlyName: 'Jonz admin' });
   if (error) throw new Error(error.message);
-  // Supabase sends the QR code as a data: URL holding the SVG's markup.
-  const qr = qrShape(data.totp.qr_code.replace(/^data:image\/svg\+xml;[^,]*,/, ''));
-  return { id: data.id, qr, secret: data.totp.secret, uri: data.totp.uri };
+  return { id: data.id, qr: qrShape(data.totp.qr_code), secret: data.totp.secret, uri: data.totp.uri };
 }
 
 /** Checks a code; afterwards the session has passed the second factor. False for a wrong code. */

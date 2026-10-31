@@ -22,7 +22,10 @@ the owner admin viewer (https://claude.ai/artifact/97GEyJDGnrWxB8HTbbrXmo).
   authenticator app). Every owner read and write checks it in the database.
 - **Anyone else.** They see the app's "Nothing here" page. The owner without a
   code this session sees the code screen. The first time, it adds the
-  authenticator with a QR code or a typed key.
+  authenticator with a QR code or a typed key. The QR code is redrawn from
+  Supabase's markup (`qrShape` in core); a db test checks that a real
+  Supabase's code, drawn that way, scans back to the authenticator link. If
+  it can't be drawn, the screen says to type the key instead of showing a gap.
 - **Status for the page.** `owner_status()` returns `{owner, mfa}` so the page
   knows which of these to show. It says nothing to anyone else that they
   couldn't already tell.
