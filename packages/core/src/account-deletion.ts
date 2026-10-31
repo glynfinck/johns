@@ -26,6 +26,20 @@ export function deletionDay(iso: string, zone?: string): string {
   );
 }
 
+/**
+ * The day an account went, as its last email says it: "31 October 2026",
+ * where they were. A zone that isn't one (or none) reads as UTC.
+ */
+export function deletedOnDay(at: Date, zone?: string | null): string {
+  const day = (timeZone: string) =>
+    new Intl.DateTimeFormat("en-GB", { day: "numeric", month: "long", year: "numeric", timeZone }).format(at);
+  try {
+    return day(zone || "UTC");
+  } catch {
+    return day("UTC");
+  }
+}
+
 /** A date as the sheet says how long a Pass lasts: "12 Oct 2027". */
 export function passDay(date: string): string {
   const [y, m, d] = date.split("-").map(Number);

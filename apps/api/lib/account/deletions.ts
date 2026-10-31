@@ -1,5 +1,11 @@
+import { accountDeletedEmail, deletedOnDay } from "@app/core";
+
+import { sendEmail } from "@/lib/email";
 import type { AdminClient } from "@/lib/supabase/admin";
 import type { PassStripe } from "@/lib/pass/stripe";
+
+/** How the clock sends the last email: Resend in the app, a fake in tests. */
+export type SendEmail = typeof sendEmail;
 
 /** The bucket profile photos are kept in, each account's under its own id. */
 const PHOTOS = "avatars";
@@ -12,6 +18,8 @@ export interface DeletionRun {
   resumed: number;
   /** Accounts deleted for good. */
   finished: number;
+  /** "Your account is deleted" emails Resend took. One that fails is logged and never holds a delete up. */
+  emailed: number;
   /** One line for each account that failed this turn; the next turn tries it again. */
   errors: string[];
 }
@@ -26,17 +34,23 @@ export interface DeletionRun {
  * 3. On the day (or sooner, when the owner says so), the account goes: a
  *    Pass it's carrying from a house it left stops renewing, the database
  *    takes it out of the house and takes its name away, then its photo
- *    file and its sign-in go, and the audit log says so.
+ *    file and its sign-in go, and the audit log says so. Then the address it
+ *    had gets one last email saying it's done (docs/specs/email.md).
  *
  * Without Stripe the Pass steps wait, and the deletions still happen.
  */
-export async function runDeletions(db: AdminClient, stripe: PassStripe | null, now: Date): Promise<DeletionRun> {
-  const run: DeletionRun = { stopped: 0, resumed: 0, finished: 0, errors: [] };
+export async function runDeletions(
+  db: AdminClient,
+  stripe: PassStripe | null,
+  now: Date,
+  send: SendEmail = sendEmail,
+): Promise<DeletionRun> {
+  const run: DeletionRun = { stopped: 0, resumed: 0, finished: 0, emailed: 0, errors: [] };
   if (stripe) {
     await stopPasses(db, stripe, now, run);
     await resumePasses(db, stripe, now, run);
   }
-  await finishDue(db, stripe, now, run);
+  await finishDue(db, stripe, now, run, send);
   return run;
 }
 
@@ -104,7 +118,7 @@ async function resumePasses(db: AdminClient, stripe: PassStripe, now: Date, run:
   }
 }
 
-async function finishDue(db: AdminClient, stripe: PassStripe | null, now: Date, run: DeletionRun) {
+async function finishDue(db: AdminClient, stripe: PassStripe | null, now: Date, run: DeletionRun, send: SendEmail) {
   const { data: rows, error } = await db
     .from("account_deletions")
     .select("id, user_id, requested_by")
@@ -115,6 +129,8 @@ async function finishDue(db: AdminClient, stripe: PassStripe | null, now: Date, 
   if (error) throw new Error(`Couldn't read the accounts due to go: ${error.message}`);
   for (const row of rows ?? []) {
     try {
+      // Read before it goes: the delete takes the name away and scrambles the address.
+      const last = await lastLetter(db, row.user_id);
       if (stripe) await stopCarriedPass(db, stripe, row.user_id, now);
       const { error: finished } = await db.rpc("finish_account_deletion", { p_user: row.user_id });
       if (finished) throw new Error(finished.message);
@@ -137,9 +153,53 @@ async function finishDue(db: AdminClient, stripe: PassStripe | null, now: Date, 
       });
       if (logged) throw new Error(logged.message);
       run.finished += 1;
+      if (await sendLastLetter(send, last, row.id, now)) run.emailed += 1;
     } catch (e) {
       run.errors.push(`delete ${row.id}: ${message(e)}`);
     }
+  }
+}
+
+/** Who the last email goes to, read while the account still has its name and address. */
+interface LastLetter {
+  address: string | null;
+  /** Null on a retry, once the name is already "Someone who left". */
+  name: string | null;
+  /** Their own zone, else their house's: the day it went is said where they are. */
+  zone: string | null;
+}
+
+async function lastLetter(db: AdminClient, userId: string): Promise<LastLetter> {
+  const [account, profile, prefs, member] = await Promise.all([
+    db.auth.admin.getUserById(userId),
+    db.from("profiles").select("display_name, deleted_at").eq("id", userId).maybeSingle(),
+    db.from("notification_prefs").select("timezone").eq("user_id", userId).maybeSingle(),
+    db.from("members").select("houses(timezone)").eq("user_id", userId).limit(1).maybeSingle(),
+  ]);
+  return {
+    // A sign-in already deleted (a turn that stopped part way) has a scrambled address: nobody to write to.
+    address: account.error || account.data.user?.deleted_at ? null : (account.data.user?.email ?? null),
+    name: profile.data && !profile.data.deleted_at ? profile.data.display_name : null,
+    zone: prefs.data?.timezone ?? member.data?.houses?.timezone ?? null,
+  };
+}
+
+/**
+ * "Your Jonz account is deleted", to the address it had. The account is
+ * already gone, so a failed email is logged and nothing else: it never
+ * fails the delete, and the idempotency key means a retry sends it once.
+ */
+async function sendLastLetter(send: SendEmail, last: LastLetter, deletionId: string, now: Date): Promise<boolean> {
+  if (!last.address) return false;
+  try {
+    const result = await send(last.address, accountDeletedEmail({ name: last.name, deletedOn: deletedOnDay(now, last.zone) }), {
+      tag: "account-deleted",
+      idempotencyKey: `account-deleted-${deletionId}`,
+    });
+    return result.sent;
+  } catch (e) {
+    console.error(`email: account-deleted ${deletionId}: ${message(e)}`);
+    return false;
   }
 }
 

@@ -1,4 +1,4 @@
-import { beforeEach, describe, expect, it } from "vitest";
+import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import { runDeletions } from "@/lib/account/deletions";
 import type { PassStripe } from "@/lib/pass/stripe";
@@ -227,9 +227,24 @@ describe("the clock", () => {
     // As if the 30 days were up.
     await db.from("account_deletions").update({ delete_after: new Date(Date.now() - 60_000).toISOString() }).eq("user_id", ava.userId);
 
-    const run = await runDeletions(db, fakeStripe().stripe, new Date());
+    const sent: { to: string; subject: string; text: string; key?: string }[] = [];
+    const run = await runDeletions(db, fakeStripe().stripe, new Date(), async (to, message, options) => {
+      sent.push({ to, subject: message.subject, text: message.text, key: options.idempotencyKey });
+      return { sent: true, id: "em_1" };
+    });
     expect(run.errors).toEqual([]);
     expect(run.finished).toBeGreaterThanOrEqual(1);
+    // One last email, to the address she had, by her first name, once.
+    const hers = sent.filter((mail) => mail.to === email);
+    expect(hers).toEqual([
+      {
+        to: email,
+        subject: "Your Jonz account is deleted",
+        text: expect.stringContaining("Hi Ava,"),
+        key: `account-deleted-${(await deletionOf(ava.userId)).id}`,
+      },
+    ]);
+    expect(run.emailed).toBe(sent.length);
 
     const { data: members } = await db.from("members").select("user_id, role").eq("house_id", house.id).order("joined_at");
     expect(members).toEqual([
@@ -254,6 +269,20 @@ describe("the clock", () => {
     const words = JSON.stringify(await auditFor(ava.userId));
     expect(words).not.toContain("Ava");
     expect(words).not.toContain(email);
+  });
+
+  it("deletes the account even when the last email can't go", async () => {
+    const solo = await makeHouse(["Dee"]);
+    await solo.admin.db.rpc("request_account_deletion");
+    await db.from("account_deletions").update({ delete_after: new Date(Date.now() - 60_000).toISOString() }).eq("user_id", solo.admin.userId);
+    const quiet = vi.spyOn(console, "error").mockImplementation(() => {});
+    const run = await runDeletions(db, null, new Date(), async () => {
+      throw new Error("Resend is down");
+    });
+    quiet.mockRestore();
+    expect(run.errors).toEqual([]);
+    expect(run.emailed).toBe(0);
+    expect((await deletionOf(solo.admin.userId)).state).toBe("done");
   });
 
   it("leaves a house empty, and closed, when its last member goes", async () => {

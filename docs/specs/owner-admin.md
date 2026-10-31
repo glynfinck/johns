@@ -84,11 +84,14 @@ signed out says what goes and stays and signs in on the way back to itself.
   soft-deleted: Supabase scrambles the email and unlinks Google or
   Microsoft, so the profile the house's history points at stays and
   signing in again makes a new, empty account. A Pass they carry from a
-  house they left stops renewing.
+  house they left stops renewing. Last, the address they had gets "Your
+  Jonz account is deleted" (`accountDeletedEmail`, docs/specs/email.md),
+  by first name, with the day in their own zone (else their house's). The
+  address and name are read before the delete takes them; a failed email is
+  logged and never holds the delete up, and its idempotency key means a
+  retry sends it once.
 - **The log.** Request, keep, stop, delete now and done each write
   `admin_audit`, naming the account by id only, never a name or an email.
-- **Not yet.** The design's "you get an email when it's done": Jonz has no
-  email sending yet.
 
 ## The pages
 
