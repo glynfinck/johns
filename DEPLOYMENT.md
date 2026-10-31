@@ -49,14 +49,16 @@ reset the password if you ever need a direct connection.
 | Supabase project | Creates `Johns` in London at the smallest compute (Micro) if it doesn't exist, saving the database password to `.env.provision.local` first, and waits for it to be healthy | Finds it by name |
 | Migrations | Pushes any `supabase/migrations` the database hasn't recorded (`supabase db push`, with the saved password) | Compares versions both ways |
 | The clock | Writes the two Vault secrets `request_tick()` reads. The tick secret is reused if it exists, so it never drifts from Vercel's `CRON_SECRET` | Reads both back; finds the `johns-tick` pg_cron job |
-| Sign-in | Sets only production's auth fields through the Management API: site URL, redirect URLs, email sign-up off, and Google once its client is given, with the app's iOS and Android clients from `config.mjs` listed after it (nonce check skipped only once there is an iOS client) | Reads them back and refuses an unresolved `env(...)` client ID, a different client list or nonce setting |
+| Sign-in | Sets only production's auth fields through the Management API: site URL, redirect URLs, email and password sign-in on (every new address proven by a 6-digit emailed code, passwords of 8 or more), Jonz's own sign-in emails from `@app/core`'s `authEmailTemplates()`, and Google once its client is given, with the app's iOS and Android clients from `config.mjs` listed after it (nonce check skipped only once there is an iOS client) | Reads them back and refuses auto-confirmed sign-ups, SMTP that isn't Resend from hello@jonz.app, an email that isn't Jonz's own, an unresolved `env(...)` client ID, a different client list or nonce setting |
 | Vercel | Upserts the production environment (Supabase URL and keys, site URL, `CRON_SECRET`, VAPID keys, made once and then kept, since new ones would orphan every subscribed phone) and deploys `main` | Reads the variables back; checks the project builds from `apps/api` (its Root Directory, which it never sets: that one is by hand) and that its own name, `api.jonz.app`, is attached and verified; waits for the deploy |
 | The web build | Upserts `jonz-web`'s production environment (public values only: Supabase's URL and anon key, and the VAPID public key read back from `jonz-api`) and deploys `main` | Finds the project (made by hand, never by provision); checks it builds from `apps/client`, reads the variables back, and that `jonz.app` is attached to it and verified; waits for the deploy |
 | End to end | | `/signin` answers; the clock's tick, sent to `jonz.app` and passed on to `apps/api`, is accepted (so Vercel and the Vault share one secret); Supabase sends sign-in to Google with this client and back to `/signin`, and Google doesn't refuse it |
 
 It never runs `supabase config push`. That would write `config.toml`'s
-localhost over the production site URL and turn email sign-up back on, which
-is exactly what local development needs and production must not have.
+localhost over the production site URL and switch off the emailed code that
+proves a new address, which is exactly what local development needs and
+production must not have. SMTP is the one sign-in setting set by hand: the
+password is a Resend key, pasted in the dashboard (Email, below).
 
 ### What stays manual, and why
 

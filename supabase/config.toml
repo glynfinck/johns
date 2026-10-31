@@ -340,9 +340,10 @@ email_optional = false
 
 # Allow Solana wallet holders to sign in to your project via the Sign in with Solana (SIWS, EIP-4361) standard.
 # You can configure "web3" rate limit in the [auth.rate_limit] section and set up [auth.captcha] if self-hosting.
-# Google is the way in (see AGENTS.md), and Apple too on iOS. Locally the e2e
-# and db suites mint sessions with the admin API + email/password, which is
-# why [auth.email] signup stays on here and is switched off in [remotes.*].
+# Google, Microsoft and an email and password are the ways in (see AGENTS.md),
+# and Apple too on iOS. Locally an email sign-up needs no code (the e2e and db
+# suites mint sessions with the admin API + email/password); production's
+# settings, codes included, come from scripts/provision (DEPLOYMENT.md).
 # AUTH_GOOGLE_CLIENT_ID may list the iOS and Android clients after the web's,
 # comma-separated, to sign in from a development build.
 [auth.external.google]

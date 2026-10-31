@@ -12,6 +12,8 @@ export * from "./deal";
 export * from "./dispute";
 export * from "./domain";
 export * from "./email";
+export * from "./auth-email";
+export * from "./email-sign-in";
 export * from "./errors";
 export * from "./format";
 export * from "./history";
