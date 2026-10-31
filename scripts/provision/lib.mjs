@@ -22,8 +22,11 @@ export const EMAIL_SMTP = { host: "smtp.resend.com", port: "465", user: "resend"
 /**
  * Supabase's emails as Management API fields, from @app/core's
  * authEmailTemplates(): mailer_subjects_<name> and mailer_templates_<name>_content.
+ * @param {Record<string, { subject: string; html: string }>} templates
+ * @returns {Record<string, string>}
  */
 export function mailerFields(templates) {
+  /** @type {Record<string, string>} */
   const body = {};
   for (const [name, t] of Object.entries(templates)) {
     body[`mailer_subjects_${name}`] = t.subject;

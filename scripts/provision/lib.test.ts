@@ -67,7 +67,7 @@ describe("auth settings", () => {
       password_min_length: 8,
       mailer_subjects_confirmation: "Your Jonz code is {{ .Token }}",
     });
-    expect(authSettings(CONFIG, null, EMAILS).mailer_templates_recovery_content).toContain("{{ .Token }}");
+    expect((authSettings(CONFIG, null, EMAILS) as Record<string, unknown>).mailer_templates_recovery_content).toContain("{{ .Token }}");
     // SMTP's password is a Resend key pasted in the dashboard, so provision never writes SMTP.
     expect(Object.keys(authSettings(CONFIG, null, EMAILS)).filter((k) => k.startsWith("smtp_"))).toEqual([]);
     expect(authSettings(CONFIG, GOOGLE, EMAILS)).toMatchObject({
