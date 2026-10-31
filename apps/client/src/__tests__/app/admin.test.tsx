@@ -3,10 +3,24 @@ import * as Clipboard from 'expo-clipboard';
 import { fireEvent, screen, waitFor, within } from 'expo-router/testing-library';
 import { useWindowDimensions } from 'react-native';
 
-import { auditEntry, auditPage, endNotice, enrollFactor, ownerNotices, ownerStatus, saveNotice, verifiedFactor } from '@/api/owner';
+import {
+  auditEntry,
+  auditPage,
+  deleteByEmail,
+  deleteNow,
+  endNotice,
+  enrollFactor,
+  ownerDeletions,
+  ownerNotices,
+  ownerStatus,
+  saveNotice,
+  stopDeletion,
+  verifiedFactor,
+} from '@/api/owner';
 import AdminLayout from '@/app/admin/_layout';
 import AuditEntryPage from '@/app/admin/audit/[id]';
 import AuditPage from '@/app/admin/audit/index';
+import DeletionsPage from '@/app/admin/deletions';
 import AdminIndex from '@/app/admin/index';
 import NoticesPage from '@/app/admin/notices';
 import { supabase } from '@/api/supabase';
@@ -22,6 +36,10 @@ jest.mock('@/api/owner', () => ({
   endNotice: jest.fn(),
   auditPage: jest.fn(),
   auditEntry: jest.fn(),
+  ownerDeletions: jest.fn(),
+  deleteNow: jest.fn(),
+  stopDeletion: jest.fn(),
+  deleteByEmail: jest.fn(),
 }));
 jest.mock('@/api/supabase', () => ({ supabase: {} }));
 jest.mock('@/api/http', () => ({ apiPost: jest.fn() }));
@@ -97,6 +115,7 @@ const ROUTES = {
   'admin/_layout': AdminLayout,
   'admin/index': AdminIndex,
   'admin/notices': NoticesPage,
+  'admin/deletions': DeletionsPage,
   'admin/audit/index': AuditPage,
   'admin/audit/[id]': AuditEntryPage,
 };
@@ -109,7 +128,21 @@ beforeEach(() => {
   jest.mocked(endNotice).mockResolvedValue({ copied: true });
   jest.mocked(auditPage).mockResolvedValue({ entries: [entry(2), entry(1, { before: null, actor: 'someone-else' })], more: false });
   jest.mocked(auditEntry).mockResolvedValue(entry(2));
+  jest.mocked(ownerDeletions).mockResolvedValue([SAM, KIT]);
+  for (const move of [deleteNow, stopDeletion, deleteByEmail]) jest.mocked(move).mockResolvedValue(undefined);
 });
+
+const DAY = 86_400_000;
+const SAM = {
+  userId: 'sam',
+  name: 'Sam',
+  email: 'sam@example.com',
+  house: 'The Annexe',
+  requestedAt: new Date(Date.now() - 2 * DAY).toISOString(),
+  deleteAfter: new Date(Date.now() + 28 * DAY - 60_000).toISOString(),
+  requestedBy: 'self' as const,
+};
+const KIT = { ...SAM, userId: 'kit', name: 'Kit', email: 'kit@example.com', house: null, requestedBy: 'owner' as const };
 
 describe('who gets in', () => {
   it('shows anyone who is not the owner the page that is not there', async () => {
@@ -246,6 +279,69 @@ describe('notices on a laptop', () => {
     expect(within(side).getByText(ADMIN_COPY.start.status.title)).toBeVisible();
     await fireEvent.press(screen.getByTestId('notice-row-n2'));
     expect(await within(screen.getByTestId('notice-side')).findByDisplayValue('Jonz is on iPhone and Android')).toBeVisible();
+  });
+});
+
+describe('deletions', () => {
+  it('lists who is waiting, their email (a line of its own) and house, and how long is left, with a tab of its own', async () => {
+    await renderPages(ROUTES, '/admin/deletions');
+    await untilRead();
+    expect(screen.getByText(ADMIN_COPY.deletionsMeta(2))).toBeVisible();
+    expect(screen.getByTestId('deletion-sam')).toHaveTextContent(/Sam.*sam@example\.com\sThe Annexe, asked in the app.*Goes in 28 days/);
+    expect(screen.getByTestId('deletion-kit')).toHaveTextContent(/kit@example\.com\sin no house, you started it/);
+    expect(screen.getByTestId('admin-tab-deletions')).toBeSelected();
+  });
+
+  it('says so when nobody is waiting', async () => {
+    jest.mocked(ownerDeletions).mockResolvedValue([]);
+    await renderPages(ROUTES, '/admin/deletions');
+    expect(await screen.findByTestId('deletions-empty')).toBeVisible();
+    expect(screen.getByText(ADMIN_COPY.noDeletions)).toBeVisible();
+  });
+
+  it('deletes now, with a reason, only once asked twice', async () => {
+    await renderPages(ROUTES, '/admin/deletions');
+    await untilRead();
+    await fireEvent.press(within(screen.getByTestId('deletion-sam')).getByRole('button'));
+    const sheet = within(await screen.findByTestId('deletion-sheet'));
+    await fireEvent.changeText(sheet.getByLabelText(ADMIN_COPY.reason), 'Emailed to ask for it sooner');
+    await fireEvent.press(sheet.getByTestId('deletion-now'));
+    expect(deleteNow).not.toHaveBeenCalled();
+    expect(sheet.getByRole('header', { name: ADMIN_COPY.deleteNowAsk('Sam') })).toBeVisible();
+    await fireEvent.press(sheet.getByTestId('deletion-confirm'));
+    expect(deleteNow).toHaveBeenCalledWith('sam', 'Emailed to ask for it sooner');
+    expect(await screen.findByText(ADMIN_COPY.deletingSoon)).toBeVisible();
+  });
+
+  it('stops one, and can think better of it', async () => {
+    await renderPages(ROUTES, '/admin/deletions');
+    await untilRead();
+    await fireEvent.press(within(screen.getByTestId('deletion-kit')).getByRole('button'));
+    const sheet = within(await screen.findByTestId('deletion-sheet'));
+    await fireEvent.press(sheet.getByTestId('deletion-stop'));
+    await fireEvent.press(sheet.getByTestId('deletion-cancel'));
+    expect(sheet.getByTestId('deletion-now')).toBeVisible();
+    await fireEvent.press(sheet.getByTestId('deletion-stop'));
+    await fireEvent.press(sheet.getByTestId('deletion-confirm'));
+    expect(stopDeletion).toHaveBeenCalledWith('kit', '');
+    expect(await screen.findByText(ADMIN_COPY.stopped)).toBeVisible();
+  });
+
+  it('starts the 30 days for someone who emailed, and says why it couldn’t', async () => {
+    jest.mocked(deleteByEmail).mockRejectedValueOnce(new Error('There’s no Jonz account with that email.'));
+    await renderPages(ROUTES, '/admin/deletions');
+    await untilRead();
+    await fireEvent.press(within(screen.getByTestId('delete-by-email')).getByRole('button'));
+    const sheet = within(await screen.findByTestId('by-email-sheet'));
+    expect(sheet.getByTestId('deletion-start')).toBeDisabled();
+    await fireEvent.changeText(sheet.getByLabelText(ADMIN_COPY.email), 'nobody@example.com');
+    await fireEvent.press(sheet.getByTestId('deletion-start'));
+    expect(await sheet.findByText('There’s no Jonz account with that email.')).toBeVisible();
+    await fireEvent.changeText(sheet.getByLabelText(ADMIN_COPY.email), 'ana@example.com');
+    await fireEvent.changeText(sheet.getByLabelText(ADMIN_COPY.reason), 'Email of 31 Oct');
+    await fireEvent.press(sheet.getByTestId('deletion-start'));
+    expect(deleteByEmail).toHaveBeenLastCalledWith('ana@example.com', 'Email of 31 Oct');
+    expect(await screen.findByText(ADMIN_COPY.started)).toBeVisible();
   });
 });
 

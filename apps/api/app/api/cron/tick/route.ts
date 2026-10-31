@@ -2,6 +2,7 @@ import { timingSafeEqual } from "node:crypto";
 
 import { NextResponse } from "next/server";
 
+import { runDeletions } from "@/lib/account/deletions";
 import { tickAll } from "@/lib/engine/tick";
 import { stopCarriedPasses } from "@/lib/pass/moves";
 import { passStripe } from "@/lib/pass/stripe";
@@ -37,6 +38,13 @@ async function tick(request: Request) {
     } catch (e) {
       results.push({ houseId: "moving_pass", error: e instanceof Error ? e.message : String(e) });
     }
+  }
+  // Accounts being deleted: their Pass stops (or starts again), and on the day they go (lib/account/deletions.ts).
+  try {
+    const run = await runDeletions(db, stripe, now);
+    for (const error of run.errors) results.push({ houseId: "deletions", error });
+  } catch (e) {
+    results.push({ houseId: "deletions", error: e instanceof Error ? e.message : String(e) });
   }
   const failed = results.filter((r) => r.error);
   return NextResponse.json(

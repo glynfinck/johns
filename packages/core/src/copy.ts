@@ -36,6 +36,7 @@ export const PAGE_TITLE = {
   prefs: "Preferences",
   moving: "Moving out",
   movingOn: "Moving on",
+  deleteAccount: "Delete your account",
 } as const;
 
 /** A page that isn't there, and a page that broke. */

@@ -40,6 +40,7 @@ function fakeStripe() {
     stopRenewing: async (id) => {
       calls.stopped.push(id);
     },
+    resumeRenewing: async () => {},
   };
   return { stripe, subs, calls };
 }

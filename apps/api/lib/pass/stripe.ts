@@ -18,6 +18,8 @@ export interface SubscriptionView {
   /** Unix seconds: the end of the period paid for, or of the trial. */
   periodEnd: number;
   endedAt: number | null;
+  /** Set to stop at the end of what was paid (the buyer cancelled, or the clock stopped it). */
+  cancelAtPeriodEnd?: boolean;
 }
 
 export interface CheckoutParams {
@@ -42,6 +44,8 @@ export interface PassStripe {
   subscription(id: string): Promise<SubscriptionView>;
   /** Stops a subscription renewing; it runs to the end of what was paid. */
   stopRenewing(id: string): Promise<void>;
+  /** Undoes stopRenewing: it renews again at the end of the period. */
+  resumeRenewing(id: string): Promise<void>;
 }
 
 /** Stripe's own client, or null when STRIPE_SECRET_KEY isn't set. */
@@ -95,11 +99,16 @@ export function passStripe(sdk: Stripe | null = stripeSdk()): PassStripe | null 
         lookupKey: plan ? PASS_LOOKUP_KEYS[plan] : null,
         periodEnd: item?.current_period_end ?? sub.ended_at ?? 0,
         endedAt: sub.ended_at,
+        cancelAtPeriodEnd: sub.cancel_at_period_end,
       };
     },
 
     async stopRenewing(id) {
       await sdk.subscriptions.update(id, { cancel_at_period_end: true });
+    },
+
+    async resumeRenewing(id) {
+      await sdk.subscriptions.update(id, { cancel_at_period_end: false });
     },
   };
 }

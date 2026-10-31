@@ -17,15 +17,18 @@ import { CONTENT_MAX, GROUP_RADIUS, GUTTER, SPACE, TAP, useTheme } from '@/theme
 
 type Tone = 'status' | 'offer' | 'news';
 
-/** Shows the band above `children` when there is something to say. */
+/**
+ * Shows the band above `children` when there is something to say. The tree
+ * keeps one shape whether or not the band shows, so a band coming or going
+ * doesn't rebuild the screen under it (and close a half-typed sheet).
+ */
 export function NoticeBand({ children }: { children: ReactNode }) {
   const { notice, unreachable, close, retry } = useNotices();
   const insets = useSafeAreaInsets();
   const showing = unreachable || notice !== null;
-  if (!showing) return children;
   return (
     <>
-      {unreachable ? (
+      {!showing ? null : unreachable ? (
         <NoticeView
           tone="status"
           icon={WifiOffIcon}
@@ -47,7 +50,7 @@ export function NoticeBand({ children }: { children: ReactNode }) {
           testID={`notice-${notice!.kind}`}
         />
       )}
-      <SafeAreaInsetsContext.Provider value={{ ...insets, top: 0 }}>{children}</SafeAreaInsetsContext.Provider>
+      <SafeAreaInsetsContext.Provider value={showing ? { ...insets, top: 0 } : insets}>{children}</SafeAreaInsetsContext.Provider>
     </>
   );
 }

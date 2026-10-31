@@ -76,6 +76,9 @@ const MESSAGES: Record<string, string> = {
   owner_only: "Only the owner can do that, signed in with their code.",
   notice_ends_first: "A notice has to end after it starts.",
   audit_append_only: "The audit log can’t be changed.",
+  no_deletion: "That account isn’t waiting to be deleted any more.",
+  no_account: "There’s no Jonz account with that email.",
+  already_deleting: "That account is already waiting to be deleted.",
 };
 
 export function humanError(error: { message?: string; code?: string } | null | undefined): string {

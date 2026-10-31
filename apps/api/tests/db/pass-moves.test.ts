@@ -77,6 +77,7 @@ function fakeStripe(subs: Record<string, SubscriptionView> = {}) {
     portal: async () => "https://billing.stripe.com/p/session/test_1",
     subscription: async (id) => subs[id],
     stopRenewing: async (id) => void stopped.push(id),
+    resumeRenewing: async () => {},
   };
   return { stripe, stopped };
 }

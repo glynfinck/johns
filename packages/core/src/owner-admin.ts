@@ -8,6 +8,7 @@ export const ADMIN_PATH = "/admin";
 
 export const ADMIN_PAGES = [
   { key: "notices", label: "Notices", path: "/admin/notices" },
+  { key: "deletions", label: "Deletions", path: "/admin/deletions" },
   { key: "audit", label: "Audit log", path: "/admin/audit" },
 ] as const;
 export type AdminPage = (typeof ADMIN_PAGES)[number]["key"];
@@ -87,7 +88,49 @@ export const ADMIN_COPY = {
   when: "When",
   openNotice: "Open the notice",
   noEntry: "That entry isn’t in the log.",
+  // Deletions.
+  deletionsMeta: (count: number) => (count === 0 ? "Nobody waiting" : `${count} waiting`),
+  noDeletions: "Nobody is waiting to be deleted",
+  noDeletionsBody:
+    "When someone deletes their account it waits here for 30 days, in case they change their mind. Signing in again and pressing Keep my account stops it.",
+  waiting: "Waiting",
+  goesIn: (days: number) => (days <= 0 ? "Goes within 10 minutes" : days === 1 ? "Goes tomorrow" : `Goes in ${days} days`),
+  askedInApp: "asked in the app",
+  startedByYou: "you started it",
+  noHouse: "in no house",
+  deleteNow: "Delete now",
+  deleteNowAsk: (name: string) => `Delete ${name} now?`,
+  deleteNowBody: "Their account goes within 10 minutes instead of waiting out the 30 days. Only do this when they’ve asked you to.",
+  stop: "Stop",
+  stopAsk: (name: string) => `Stop deleting ${name}?`,
+  stopBody: "Their account stays, the time away it put in ends, and a House Pass they pay for renews again.",
+  reason: "Why, for the audit log",
+  reasonPlaceholder: "They emailed on 31 Oct",
+  byEmail: "Delete an account someone emailed about",
+  byEmailBody:
+    "For someone who can’t sign in to do it themselves. Only when the email came from the address on the account. It waits 30 days like any other.",
+  email: "Their email",
+  startDeleting: "Start the 30 days",
+  started: "Started. It’s in the list.",
+  deletingSoon: "It goes within 10 minutes.",
+  stopped: "Stopped. Their account stays.",
 } as const;
+
+/** Whole days until a deletion is due, from now; 0 or less is due now. */
+export function daysUntil(iso: string, now: Date): number {
+  return Math.ceil((Date.parse(iso) - now.getTime()) / 86_400_000);
+}
+
+/** Someone waiting to be deleted, as the Deletions page lists them. */
+export interface PendingDeletion {
+  userId: string;
+  name: string;
+  email: string | null;
+  house: string | null;
+  requestedAt: string;
+  deleteAfter: string;
+  requestedBy: "self" | "owner";
+}
 
 /** How long a new notice runs: the choices on the Ends switch. */
 export const NOTICE_ENDS = ["never", "2h", "tomorrow", "date"] as const;
@@ -186,7 +229,8 @@ export interface AuditChange {
   to: string | null;
 }
 
-const NOTICE_FIELDS: readonly [string, string][] = [
+const FIELDS: readonly [string, string][] = [
+  // A notice's.
   ["kind", "Kind"],
   ["title", "Title"],
   ["body", "More"],
@@ -194,7 +238,18 @@ const NOTICE_FIELDS: readonly [string, string][] = [
   ["link_url", "Button goes to"],
   ["starts_at", "Starts"],
   ["ends_at", "Ends"],
+  // An account being deleted's: never a name or an email.
+  ["state", "State"],
+  ["requested_by", "Asked"],
+  ["delete_after", "Goes"],
 ];
+
+const WORDS: Record<string, Record<string, string>> = {
+  state: { pending: "Waiting", kept: "Kept", done: "Deleted" },
+  requested_by: { self: "In the app", owner: "By email, started by the owner" },
+};
+
+const WHEN_FIELDS = new Set(["starts_at", "ends_at", "delete_after"]);
 
 function asRecord(value: unknown): Record<string, unknown> | null {
   return value !== null && typeof value === "object" && !Array.isArray(value) ? (value as Record<string, unknown>) : null;
@@ -202,8 +257,8 @@ function asRecord(value: unknown): Record<string, unknown> | null {
 
 function shown(value: unknown, field: string, zone?: string): string | null {
   if (value === null || value === undefined || value === "") return null;
-  if ((field === "starts_at" || field === "ends_at") && typeof value === "string") return formatWhen(value, zone);
-  return String(value);
+  if (WHEN_FIELDS.has(field) && typeof value === "string") return formatWhen(value, zone);
+  return WORDS[field]?.[String(value)] ?? String(value);
 }
 
 /** A moment as the audit log says it: "Fri 30 Oct, 16:41". */
@@ -226,7 +281,7 @@ export function auditChanges(entry: Pick<AuditEntry, "before" | "after">, zone?:
   const before = asRecord(entry.before);
   const after = asRecord(entry.after);
   if (!after) return [];
-  return NOTICE_FIELDS.flatMap(([field, label]) => {
+  return FIELDS.flatMap(([field, label]) => {
     const from = before ? shown(before[field], field, zone) : null;
     const to = shown(after[field], field, zone);
     if (before && from === to) return [];
@@ -248,9 +303,26 @@ export function auditLine(entry: AuditEntry, ownerId: string | null): { title: s
       return { title: `${who} ${entry.before ? "changed" : "wrote"} ${kind}`, meta: title };
     case "notice.end":
       return { title: `${who} ended ${kind}`, meta: title };
+    // The log names an account by its id only: once it's deleted, nothing else is left.
+    case "account.delete_request":
+      return after?.requested_by === "owner"
+        ? { title: `${who} started deleting an account`, meta: accountMeta(entry) }
+        : { title: "Someone asked to delete their account", meta: accountMeta(entry) };
+    case "account.delete_keep":
+      return { title: "Someone kept their account", meta: accountMeta(entry) };
+    case "account.delete_stop":
+      return { title: `${who} stopped a deletion`, meta: accountMeta(entry) };
+    case "account.delete_now":
+      return { title: `${who} deleted an account sooner`, meta: accountMeta(entry) };
+    case "account.delete_done":
+      return { title: "An account was deleted", meta: accountMeta(entry) };
     default:
       return { title: `${who}: ${entry.action}`, meta: entry.targetId ?? "" };
   }
+}
+
+function accountMeta(entry: AuditEntry): string {
+  return entry.targetId ? `Account ${entry.targetId.slice(0, 8)}` : "";
 }
 
 /** Entries by day, newest first, for the list's day headings. */

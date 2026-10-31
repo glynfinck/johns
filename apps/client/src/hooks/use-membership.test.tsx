@@ -1,11 +1,13 @@
 import { act, fireEvent, render, screen } from '@testing-library/react-native';
 import { Pressable, Text } from 'react-native';
 
+import { deletionStatus } from '@/api/account';
 import { getMyHouse } from '@/api/house';
 import { MembershipProvider, useMembership } from '@/hooks/use-membership';
 import { useSession } from '@/hooks/use-session';
 
 jest.mock('@/api/house', () => ({ getMyHouse: jest.fn() }));
+jest.mock('@/api/account', () => ({ deletionStatus: jest.fn().mockResolvedValue(null) }));
 jest.mock('@/hooks/use-session', () => ({ useSession: jest.fn() }));
 jest.mock('@/api/microsoft-photo', () => ({ followMicrosoftSignIns: () => () => undefined }));
 
@@ -75,4 +77,29 @@ it("says so when the house can't be read, rather than claiming there's none", as
 it('needs a provider', async () => {
   jest.spyOn(console, 'error').mockImplementation(() => undefined);
   await expect(render(<Probe />)).rejects.toThrow('MembershipProvider');
+});
+
+it('knows when the account is waiting to be deleted, and lets the house decide if it can’t tell', async () => {
+  function Deleting() {
+    const { loading, deletion } = useMembership();
+    return <Text>{loading ? 'loading' : (deletion?.deleteAfter ?? 'staying')}</Text>;
+  }
+  session.mockReturnValue({ session: { user: { id: 'u1' } }, loading: false });
+  myHouse.mockResolvedValue(FLAT);
+  jest.mocked(deletionStatus).mockResolvedValueOnce({ deleteAfter: '2026-11-29T09:00:00Z', requestedBy: 'self' });
+  const view = await render(
+    <MembershipProvider>
+      <Deleting />
+    </MembershipProvider>,
+  );
+  expect(await screen.findByText('2026-11-29T09:00:00Z')).toBeOnTheScreen();
+  view.unmount();
+
+  jest.mocked(deletionStatus).mockRejectedValueOnce(new Error('offline'));
+  await render(
+    <MembershipProvider>
+      <Deleting />
+    </MembershipProvider>,
+  );
+  expect(await screen.findByText('staying')).toBeOnTheScreen();
 });

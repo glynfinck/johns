@@ -1,3 +1,4 @@
+import { DELETE_PATH } from "./account-deletion";
 import { safeNext, signInPath, signInReason } from "./auth-paths";
 import { FRONT_DOOR_COPY, SIGN_IN_COPY } from "./copy";
 import { CURRENCIES, type Currency, DEFAULT_RULES, DOW_LABEL, type IsoDow } from "./domain";
@@ -14,15 +15,15 @@ export const DOOR = { start: "/house/new", invite: "/welcome" } as const;
 const JOIN_PATH = /^\/join\/[^/?#]+$/;
 
 /**
- * Where signing in leads someone with no house yet, when sign-in was carrying
- * somewhere (`next`): the front door's choice (naming the house, or pasting
- * the invite) or a join link. Undefined for anything else, safe or not, so
- * the root layout's own rule decides and no `next` can send anyone round in
- * circles.
+ * Where signing in leads, when sign-in was carrying somewhere (`next`): for
+ * someone with no house yet, the front door's choice (naming the house, or
+ * pasting the invite) or a join link; for anyone, jonz.app/delete. Undefined
+ * for anything else, safe or not, so the root layout's own rule decides and
+ * no `next` can send anyone round in circles.
  */
 export function afterSignIn(next: string | null | undefined): string | undefined {
   const target = safeNext(next);
-  if (target === DOOR.start || target === DOOR.invite || JOIN_PATH.test(target)) return target;
+  if (target === DOOR.start || target === DOOR.invite || target === DELETE_PATH || JOIN_PATH.test(target)) return target;
   return undefined;
 }
 

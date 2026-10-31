@@ -4,6 +4,7 @@ import {
   auditByDay,
   auditChanges,
   auditLine,
+  daysUntil,
   formatLocalDateTime,
   noticeEndsAt,
   noticeProblems,
@@ -113,6 +114,35 @@ describe("the audit log", () => {
     expect(auditChanges(entry({}), "UTC").map((c) => c.label)).toEqual(["Kind", "Title", "Starts"]);
   });
 
+  it("says what happened to an account by its id alone, never a name", () => {
+    const account = (action: string, actor: string | null, after: unknown = null) =>
+      auditLine(entry({ action, actor, targetKind: "account", targetId: "a1b2c3d4-0000-4000-8000-000000000000", before: null, after }), owner);
+    expect(account("account.delete_request", "a1b2c3d4", { requested_by: "self" })).toEqual({
+      title: "Someone asked to delete their account",
+      meta: "Account a1b2c3d4",
+    });
+    expect(account("account.delete_request", owner, { requested_by: "owner" }).title).toBe("You started deleting an account");
+    expect(account("account.delete_keep", "a1b2c3d4").title).toBe("Someone kept their account");
+    expect(account("account.delete_stop", owner).title).toBe("You stopped a deletion");
+    expect(account("account.delete_now", owner).title).toBe("You deleted an account sooner");
+    expect(account("account.delete_done", null).title).toBe("An account was deleted");
+  });
+
+  it("lists what changed on a deletion in words", () => {
+    const changes = auditChanges(
+      { before: { state: "pending", delete_after: "2026-11-30T09:00:00Z" }, after: { state: "kept" } },
+      "UTC",
+    );
+    expect(changes).toEqual([
+      { field: "state", label: "State", from: "Waiting", to: "Kept" },
+      { field: "delete_after", label: "Goes", from: "Mon 30 Nov, 09:00", to: null },
+    ]);
+    expect(auditChanges({ before: null, after: { requested_by: "self", delete_after: "2026-11-30T09:00:00Z" } }, "UTC")).toEqual([
+      { field: "requested_by", label: "Asked", from: null, to: "In the app" },
+      { field: "delete_after", label: "Goes", from: null, to: "Mon 30 Nov, 09:00" },
+    ]);
+  });
+
   it("groups entries by day, newest first as they come", () => {
     const days = auditByDay(
       [entry({ id: 3, at: "2026-10-30T16:41:00Z" }), entry({ id: 2, at: "2026-10-30T09:00:00Z" }), entry({ id: 1, at: "2026-10-29T22:00:00Z" })],
@@ -137,5 +167,14 @@ describe("a notice's window, as its row says it", () => {
   it("says from when for one that starts later, and when it ended for one that's over", () => {
     expect(noticeWindow({ startsAt: at("2026-11-09T08:00:00Z"), endsAt: null }, NOW, "UTC")).toBe("from Mon 9 Nov, 08:00, until you end it");
     expect(noticeWindow({ startsAt: at("2026-11-01T08:00:00Z"), endsAt: at("2026-11-01T10:00:00Z") }, NOW, "UTC")).toBe("ended Sun 1 Nov, 10:00");
+  });
+});
+
+describe("days until a deletion", () => {
+  it("counts whole days up, and none once it's due", () => {
+    expect(daysUntil("2026-12-02T11:00:00Z", NOW)).toBe(30);
+    expect(daysUntil("2026-11-03T12:00:00Z", NOW)).toBe(1);
+    expect(daysUntil("2026-11-02T12:00:00Z", NOW)).toBe(0);
+    expect(daysUntil("2026-11-01T12:00:00Z", NOW)).toBeLessThan(0);
   });
 });

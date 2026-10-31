@@ -125,7 +125,7 @@ function NoticeList({ notices, chosen, choose }: { notices: Notice[]; chosen: Ch
       key={notice.id}
       title={notice.title}
       meta={noticeWindow(notice, now)}
-      leading={<Chip label={KIND_LABEL[notice.kind]} tone={notice.kind === 'status' ? 'hazard' : 'quiet'} />}
+      trailing={<Chip label={KIND_LABEL[notice.kind]} tone={notice.kind === 'status' ? 'hazard' : 'quiet'} />}
       tint={chosen !== null && !isNew(chosen) && chosen.id === notice.id}
       chevron
       onPress={() => choose(notice)}

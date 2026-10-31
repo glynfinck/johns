@@ -3,13 +3,14 @@
 ## What it does
 
 The owner of Jonz (not a house admin) has pages of their own at `/admin`.
-The first two are:
+The first three are:
 
 - **Notices**: a band at the top of the app for everyone. It can be an outage
   status, an offer, or news.
+- **Deletions**: accounts waiting to be deleted (see "Deleting an account").
 - **Audit log**: everything done on the admin pages, which nobody can change.
 
-Later PRs add account deletion, an overview, houses, messages, a support inbox
+Later PRs add an overview, houses, messages, a support inbox
 with an agent that asks before it acts, and an owner Ask Jonz. Designs are in
 the owner admin viewer (https://claude.ai/artifact/97GEyJDGnrWxB8HTbbrXmo).
 
@@ -53,6 +54,44 @@ the owner admin viewer (https://claude.ai/artifact/97GEyJDGnrWxB8HTbbrXmo).
     24 hours.
   - The app keeps the last notices it read. If it can't reach Jonz it shows
     its own "can't reach Jonz" band.
+
+## Deleting an account
+
+Apple (5.1.1(v)) needs deleting to start in the app; Google Play needs a web
+page for anyone who has removed the app. Both are the same form: House, then
+Leave, then **Delete my account** (a sheet), and **jonz.app/delete**, which
+signed out says what goes and stays and signs in on the way back to itself.
+
+- **Asking.** Typing DELETE starts 30 days (`request_account_deletion`). The
+  house sees you as away from today until the day it goes, around any time
+  away you'd set; other devices are signed out. A House Pass you pay for
+  stops renewing at the clock's next turn (the subscription it stopped is
+  kept).
+- **The 30 days.** Signing in shows only "Your account is being deleted",
+  with the day, Keep my account and Sign out. Keeping it (`keep_account`)
+  takes the time away back out, and the clock starts the Pass renewing
+  again.
+- **The owner.** Deletions lists who is waiting (name, email, house, days
+  left). Delete now brings it forward to the clock's next turn; Stop is
+  Keep my account for them; each takes a reason. For someone who emailed and
+  can't sign in, the owner starts the same 30 days by their address.
+- **The day.** The clock (`lib/account/deletions.ts`, every 10 minutes):
+  `finish_account_deletion` takes them out of the house (the
+  longest-standing housemate becomes admin if they were the only one; the
+  last one out leaves the house empty, so closed), clears the Pass's buyer,
+  their reminders and open swap asks, and renames them "Someone who left"
+  without a photo. Then their photo files go, and their sign-in is
+  soft-deleted: Supabase scrambles the email and unlinks Google or
+  Microsoft, so the profile the house's history points at stays and
+  signing in again makes a new, empty account. A Pass they carry from a
+  house they left stops renewing. Last, the address they had gets "Your
+  Jonz account is deleted" (`accountDeletedEmail`, docs/specs/email.md),
+  by first name, with the day in their own zone (else their house's). The
+  address and name are read before the delete takes them; a failed email is
+  logged and never holds the delete up, and its idempotency key means a
+  retry sends it once.
+- **The log.** Request, keep, stop, delete now and done each write
+  `admin_audit`, naming the account by id only, never a name or an email.
 
 ## The pages
 

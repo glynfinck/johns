@@ -1,7 +1,7 @@
 import { QueryClientProvider } from '@tanstack/react-query';
 import { fireEvent, render, screen } from '@testing-library/react-native';
 import { WifiOffIcon } from 'lucide-react-native';
-import type { ReactNode } from 'react';
+import { useEffect, type ReactNode } from 'react';
 import { Text } from 'react-native';
 
 import { authStorage } from '@/api/storage';
@@ -66,6 +66,23 @@ describe('the notice band', () => {
     await fireEvent.press(await screen.findByRole('button', { name: 'Close notice' }));
     expect(screen.queryByTestId('notice-offer')).toBeNull();
     expect(JSON.parse(authStorage!.getItem('jonz.closed-notices')!)).toHaveProperty('n1');
+  });
+
+  it('leaves the screen under it alone when it comes up (a half-typed sheet stays open)', async () => {
+    fetchMock.mockResolvedValue(reply({ notices: [on({})] }));
+    const mounted = jest.fn();
+    function Screen() {
+      useEffect(() => mounted(), []);
+      return <Text>Today</Text>;
+    }
+    await render(
+      <NoticeBand>
+        <Screen />
+      </NoticeBand>,
+      { wrapper: App },
+    );
+    expect(await screen.findByTestId('notice-offer')).toBeTruthy();
+    expect(mounted).toHaveBeenCalledTimes(1);
   });
 
   it('shows nothing when there is nothing to say', async () => {
