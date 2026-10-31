@@ -1,4 +1,5 @@
 import { ADMIN_COPY, NOT_FOUND_COPY, type AuditEntry, type Notice } from '@app/core';
+import * as Clipboard from 'expo-clipboard';
 import { fireEvent, screen, waitFor, within } from 'expo-router/testing-library';
 import { useWindowDimensions } from 'react-native';
 
@@ -24,6 +25,7 @@ jest.mock('@/api/owner', () => ({
 }));
 jest.mock('@/api/supabase', () => ({ supabase: {} }));
 jest.mock('@/api/http', () => ({ apiPost: jest.fn() }));
+jest.mock('expo-clipboard', () => ({ setStringAsync: jest.fn().mockResolvedValue(true) }));
 jest.mock('react-native/Libraries/Utilities/useWindowDimensions', () => ({ __esModule: true, default: jest.fn() }));
 jest.mock('@/hooks/use-membership', () => ({
   useMembership: () => ({ session: { user: { id: 'owner' } }, house: null, refresh: jest.fn() }),
@@ -136,6 +138,16 @@ describe('who gets in', () => {
     expect(screen.getByText(ADMIN_COPY.copyKey)).toBeVisible();
     expect(screen.queryByTestId('admin-no-qr')).toBeNull();
     expect(screen.getByTestId('admin-key')).toHaveTextContent('JBSW Y3DP EHPK 3PXP');
+  });
+
+  it('copies the key without its spaces, and says so', async () => {
+    jest.mocked(ownerStatus).mockResolvedValue({ owner: true, mfa: false });
+    jest.mocked(verifiedFactor).mockResolvedValue(null);
+    supabaseEnrolls(SUPABASE_QR);
+    await renderPages(ROUTES, '/admin/notices');
+    await fireEvent.press(await screen.findByRole('button', { name: ADMIN_COPY.copyKeyButton }));
+    expect(Clipboard.setStringAsync).toHaveBeenCalledWith('JBSWY3DPEHPK3PXP');
+    expect(await screen.findByRole('button', { name: ADMIN_COPY.keyCopied })).toBeVisible();
   });
 
   it('says to type the key, never a blank, when the QR code can’t be drawn', async () => {
