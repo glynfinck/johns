@@ -5,6 +5,7 @@ import { appleSignInAvailable, signInWithApple, signInWithGoogle, signInWithMicr
 import SignIn from '@/app/signin';
 import { TAP } from '@/theme';
 
+jest.mock('@/api/email-auth', () => ({}));
 jest.mock('@/api/auth', () => ({
   appleSignInAvailable: jest.fn(),
   signInWithApple: jest.fn(),

@@ -8,6 +8,7 @@ import Join from '@/app/join/[joinCode]';
 import { useMembership } from '@/hooks/use-membership';
 
 jest.mock('@/api/house', () => ({ houseByCode: jest.fn(), joinHouse: jest.fn() }));
+jest.mock('@/api/email-auth', () => ({}));
 jest.mock('@/api/auth', () => ({
   appleSignInAvailable: jest.fn(async () => false),
   signInWithApple: jest.fn(),

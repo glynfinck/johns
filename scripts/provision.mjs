@@ -22,6 +22,7 @@ import path from "node:path";
 import { fileURLToPath } from "node:url";
 
 import { CONFIG as C } from "./provision/config.mjs";
+import { loadCore } from "./provision/core.mjs";
 import {
   authProblems,
   authSettings,
@@ -266,10 +267,11 @@ if (missing.length === 0) {
 // --- 4. Sign-in ---------------------------------------------------------------------
 
 step("Sign-in (Supabase auth settings)");
-if (!CHECK_ONLY) await supa("PATCH", `/v1/projects/${ref}/config/auth`, authSettings(C, google));
+const emails = (await loadCore("auth-email.ts")).authEmailTemplates();
+if (!CHECK_ONLY) await supa("PATCH", `/v1/projects/${ref}/config/auth`, authSettings(C, google, emails));
 const auth = await supa("GET", `/v1/projects/${ref}/config/auth`);
-const problems = authProblems(auth, C, google);
-if (problems.length === 0) pass(`site URL ${siteUrl(C)}, email sign-up off${google ? ", Google on" : ""}`);
+const problems = authProblems(auth, C, google, emails);
+if (problems.length === 0) pass(`site URL ${siteUrl(C)}, email and password on with Jonz's emails through Resend${google ? ", Google on" : ""}`);
 if (google && !C.google.iosClientId && C.google.androidClientIds.length === 0) {
   say("  · Google signs in on the web only: the app's iOS and Android clients aren't in config.mjs yet (DEPLOYMENT.md)");
 }

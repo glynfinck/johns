@@ -2,6 +2,7 @@ import { readFileSync } from "node:fs";
 
 import { describe, expect, it } from "vitest";
 
+import { authEmailTemplates } from "../../packages/core/src/auth-email";
 import { CONFIG } from "./config.mjs";
 import {
   apexDomain,
@@ -51,14 +52,25 @@ const NATIVE = {
   },
 };
 
+/** What production's dashboard holds for SMTP once Resend is pasted in. */
+const SMTP = { smtp_host: "smtp.resend.com", smtp_port: 465, smtp_user: "resend", smtp_admin_email: "hello@jonz.app" };
+const EMAILS = authEmailTemplates();
+
 describe("auth settings", () => {
   it("sends only production's fields, never the local config", () => {
-    expect(authSettings(CONFIG, null)).toEqual({
+    expect(authSettings(CONFIG, null, EMAILS)).toMatchObject({
       site_url: "https://jonz.app",
       uri_allow_list: "https://jonz.app/**",
-      external_email_enabled: false,
+      external_email_enabled: true,
+      mailer_autoconfirm: false,
+      mailer_otp_length: 6,
+      password_min_length: 8,
+      mailer_subjects_confirmation: "Your Jonz code is {{ .Token }}",
     });
-    expect(authSettings(CONFIG, GOOGLE)).toMatchObject({
+    expect((authSettings(CONFIG, null, EMAILS) as Record<string, unknown>).mailer_templates_recovery_content).toContain("{{ .Token }}");
+    // SMTP's password is a Resend key pasted in the dashboard, so provision never writes SMTP.
+    expect(Object.keys(authSettings(CONFIG, null, EMAILS)).filter((k) => k.startsWith("smtp_"))).toEqual([]);
+    expect(authSettings(CONFIG, GOOGLE, EMAILS)).toMatchObject({
       external_google_enabled: true,
       external_google_client_id: GOOGLE.clientId,
       external_google_secret: GOOGLE.secret,
@@ -66,21 +78,36 @@ describe("auth settings", () => {
   });
 
   it("accepts the settings it wrote when they read back the same", () => {
-    expect(authProblems({ ...authSettings(CONFIG, GOOGLE), external_google_secret: undefined }, CONFIG, GOOGLE)).toEqual([]);
+    expect(authProblems({ ...SMTP, ...authSettings(CONFIG, GOOGLE, EMAILS), external_google_secret: undefined }, CONFIG, GOOGLE)).toEqual([]);
   });
 
   it("catches a client ID that is still an unresolved env() placeholder", () => {
-    const read = { ...authSettings(CONFIG, GOOGLE), external_google_client_id: "env(AUTH_GOOGLE_CLIENT_ID)" };
+    const read = { ...SMTP, ...authSettings(CONFIG, GOOGLE, EMAILS), external_google_client_id: "env(AUTH_GOOGLE_CLIENT_ID)" };
     expect(authProblems(read, CONFIG, GOOGLE)).toEqual([
       "the Google client ID is the unresolved placeholder env(AUTH_GOOGLE_CLIENT_ID)",
     ]);
   });
 
-  it("catches localhost written over the site URL, and email sign-up left on", () => {
-    const read = { ...authSettings(CONFIG, null), site_url: "http://localhost:3205", external_email_enabled: true };
-    expect(authProblems(read, CONFIG, null)).toEqual([
+  it("catches localhost written over the site URL, and email sign-in turned off or auto-confirmed", () => {
+    const read = { ...SMTP, ...authSettings(CONFIG, null, EMAILS), site_url: "http://localhost:3205", external_email_enabled: false, mailer_autoconfirm: true };
+    expect(authProblems(read, CONFIG, null, EMAILS)).toEqual([
       "site URL is http://localhost:3205, not https://jonz.app",
-      "email sign-up is still on",
+      "email and password sign-in is off",
+      "email sign-ups are confirmed without an email",
+    ]);
+  });
+
+  it("catches Supabase not sending through Resend, from the wrong address, or with its own emails", () => {
+    const written = { ...SMTP, ...authSettings(CONFIG, null, EMAILS) };
+    expect(authProblems(written, CONFIG, null, EMAILS)).toEqual([]);
+    expect(authProblems({ ...written, smtp_host: null }, CONFIG, null, EMAILS)).toEqual([
+      "Supabase doesn't send through Resend (SMTP host unset): set it in Authentication → Emails → SMTP",
+    ]);
+    expect(authProblems({ ...written, smtp_admin_email: "noreply@mail.app.supabase.io" }, CONFIG, null, EMAILS)).toEqual([
+      "Supabase's emails come from noreply@mail.app.supabase.io, not hello@jonz.app",
+    ]);
+    expect(authProblems({ ...written, mailer_subjects_recovery: "Reset Your Password" }, CONFIG, null, EMAILS)).toEqual([
+      "mailer_subjects_recovery isn't Jonz's own email",
     ]);
   });
 
@@ -94,16 +121,16 @@ describe("auth settings", () => {
 
   it("skips Google's nonce check only once there is an iOS client", () => {
     expect(googleSkipsNonce(CONFIG)).toBe(false);
-    expect(authSettings(CONFIG, GOOGLE)).toMatchObject({ external_google_skip_nonce_check: false });
+    expect(authSettings(CONFIG, GOOGLE, EMAILS)).toMatchObject({ external_google_skip_nonce_check: false });
     expect(googleSkipsNonce(ANDROID_ONLY)).toBe(false);
-    expect(authSettings(NATIVE, GOOGLE)).toMatchObject({
+    expect(authSettings(NATIVE, GOOGLE, EMAILS)).toMatchObject({
       external_google_client_id: googleClientIds(NATIVE, GOOGLE),
       external_google_skip_nonce_check: true,
     });
   });
 
   it("catches a client list or nonce setting that doesn't read back", () => {
-    const written = { ...authSettings(NATIVE, GOOGLE), external_google_secret: undefined };
+    const written = { ...SMTP, ...authSettings(NATIVE, GOOGLE, EMAILS), external_google_secret: undefined };
     expect(authProblems(written, NATIVE, GOOGLE)).toEqual([]);
     expect(authProblems({ ...written, external_google_client_id: GOOGLE.clientId }, NATIVE, GOOGLE)).toEqual([
       "the Google client IDs aren't the ones given",
@@ -111,14 +138,14 @@ describe("auth settings", () => {
     expect(authProblems({ ...written, external_google_skip_nonce_check: false }, NATIVE, GOOGLE)).toEqual([
       "Google's nonce check is on, not skipped (iOS)",
     ]);
-    const web = { ...authSettings(CONFIG, GOOGLE), external_google_secret: undefined };
+    const web = { ...SMTP, ...authSettings(CONFIG, GOOGLE, EMAILS), external_google_secret: undefined };
     expect(authProblems({ ...web, external_google_skip_nonce_check: true }, CONFIG, GOOGLE)).toEqual([
       "Google's nonce check is skipped, not on",
     ]);
   });
 
   it("finds the app's redirect URL among others", () => {
-    const read = { ...authSettings(CONFIG, null), uri_allow_list: "http://localhost:3205/**, https://jonz.app/**" };
+    const read = { ...SMTP, ...authSettings(CONFIG, null, EMAILS), uri_allow_list: "http://localhost:3205/**, https://jonz.app/**" };
     expect(authProblems(read, CONFIG, null)).toEqual([]);
   });
 });

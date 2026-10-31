@@ -1,4 +1,4 @@
-import { HOUSE_COPY, HOUSE_LOWER_COPY, ME_COPY, MOVING_COPY, STEADY_COPY } from '@app/core';
+import { EMAIL_SIGN_IN_COPY, HOUSE_COPY, HOUSE_LOWER_COPY, ME_COPY, MOVING_COPY, PASSWORD_SETTING_COPY, STEADY_COPY } from '@app/core';
 import { fireEvent, screen, waitFor, within } from 'expo-router/testing-library';
 
 import { signOut } from '@/api/auth';
@@ -13,6 +13,7 @@ import { renderPages } from '@/testing/pages';
 import { YouSection } from './you-section';
 
 jest.mock('@/api/auth', () => ({ signOut: jest.fn() }));
+jest.mock('@/api/email-auth', () => ({ emailSignIn: jest.fn(async () => null), setPassword: jest.fn() }));
 jest.mock('@/api/board', () => ({ loadHouse: jest.fn() }));
 jest.mock('@/api/house', () => ({ catchUp: jest.fn() }));
 jest.mock('@/api/profile', () => ({ renameMe: jest.fn() }));
@@ -157,4 +158,31 @@ it('signs you out', async () => {
   await open();
   await fireEvent.press(within(screen.getByTestId('sign-out')).getByRole('button', { name: HOUSE_LOWER_COPY.signOut }));
   expect(signOut).toHaveBeenCalledTimes(1);
+});
+
+it('adds a password in a sheet, for an account with an email address', async () => {
+  const { emailSignIn, setPassword } = jest.requireMock<{ emailSignIn: jest.Mock; setPassword: jest.Mock }>('@/api/email-auth');
+  emailSignIn.mockResolvedValue({ email: 'priya@example.com', hasPassword: false });
+  setPassword.mockResolvedValue(undefined);
+  await open();
+  const row = await screen.findByTestId('to-password');
+  expect(row).toHaveTextContent(new RegExp(`${PASSWORD_SETTING_COPY.label}.*${PASSWORD_SETTING_COPY.add}`));
+  await fireEvent.press(within(row).getByRole('button'));
+  const sheet = within(screen.getByTestId('password-sheet'));
+  expect(sheet.getByText(PASSWORD_SETTING_COPY.addBody('priya@example.com'))).toBeOnTheScreen();
+  await fireEvent.changeText(sheet.getByTestId('new-password'), 'short');
+  await fireEvent.press(sheet.getByRole('button', { name: PASSWORD_SETTING_COPY.save }));
+  expect(setPassword).not.toHaveBeenCalled();
+  expect(sheet.getByRole('alert')).toHaveTextContent(EMAIL_SIGN_IN_COPY.shortPassword);
+  await fireEvent.changeText(sheet.getByTestId('new-password'), 'long enough');
+  await fireEvent.press(sheet.getByRole('button', { name: PASSWORD_SETTING_COPY.save }));
+  expect(setPassword).toHaveBeenCalledWith('long enough');
+  expect(sheet.getByText(PASSWORD_SETTING_COPY.saved)).toBeOnTheScreen();
+});
+
+it('leaves out the password row for an account with no email address', async () => {
+  jest.requireMock<{ emailSignIn: jest.Mock }>('@/api/email-auth').emailSignIn.mockResolvedValue(null);
+  await open();
+  await waitFor(() => expect(screen.getByTestId('sign-out')).toBeOnTheScreen());
+  expect(screen.queryByTestId('to-password')).toBeNull();
 });

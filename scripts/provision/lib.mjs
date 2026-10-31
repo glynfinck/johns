@@ -7,16 +7,53 @@ export const siteUrl = (c) => `https://${c.domain}`;
 /** The registrable domain Google's consent screen authorises: jonz.app for jonz.app, glyn.dev for a name like johns.glyn.dev. */
 export const apexDomain = (domain) => domain.split(".").slice(-2).join(".");
 
+/** Production's email and password rules; the app checks the same (@app/core's email-sign-in.ts). */
+export const EMAIL_AUTH = {
+  passwordMin: 8,
+  codeLength: 6,
+  codeSeconds: 3600,
+  /** Supabase's emails an hour, through Resend (its free plan stops at 100 a day). */
+  emailsPerHour: 100,
+};
+
+/** The SMTP fields Supabase must have to send through Resend (the password, a Resend key, is pasted in the dashboard). */
+export const EMAIL_SMTP = { host: "smtp.resend.com", port: "465", user: "resend", sender: (c) => `hello@${c.domain}` };
+
+/**
+ * Supabase's emails as Management API fields, from @app/core's
+ * authEmailTemplates(): mailer_subjects_<name> and mailer_templates_<name>_content.
+ * @param {Record<string, { subject: string; html: string }>} templates
+ * @returns {Record<string, string>}
+ */
+export function mailerFields(templates) {
+  /** @type {Record<string, string>} */
+  const body = {};
+  for (const [name, t] of Object.entries(templates)) {
+    body[`mailer_subjects_${name}`] = t.subject;
+    body[`mailer_templates_${name}_content`] = t.html;
+  }
+  return body;
+}
+
 /**
  * Production's auth settings. Only these fields are sent, never the local
- * config: `supabase config push` would write localhost over the site URL and
- * turn email sign-up back on.
+ * config: `supabase config push` would write localhost over the site URL.
+ * Email and password sign-in is on, every new address proven by an emailed
+ * code (never auto-confirmed), and Supabase's emails are Jonz's own
+ * (`templates`, from @app/core). SMTP itself is left as set in the dashboard.
  */
-export function authSettings(c, google) {
+export function authSettings(c, google, templates) {
   const body = {
     site_url: siteUrl(c),
     uri_allow_list: `${siteUrl(c)}/**`,
-    external_email_enabled: false,
+    external_email_enabled: true,
+    mailer_autoconfirm: false,
+    mailer_secure_email_change_enabled: true,
+    mailer_otp_length: EMAIL_AUTH.codeLength,
+    mailer_otp_exp: EMAIL_AUTH.codeSeconds,
+    password_min_length: EMAIL_AUTH.passwordMin,
+    rate_limit_email_sent: EMAIL_AUTH.emailsPerHour,
+    ...mailerFields(templates),
   };
   if (google) {
     body.external_google_enabled = true;
@@ -47,14 +84,26 @@ export const googleSkipsNonce = (c) => Boolean(c.google.iosClientId);
  * reported success on the way in, so nothing counts as done until it reads
  * back right.
  */
-export function authProblems(actual, c, google) {
+export function authProblems(actual, c, google, templates) {
   const problems = [];
   if (actual.site_url !== siteUrl(c)) problems.push(`site URL is ${actual.site_url || "unset"}, not ${siteUrl(c)}`);
   const allowed = String(actual.uri_allow_list ?? "")
     .split(",")
     .map((s) => s.trim());
   if (!allowed.includes(`${siteUrl(c)}/**`)) problems.push(`redirect URLs don't include ${siteUrl(c)}/**`);
-  if (actual.external_email_enabled) problems.push("email sign-up is still on");
+  if (!actual.external_email_enabled) problems.push("email and password sign-in is off");
+  if (actual.mailer_autoconfirm) problems.push("email sign-ups are confirmed without an email");
+  if (actual.mailer_otp_length !== EMAIL_AUTH.codeLength) problems.push(`emailed codes are ${actual.mailer_otp_length} digits, not ${EMAIL_AUTH.codeLength}`);
+  if ((actual.password_min_length ?? 0) < EMAIL_AUTH.passwordMin) problems.push(`passwords may be ${actual.password_min_length ?? 0} characters, not at least ${EMAIL_AUTH.passwordMin}`);
+  if (actual.smtp_host !== EMAIL_SMTP.host || String(actual.smtp_port) !== EMAIL_SMTP.port || actual.smtp_user !== EMAIL_SMTP.user) {
+    problems.push(`Supabase doesn't send through Resend (SMTP host ${actual.smtp_host || "unset"}): set it in Authentication → Emails → SMTP`);
+  }
+  if (actual.smtp_admin_email !== EMAIL_SMTP.sender(c)) problems.push(`Supabase's emails come from ${actual.smtp_admin_email || "unset"}, not ${EMAIL_SMTP.sender(c)}`);
+  if (templates) {
+    for (const [key, value] of Object.entries(mailerFields(templates))) {
+      if (actual[key] !== value) problems.push(`${key} isn't Jonz's own email`);
+    }
+  }
   if (google) {
     const id = String(actual.external_google_client_id ?? "");
     if (!actual.external_google_enabled) problems.push("Google sign-in is off");

@@ -307,7 +307,9 @@ at `<house>/<assignment>/<file>`.
   the iOS app (App Store guideline 4.8: social sign-in on iOS must offer
   Apple too). The web signs in through Google's redirect; the native app
   hands Supabase an ID token from Google's or Apple's own sheet
-  (`apps/client/src/api/auth.ts`).
+  (`apps/client/src/api/auth.ts`). Microsoft works the same way, and an email
+  and password too, where a new account and a reset each take a 6-digit
+  emailed code, never a link (`apps/client/src/api/email-auth.ts`).
 - `supabase/config.toml` is for local development only. Never `supabase
   config push`, which writes local settings over production's.
 

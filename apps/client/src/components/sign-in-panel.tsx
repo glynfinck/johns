@@ -8,6 +8,7 @@ import { ON_STAGING } from '@/api/staging';
 import { Alert } from '@/components/alert';
 import { Button } from '@/components/button';
 import { DemoSignIn } from '@/components/demo-sign-in';
+import { EmailSignIn } from '@/components/email-sign-in';
 import { DoorFoot, Sign, SignHeading } from '@/components/front-door/door';
 import { GoogleIcon } from '@/components/google-icon';
 import { MicrosoftIcon } from '@/components/microsoft-icon';
@@ -17,8 +18,8 @@ import { RADIUS, SPACE, TAP, useTheme } from '@/theme';
 
 /**
  * Sign-in: Apple then Google then Microsoft on iOS, Google then Microsoft
- * elsewhere (Microsoft for Outlook, Hotmail and work accounts), on the page's taped
- * sign, with the small print under it. The sign-in screen is this on its
+ * elsewhere (Microsoft for Outlook, Hotmail and work accounts), then an
+ * email and password (EmailSignIn), on the page's taped sign, with the small print under it. The sign-in screen is this on its
  * own; a join link shows it in place, so the code survives. `next` is where
  * signing in leads (the front door's choice, or the join link): the line
  * under the heading names it, and the web comes back from Google or
@@ -104,6 +105,8 @@ export function SignInPanel({ next, failed: failedBefore = false }: { next?: str
 
           <Meta>{SIGN_IN_COPY.sameAccount}</Meta>
         </View>
+
+        <EmailSignIn />
 
         {ON_STAGING ? <DemoSignIn /> : null}
       </Sign>
