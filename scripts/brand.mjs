@@ -174,6 +174,40 @@ const LOCKUPS = [
   [`${BRAND}/lockup-on-dark.png`, ON_TARMAC, signSvg({ ink: AMBER_DARK, safe: SHIELD })],
 ].map(([path, ink, mark]) => [path, 1200, 300, `<div style="width:1200px;height:300px;display:flex;align-items:center;justify-content:center;font-family:Overpass">${lockup({ size: 150, ink, mark })}</div>`]);
 
+// ── Email pictures ────────────────────────────────────────────────────────
+//
+// What an email can't draw itself (packages/core/src/email.ts): the small
+// JONZ sign at the top, a notice's icon on its tile, and the hazard tape over
+// a status notice. Served from jonz.app/email/; drawn at 3x so they stay sharp.
+
+const EMAIL = `${PUBLIC}/email`;
+const HAZARD = "#c8410c";
+const NIGHT_HAZARD = "#ff7a3d";
+// The notice banner's icons (lucide, as apps/client/src/components/notice-banner.tsx uses them).
+const LUCIDE = {
+  status: '<path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3"/><path d="M12 9v4"/><path d="M12 17h.01"/>',
+  offer: '<rect x="3" y="8" width="18" height="4" rx="1"/><path d="M12 8v13"/><path d="M19 12v7a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2v-7"/><path d="M7.5 8a2.5 2.5 0 0 1 0-5A4.8 8 0 0 1 12 8a4.8 8 0 0 1 4.5-5 2.5 2.5 0 0 1 0 5"/>',
+  news: '<path d="M15 18h-5"/><path d="M18 14h-8"/><path d="M4 22h16a2 2 0 0 0 2-2V4a2 2 0 0 0-2-2H8a2 2 0 0 0-2 2v16a2 2 0 0 1-4 0v-9a2 2 0 0 1 2-2h2"/><rect width="8" height="4" x="10" y="6" rx="1"/>',
+};
+/** A notice's icon on its square tile, the tile's edge in the icon's colour: 48 shown, 144 drawn. */
+const noticeTile = (kind, color) =>
+  `<div style="width:144px;height:144px;border:7.5px solid ${color};border-radius:21px;display:flex;align-items:center;justify-content:center">
+    <svg width="78" height="78" viewBox="0 0 24 24" fill="none" stroke="${color}" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">${LUCIDE[kind]}</svg></div>`;
+/** Hazard tape, as one tile that repeats across: 45° stripes, 8px of each, 12px tall. */
+const tapeTile = `<svg width="16" height="12" viewBox="0 0 16 12" style="display:block"><rect width="16" height="12" fill="${INK}"/>${[-16, 0, 16]
+  .map((x) => `<polygon points="${x},12 ${x + 8},12 ${x + 20},0 ${x + 12},0" fill="${HAZARD}"/>`)
+  .join("")}</svg>`;
+
+const EMAIL_PICTURES = [
+  // The sign alone, as wide as its word: shown 85 wide in the email's top bar.
+  [`${EMAIL}/sign.png`, 255, 102, `<div style="display:flex;font-family:Overpass">${sign({ legend: "Jonz", width: 255, scale: 0.34, height: 300, shield: 168 })}</div>`],
+  [`${EMAIL}/notice-status.png`, 144, 144, noticeTile("status", NIGHT_HAZARD)],
+  [`${EMAIL}/notice-offer.png`, 144, 144, noticeTile("offer", INK)],
+  [`${EMAIL}/notice-news.png`, 144, 144, noticeTile("news", INK)],
+  [`${EMAIL}/notice-news-dark.png`, 144, 144, noticeTile("news", ON_TARMAC)],
+  [`${EMAIL}/hazard-tape.png`, 16, 12, tapeTile],
+];
+
 // ── Store frames ──────────────────────────────────────────────────────────
 
 /** Headlines for the store frames, in order: five words at most, each on its own sign. */
@@ -253,7 +287,7 @@ const icoPngs = [];
 for (const size of ICO_SIZES) icoPngs.push([size, await draw(sized(icon.favicon, size), size, size)]);
 write(`${PUBLIC}/favicon.ico`, ico(icoPngs));
 
-for (const [path, width, height, html] of [...CARDS, ...LOCKUPS]) await draw(html, width, height, path);
+for (const [path, width, height, html] of [...CARDS, ...LOCKUPS, ...EMAIL_PICTURES]) await draw(html, width, height, path);
 
 const framed = [];
 for (const [i, screen] of screens.entries()) {

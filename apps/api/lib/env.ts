@@ -2,6 +2,8 @@
 // Values come from .env.local locally and from Vercel's environment when
 // deployed. (The engine's service-role key is read by lib/supabase/admin.ts.)
 
+import { EMAIL_ADDRESSES } from "@app/core";
+
 import { originAllowed } from "./cors";
 
 function required(name: string): string {
@@ -39,6 +41,13 @@ export const env = {
     const origin = request.headers.get("origin");
     return originAllowed(origin, env.allowedOrigins()) ? origin : env.appUrl();
   },
+  /**
+   * Resend's key for sending email (lib/email.ts), "Sending access" only.
+   * Unset locally and on staging, where emails are logged, not sent.
+   */
+  resendApiKey: () => process.env.RESEND_API_KEY || null,
+  /** Who emails come from: Jonz <hello@jonz.app>, unless EMAIL_FROM says otherwise. */
+  emailFrom: () => process.env.EMAIL_FROM || EMAIL_ADDRESSES.from,
   /**
    * Which copy of Jonz this is, from Vercel's own VERCEL_ENV: production, or
    * staging (every preview shares the staging database), or local. Stripe

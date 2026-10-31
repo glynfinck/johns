@@ -14,7 +14,7 @@ describe("the Privacy Policy", () => {
   });
 
   it("names what each sign-in gives us, and every company that helps run Jonz", () => {
-    for (const name of ["Google", "Microsoft", "Apple", "User.Read", "Supabase", "Vercel", "Anthropic", "Stripe", "Link"]) {
+    for (const name of ["Google", "Microsoft", "Apple", "User.Read", "Supabase", "Vercel", "Anthropic", "Stripe", "Link", "Resend"]) {
       expect(text).toContain(name);
     }
   });
