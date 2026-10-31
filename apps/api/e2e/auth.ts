@@ -82,6 +82,12 @@ async function clientSession(context: BrowserContext, name: string): Promise<{ i
  * due on Sunday at 21:00 unless it names another time (`dueTime`), so a test
  * can say which comes first. An `onCall` John is dealt as someone on call
  * instead, with the 12-hour window.
+ *
+ * From Saturday evening the deal's day of grace moves every Sunday John to
+ * the same moment, a day after the deal (or the week's last minute). Those
+ * ties are broken here, a second apart, in the order the test gives them
+ * (by `dueTime`, then as named), so Next up stays the one the test expects
+ * whatever day the suite runs. `at` deals as if it were then, for checking that.
  */
 export async function dealtHouseInClient(
   context: BrowserContext,
@@ -89,7 +95,8 @@ export async function dealtHouseInClient(
   houseName: string,
   johns: { name: string; category?: string; needsPhoto?: boolean; dueTime?: string; onCall?: boolean }[],
   housemates: { context: BrowserContext; name: string }[] = [],
-): Promise<{ userId: string; houseId: string; housemateIds: string[] }> {
+  at?: Date,
+): Promise<{ userId: string; houseId: string; housemateIds: string[]; weekId: string }> {
   const { id, client } = await clientSession(context, name);
   const { data: houseId, error } = await client.rpc("create_house", {
     p_name: houseName,
@@ -109,7 +116,8 @@ export async function dealtHouseInClient(
     housemateIds.push(joiner.id);
   }
 
-  const now = new Date();
+  // Taken after everyone has joined: the deal leaves out anyone who joins after its "now".
+  const now = at ?? new Date();
   const week = weekWindow(now, "Europe/London", 1);
   const { error: johnsError } = await db.from("johns").insert(
     johns.map((j) => ({
@@ -133,7 +141,45 @@ export async function dealtHouseInClient(
   const { house, members } = await loadHouse(db, houseId);
   const { weekId } = await dealWeek(db, house, members, week, now, false);
   if (!weekId) throw new Error("Nothing was dealt");
-  return { userId: id, houseId, housemateIds };
+  await keepNamedOrder(db, weekId, johns);
+  return { userId: id, houseId, housemateIds, weekId };
+}
+
+/**
+ * Johns due at one shared moment (the grace's, or plain Sunday 21:00), a
+ * second apart in the test's order: by `dueTime` (default 21:00), then as
+ * named. The first keeps the moment; the rest stay inside the same minute,
+ * and inside the week, which the grace leaves a minute of.
+ */
+async function keepNamedOrder(db: SupabaseClient, weekId: string, johns: { name: string; dueTime?: string }[]) {
+  const { data, error } = await db.from("assignments").select("id, name, due_at").eq("week_id", weekId);
+  if (error) throw error;
+  const rank = (name: string) => {
+    const i = johns.findIndex((j) => j.name === name);
+    return { time: johns[i]?.dueTime ?? "21:00", i };
+  };
+  const byMoment = new Map<number, { id: string; name: string }[]>();
+  for (const a of data ?? []) {
+    if (!a.due_at) continue;
+    const t = new Date(a.due_at).getTime();
+    byMoment.set(t, [...(byMoment.get(t) ?? []), a]);
+  }
+  for (const [moment, rows] of byMoment) {
+    // One John shared by several housemates is one job: its rows move together.
+    const tied = [...new Set(rows.map((a) => a.name))];
+    if (tied.length < 2) continue;
+    tied.sort((a, b) => {
+      const ra = rank(a);
+      const rb = rank(b);
+      return ra.time.localeCompare(rb.time) || ra.i - rb.i;
+    });
+    for (const [k, name] of tied.entries()) {
+      const due = new Date(moment + k * 1000).toISOString();
+      const ids = rows.filter((a) => a.name === name).map((a) => a.id);
+      const { error: moveError } = await db.from("assignments").update({ due_at: due }).in("id", ids);
+      if (moveError) throw moveError;
+    }
+  }
 }
 
 /**
