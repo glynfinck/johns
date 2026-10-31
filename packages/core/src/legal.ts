@@ -19,7 +19,7 @@ export const LEGAL = {
   /** Whose courts and law the Terms name. */
   law: "England and Wales",
   /** When either page last changed in substance. */
-  updated: "30 October 2026",
+  updated: "31 October 2026",
   privacyPath: "/privacy",
   termsPath: "/terms",
   site: "https://jonz.app",
@@ -114,6 +114,7 @@ export const PRIVACY_POLICY: LegalPage = {
         "• Supabase: our database, sign-in and photo storage, in London, UK.",
         "• Vercel: hosts the website and the API, mainly in the United States.",
         "• Anthropic, through Vercel: writes Ask Jonz’s answers.",
+        "• Resend: sends Jonz’s emails and receives replies to them, in Ireland, EU. It sees your email address and the email, and keeps them for 30 days.",
         "• Stripe, and Link (Stripe’s checkout): take payment for the House Pass and handle tax, receipts and refunds as the seller of record. They collect your payment details and billing address under Stripe’s own privacy policy.",
         "• Google, Microsoft and Apple: sign you in, and deliver notifications to your browser or phone (as do Mozilla for Firefox and other browser makers). Notifications say what the reminder is about and nothing else.",
         "We may also share information if the law requires it, to protect people’s safety, or with whoever takes over Jonz, who would be bound by this policy.",

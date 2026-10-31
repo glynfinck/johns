@@ -139,6 +139,20 @@ is exactly what local development needs and production must not have.
   is `bpc_1UVt3gRwTZ2GsMbUO4o3mD4i`; live needs the same one). Then `EXPO_PUBLIC_PASS_CHECKOUT=on` on
   `jonz-web` shows the plans as buttons. Without the key the Pass page shows
   the plans and sells nothing.
+- **Email (Resend).** Jonz's emails go out through Resend from
+  `Jonz <hello@jonz.app>`, replies to `support@jonz.app`
+  (`apps/api/lib/email.ts`, the words and look in
+  `packages/core/src/email.ts`, `docs/specs/email.md`). The domain
+  `jonz.app` is verified in Resend's Ireland region (eu-west-1) with these
+  records on Vercel DNS: the DKIM TXT `resend._domainkey`, the SPF TXT and
+  bounce MX on `send`, the receiving MX on the root, and `_dmarc` (starting
+  `p=none`, then `p=reject` once two weeks of reports are clean). On
+  `jonz-api` set `RESEND_API_KEY` (Production only, a "Sending access" key
+  named "Jonz app"); staging and previews have none and log instead. The
+  pictures an email shows are `apps/client/public/email/*.png`, drawn by
+  `npm run brand`, so they're served from jonz.app. Free plan: 3,000 emails
+  a month and 100 a day, incoming mail included; Pro ($20 a month) lifts the
+  daily cap.
 - **Brand verification.** Opening the app beyond your own house means
   Google's review; the landing page at `/` carries the name, the purpose and
   the privacy link it checks for.

@@ -20,7 +20,12 @@ export default defineConfig({
       // The pure rules are tested in packages/core. This app's own pure
       // helpers, when it has any, go here.
       {
-        resolve: { alias },
+        resolve: {
+          alias: [
+            ...alias,
+            { find: /^server-only$/, replacement: fileURLToPath(new URL("./tests/support/server-only.ts", import.meta.url)) },
+          ],
+        },
         test: {
           name: "unit",
           environment: "node",

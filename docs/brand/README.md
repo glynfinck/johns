@@ -93,6 +93,7 @@ form is "Fair shares of the housework." The social handle is @jonz.app.
 | Any jonz.app link pasted in a chat | `og.png` | 1200×630 |
 | A join link pasted in a chat | drawn per house by `apps/api/app/api/og/join/[code]` | 1200×630 |
 | Email header | `email-header.png`, shown at 600×120 | 1200×240 |
+| An email's top bar, a notice's icon, hazard tape | `apps/client/public/email/sign.png` (shown 85×34), `notice-*.png` (48), `hazard-tape.png` (a 16×12 tile); served from jonz.app/email | 3x |
 | Repo social preview | `social-preview.png` | 1280×640 |
 | README banner | `readme-banner.png`, the same in GitHub's light and dark | 1280×360 |
 | README's app pictures | `readme-screens.png`, the first two iPhone frames side by side, shown at 540 so a phone shrinks it whole | 1240×1300 |

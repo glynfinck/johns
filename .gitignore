@@ -34,3 +34,5 @@ next-env.d.ts
 
 # supabase
 /supabase/.temp
+# email previews (npm run email:preview)
+email-previews/
