@@ -1,10 +1,10 @@
-import { ADMIN_COPY, BIN_NIGHT } from '@app/core';
+import { ADMIN_COPY, BIN_NIGHT, type QrShape } from '@app/core';
 import { useQuery } from '@tanstack/react-query';
 import { useState } from 'react';
 import { Linking, Platform, StyleSheet, Text, View } from 'react-native';
 import Svg, { Path } from 'react-native-svg';
 
-import { checkCode, enrollFactor, verifiedFactor, type QrShape } from '@/api/owner';
+import { checkCode, enrollFactor, verifiedFactor } from '@/api/owner';
 import { Button } from '@/components/button';
 import { Field } from '@/components/field';
 import { ReadFailed, Reading } from '@/components/read-state';
@@ -98,7 +98,8 @@ function AddAuthenticator({ onPassed }: { onPassed: () => void }) {
           {Platform.OS !== 'web' ? (
             <TextButton label={ADMIN_COPY.addToPasswords} onPress={() => void Linking.openURL(factor.data.uri)} />
           ) : null}
-          <Meta>{ADMIN_COPY.copyKey}</Meta>
+          {/* Never a silent gap: without a code to scan, say to type the key. */}
+          <Meta testID={factor.data.qr ? undefined : 'admin-no-qr'}>{factor.data.qr ? ADMIN_COPY.copyKey : ADMIN_COPY.noQr}</Meta>
           <Text selectable style={[styles.key, { color: colors.foreground }]} testID="admin-key">
             {factor.data.secret.replace(/(.{4})/g, '$1 ').trim()}
           </Text>
